@@ -3,7 +3,7 @@
 The arc: **ShadowKV** (bolt-on within-layer SVD) → no headroom on V4; **xKV** (cross-layer low-rank) →
 proxy says grouping wins but needs end-task proof; **AsymKV** premise (adjacent-key homogeneity) →
 mostly holds, barely; **Mustafar** (magnitude pruning of the compressed cache) → strong go;
-**xKV RULER end-task** → free at 32k.
+**xKV RULER end-task** → free at 32k (latent); **xKV on the CSA indexer** → not free at 64k (−1.1 pts).
 
 **Headline numbers:**
 
@@ -14,7 +14,7 @@ mostly holds, barely; **Mustafar** (magnitude pruning of the compressed cache) �
 | AsymKV adjacent-key homogeneity | mostly yes, barely | ρ1 ≈ 0.46–0.61 vs paper's 0.80; niah ρ4 > ρ1 (✗ monotone) |
 | Mustafar TopMag pruning | STRONG GO | 50%: −0.2 pts; 70%: +0.4–0.6 pts except QA (qa_2 −4.5 @64k) |
 | xKV cross-layer end-task | free @32k | −0.004 @32k, −0.03 @8k; 6.4× CSA-latent cut (134.8→21.0 MB) |
-| xKV cross-layer on CSA indexer | *planned* | — |
+| xKV cross-layer on CSA indexer | ⚠ not free @64k | −1.1 pts macro (5 hardest × n=50); retrieval/needle free, fwe +4.0, qa_1 +2.0; 2:1 indexer compute cut is kernel-gated |
 | TopMag (Mustafar) on CSA indexer | STRONG GO | 5 hardest @64k × n=50: Δ50 0.82 pt, Δ70 0.55 pt; qa_2 @70% −2.0 (vs −4.5 latent) |
 
 ---
@@ -192,25 +192,43 @@ card) leaves room; the long-context result is the 32k leg.
 
 ## 6. xKV cross-layer low-rank on the CSA indexer
 
-*Status: **planned — not yet run.***
+**Question.** Does a rank-`r` basis shared across adjacent CSA layers preserve the CSA indexer's
+*selection* (the top-512 token set → end-task RULER score) while cutting its compute? The indexer —
+per-query top-512 token selection over 64 index heads, fp32 `[B, S_q, 64, S_kv/4]` score tensor — is
+likely the largest non-MoE compute component in V4-Flash, so the win metric is **compute (dims/token
+in the indexer)**, not memory. Same transfer as Section 5 but retargeted from the 512-dim compressor
+latent to the **128-dim indexer keys**: W3@b64 (adjacent groups of 3 CSA layers share a rank-192
+basis, b = 64 dims/layer) = **2:1** compression on the indexer, 2-pass (capture → joint SVD → inject).
 
-**Motivation.** The CSA indexer — per-query top-512 token selection over 64 index heads (fp32
-`[B, S_q, 64, S_kv/4]` score tensor) — is likely the **largest non-MoE compute component** in
-V4-Flash. Cross-layer low-rank, which is *free at 32k* on the compressed latent (Section 5), targets
-exactly this kind of per-layer computation. The question is whether a rank-`r` basis shared across
-the 21 CSA layers preserves the indexer's *selection* (the top-512 set → end-task RULER score) while
-cutting its compute.
+### Verdict: NOT free at 64k — the indexer is more sensitive than the latent
 
-**Method.** Same transfer as Sections 2/5, retargeted from the stored latent to the **indexer**:
-adjacent groups of CSA layers share a rank-`r` basis (b = r/W dims/layer) for the indexer's per-layer
-score inputs; the reconstruction is injected back into the indexer path (2-pass: capture → joint SVD
-→ inject).
+**64k, 5 hardest tasks × n=50 (250 smp), two tp=4 legs on 8 GPUs:**
 
-**Go/no-go design.**
-- End-task RULER at 32k × n=100, native indexer vs W3@b64, same scoring as Section 5.
-- The win metric is **compute** (dims/token in the indexer), not the memory metric of Section 5.
-- Hypothesis: free at long context (mirroring Section 5's −0.004 @32k); expect an 8k penalty, tracking
-  the codebook-dominated short-context regime (Section 2).
+| task | native indexer | W3@b64 indexer | Δ pts |
+|---|---:|---:|---:|
+| qa_2 | 0.760 | 0.760 | 0.0 |
+| qa_1 | 0.820 | 0.800 | +2.0 |
+| fwe | 0.867 | 0.827 | +4.0 |
+| vt | 0.992 | 0.996 | −0.4 |
+| niah_multivalue | 1.000 | 1.000 | 0.0 |
+| **mean** | **0.888** | **0.877** | **+1.1** |
+
+- **Not free at 64k.** Macro mean −1.1 pts vs Section 5's latent W3 at −0.004 @32k. The indexer
+  outputs a hard top-512 *selection*, so small basis errors move tokens across the selection boundary
+  and change the attended set wholesale — averaged recon error (Section 2) can't see this.
+- **Workload-shaped: retrieval/needle free, word-recall penalized.** niah_multivalue 0.00, vt −0.4,
+  qa_2 0.0; the cost concentrates in **fwe (+4.0)** and **qa_1 (+2.0)**. Individual deltas are within
+  ~1 binomial SEM at n=50 (≈4.8 pts/column); the family pattern is the signal.
+- **The 2:1 compute win is real but kernel-gated** — indexer key-dims/token halve (128→64), but the
+  wall-clock win only materializes if the fused indexer kernel skips the dropped dims (same caveat as
+  Section 4's sparse store).
+- **64k feasible here** where Section 5 deferred it: indexer capture is `[T,128]` — 4× smaller than
+  the `[T,512]` latent that OOM'd rank 0. Only-indexer capture/inject proven (0 compressor events).
+
+*Caveats: n=50/task at 64k (RULER on-disk cap + scheduling match with the sibling TopMag-indexer run);
+the dense column is the model's native indexer (already `compress_ratio=4`); no 8k/32k indexer legs.
+Artifacts: `transferibility/out/ruler_csa_idx_w3_64k{,_a,_b}.json`, launcher
+`transferibility/sg_idx_w3_64k_par.sh`. Detailed writeup: `writeup/xkv-crosslayer.md` Part 4.*
 
 ---
 

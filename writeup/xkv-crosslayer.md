@@ -190,3 +190,78 @@ deferred**: the capture pass materializes ~2.8 GB of fp32 latents on rank 0, and
 config leaves room for it — at tp=8 the 0.95-mem-fraction KV pool leaves only ~0.5 GiB free; at
 tp=4 the weights (~8.7 GB/rank) plus SGLang's minimum pool (0.89 × 80 GB) fill the card outright.
 The long-context result is therefore the 32k leg, where cross-layer SVD is free._
+
+---
+
+## Part 4 — Cross-layer low-rank on the CSA indexer (64k end-task)
+
+Part 3 showed W3 cross-layer SVD is *free at 32k* on the **compressor latent** (`[T,512]`). This part
+runs the same transfer on the **CSA indexer** — the per-query top-512 token selector whose per-layer
+score inputs are the 128-dim indexer keys (`index_head_dim=128`, `index_n_heads=64`, fp32
+`[B, S_q, 64, S_kv/4]` score tensor). The indexer is likely the largest non-MoE compute component in
+V4-Flash, so the win metric here is **compute (dims/token in the indexer)**, not the memory metric of
+Part 3. W3@b64 on 128-dim keys is a **2:1** compression — adjacent groups of 3 CSA layers share a
+rank-192 basis (b = 64 dims/layer), gentler than Part 3's 8:1 on the 512-dim latent — but the object
+is a *selector*, whose top-512 set is a hard threshold on the score tensor.
+
+**Method / environment.** Same 2-pass harness as Part 3, retargeted with `--recon-target indexer`:
+pass 1 captures the normed 128-dim indexer keys (`on_compress`, indexer-only gate), computes the
+joint SVD, pass 2 injects the `[T,128]` reconstructions back into the indexer path. Only-indexer
+proof (smoke, n=3, `XKV_DEBUG=1`): 1008 `compress` + 504 `inject` events all `d=128,
+is_indexer=True`; **zero** compressor / `d=512` events. Model served in SGLang 0.5.15
+(`ruler-eval` container), tp=4, mem-fraction 0.95, **two parallel legs on 8 GPUs** (qa_2, qa_1, fwe
+on GPUs 0–3; vt, niah_multivalue on GPUs 4–7; distinct MASTER_PORT + ctrl-dir + out per leg).
+**64k**, the five hardest tasks × n=50 (250 samples), matching the sibling TopMag-indexer 64k run
+(Section 4 of the indexer-prune writeup) and Part 3's 32k leg. Date 2026-08-19. 64k is feasible here
+where Part 3 deferred it because the indexer capture is `[T,128]` — 4× smaller than the `[T,512]`
+latent that OOM'd Part 3's rank 0.
+
+**64k RULER (n=50/task):**
+
+| task | native indexer | W3@b64 indexer | Δ pts |
+|---|---:|---:|---:|
+| qa_2 | 0.760 | 0.760 | 0.0 |
+| qa_1 | 0.820 | 0.800 | +2.0 |
+| fwe | 0.867 | 0.827 | +4.0 |
+| vt | 0.992 | 0.996 | −0.4 |
+| niah_multivalue | 1.000 | 1.000 | 0.0 |
+| **mean** | **0.888** | **0.877** | **+1.1** |
+
+The dense column agrees with the TopMag-indexer 64k dense baselines (qa_2 0.76 vs 0.74, qa_1 0.82
+vs 0.80, fwe 0.87 vs 0.85, vt 0.99 vs 0.99, niah 1.00 vs 1.00) — the run is measuring the native
+indexer path.
+
+**Analysis.**
+
+**1. Not free at 64k — the indexer is more sensitive than the latent.** Macro mean −1.1 pts
+(0.888 vs 0.877). Part 3's latent W3 was −0.004 at 32k; the same W3@b64 on the indexer keys costs
+~1 pt even at 64k. The indexer's output is a *selection* — a hard top-512 threshold on the score
+tensor — so even a small basis error moves tokens across the selection boundary and changes the
+attended set wholesale. Averaged Frobenius error on the latent (Part 2) does not capture
+selection-boundary sensitivity; this is the end-task cost of that gap.
+
+**2. The cost is workload-shaped: retrieval/needle free, word-recall penalized.** niah_multivalue
+(0.00) and vt (−0.4, w3 ≥ dense) sit at the ceiling; qa_2 is untouched (0.0). The penalty
+concentrates in **fwe (+4.0)** and **qa_1 (+2.0)** — the multi-word extraction/recall family. This
+runs counter to Part 2 §3's "retrieval compresses best": here the *selection* the indexer performs
+matters most for tasks whose answer is a specific short word list.
+
+**3. The fwe magnitude is soft but directionally consistent.** fwe settled at 0.867 vs 0.827 at
+n=50; the gap ran ~10→4 pts across the run as the dense column drifted down to its (~0.85) baseline
+while w3 sat flat near 0.83. At n=50 the per-column binomial SEM is ≈4.8 pts (difference SEM ≈6.8),
+so the 4-pt gap and the 2-pt qa_1 gap are individually within ~1 SEM — the family pattern is the
+signal, the individual magnitudes are not resolved.
+
+**4. The compute win is real but kernel-gated.** Indexer key-dims/token halve (128→64) at 2:1.
+Whether that moves wall-clock depends on the fused indexer kernel skipping the dropped dims — the
+same "savings materialize only in the kernel" caveat as the TopMag-indexer sparse-store note. This
+run bounds the accuracy ceiling: ~1 pt macro at 64k, worse on word-recall.
+
+_Notes: same caveat as Part 3 — the native-indexer column already runs the model's built-in
+`compress_ratio=4`; W3 measures the *additional* cost of cross-layer low-rank on the indexer path.
+n=50/task at 64k (RULER on-disk cap + scheduling match with the sibling TopMag-indexer run); no
+8k/32k indexer legs yet. Artifacts:
+`transferibility/out/ruler_csa_idx_w3_64k{,_a,_b}.json`, `transferibility/par_idx_w3_64k_{a,b}.log`,
+launcher `transferibility/sg_idx_w3_64k_par.sh`; smoke
+`transferibility/out/ruler_csa_idx_w3_smoke.json` + `transferibility/sg_ctrl_idx_w3_smoke/debug.log`
+(only-indexer proof)._
