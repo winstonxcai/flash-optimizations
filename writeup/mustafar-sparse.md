@@ -133,3 +133,88 @@ docker exec sglang-44039 bash -c "cd /mnt/host_root/home/jovyan/winstonxcai/tran
 # ... same for keep=0.3 on GPUs 4-7 (MASTER_PORT=29500, *_70* paths)
 python3 -u sg_capture.py report-prune   # prints the decision table + verdict
 ```
+
+---
+
+## Part: TopMag on the CSA indexer — compute, not bytes
+
+**Question.** The sections above pruned the *compressed latent* (`C^Comp ∈ ℝ^512`) — a memory win
+that needs a sparse store to materialize bytes. The same TopMag, retargeted at the **CSA indexer's**
+128-dim `kv_norm` working vectors (`--prune-target indexer`), converts sparsity into **skipped score
+work**: the indexer's `[B, S_q, 64, S_kv/4]` score GEMM is O(S²) — the largest non-MoE compute in the
+model. Does end-task RULER survive 50% / 70% indexer-key pruning? Measured at **64k, the 5 hardest
+RULER tasks × n=50**, same scoring and go rule as the latent legs.
+
+### Run / environment
+
+- Same harness + scoring as the latent legs, container `ruler-eval` (v0.5.15), date 2026-08-19.
+- `run-acc --prune-keep {0.5,0.3} --prune-target indexer`: per-row keep top-k by |RMSNorm(raw)·weight|,
+  zero the raw coords of the rest, fused recompute renormalizes. Only the indexer's keys are pruned —
+  the compressor latent and CSA attention stay at native density.
+- 64k, 5 tasks (qa_2, qa_1, fwe, vt, niah_multivalue) × n=50 = 250 samples/config, two tp=4 legs in
+  parallel on 8 GPUs (0–3 keep=0.5, 4–7 keep=0.3), separate `--ctrl-dir` + distinct `MASTER_PORT`.
+
+### Verdict: STRONG GO — the latent's QA caveat does NOT recur on the indexer
+
+| task | dense | pr50 | pr70 | d50 pts | d70 pts | R(0.5) | R(0.7) |
+|---|---|---:|---:|---:|---:|---:|---:|
+| qa_2 | 0.760 | 0.740 | 0.740 | 2.0 | 2.0 | 0.965 | 0.854 |
+| qa_1 | 0.810 | 0.780 | 0.800 | 3.0 | 1.0 | 0.968 | 0.859 |
+| fwe | 0.853 | 0.860 | 0.853 | −0.7 | 0.0 | 0.967 | 0.860 |
+| vt | 0.992 | 0.992 | 0.992 | 0.0 | 0.0 | 0.971 | 0.879 |
+| niah_multivalue | 0.998 | 1.000 | 1.000 | −0.3 | −0.3 | 0.966 | 0.853 |
+| **mean** | **0.883** | **0.874** | **0.877** | **0.82** | **0.55** | **0.967** | **0.861** |
+
+Go rule satisfied: 50% mean drop 0.82 ≤ 2 pts, R(0.5) = 0.967 > 0.90, 70% mean drop 0.55 ≤ 2 pts.
+
+### Analysis
+
+1. **The QA-family caveat does not transfer to the indexer.** qa_2 @70% is **−2.0 pts** here vs
+   **−4.5 pts** on the 512-dim latent at the same context (n=100 there). The 128-dim indexer working
+   vectors survive 70% magnitude pruning more gracefully than the latent — the caveat was a property
+   of the compressor latent, not of pruning per se.
+2. **Retrieval/needle is free again** — vt 0.0 and niah_multivalue −0.3 pts at both sparsities;
+   fwe −0.7 @50. The only tasks at/beyond 2 pts are qa_2 (2.0 @ both) and qa_1 (3.0 @50).
+3. **qa_1's −3.0 @50 vs −1.0 @70 is n=50 noise** — its dense baseline varies 0.81 (pr50 leg) vs 0.82
+   (pr70 leg) across independently-sampled configs; ±~7 pt per-task binomial error.
+4. **Compute is the point, and it is contingent.** Zeroed coords contribute zero to the score dot
+   product, but the dense score GEMM executes them all the same — this run measures the *accuracy
+   ceiling*, not a speedup. The wall-clock win needs a sparse-aware indexer score kernel (skip
+   zeroed-coordinate MACs), exactly as the latent legs' byte win needs a sparse store.
+5. **R(0.7) uniform (0.85–0.88) and non-diagnostic again** — same as the latent legs; here it does not
+   bite because no per-task loss exceeds 3 pts and the mean stays ≤ 0.8.
+6. **Orthogonal to cross-layer low-rank on the indexer** (`experiments.md` §6) — TopMag cuts the live
+   coordinates within a dimension; xKV cuts the dimensions scored. Composable; the two multiply the
+   effective per-position score cost.
+
+### Caveats
+
+- n=50/task → ~±7 pt binomial noise per task; the mean over n=200 (4-task) is ~±3.5 pt.
+- 5 hardest tasks only — no full 13-task 64k leg for the indexer, and no 32k/8k indexer legs.
+- Compute (speedup) is **not measured** — accuracy-only run; realize the win with a sparse kernel.
+- Dense is re-measured in-run per config, so pr50/pr70 deltas use slightly different dense baselines
+  (e.g. qa_1 0.810 vs 0.820).
+
+### Artifacts
+
+- `transferibility/out/ruler_csa_idx_prune50_64k.json`,
+  `transferibility/out/ruler_csa_idx_prune70_64k.json` (250 samples each)
+- Logs: `transferibility/par_idx_prune50_64k.log`, `par_idx_prune70_64k.log` (both end
+  `[acc] wrote … in ~35.5 min` + `[unpatch] restored`); launcher `transferibility/sg_prune_idx_64k_par.sh`
+
+### Reproduce
+
+```bash
+# 64k indexer leg — two tp=4 runs in parallel on 8 GPUs; separate ctrl-dir + distinct MASTER_PORT
+CT=/mnt/host_root/home/jovyan/winstonxcai/transferibility
+docker exec ruler-eval bash -c "cd $CT && CUDA_VISIBLE_DEVICES=0,1,2,3 MASTER_PORT=29501 \
+  SG_ENV_OVERRIDE=1 NCCL_IB_DISABLE=1 NCCL_SOCKET_IFNAME=lo NCCL_P2P_LEVEL=NVL \
+  python3 -u sg_capture.py run-acc --prune-keep 0.5 --prune-target indexer --lengths 64k \
+    --tasks qa_2,qa_1,fwe,vt,niah_multivalue --n-64k 50 --tp 4 --mem-fraction 0.95 \
+    --ctrl-dir $CT/sg_ctrl_idx_prune50_64k --out $CT/out/ruler_csa_idx_prune50_64k.json"
+# ... same for --prune-keep 0.3 on GPUs 4-7 (MASTER_PORT=29500, *_70* paths)
+
+docker exec ruler-eval bash -c "cd $CT && python3 -u sg_capture.py report-prune \
+  --prune50 out/ruler_csa_idx_prune50_64k.json --prune70 out/ruler_csa_idx_prune70_64k.json \
+  --label 64k --tasks qa_2,qa_1,fwe,vt,niah_multivalue"
+```

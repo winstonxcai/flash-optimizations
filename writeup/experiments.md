@@ -15,7 +15,7 @@ mostly holds, barely; **Mustafar** (magnitude pruning of the compressed cache) �
 | Mustafar TopMag pruning | STRONG GO | 50%: −0.2 pts; 70%: +0.4–0.6 pts except QA (qa_2 −4.5 @64k) |
 | xKV cross-layer end-task | free @32k | −0.004 @32k, −0.03 @8k; 6.4× CSA-latent cut (134.8→21.0 MB) |
 | xKV cross-layer on CSA indexer | *planned* | — |
-| TopMag (Mustafar) on CSA indexer | *planned* | — |
+| TopMag (Mustafar) on CSA indexer | STRONG GO | 5 hardest @64k × n=50: Δ50 0.82 pt, Δ70 0.55 pt; qa_2 @70% −2.0 (vs −4.5 latent) |
 
 ---
 
@@ -216,7 +216,8 @@ score inputs; the reconstruction is injected back into the indexer path (2-pass:
 
 ## 7. TopMag (Mustafar) sparsity on the CSA indexer
 
-*Status: **planned — not yet run.***
+*Status: **done — STRONG GO @64k** (5 hardest tasks × n=50). Full write-up: appended to
+`writeup/mustafar-sparse.md`.*
 
 **Motivation.** Same compute motive: the indexer is likely the largest non-MoE compute component in
 V4-Flash. The latent TopMag study (Section 4) was a strong go (50% free, 70% near-free except QA).
@@ -224,13 +225,34 @@ Applying the same zero-smallest-|·|-in-place + renormalize to the indexer's wor
 that into **skipped compute** — zeroed coordinates accumulate no score — which is the win Section 4
 could not claim in bytes (the store still wrote full 512-dim vectors).
 
-**Method.** Transfer of Section 4's harness (`run-acc --prune-keep {0.5,0.3}`), retargeted from the
-compressed latent to the **indexer**: per-row keep top-k by |RMSNorm(raw)·weight|, zero the rest,
-fused recompute renormalizes; measure retained energy + end-task RULER.
+**Method.** Transfer of Section 4's harness (`run-acc --prune-keep {0.5,0.3} --prune-target indexer`),
+targeting the indexer's 128-dim `kv_norm` keys: per-row keep top-k by |RMSNorm(raw)·weight|, zero the
+rest, fused recompute renormalizes; measure retained energy + end-task RULER. 64k, the 5 hardest tasks
+× n=50, two tp=4 legs in parallel on 8 GPUs (container `ruler-eval`, 2026-08-19).
 
-**Go/no-go design.**
-- End-task RULER dense vs pr50 vs pr70, same go rule as Section 4 (mean drop ≤ 2 pts at both
-  sparsities; R(0.5) > 0.90).
-- Whether the QA-family caveat (qa_2 −4.5 pts @70% @64k) recurs when the *indexer*, not the latent, is
-  the pruned object.
-- Compute savings = score work skipped on zeroed coords (vs Section 4, where no bytes were saved).
+### Verdict: STRONG GO — and the QA caveat does NOT recur on the indexer
+
+| task | dense | pr50 | pr70 | d50 pts | d70 pts | R(0.5) | R(0.7) |
+|---|---|---:|---:|---:|---:|---:|---:|
+| qa_2 | 0.760 | 0.740 | 0.740 | 2.0 | 2.0 | 0.965 | 0.854 |
+| qa_1 | 0.810 | 0.780 | 0.800 | 3.0 | 1.0 | 0.968 | 0.859 |
+| fwe | 0.853 | 0.860 | 0.853 | −0.7 | 0.0 | 0.967 | 0.860 |
+| vt | 0.992 | 0.992 | 0.992 | 0.0 | 0.0 | 0.971 | 0.879 |
+| niah_multivalue | 0.998 | 1.000 | 1.000 | −0.3 | −0.3 | 0.966 | 0.853 |
+| **mean** | **0.883** | **0.874** | **0.877** | **0.82** | **0.55** | **0.967** | **0.861** |
+
+- **STRONG GO** — mean 50% drop 0.82 pts (≤2 ✓) and R(0.5) = 0.967 (>0.90 ✓); 70% drop 0.55 pts (≤2 ✓).
+- **The qa_2 caveat does not recur.** On the latent, qa_2 @70% fell **4.5 pts** @64k (Section 4, n=100);
+  on the indexer it's **−2.0 pts @70%**. The 128-dim indexer working vectors survive 50/70% TopMag more
+  gracefully than the 512-dim latent. qa_1 is within n=50 noise (−3.0 @50 vs −1.0 @70; dense baseline
+  varies 0.81–0.82 between configs).
+- **Retrieval/needle is free again** — vt 0.0 and niah_multivalue −0.3 pts at both sparsities.
+- **Win is compute, realized only with a sparse score kernel.** Zeroed coords don't change the dense
+  GEMM's FLOPs as executed today; this run sets the accuracy ceiling, the skipped-score-work speedup
+  needs a sparse-aware indexer kernel (mirror of Section 4's "no bytes saved yet").
+- **Orthogonal to §6's cross-layer low-rank** — TopMag prunes within-dimension coords; xKV cuts the
+  dims scored; the two multiply the effective per-position score cost.
+
+*Caveats:* per-task n=50 → ~±7 pt binomial noise (qa_1's sign flip is that noise); 5 hardest tasks
+only — no full-13 or short-context indexer legs; R(0.7)≈0.86 uniform and non-diagnostic (same
+limitation as Section 4); compute claim contingent on a sparse kernel.
