@@ -185,7 +185,10 @@ Go rule satisfied: 50% mean drop 0.82 ≤ 2 pts, R(0.5) = 0.967 > 0.90, 70% mean
    bite because no per-task loss exceeds 3 pts and the mean stays ≤ 0.8.
 6. **Orthogonal to cross-layer low-rank on the indexer** (`experiments.md` §6) — TopMag cuts the live
    coordinates within a dimension; xKV cuts the dimensions scored. Composable; the two multiply the
-   effective per-position score cost.
+   effective per-position score cost. **The composed version ran and is free** (`experiments.md` §8,
+   `xkv-crosslayer.md` Part 5): xKV W3 recon → TopMag50 on the reconstruction → indexer, 0.883 vs
+   paired native 0.869 @64k — TopMag on the reconstruction appears to partially *clean* the W3
+   truncation error rather than stack on it.
 
 ### Caveats
 

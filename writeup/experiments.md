@@ -3,7 +3,9 @@
 The arc: **ShadowKV** (bolt-on within-layer SVD) → no headroom on V4; **xKV** (cross-layer low-rank) →
 proxy says grouping wins but needs end-task proof; **AsymKV** premise (adjacent-key homogeneity) →
 mostly holds, barely; **Mustafar** (magnitude pruning of the compressed cache) → strong go;
-**xKV RULER end-task** → free at 32k (latent); **xKV on the CSA indexer** → not free at 64k (−1.1 pts).
+**xKV RULER end-task** → free at 32k (latent); **xKV on the CSA indexer** → not free at 64k (−1.1 pts);
+**TopMag on the indexer** → strong go; **composed xKV + TopMag on the indexer** → free at 64k
+(the errors don't compound).
 
 **Headline numbers:**
 
@@ -16,6 +18,7 @@ mostly holds, barely; **Mustafar** (magnitude pruning of the compressed cache) �
 | xKV cross-layer end-task | free @32k | −0.004 @32k, −0.03 @8k; 6.4× CSA-latent cut (134.8→21.0 MB) |
 | xKV cross-layer on CSA indexer | ⚠ not free @64k | −1.1 pts macro (5 hardest × n=50); retrieval/needle free, fwe +4.0, qa_1 +2.0; 2:1 indexer compute cut is kernel-gated |
 | TopMag (Mustafar) on CSA indexer | STRONG GO | 5 hardest @64k × n=50: Δ50 0.82 pt, Δ70 0.55 pt; qa_2 @70% −2.0 (vs −4.5 latent) |
+| Composed xKV W3 → TopMag50 (indexer) | STRONG GO @64k | composed 0.883 ≥ paired native 0.869 and ≥ both single levers (W3 0.877, pr50 0.874); 4× indexer score-cost ceiling; errors don't compound |
 
 ---
 
@@ -192,6 +195,9 @@ card) leaves room; the long-context result is the 32k leg.
 
 ## 6. xKV cross-layer low-rank on the CSA indexer
 
+*This run is now a **baseline column** of the composed experiment 8 (§8), together with §7's TopMag
+run.*
+
 **Question.** Does a rank-`r` basis shared across adjacent CSA layers preserve the CSA indexer's
 *selection* (the top-512 token set → end-task RULER score) while cutting its compute? The indexer —
 per-query top-512 token selection over 64 index heads, fp32 `[B, S_q, 64, S_kv/4]` score tensor — is
@@ -234,6 +240,9 @@ Artifacts: `transferibility/out/ruler_csa_idx_w3_64k{,_a,_b}.json`, launcher
 
 ## 7. TopMag (Mustafar) sparsity on the CSA indexer
 
+*This run is now a **baseline column** of the composed experiment 8 (§8), together with §6's W3-only
+run.*
+
 *Status: **done — STRONG GO @64k** (5 hardest tasks × n=50). Full write-up: appended to
 `writeup/mustafar-sparse.md`.*
 
@@ -274,3 +283,70 @@ rest, fused recompute renormalizes; measure retained energy + end-task RULER. 64
 *Caveats:* per-task n=50 → ~±7 pt binomial noise (qa_1's sign flip is that noise); 5 hardest tasks
 only — no full-13 or short-context indexer legs; R(0.7)≈0.86 uniform and non-diagnostic (same
 limitation as Section 4); compute claim contingent on a sparse kernel.
+
+---
+
+## 8. Composed: xKV W3 cross-layer recon → TopMag50 → CSA indexer
+
+*Status: **done — STRONG GO @64k** (5 hardest tasks × n=50, single tp=4 leg on 4 GPUs). The exp-6
+W3-only run and the exp-7 TopMag50 run above are the two **baseline columns** of this experiment's
+report table.*
+
+**Question.** The two indexer compute levers measured separately in §6 (xKV W3@b64, NOT free: −1.1
+pts @64k) and §7 (TopMag50, free: +0.82 pts @64k) compose cleanly into one pipeline:
+
+```
+K^I →(xKV W3@r192)→ K̂^I →(TopMag 50%)→ K̃^I →(indexer)→ Top-512
+```
+
+native 128-dim indexer keys → rank-192 shared-basis reconstruction across groups of 3 CSA layers →
+per-key TopMag50 (128 → 64 nonzeros, on the *reconstruction*) → the ordinary indexer's top-512
+selection. The win metric is **compute**: xKV halves the dims scored (128→64) and TopMag zeroes half
+the remaining coords, so the per-position indexer score cost drops **4×** — *if* the fused indexer
+kernel skips the dropped/zeroed dims (kernel-gated, same caveat as §6/§7). The question: does
+stacking the two levers **compound the errors** (W3-only −1.1 pts) or interact usefully?
+
+### Verdict: STRONG GO — composition is free, and ≥ both single levers in aggregate
+
+**64k, 5 hardest tasks × n=50 (250 smp), 2026-08-20:**
+
+| task | native | W3-only | TopMag50 | composed | Δcomp pts |
+|---|---:|---:|---:|---:|---:|
+| qa_2 | 0.720 | 0.760 | 0.740 | **0.800** | −0.08 |
+| qa_1 | 0.780 | 0.800 | 0.780 | 0.780 | +0.00 |
+| fwe | 0.853 | 0.827 | 0.860 | 0.833 | +0.02 |
+| vt | 0.992 | 0.996 | 0.992 | 1.000 | −0.01 |
+| niah_multivalue | 1.000 | 1.000 | 1.000 | 1.000 | +0.00 |
+| **mean** | **0.869** | **0.877** | **0.874** | **0.883** | **−0.014** |
+
+`native` = the composed run's own pass-1 dense (paired, same samples); `Δcomp` = native − composed,
+positive = drop. The exp-6/exp-7 dense baselines were 0.888 / 0.883 — this run's dense drew low on
+qa_2/qa_1 (0.72/0.78 vs 0.76/0.81), within n=50 sampling noise (shared-gt dense matches 234/242
+across runs, so the native path itself is stable).
+
+- **Composition does NOT compound the errors — it is free.** Composed mean 0.883 vs its paired
+  native 0.869 (**Δ = −0.014**, i.e. composed 1.4 pts *above* native on the same samples) and vs
+  the historical native range 0.883–0.888 within 0.5 pt. Under the ≤1–2 pt go bar → **STRONG GO**.
+- **Composed ≥ both single levers in aggregate** (0.883 vs W3-only 0.877, TopMag50 0.874).
+  Suggestive mechanism: the SVD-truncation error is concentrated in the reconstruction's
+  smallest-|·| coords; TopMag50 zeroes exactly those, so pruning the *reconstruction* partially
+  **cleans the W3 error** rather than stacking on it. Caveat: per-column n=50 binomial SEM ≈ 4.8
+  pts — the 0.6–0.9 pt gaps are within noise; the defensible claim is "not worse", the direction
+  is suggestive.
+- **The treatment is very mild.** Only 11/250 samples change under composition (+7/−4 net).
+  R(0.5) = 0.968 on the reconstruction ≈ exp-7's native R(0.5) = 0.967 — TopMag keeps the same
+  energy fraction whether applied to native or reconstructed keys.
+- **Workload shape is preserved.** fwe (word-recall) still carries the small penalty (composed
+  0.833, +0.02 vs its dense, 3 down-flips — the §6 fwe cost persists); retrieval/needle free
+  (niah_multivalue 1.000, vt 0.992 → 1.000).
+- **4× per-position score-cost ceiling, kernel-gated.** xKV halves dims (128→64), TopMag zeroes
+  50% of coords → 4× fewer indexer score FLOPs/position at ≤1 pt of accuracy cost, *if* the fused
+  indexer kernel skips the dropped/zeroed dims (mirror of §6/§7's sparse-kernel caveat).
+
+*Caveats: per-task n=50 → ~±4.8 pts/column binomial noise (the qa_2 −0.08 "gain" is within it);
+the composed run's dense column drew low (0.869 vs 0.883–0.888) — sample draw + fp8 nondeterminism,
+not a path change; no 8k/32k composed legs; compute claim contingent on a sparse fused kernel.
+Artifacts: `transferibility/out/ruler_csa_idx_w3_tm50_64k.json`, launcher
+`transferibility/sg_idx_w3_tm50_64k.sh` (single tp=4 leg, 4 GPUs), smoke
+`out/ruler_csa_idx_w3_tm50_smoke.json` (504 `inject` ↔ 504 `compose_inject`, zero
+`prune_inject`/`dim=512`). Detailed method: `writeup/xkv-crosslayer.md` Part 5.*

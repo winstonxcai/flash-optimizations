@@ -265,3 +265,64 @@ n=50/task at 64k (RULER on-disk cap + scheduling match with the sibling TopMag-i
 launcher `transferibility/sg_idx_w3_64k_par.sh`; smoke
 `transferibility/out/ruler_csa_idx_w3_smoke.json` + `transferibility/sg_ctrl_idx_w3_smoke/debug.log`
 (only-indexer proof)._
+
+---
+
+## Part 5 — Composed: xKV W3 recon → TopMag50 → indexer (64k end-task)
+
+Part 4 found W3 cross-layer low-rank on the indexer keys is **not free** at 64k (−1.1 pts). This part
+composes it with the magnitude lever that *was* free (Part 4 of the Mustafar writeup, TopMag50 on the
+same 128-dim keys, +0.82 pts): apply TopMag50 **after** the cross-layer reconstruction, to the
+*reconstructed* keys, then let the indexer select on those.
+
+```
+K^I →(xKV W3@r192)→ K̂^I →(TopMag 50%)→ K̃^I →(indexer)→ Top-512
+```
+
+Part 4 is now a **baseline column** of this experiment's report table. Same 2-pass harness as Part 4,
+with `--prune-target indexer --prune-keep 0.5` added: pass 2 reconstructs then TopMag's each
+`[T,128]` reconstructed key (mask on `|R_slice|`, zero the raw `inv` coords so the store renormalizes
+into `TopMag_50%(K̂^I)`). 64k, 5 hardest tasks × n=50, single tp=4 leg on 4 GPUs (container
+`ruler-eval`, 2026-08-20).
+
+**64k RULER (n=50/task, 250 smp):**
+
+| task | native | W3-only | TopMag50 | composed | Δcomp pts |
+|---|---:|---:|---:|---:|---:|
+| qa_2 | 0.720 | 0.760 | 0.740 | **0.800** | −0.08 |
+| qa_1 | 0.780 | 0.800 | 0.780 | 0.780 | +0.00 |
+| fwe | 0.853 | 0.827 | 0.860 | 0.833 | +0.02 |
+| vt | 0.992 | 0.996 | 0.992 | 1.000 | −0.01 |
+| niah_multivalue | 1.000 | 1.000 | 1.000 | 1.000 | +0.00 |
+| **mean** | **0.869** | **0.877** | **0.874** | **0.883** | **−0.014** |
+
+**Analysis.**
+
+**1. Composition does NOT compound the W3 error — it is free.** Composed mean 0.883 vs paired native
+0.869 (Δ −0.014, i.e. composed 1.4 pts above its own dense on the same samples), vs the Part-4/§7
+native range 0.883–0.888 within 0.5 pt. The ≤1–2 pt bar is met with room.
+
+**2. Composed ≥ both single levers in aggregate** (0.883 vs W3-only 0.877, TopMag50 0.874). The
+suggestive mechanism: SVD-truncation error lives in the reconstruction's smallest-|·| coords, and
+TopMag50 zeroes exactly those — pruning the *reconstruction* partially cleans the cross-layer error
+instead of adding to it. At n=50 the 0.6–0.9 pt gaps are within binomial SEM (≈4.8 pts/column), so
+"not worse" is the defensible claim; the direction is consistent with the mechanism.
+
+**3. Very mild treatment.** 11/250 samples flip under composition (+7/−4 net). R(0.5) = 0.968 on the
+reconstruction ≈ native TopMag's 0.967 — the same energy fraction is kept whether the mask is applied
+to native or reconstructed keys.
+
+**4. Workload shape is preserved.** fwe still carries the small word-recall penalty (0.833, 3
+down-flips — Part 4's fwe cost persists); retrieval/needle free (niah_multivalue 1.000, vt → 1.000).
+
+**5. The 4× compute ceiling is kernel-gated.** xKV halves the dims scored (128→64) and TopMag zeroes
+half the remaining coords → 4× fewer per-position indexer score FLOPs at ≤1 pt of accuracy cost,
+conditional on a fused indexer kernel that skips dropped/zeroed dims.
+
+_Notes: `native` = composed run's own pass-1 dense (capture-mode generation is native), the same
+paired reference used throughout; its qa_2/qa_1 drew low vs Part 4's (0.72/0.78 vs 0.76/0.82) —
+shared-gt dense matches 234/242 across runs, so the native path is stable and the difference is n=50
+sample draw + fp8 nondeterminism. Artifacts: `transferibility/out/ruler_csa_idx_w3_tm50_64k.json`,
+launcher `transferibility/sg_idx_w3_tm50_64k.sh`, smoke
+`transferibility/out/ruler_csa_idx_w3_tm50_smoke.json` (compose proof: 504 `inject` ↔ 504
+`compose_inject`, zero `prune_inject` / `dim=512`)._
