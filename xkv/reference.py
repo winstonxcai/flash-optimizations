@@ -96,7 +96,7 @@ def apply_rope_tail(recon, freqs_cis, pos):
     n = recon.shape[0]
     fc = torch.view_as_real(freqs_cis[pos.long()])
     tail = recon[:, config.NOPE_DIM:].view(n, config.ROPE_DIM // 2, 2)
-    real, imag = tail[..., 0], tail[..., 1]
+    real, imag = tail[..., 0].clone(), tail[..., 1].clone()
     tail[..., 0] = real * fc[..., 0] - imag * fc[..., 1]
     tail[..., 1] = real * fc[..., 1] + imag * fc[..., 0]
 
