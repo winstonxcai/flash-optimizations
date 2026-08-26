@@ -42,3 +42,44 @@ def test_triton_reconstruction_matches_reference():
     fused_indexer.reconstruct(buf, loc, page_size=32, layer_id=layer, out=out_tri, freqs_cis=freqs)
     torch.cuda.synchronize()
     assert torch.allclose(out_ref, out_tri, atol=0.02, rtol=0.02)
+
+
+@pytest.mark.skipif(
+    not torch.cuda.is_available()
+    or torch.cuda.get_device_capability()[0] != 8
+    or not hasattr(torch, "float8_e4m3fnuz"),
+    reason="A800-compatible FP8 test requires SM80 and float8_e4m3fnuz",
+)
+def test_triton_reconstruction_a800_supported_fp8():
+    """Exercise the Triton path with SM80's supported e4m3b15 encoding."""
+    from xkv.triton import fused_indexer
+
+    device = torch.device("cuda")
+    layer = 1
+    supported_fp8 = torch.float8_e4m3fnuz
+    old_reference_dtype = reference.fp8_dtype
+    old_triton_dtype = fused_indexer.fp8_dtype
+    try:
+        reference.fp8_dtype = supported_fp8
+        fused_indexer.fp8_dtype = supported_fp8
+        basis, _ = torch.linalg.qr(torch.randn(config.HEAD_DIM, config.COEFF_DIM, device=device))
+        reference._Vr[layer] = basis.cpu()
+        reference._VrT[layer] = basis.T.cpu()
+        reference._Vr_dev.clear()
+        reference._VrT_dev.clear()
+        reference._VrT_bf16_dev.clear()
+        freqs = torch.polar(torch.ones(64, config.ROPE_DIM // 2, device=device), torch.zeros(64, config.ROPE_DIM // 2, device=device))
+        reference.set_freqs(freqs)
+        buf = torch.zeros(2, 32 * config.BYTES_PER_TOKEN, dtype=torch.uint8, device=device)
+        loc = torch.arange(32, device=device, dtype=torch.long)
+        coeff, scales = reference.quantize(torch.randn(32, config.COEFF_DIM, device=device))
+        reference.store_torch(buf, loc, coeff, scales, torch.arange(32, device=device, dtype=torch.int32), 32)
+        out_ref = torch.zeros(32, 1, config.HEAD_DIM, dtype=torch.bfloat16, device=device)
+        out_tri = torch.zeros_like(out_ref)
+        reference.reconstruct_torch(buf, loc, page_size=32, layer_id=layer, out=out_ref)
+        fused_indexer.reconstruct(buf, loc, page_size=32, layer_id=layer, out=out_tri, freqs_cis=freqs)
+        torch.cuda.synchronize()
+        assert torch.allclose(out_ref, out_tri, atol=0.02, rtol=0.02)
+    finally:
+        reference.fp8_dtype = old_reference_dtype
+        fused_indexer.fp8_dtype = old_triton_dtype
