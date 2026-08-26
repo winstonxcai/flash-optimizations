@@ -14,7 +14,11 @@ def test_projection_reconstruction_rank192():
     assert torch.isfinite(restored).all()
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA/Triton unavailable")
+@pytest.mark.skipif(
+    not torch.cuda.is_available()
+    or torch.cuda.get_device_capability()[0] < 9,
+    reason="CUDA/Triton FP8 test requires SM90+",
+)
 def test_triton_reconstruction_matches_reference():
     from xkv.triton import fused_indexer
 
@@ -38,4 +42,3 @@ def test_triton_reconstruction_matches_reference():
     fused_indexer.reconstruct(buf, loc, page_size=32, layer_id=layer, out=out_tri, freqs_cis=freqs)
     torch.cuda.synchronize()
     assert torch.allclose(out_ref, out_tri, atol=0.02, rtol=0.02)
-

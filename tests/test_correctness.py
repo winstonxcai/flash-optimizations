@@ -37,6 +37,5 @@ def test_rope_tail_matches_complex_rotation():
     x = torch.zeros(1, config.HEAD_DIM)
     x[:, config.NOPE_DIM:] = 1
     reference.apply_rope_tail(x, freqs, pos)
-    assert torch.allclose(x[:, config.NOPE_DIM::2], torch.cos(torch.tensor(0.5)), atol=1e-6)
-    assert torch.allclose(x[:, config.NOPE_DIM + 1::2], torch.sin(torch.tensor(0.5)), atol=1e-6)
-
+    assert torch.allclose(x[:, config.NOPE_DIM::2], torch.cos(torch.tensor(0.5)) - torch.sin(torch.tensor(0.5)), atol=1e-6)
+    assert torch.allclose(x[:, config.NOPE_DIM + 1::2], torch.sin(torch.tensor(0.5)) + torch.cos(torch.tensor(0.5)), atol=1e-6)
