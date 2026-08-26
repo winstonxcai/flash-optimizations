@@ -47,16 +47,16 @@ def test_triton_reconstruction_matches_reference():
 @pytest.mark.skipif(
     not torch.cuda.is_available()
     or torch.cuda.get_device_capability()[0] != 8
-    or not hasattr(torch, "float8_e4m3fnuz"),
-    reason="A800-compatible FP8 test requires SM80 and float8_e4m3fnuz",
+    or not hasattr(torch, "float8_e5m2"),
+    reason="A800-compatible FP8 test requires SM80 and float8_e5m2",
 )
 def test_triton_reconstruction_a800_supported_fp8():
-    """Exercise the Triton path with SM80's supported e4m3b15 encoding."""
+    """Exercise the Triton path with an FP8 type supported by SM80 Triton."""
     from xkv.triton import fused_indexer
 
     device = torch.device("cuda")
     layer = 1
-    supported_fp8 = torch.float8_e4m3fnuz
+    supported_fp8 = torch.float8_e5m2
     old_reference_dtype = reference.fp8_dtype
     old_triton_dtype = fused_indexer.fp8_dtype
     try:
