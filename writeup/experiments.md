@@ -26,7 +26,7 @@ is one experiment, numbered sequentially; every metric is stated against the bas
 
 ---
 
-## 1. ShadowKV-on-V4-Flash probe
+## 1. ShadowKV-on-V4-Flash probe — week of July 27, 2026
 
 **Methodology.** Bolt-on within-layer SVD + sparse KV compression, testing whether V4-Flash has
 headroom to speed up decode. Headroom requires (1) retained KV still strongly low-rank
@@ -58,7 +58,7 @@ naive-inference artifacts — trust the roofline.
 
 ---
 
-## 2. xKV cross-layer on CSA — Frobenius proxy
+## 2. xKV cross-layer on CSA — Frobenius proxy — week of August 3, 2026
 
 **Methodology.** Proxy for cross-layer low-rank on the pre-RoPE CSA latent (`[T,512]`, 21 layers):
 relative Frobenius recon error of a rank-`r` basis shared across adjacent groups of W layers vs
@@ -85,7 +85,7 @@ n=32.
 
 ---
 
-## 3. AsymKV sanity check on V4-Flash CSA keys
+## 3. AsymKV sanity check on V4-Flash CSA keys — week of August 10, 2026
 
 **Methodology.** AsymKV premise: adjacent cached keys are locally homogeneous (ρ(1) ≫ ρ(2) > ρ(4) >
 ρ(8)). Measured ρ(Δ) = mean cos(C_j, C_{j+Δ}) on pre-RoPE CSA latents (21 layers, RULER tasks,
@@ -113,7 +113,7 @@ niah period-4 peak is unexplained.
 
 ---
 
-## 4. TopMag pruning of the CSA compressed cache (latent)
+## 4. TopMag pruning of the CSA compressed cache (latent) — week of August 17, 2026
 
 **Methodology.** Mustafar-style magnitude pruning on the stored native CSA vector (`C^Comp ∈ ℝ^512`,
 21 layers): zero the smallest-|·| coordinates in place at keep-ratio 0.5/0.7, fused store renormalizes.
@@ -143,7 +143,7 @@ penalty is not noise.
 
 ---
 
-## 5. Cross-layer low-rank on CSA: RULER end-task accuracy
+## 5. Cross-layer low-rank on CSA: RULER end-task accuracy — week of August 17, 2026
 
 **Methodology.** `W3` = adjacent groups of 3 CSA layers share a rank-192 basis (b = 64 dims/layer),
 reconstruction injected back into the KV store, vs the model's **native CSA** path (full 512-dim,
@@ -171,7 +171,7 @@ cost of cross-layer low-rank; 64k deferred (the fp32 latent capture OOM's rank 0
 
 ---
 
-## 6. xKV cross-layer low-rank on the CSA indexer
+## 6. xKV cross-layer low-rank on the CSA indexer — week of August 17, 2026
 
 **Methodology.** Same transfer as exp 5, retargeted from the 512-dim compressor latent to the 128-dim
 indexer keys: W3@b64 (adjacent groups of 3 CSA layers share a rank-192 basis) = 2:1 indexer compression,
@@ -202,7 +202,7 @@ pattern is the signal); no 8k/32k indexer legs.
 
 ---
 
-## 7. TopMag (Mustafar) sparsity on the CSA indexer
+## 7. TopMag (Mustafar) sparsity on the CSA indexer — week of August 17, 2026
 
 **Methodology.** Transfer of exp 4 to the 128-dim indexer keys: per-row keep top-k by
 |RMSNorm(raw)·weight|, zero the rest, fused recompute renormalizes. 64k, 5 hardest tasks × n=50.
@@ -231,7 +231,7 @@ R(0.7)≈0.86 uniform and non-diagnostic.
 
 ---
 
-## 8. Composed: xKV W3 cross-layer recon → TopMag50 → CSA indexer
+## 8. Composed: xKV W3 cross-layer recon → TopMag50 → CSA indexer — week of August 17, 2026
 
 **Methodology.** Stack the two indexer compute levers end-to-end: native 128-dim keys → xKV W3@r192
 (reconstruction across groups of 3 CSA layers, halves dims scored 128→64) → TopMag50 (zeroes half the
@@ -269,7 +269,7 @@ column drew low (0.869 vs 0.883–0.888); no 8k/32k composed legs; the 4× compu
 
 ---
 
-## 9. Lowrank serving benchmark — compressor-only, no store
+## 9. Lowrank serving benchmark — compressor-only, no store — week of August 24, 2026
 
 **Methodology.** xKV W3 cross-layer low-rank (rank-192 fixed basis, single-pass projection before the
 fused store) on the CSA compressor latent only; the indexer untouched. bench_serving, 64 concurrent
@@ -298,7 +298,7 @@ the latent is reconstructed to full 512 dims before storing → stored bytes unc
 
 ---
 
-## 10. Lowrank concurrency ceiling (200 B/token store)
+## 10. Lowrank concurrency ceiling (200 B/token store) — week of August 24, 2026
 
 **Methodology.** W3 xKV cross-layer low-rank on the CSA compressor latent (rank-192 fixed basis,
 512→192 dims), stored as 200 B/token in the patched low-rank store (`SGLANG_OPT_LOWRANK_KV_STORE=1`).
@@ -327,7 +327,7 @@ accompanied the run predate the fused recon and are superseded by exp 11.
 
 ---
 
-## 11. Fused Triton recon kernel
+## 11. Fused Triton recon kernel — week of August 24, 2026
 
 **Methodology.** The low-rank store must re-expand 192-dim coeffs to the 512-dim latent on read; v1 did
 it eagerly in torch (gather → dequant → fp32 GEMM → bf16 copy). Build a fused on-chip kernel (gather →
@@ -361,7 +361,7 @@ dominates the ~11 ms/layer kernel difference); validation also fixed a pre-exist
 
 ---
 
-## 12. Fixed-basis lowrank Sangfor-Bench
+## 12. Fixed-basis lowrank Sangfor-Bench — week of August 24, 2026
 
 **Methodology.** Low-rank store with a **frozen** basis fit on corpus latents
 (`SGLANG_OPT_LOWRANK_KV_STORE=1`, `XKV_RECON_TRITON=1`), evaluated on Sangfor-Bench. Retention
@@ -394,7 +394,7 @@ latents); the viable design is windowed self-fit (exp 13).
 
 ---
 
-## 13. Windowed self-fit (1-sample)
+## 13. Windowed self-fit (1-sample) — week of August 24, 2026
 
 **Methodology.** Windowed self-fit low-rank store: the newest W=4096 c4 tokens stay **native** (528
 B/slot, full rank); at each window boundary a rank-192 basis is SVD-fit on the window's *own* normed
@@ -425,7 +425,7 @@ Memory: **528 B/token vs native 584 (1.11× = 9.6 %)**; fixed-basis xkv was 200 
 
 ---
 
-## 14. Windowed self-fit (10-sample gate) — terminated
+## 14. Windowed self-fit (10-sample gate) — terminated — week of August 24, 2026
 
 **Methodology.** Gate for the packed two-pool design: 10 instances sampled (seed=42) from the native
 baseline's 190, Sangfor-Bench cc agent, max_workers=3, 18k-s timeout. Run **terminated after ~70 min**
