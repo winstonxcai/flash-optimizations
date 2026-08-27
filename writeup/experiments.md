@@ -23,6 +23,7 @@ is one experiment, numbered sequentially; every metric is stated against the bas
 | 12 | Fixed-basis Sangfor-Bench | 10/10 garbage (0–1 tool calls); retention 0.77–0.87 @r320 |
 | 13 | Windowed self-fit (n=1) | 19/29 vs native 29/29; 528 vs 584 B/token (9.6 %) |
 | 14 | Windowed self-fit (n=10) | terminated: 0/10 done @70 min, 3/3 agents 0 tool calls |
+| 15 | TopMag 50 % on native c4 (n=1) | 29/29 vs native 29/29 (windowed 19/29); 0 memory saved |
 
 ---
 
@@ -454,3 +455,35 @@ with 0/10 completed.
 *Caveat:* no root cause; the server had ~4 h uptime and 3 concurrent workers when the stall began,
 whereas the 1-sample acted on a freshly-started server at max_workers=1 — concurrency or server state
 are confounders, not ruled out.
+
+---
+
+## 15. TopMag 50 % on the native c4 latent (n=1)
+
+**Methodology.** Store-time magnitude pruning, native build: each c4 latent has its smallest-|·| 256
+of 512 coords zeroed in place right before the stock fused store (`mustafar` package, hook injected
+into `compressor_v2.py`). Memory pool (584 B/token), decode, and every other path are **stock
+DeepSeek-V4** — no lowrank KV, no basis. Sangfor-Bench cc agent, single instance, same task as exp
+13/14 and the native CSA baseline.
+
+**Metrics.**
+
+| | native CSA | windowed self-fit | TopMag 50 % (native) |
+|---|---|---|---|
+| run_agent tests | 29/29 (100 %) | 19/29 (65.5 %) | **29/29 (100 %)** |
+| resolved | true | false | **true** |
+
+Memory: **unchanged** (native 584 B/token) — the point is pure fidelity, not savings.
+
+**Takeaways.**
+- TopMag 50 % on the native c4 latent is **indistinguishable from native on this agentic task** —
+  all 29 tests pass, including the exact-string Chinese log assertions the windowed build missed
+  (8× sleep-path, one missing `间隔` token). Agent: 00:42:38, 9 coherent tool calls, complete patch.
+- Direct contrast: windowed self-fit re-encodes windows through a fitted basis and drifted one string
+  + dropped one edit (19/29); zeroing the smallest-|·| half of each latent concentrates loss in the
+  least-important directions and preserves the kept coords bit-exactly.
+- Zero bandwidth saved — this answers *"can the model tolerate 50 % per-latent pruning at
+  store-time?"* (yes, on n=1), not *"how much memory can TopMag save?"*. A packed store that drops
+  the zeroed coords is the untested follow-up.
+
+*Caveat:* n=1 — diagnostic, not a ranking.

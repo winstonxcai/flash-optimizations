@@ -1,0 +1,5 @@
+# mustafar runtime artifacts (prune ctrl log, serve logs, bytecode)
+mustafar/ctrl/
+mustafar/logs/
+mustafar/__pycache__/
+**/__pycache__/
