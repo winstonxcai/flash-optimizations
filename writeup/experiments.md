@@ -350,3 +350,30 @@ Artifacts: `transferibility/out/ruler_csa_idx_w3_tm50_64k.json`, launcher
 `transferibility/sg_idx_w3_tm50_64k.sh` (single tp=4 leg, 4 GPUs), smoke
 `out/ruler_csa_idx_w3_tm50_smoke.json` (504 `inject` ↔ 504 `compose_inject`, zero
 `prune_inject`/`dim=512`). Detailed method: `writeup/xkv-crosslayer.md` Part 5.*
+
+---
+
+## 9. Lowrank KV-decode: the windowed self-fit pivot
+
+*Status: **pivot — fixed basis dead, windowed self-fit coherent (n=1), 10-sample gate running.***
+
+**Why.** Fixed-basis lowrank KV-decode fails by construction on agentic tasks: the c4 latent subspace
+is content-dependent and drifts during decode, so a precomputed basis retains only 0.77–0.87 of
+per-layer energy @ r320 → **10/10 garbage** on Sangfor-Bench. The fix (mirroring real xKV's online
+per-sequence SVD): **per-window self-fit** — newest W=4096 tokens stay native; each window boundary
+SVD-fits a rank-192 basis on the window's *own* latents and re-encodes in place (self-fit retention
+≈ 1.0).
+
+**First eval (1 sample, same task):** windowed **19/29 (65.5 %, resolved=false)** vs native CSA
+**29/29 (100 %)**. First lowrank instance to produce a coherent, task-appropriate patch (all 9
+core-logic tests pass); the 10 failures are exact-string gaps (8× missing `间隔` in one Chinese log
+message, 2× failed edit), not garbage. n=1 — diagnostic only.
+
+**Honest memory saving:** **528 B/token vs native 584 = 9.6 %** (fixed-basis xkv was 200 = 2.92×).
+Uniform 528-B slots hold the newest window native and re-encode in place; a compressed window fills
+only ~196 B of its slot but the pool can't reclaim it — **the saving is slot width, not compression.**
+A packed two-pool design (native ring + compact ~200 B history) would restore ~2.2–2.9×; gated on the
+10-sample result.
+
+Concise summary: `writeup/windowed-self-fit-pivot.md`; detail:
+`writeup/lowrank-sangfor-windowed-self-fit-first-eval.md`.
