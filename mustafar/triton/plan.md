@@ -24,8 +24,10 @@ packed values are exactly that dtype — otherwise TopMag error and FP8 quant er
 
 **Empirical finding that drives the packer (verified in the container):** `torch.topk(256,
 largest=False)` tie-breaking is **arbitrary-but-deterministic** — not columns 0..255, and not
-reproducible by an in-kernel `(mag, idx)` sort. So the exact-global TopMag keep-mask **must** come from
-the same host-side `topk` call `topmag_zero` uses.
+reproducible by an in-kernel `(mag, idx)` sort. So the exact-global TopMag keep-mask **must be computed
+once from the unmodified latent and passed explicitly to both the dense-zero path and the packer**.
+Re-running `topk` is not an acceptable way to reproduce the mask, especially after pruning or when
+the input contains natural zeros or cutoff ties.
 
 ## Staging — correctness prototype split from storage design
 
@@ -33,7 +35,7 @@ the same host-side `topk` call `topmag_zero` uses.
 |---|---|---|---|
 | **0** | Triton pack/unpack, **original dtype**, round-trip vs dense TopMag | bit-exact round-trip (bf16+fp32); live shadow-check | no |
 | **0.5** | FP8 packed values (UE8M0 survivors) as a numerical experiment | FP8-quant error acceptable on long-decode tasks | no |
-| **1** | Persistent sparse C4 pool + fused gather/unpack; pre- vs post-transform decision | real bytes/req + concurrency gain | yes |
+| **1** | Persistent sparse C4 pool + fused gather/unpack into the existing dense attention workspace; pre- vs post-transform decision | real bytes/req + concurrency gain | yes |
 | **2** | CUDA sparse consumer (no dense [512,512] intermediate) | ITL improvement | yes |
 
 **This plan implements Stage 0 and designs Stage 0.5** (both compression-only — no memory-pool change,
@@ -48,9 +50,13 @@ correct *first* implementation, but it may not be the best *serving* architectur
 
 ```
 exact global TopMag, host-side mask:
-  keep-mask = complement of topk(k=256, largest=False).indices
-            = same torch.topk call reference.topmag_zero makes, computed at the store site.
-  bit-exact, reproduces the experiment — correct first implementation.
+  keep_k   = round(512 * keep)
+  prune_k  = 512 - keep_k
+  keep_mask = complement of topk(k=prune_k, largest=False).indices
+              computed exactly once from the unmodified latent at the store site.
+  dense-zero baseline = latent.masked_fill(~keep_mask, 0)
+  packed representation = pack_ccomp(latent, keep_mask, keep_k)
+  both consumers share the same mask tensor; neither recomputes topk.
 ```
 - In-kernel `kth_largest` / `tl.sort` over 512 elements is the **hard part** (no cheap Triton
   primitive; tie-break can't reproduce torch's). **Deferred** — only revisit if the host `topk`
@@ -68,8 +74,10 @@ exact global TopMag, host-side mask:
 - **NEW** `flash-optimizations/mustafar/sparse.py` — host wrappers (`pack_ccomp`, `unpack_ccomp`) +
   helpers + torch refs; imports kernels via `from .triton import …`.
 - **NEW** `flash-optimizations/mustafar/selftest_sparse.py` — `run()` assertions, CLI `sparseselftest`.
-- **EDIT** `flash-optimizations/mustafar/reference.py` — factor `topk_drop_indices(latent, keep)`
-  out of `topmag_zero` (lines 11-29); both call it (single mask source, no drift).
+- **EDIT** `flash-optimizations/mustafar/reference.py` — factor
+  `topmag_keep_mask(latent, keep)` out of `topmag_zero`. Allow the dense-zero operation to consume an
+  already-computed mask, so the store site computes the mask once and passes that same tensor to the
+  dense-zero baseline and packer.
 - **EDIT** `flash-optimizations/mustafar/__main__.py` — add `sparseselftest`.
 - **EDIT** `flash-optimizations/mustafar/config.py` — add `BITMAP_WORDS = HEAD_DIM // 64  # 8` and
   `XKV_SPARSE_SHADOW` flag (default 0).
@@ -84,13 +92,14 @@ No sglang behavior change when shadow is off (Stage-0 pool untouched).
 | Server file | Stage-0 change |
 |---|---|
 | `deepseek_v4_memory_pool.py` (memory pool) | **UNCHANGED.** 584 B/token native layout and pool class stay exactly as-is. The sparse persistent pool is Stage 1. |
-| `compressor_v2.py` (compressor) | **UNCHANGED in behavior.** The existing TopMag `maybe_prune` hook (already deployed) stays. Stage 0 adds **only** an optional, default-off shadow check (`XKV_SPARSE_SHADOW=1`): pack→unpack→`torch.equal` against the dense pruned tensor, logged, then `compress_norm_rope_store` writes **byte-identical** output. With the flag off (default), Stage 0 adds nothing to this file. |
+| `compressor_v2.py` (compressor) | **UNCHANGED numerically.** At the TopMag store site, compute `keep_mask` once from the unmodified latent and pass it to both the existing dense-zero operation and, when enabled, the shadow packer. Stage 0 adds an optional, default-off shadow check (`XKV_SPARSE_SHADOW=1`): pack with that same mask → unpack → `torch.equal` against the dense-pruned tensor, then continue to `compress_norm_rope_store` unchanged. With the flag off, no sparse pack/unpack work is performed. |
 | `deepseek_v4_backend.py` (decode) | **UNCHANGED.** No decode-path edits in Stage 0. The `top512 → fused gather/unpack → norm/rope` work is Stage 1+. |
 | `indexer.py`, kernels (`fused_norm_rope`, FlashMLA), pool config | **UNCHANGED.** |
 
-Stage 0's only edits are inside the `mustafar/` package (`triton/kernels.py`, `sparse.py`,
-`selftest_sparse.py`, `reference.py`, `__main__.py`, `config.py`) — a GPU-unit-testable compression
-module. The server runs exactly as today unless the shadow flag is explicitly on.
+Stage 0's implementation lives in the `mustafar/` package (`triton/kernels.py`, `sparse.py`,
+`selftest_sparse.py`, `reference.py`, `__main__.py`, `config.py`), plus the narrow compressor-hook
+refactor needed to compute and share the mask once. The server's numerical output remains unchanged;
+with the shadow flag off, it performs no sparse pack/unpack work.
 
 ### Kernel A — `_pack_ccomp_kernel` (`triton/kernels.py`), one program per row
 ```
@@ -118,9 +127,10 @@ rank = cumsum(bits.to(int32), axis=0) - 1
 val = load(packed[row, rank], mask=bits, other=0.0)   # masked load = inverse of masked scatter
 store(out[row, offs], val)                      # pruned coords land as exactly 0 (== topmag_zero)
 ```
-Grid `(n,)`, `num_warps=4`. **No separate gather kernel** — by design the consumer is
-`gather_unpack(sparse_cache, top512_idx)` fused (Stage 1); SEL_VALUES/SEL_BITMAP temps never exist
-except transiently inside the kernel.
+Grid `(n,)`, `num_warps=4`. Stage 1 fuses sparse-record gathering and unpacking in one kernel, so
+separate `SEL_VALUES`/`SEL_BITMAP` tensors are not materialized. The fused kernel **does write the
+existing dense BF16 attention workspace**; removing that dense workspace requires the Stage-2 sparse
+attention consumer.
 
 ### Bitmap representation
 - Stage 0: **`[n, 8]` int64**, word w covers cols `64w..64w+63`, bit `63-lane` = keep(col `64w+lane`)
@@ -133,28 +143,35 @@ except transiently inside the kernel.
 
 ### Host wrapper API (`sparse.py`)
 ```python
-def pack_ccomp(latent, keep=0.5) -> (packed[n,KEEP] in latent.dtype, bitmap[n,8] int64)
+def pack_ccomp(latent, keep_mask, keep_k) -> (packed[n,KEEP_K] in latent.dtype, bitmap[n,8] int64)
 def unpack_ccomp(packed, bitmap, n_rows=None) -> dense[n, 512]
-def _keep_count(keep)          # 512 - round(512*keep) == topmag_zero's k; allocation parameterized by keep
-def _keep_mask_from_latent(latent, keep)   # int8 [n,512]; kidx=topk(k, largest=False).indices;
-                                           # mask.ones().scatter_(-1, kidx, 0)  ← same call as topmag_zero
+def _keep_count(keep)          # round(512 * keep); e.g. 0.375 -> 192 retained values
+def _prune_count(keep)         # 512 - _keep_count(keep); e.g. 0.375 -> 320 dropped values
+def topmag_keep_mask(latent, keep)         # bool [n,512]; kidx=topk(_prune_count(keep),
+                                           # largest=False).indices; computed once before mutation
 def _mask_to_bitmap(mask); def _bitmap_to_bits(bitmap)
-def pack_ccomp_ref(latent, keep);  def unpack_ccomp_ref(packed, bitmap)   # torch cross-check
+def pack_ccomp_ref(latent, keep_mask, keep_k);  def unpack_ccomp_ref(packed, bitmap)  # torch cross-check
 ```
-Zero-row guards return empty tensors without launching. Kernels shaped so a `QUANTIZE: tl.constexpr`
-slots in for Stage 0.5 without changing the host API.
+`keep_k` is an explicit host scalar, so output allocation and the `KEEP_K: tl.constexpr` launch do not
+require reading a GPU popcount back to the host. Tests and optional debug validation assert that every
+row of `keep_mask` has popcount `keep_k`; the runtime contract requires it. Zero-row guards return
+empty tensors without launching. Kernels are shaped so a `QUANTIZE: tl.constexpr` slots in for Stage
+0.5 without changing the explicit-mask API.
 
 ### Selftest (`selftest_sparse.py`, `python3 -m mustafar sparseselftest`, on `cuda:0`)
 1. **Bit-exact round-trip (bf16 and fp32, n=256, keep=0.5):**
-   `torch.equal(unpack_ccomp(*pack_ccomp(x, 0.5)), reference.topmag_zero(x.clone(), 0.5))`. Plus
-   shape/dtype asserts, per-row `mask.sum(-1)==256`, kept coords bit-identical, pruned coords exactly 0.
+   Compute `keep_k = _keep_count(0.5)` and `mask = topmag_keep_mask(x, 0.5)` once, then compare
+   `unpack_ccomp(*pack_ccomp(x, mask, keep_k))` with `x.masked_fill(~mask, 0)`. Plus shape/dtype
+   asserts, per-row `mask.sum(-1)==256`, kept coords bit-identical, and pruned coords exactly 0.
 2. **Torch-ref cross-check:** `torch.equal(packed, pack_ccomp_ref(..))`, `torch.equal(bitmap, ..)`,
    `torch.equal(recon, unpack_ccomp_ref(..))`.
 3. **Bit-convention pins:** keep col 0 → `bitmap[0,0] == -2**63`; col 63 → `bitmap[0,0] == 1`;
    col 64 → `bitmap[0,1] == -2**63`; `_bitmap_to_bits(_mask_to_bitmap(m))` recovers `m.bool()`.
-4. **Tie cases (locks the design):** all-equal magnitudes `full(1.0)` and many-way ties
-   `arange(512)%5` — round-trip still equals `topmag_zero` bit-exactly, exactly 256 zeros. Guards
-   against a future "simplification" to first-256-columns.
+4. **Tie and natural-zero cases (locks the design):** all-equal magnitudes `full(1.0)`, many-way ties
+   `arange(512)%5`, and inputs containing more than 256 natural zeros. Assert that the exact same mask
+   tensor is consumed by dense-zero and pack paths, the bitmap decodes to that mask exactly, and the
+   round-trip is bit-exact. Guards against both a future "first 256 columns" simplification and
+   accidental `topk` recomputation after pruning.
 5. **Sparsity sweep via KEEP_K variants:** keep ∈ {1.0, 0.5, 0.375, 0.3125} — round-trip holds,
    packed shapes match `_keep_count`.
 6. **Storage-size assert:** `packed.numel()*elem + bitmap.numel()*8 < n*512*elem` (fp32: 1088<2048
@@ -162,8 +179,9 @@ slots in for Stage 0.5 without changing the host API.
 7. Zero-row edge: no kernel launch.
 
 ### Live shadow-check (optional, default-off)
-`XKV_SPARSE_SHADOW=1`: at the store site, after `maybe_prune`, run pack→unpack and `torch.equal` vs
-the dense pruned tensor; log pass/fail; continue to `compress_norm_rope_store` **unchanged**
+`XKV_SPARSE_SHADOW=1`: at the store site, compute `keep_mask` once from the unmodified latent, pass it
+to `maybe_prune`, and pass that same mask to pack→unpack. Compare against the dense-pruned tensor, log
+pass/fail, and continue to `compress_norm_rope_store` **unchanged**
 (byte-identical server behavior). Off (default) → zero server change. Validates the kernels against
 **real compressor output distributions**, not just synthetic tensors. This is also the hook point
 Stage 0.5 reuses.
@@ -182,9 +200,11 @@ experiment only, no pool change.**
 
 - **Stage 1 — persistent sparse C4 pool.** Replace the 584 B/token native slot store with the packed
   sparse pool (`TopMag + FP8 pack` at row creation; rows packed exactly once). Read path:
-  `top512_idx → fused gather_unpack(sparse_cache, top512_idx) → native-equivalent downstream rep →
-  existing attention`. **Design constraints:** no separate SEL_VALUES/SEL_BITMAP gather kernels; no
-  dense `[512,512]` materialization to HBM; bitmap 8×uint64 vs 16×uint32 micro-benchmark. **Profile
+  `top512_idx → fused gather_unpack(sparse_cache, top512_idx) → existing dense BF16 attention
+  workspace → existing attention`. **Design constraints:** no separate `SEL_VALUES`/`SEL_BITMAP`
+  gather tensors; the gather/unpack kernel writes directly into the already-required dense workspace.
+  Eliminating that workspace is explicitly deferred to Stage 2. Micro-benchmark bitmap
+  8×uint64 vs 16×uint32. **Profile
   before fusing norm/RoPE:** read-side RMSNorm/RoPE cost on ~512 selected rows vs HBM bytes saved —
   decide design A (sparse **pre-RoPE** CComp + unpack/norm/RoPE at read, preserves exact TopMag
   semantics) vs design B (sparse **post-transform/native** representation, cheaper reads, **changes**
