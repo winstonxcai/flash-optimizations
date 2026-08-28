@@ -34,10 +34,17 @@ RUN cd /opt/mustafar/flash-optimizations \
     && python3 -m mustafar patch \
     && python3 -m mustafar verify
 
-# 4. Store-time TopMag on by default; config via env at run time.
+# 4. Store-time TopMag on by default; config via env at run time. NCCL
+#    settings reproduce the tested single-host 4-GPU run (override at run
+#    time with -e if the target host uses InfiniBand / different fabrics).
 ENV SGLANG_OPT_TOPMAG=1 \
     XKV_TOPMAG_KEEP=0.5 \
-    XKV_DEBUG=0
+    XKV_DEBUG=0 \
+    NCCL_IB_DISABLE=1 \
+    NCCL_SOCKET_IFNAME=lo \
+    NCCL_P2P_LEVEL=NVL \
+    NCCL_PROTO=Simple \
+    NCCL_ALGO=Ring
 
 # 5. Launch the server. Mirrors flash-optimizations/mustafar/scripts/launch.sh
 #    (same flags; decode ~2-4 tok/s on long agent contexts by design:
