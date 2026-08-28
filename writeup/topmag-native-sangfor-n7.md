@@ -71,6 +71,6 @@ reproduced native's 29/29 across **7/7** independent runs with zero failures.
 - n=1 reference: `results/test/..._dsv4-topmag50-1_20260827/...`
 - Native paired result: `results/test/Sangfor-Bench_cc_vibe_DeepSeek-V4-Flash-Local_task_20260825_195126_744/gcjs_kube-log-check-recover_2cadb18b/`
 - Windowed paired result: `results/test/..._dsv4-windowed-1_20260827/...`
-- Launcher: `flash-optimizations/mustafar/run_topmag50_20.sh` · watchdog: `watchdog_topmag50_20.sh`
+- Launcher: `flash-optimizations/mustafar/scripts/run_topmag50_20.sh` · watchdog: `watchdog_topmag50_20.sh`
 - Build: `flash-optimizations/mustafar/` (`reference.topmag_zero`, `ops.maybe_prune`, `launch.sh`)
 - Server prune evidence: `flash-optimizations/mustafar/ctrl/debug.log` (938 MB, XKV_DEBUG=1)
