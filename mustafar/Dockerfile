@@ -49,13 +49,4 @@ ENV SGLANG_OPT_TOPMAG=1 \
 # 5. Launch the server. Mirrors flash-optimizations/mustafar/scripts/launch.sh
 #    (same flags; decode ~2-4 tok/s on long agent contexts by design:
 #    --fp8-gemm-backend triton + --disable-cuda-graph).
-CMD ["bash","-c", "cd /sgl-workspace/sglang-lowrank/python && \
-  exec python3 -m sglang.launch_server \
-    --model-path ${MODEL_PATH:?} \
-    --served-model-name deepseek-v4-flash \
-    --tp ${TP:-4} --trust-remote-code --mem-fraction-static 0.93 \
-    --context-length 135168 --max-running-requests 64 \
-    --chunked-prefill-size 4096 \
-    --fp8-gemm-backend triton --host 0.0.0.0 --port ${PORT:-30211} \
-    --disable-cuda-graph --reasoning-parser deepseek-v4 \
-    --tool-call-parser deepseekv4"]
+CMD ["bash","-c","cd /sgl-workspace/sglang-lowrank/python && exec python3 -m sglang.launch_server --model-path ${MODEL_PATH:?} --served-model-name deepseek-v4-flash --tp ${TP:-4} --trust-remote-code --mem-fraction-static 0.93 --context-length 135168 --max-running-requests 64 --chunked-prefill-size 4096 --fp8-gemm-backend triton --host 0.0.0.0 --port ${PORT:-30211} --disable-cuda-graph --reasoning-parser deepseek-v4 --tool-call-parser deepseekv4"]

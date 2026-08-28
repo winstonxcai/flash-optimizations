@@ -1,10 +1,7 @@
-"""TopMag pruning on the native CSA c4-latent store (Mustafar).
+"""TopMag and persistent packed C4 configuration (Mustafar).
 
-Scope: NO lowrank KV — nothing related to the windowed self-fit / xkv build.
-The native DeepSeek-V4 c4 store is untouched (584 B/token pool, native memory
-pool, native decode). The only change is a store-time hook that zeros the
-smallest-|.| (1 - XKV_TOPMAG_KEEP) fraction of each c4 latent vector BEFORE the
-fused native store writes it. Zeros survive RMSNorm and decode to exactly 0.
+Dense mode preserves the native 584-byte DeepSeek-V4 store. Packed mode uses
+the 328-byte FP8/bitmap/scale ABI and reconstructs the native attention input.
 
 Env switches are read at import time (the serving process sets them first).
 """
@@ -17,6 +14,16 @@ ROPE_DIM = 64           # rotary tail dims
 NOPE_DIM = HEAD_DIM - ROPE_DIM          # 448
 TILE_SIZE = 64          # native store's fp8 scale tile
 BITMAP_WORDS = HEAD_DIM // 64           # 8  (uint64 words per packed row)
+PACKED_KEEP = HEAD_DIM // 2              # exact TopMag50 survivors
+PACKED_VALUE_BYTES = PACKED_KEEP         # raw FP8 E4M3 codes
+PACKED_BITMAP_BYTES = BITMAP_WORDS * 8
+PACKED_SCALE_BYTES = HEAD_DIM // TILE_SIZE
+PACKED_C4_BYTES = (
+    PACKED_VALUE_BYTES + PACKED_BITMAP_BYTES + PACKED_SCALE_BYTES
+)                                           # 328 B
+NATIVE_C4_BYTES = 584
+NATIVE_VALUE_BYTES = 576
+FP8_E4M3_MAX = 448.0
 
 # --- env switches ---------------------------------------------------------------
 # Gate: SGLANG_OPT_TOPMAG=1 enables the prune hook. Keep fraction:
@@ -24,15 +31,16 @@ BITMAP_WORDS = HEAD_DIM // 64           # 8  (uint64 words per packed row)
 TOPMAG_KEEP = float(os.environ.get("XKV_TOPMAG_KEEP", "1.0"))
 
 # --- sglang patch targets -------------------------------------------------------
-# We patch ONLY the compressor store site. The 4-file list is kept for unpatch
-# (clearing the previous lowrank injection) and verify.
+# Stage 1 patches the store, persistent pool, capacity model, raw-index output,
+# and the two unchanged-attention reconstruction call sites.
 SRC_ROOT = os.environ.get("SG_LOWRANK_SRC", "/sgl-workspace/sglang-lowrank/python")
 COMPRESSOR_V2 = f"{SRC_ROOT}/sglang/srt/layers/attention/dsv4/compressor_v2.py"
 MEM_POOL = f"{SRC_ROOT}/sglang/srt/mem_cache/deepseek_v4_memory_pool.py"
 POOL_CFG = f"{SRC_ROOT}/sglang/srt/model_executor/pool_configurator.py"
 DSV4_BACKEND = f"{SRC_ROOT}/sglang/srt/layers/attention/deepseek_v4_backend.py"
-PATCH_FILES = (COMPRESSOR_V2,)                 # files the TopMag hook touches
-OLD_PATCH_FILES = (COMPRESSOR_V2, MEM_POOL, POOL_CFG, DSV4_BACKEND)
+INDEXER = f"{SRC_ROOT}/sglang/srt/layers/attention/dsv4/indexer.py"
+PATCH_FILES = (COMPRESSOR_V2, MEM_POOL, POOL_CFG, DSV4_BACKEND, INDEXER)
+OLD_PATCH_FILES = PATCH_FILES
 
 # Package import root: inside the eval container this resolves to the mounted
 # /mnt/host_root/home/jovyan/winstonxcai/flash-optimizations, so the sglang
@@ -66,3 +74,22 @@ def sparse_shadow() -> bool:
     rows at the store site and compares against the dense-pruned tensor (default
     off -> the server performs no sparse pack/unpack work)."""
     return os.environ.get("XKV_SPARSE_SHADOW") == "1"
+
+
+def packed_c4_enabled() -> bool:
+    """Persistent 328-byte C4 pool gate (off by default)."""
+    return os.environ.get("SGLANG_OPT_TOPMAG_PACKED_C4") == "1"
+
+
+def validate_packed_static_config() -> None:
+    """Fail early for settings that would change the Stage-1 ABI."""
+    if not packed_c4_enabled():
+        return
+    if not topmag_enabled():
+        raise RuntimeError(
+            "SGLANG_OPT_TOPMAG_PACKED_C4=1 requires SGLANG_OPT_TOPMAG=1"
+        )
+    if topmag_keep() != 0.5:
+        raise RuntimeError(
+            "packed C4 requires XKV_TOPMAG_KEEP=0.5 (exactly 256/512 dims)"
+        )

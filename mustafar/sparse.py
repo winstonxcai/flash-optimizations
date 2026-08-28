@@ -28,6 +28,8 @@ the kernels without changing this explicit-mask API.
 import torch
 
 from . import config
+from .bitmap import bitmap_to_bits as _bitmap_to_bits
+from .bitmap import mask_to_bitmap as _mask_to_bitmap
 from .reference import topmag_keep_mask
 from .triton import _pack_ccomp_kernel, _unpack_ccomp_kernel
 
@@ -47,26 +49,6 @@ def _keep_count(keep: float) -> int:
 def _prune_count(keep: float) -> int:
     """Coords dropped per row: HEAD_DIM - _keep_count(keep) (e.g. 0.375 -> 320)."""
     return config.HEAD_DIM - _keep_count(keep)
-
-
-# --- bitmap (MSB = lane 0, matches mustafar-upstream) -------------------------
-def _mask_to_bitmap(mask: torch.Tensor) -> torch.Tensor:
-    """bool [n, HEAD_DIM] -> int64 [n, BITMAP_WORDS].
-
-    Word w covers cols 64w..64w+63; bit (63 - lane) of word w is 1 iff
-    col 64w+lane is kept. Single bit at col 0 -> -2**63; col 63 -> 1.
-    """
-    n = mask.shape[0]
-    bits = mask.reshape(n, config.BITMAP_WORDS, 64).to(torch.int64)   # 0/1
-    shift = (1 << (63 - torch.arange(64, device=mask.device))).to(torch.int64)
-    return (bits * shift[None, None, :]).sum(dim=2)
-
-
-def _bitmap_to_bits(bitmap: torch.Tensor) -> torch.Tensor:
-    """int64 [n, BITMAP_WORDS] -> bool [n, HEAD_DIM] (inverse of _mask_to_bitmap)."""
-    extract = 63 - torch.arange(64, device=bitmap.device)             # per-lane shift, non-negative
-    bits = (bitmap[:, :, None] >> extract[None, None, :]) & 1
-    return bits.reshape(bitmap.shape[0], -1).bool()
 
 
 # --- GPU pack / unpack --------------------------------------------------------
