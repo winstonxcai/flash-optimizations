@@ -24,7 +24,9 @@ export CUDA_VISIBLE_DEVICES=0,1,2,3
 export MASTER_PORT=29622
 export SGLANG_OPT_TOPMAG=1
 export XKV_TOPMAG_KEEP=$KEEP
-export XKV_DEBUG=1
+# XKV_DEBUG=0 for long runs: =1 grows ctrl/debug.log ~380 lines/s (~1 GB/12 h)
+# and throttles decode. Pruning itself is unaffected (the _dbg guard short-circuits).
+export XKV_DEBUG=0
 export SG_CTRL_DIR=$BASE/ctrl
 export PYTHONPATH=/sgl-workspace/sglang-lowrank/python
 export NCCL_IB_DISABLE=1 NCCL_SOCKET_IFNAME=lo NCCL_P2P_LEVEL=NVL NCCL_PROTO=Simple NCCL_ALGO=Ring
