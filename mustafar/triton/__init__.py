@@ -1,5 +1,8 @@
-"""Triton pack and unpack/gather entry points."""
+"""Triton kernels for physically-sparse TopMag compression (Stage 0).
 
-from .packed_c4 import pack_c4_rows, triton_available, unpack_gather_c4
+Import the kernels directly (e.g. `from .triton import _pack_ccomp_kernel`).
+No torch host logic lives in this subfolder — see mustafar/sparse.py.
+"""
+from .kernels import _pack_ccomp_kernel, _unpack_ccomp_kernel
 
-__all__ = ["pack_c4_rows", "unpack_gather_c4", "triton_available"]
+__all__ = ["_pack_ccomp_kernel", "_unpack_ccomp_kernel"]

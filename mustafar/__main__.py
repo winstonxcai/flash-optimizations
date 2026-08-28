@@ -1,6 +1,6 @@
 """CLI for the mustafar package: python -m mustafar <cmd>.
 
-Commands: patch | unpatch | verify | selftest
+Commands: patch | unpatch | verify | selftest | sparseselftest
 Run from flash-optimizations (or with it on PYTHONPATH).
 """
 import sys
@@ -19,6 +19,9 @@ def main():
     elif cmd == "selftest":
         from . import selftest
         selftest.run()
+    elif cmd == "sparseselftest":
+        from . import selftest_sparse
+        selftest_sparse.run()
     else:
         raise SystemExit(f"unknown command: {cmd}")
 
