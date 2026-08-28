@@ -18,7 +18,7 @@ latent and shared by the dense-zero baseline and the packer; never recompute
 pruning or on natural-zero inputs).
 
 Contract: every row of `keep_mask` has exactly `keep_k` True entries. The
-caller owns this; the selftest asserts it. `KEEP_K` is an explicit host scalar
+caller owns this; the unit tests assert it. `KEEP_K` is an explicit host scalar
 so output allocation and the `KEEP_K: tl.constexpr` launch never require
 reading a GPU popcount back to the host.
 

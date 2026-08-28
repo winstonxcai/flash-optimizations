@@ -73,7 +73,8 @@ exact global TopMag, host-side mask:
   only here; no torch host logic in the subfolder.
 - **NEW** `flash-optimizations/mustafar/sparse.py` — host wrappers (`pack_ccomp`, `unpack_ccomp`) +
   helpers + torch refs; imports kernels via `from .triton import …`.
-- **NEW** `flash-optimizations/mustafar/selftest_sparse.py` — `run()` assertions, CLI `sparseselftest`.
+- **NEW** `flash-optimizations/mustafar/tests/unit.py` — unit-test assertions, including the
+  `sparseselftest` CLI suite.
 - **EDIT** `flash-optimizations/mustafar/reference.py` — factor
   `topmag_keep_mask(latent, keep)` out of `topmag_zero`. Allow the dense-zero operation to consume an
   already-computed mask, so the store site computes the mask once and passes that same tensor to the
@@ -97,7 +98,7 @@ No sglang behavior change when shadow is off (Stage-0 pool untouched).
 | `indexer.py`, kernels (`fused_norm_rope`, FlashMLA), pool config | **UNCHANGED.** |
 
 Stage 0's implementation lives in the `mustafar/` package (`triton/kernels.py`, `sparse.py`,
-`selftest_sparse.py`, `reference.py`, `__main__.py`, `config.py`), plus the narrow compressor-hook
+`tests/unit.py`, `reference.py`, `__main__.py`, `config.py`), plus the narrow compressor-hook
 refactor needed to compute and share the mask once. The server's numerical output remains unchanged;
 with the shadow flag off, it performs no sparse pack/unpack work.
 
@@ -158,7 +159,7 @@ row of `keep_mask` has popcount `keep_k`; the runtime contract requires it. Zero
 empty tensors without launching. Kernels are shaped so a `QUANTIZE: tl.constexpr` slots in for Stage
 0.5 without changing the explicit-mask API.
 
-### Selftest (`selftest_sparse.py`, `python3 -m mustafar sparseselftest`, on `cuda:0`)
+### Selftest (`mustafar/tests/unit.py`, `python3 -m mustafar sparseselftest`, on `cuda:0`)
 1. **Bit-exact round-trip (bf16 and fp32, n=256, keep=0.5):**
    Compute `keep_k = _keep_count(0.5)` and `mask = topmag_keep_mask(x, 0.5)` once, then compare
    `unpack_ccomp(*pack_ccomp(x, mask, keep_k))` with `x.masked_fill(~mask, 0)`. Plus shape/dtype

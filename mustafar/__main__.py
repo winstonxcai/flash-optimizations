@@ -5,23 +5,24 @@ Run from flash-optimizations (or with it on PYTHONPATH).
 """
 import sys
 
-from . import ops
-
 
 def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else "verify"
     if cmd == "patch":
+        from . import ops
         ops.patch()
     elif cmd == "unpatch":
+        from . import ops
         ops.unpatch()
     elif cmd == "verify":
+        from . import ops
         ops.verify()
     elif cmd == "selftest":
-        from . import selftest
-        selftest.run()
+        from .tests import unit
+        unit.run_topmag()
     elif cmd == "sparseselftest":
-        from . import selftest_sparse
-        selftest_sparse.run()
+        from .tests import unit
+        unit.run_sparse()
     else:
         raise SystemExit(f"unknown command: {cmd}")
 
