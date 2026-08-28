@@ -24,6 +24,7 @@ is one experiment, numbered sequentially; every metric is stated against the bas
 | 13 | Windowed self-fit (n=1) | 19/29 vs native 29/29; 528 vs 584 B/token (9.6 %) |
 | 14 | Windowed self-fit (n=10) | terminated: 0/10 done @70 min, 3/3 agents 0 tool calls |
 | 15 | TopMag 50 % on native c4 (n=1) | 29/29 vs native 29/29 (windowed 19/29); 0 memory saved |
+| 16 | TopMag 50 % on native c4 (n=7) | 7× 29/29 (100 %, σ=0) on the windowed-failure task |
 
 ---
 
@@ -487,3 +488,40 @@ Memory: **unchanged** (native 584 B/token) — the point is pure fidelity, not s
   the zeroed coords is the untested follow-up.
 
 *Caveat:* n=1 — diagnostic, not a ranking.
+
+---
+
+## 16. TopMag 50 % on the native c4 latent (n=7)
+
+**Methodology.** Same build as exp 15 (store-time magnitude pruning on the native c4 latent,
+`mustafar` package, 256 of 512 coords zeroed pre-store; memory pool, decode, and everything else stock
+DeepSeek-V4). 7 independent Sangfor-Bench cc-agent runs of the **same** instance
+(`gcjs_kube-log-check-recover_2cadb18b`), each a separate single-instance eval with a unique run_id
+(`dsv4-topmag50-20-01..07_20260827`), 2 concurrent. The initial 20-samples-in-one-run attempt hit
+`docker 409 Conflict` (harness names containers `task_id__instance_id__MMDDHHMMSS` with no uniquifier)
+— rebuilt as a 10×2 wave launcher with unique run_ids.
+
+**Metrics.**
+
+| | native CSA | windowed self-fit | TopMag50 n=1 | **TopMag50 n=7** |
+|---|---|---|---|---|
+| run_agent tests | 29/29 (100 %) | 19/29 (65.5 %) | 29/29 (100 %) | **7 × 29/29 (100 %)** |
+| pass_rate (each) | — | — | 100.0 | **100.0 × 7, error=None each** |
+| run-to-run variance | — | — | — | **σ = 0 (7/7)** |
+
+**Takeaways.**
+- 7/7 independent runs reproduce native's full 29/29 on the exact task where windowed self-fit failed
+  (19/29) — the n=1 diagnostic is upgraded to a zero-variance statement on this instance.
+- Live server evidence during the run: 750 k+ `prune zeroed 256` / 384 k+ `prune_skip dim 128`,
+  0 `prune_error` — the hook is clean, and the served build was confirmed latent-only
+  (no `XKV_TOPMAG_TARGET`).
+- **Run was truncated at n=7 by server throughput, not result quality**: decode ran ~2–4 tok/s on
+  94–150 k-token agent contexts (`--fp8-gemm-backend triton` + `--disable-cuda-graph`; prefill ~8 k
+  tok/s), so 2 concurrent samples took 2 h 10 m – 3 h 29 m vs the n=1's 42 min. 13 remaining samples
+  would have needed ~10 h.
+- Ops: `XKV_DEBUG=1` grew a 938 MB ctrl/debug.log (~380 store-path appends/s) on a host mount,
+  worsening the throttled server — large-n TopMag runs should use `XKV_DEBUG=0` and revisit
+  cuda-graphs / fp8 backend.
+
+*Caveat:* all 7 runs are one task (run-to-run variance of the same instance), not 7 distinct tasks —
+generalization across the 190-instance pool remains unmeasured; σ=0 is per-task, not per-task-family.
