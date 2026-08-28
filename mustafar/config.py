@@ -16,6 +16,7 @@ HEAD_DIM = 512          # full c4 compressor latent dim
 ROPE_DIM = 64           # rotary tail dims
 NOPE_DIM = HEAD_DIM - ROPE_DIM          # 448
 TILE_SIZE = 64          # native store's fp8 scale tile
+BITMAP_WORDS = HEAD_DIM // 64           # 8  (uint64 words per packed row)
 
 # --- env switches ---------------------------------------------------------------
 # Gate: SGLANG_OPT_TOPMAG=1 enables the prune hook. Keep fraction:
@@ -58,3 +59,10 @@ def topmag_zero_count() -> int:
     """Coords zeroed per latent row (0 when keep>=1)."""
     k = HEAD_DIM - int(round(HEAD_DIM * topmag_keep()))
     return max(0, min(k, HEAD_DIM))
+
+
+def sparse_shadow() -> bool:
+    """Stage-0 shadow check: XKV_SPARSE_SHADOW=1 runs pack->unpack on real latent
+    rows at the store site and compares against the dense-pruned tensor (default
+    off -> the server performs no sparse pack/unpack work)."""
+    return os.environ.get("XKV_SPARSE_SHADOW") == "1"

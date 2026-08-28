@@ -11,6 +11,8 @@ import os
 import shutil
 import subprocess
 
+import torch
+
 from . import config
 from . import reference
 
@@ -30,9 +32,12 @@ _dbg("import", src=__file__, head_dim=config.HEAD_DIM,
 def maybe_prune(kv_compressed) -> None:
     """Hook injected into compressor_v2 just before the native c4 fused store.
 
-    Zeroes the smallest-|.| (1 - XKV_TOPMAG_KEEP) fraction of each latent
-    vector in place, gated on SGLANG_OPT_TOPMAG=1. The native store then
-    quantizes+writes the pruned latent exactly as usual.
+    Computes the exact-global keep-mask ONCE from the unmodified latent, then
+    passes that same mask to (a) the dense-zero baseline and (b), only when
+    XKV_SPARSE_SHADOW=1, the Stage-0 Triton pack->unpack shadow check. The
+    native store then quantizes+writes the pruned latent exactly as usual. With
+    the shadow flag off the server performs no sparse work and is numerically
+    identical to the previous scatter-based topmag_zero.
     """
     if not config.topmag_enabled():
         return
@@ -43,7 +48,20 @@ def maybe_prune(kv_compressed) -> None:
         _dbg("prune_skip", dim=int(kv_compressed.shape[-1]))
         return
     try:
-        reference.topmag_zero(kv_compressed, config.topmag_keep())
+        keep = config.topmag_keep()
+        shadow = config.sparse_shadow()
+        orig = kv_compressed.clone() if shadow else None
+        keep_mask = reference.topmag_keep_mask(kv_compressed, keep)
+        reference.topmag_zero_from_mask(kv_compressed, keep_mask)
+        if shadow:
+            from . import sparse as _sparse
+            keep_k = _sparse._keep_count(keep)
+            packed, bitmap = _sparse.pack_ccomp(orig, keep_mask, keep_k)
+            recon = _sparse.unpack_ccomp(packed, bitmap)
+            ok = bool(torch.equal(recon, kv_compressed))
+            _dbg("shadow", ok=ok, rows=int(kv_compressed.shape[0]),
+                 packed_bytes=int(packed.numel() * packed.element_size()),
+                 mismatch=int((recon != kv_compressed).sum().item()) if not ok else 0)
         if os.environ.get("XKV_DEBUG") == "1":
             _dbg("prune", rows=int(kv_compressed.shape[0]),
                  zeroed=config.topmag_zero_count())
