@@ -27,6 +27,15 @@ class NativeC4Workspace:
     page_size: int
     bytes_per_page: int
 
+    @property
+    def max_queries(self) -> int:
+        """Maximum query rows this decode/small-extend workspace can hold."""
+        return self.temporary_indices.shape[0]
+
+    @property
+    def selected_k(self) -> int:
+        return self.temporary_indices.shape[1]
+
     @classmethod
     def allocate(
         cls,
@@ -55,11 +64,25 @@ class NativeC4Workspace:
 def _as_buffers(packed_buffers, layer_id: int | None = None) -> PackedC4Buffers:
     if isinstance(packed_buffers, PackedC4Buffers):
         return packed_buffers
+    # The injected SGLang pool accessor deliberately exposes the stable
+    # value/bitmap/scale ABI as a plain tuple.  Normalize that form before
+    # CUDA-graph capture reaches the unpack wrapper.
+    if isinstance(packed_buffers, (tuple, list)):
+        if len(packed_buffers) != 3 or not all(
+            isinstance(buffer, torch.Tensor) for buffer in packed_buffers
+        ):
+            raise TypeError(
+                "packed buffer sequences must contain value, bitmap, and scale tensors"
+            )
+        return PackedC4Buffers(*packed_buffers)
     if hasattr(packed_buffers, "get_packed_buffers"):
         if layer_id is None:
             raise ValueError("layer_id is required for a packed C4 pool")
         return PackedC4Buffers(*packed_buffers.get_packed_buffers(layer_id))
-    return PackedC4Buffers(*packed_buffers)
+    raise TypeError(
+        "packed_buffers must be PackedC4Buffers, a three-tensor sequence, "
+        "or a packed C4 pool"
+    )
 
 
 def _plan_rows(compressor_plan: object) -> torch.Tensor:
@@ -161,12 +184,6 @@ def pack_c4_rows(
     )
 
 
-def _freq_parts(freqs_cis) -> tuple[torch.Tensor, torch.Tensor]:
-    if isinstance(freqs_cis, tuple):
-        return freqs_cis
-    return freqs_cis.real.contiguous(), freqs_cis.imag.contiguous()
-
-
 def unpack_gather_c4_bf16(
     packed_buffers,
     physical_indices: torch.Tensor,
@@ -188,7 +205,10 @@ def unpack_gather_c4_bf16(
         raise ValueError("output workspace is too small")
     if flat_rows == 0:
         return output
-    from .triton import _rope_tail_inplace_kernel, _unpack_gather_c4_bf16_kernel
+    from .triton import (
+        _rope_tail_complex_inplace_kernel,
+        _unpack_gather_c4_bf16_kernel,
+    )
 
     _unpack_gather_c4_bf16_kernel[(flat_rows,)](
         buffers.values,
@@ -206,12 +226,15 @@ def unpack_gather_c4_bf16(
         BLOCK_D=config.HEAD_DIM,
         num_warps=8,
     )
-    cos, sin = _freq_parts(freqs_cis)
-    _rope_tail_inplace_kernel[(flat_rows,)](
+    if not freqs_cis.is_complex() or not freqs_cis.is_contiguous():
+        raise ValueError("freqs_cis must be a contiguous complex tensor")
+    # This is a view only; unlike .real.contiguous()/.imag.contiguous(), it
+    # performs no CUDA allocation and can be retained by the packed pool.
+    freq_pairs = torch.view_as_real(freqs_cis)
+    _rope_tail_complex_inplace_kernel[(flat_rows,)](
         out2d,
         raw_indices,
-        cos,
-        sin,
+        freq_pairs,
         flat_rows,
         HEAD_DIM=config.HEAD_DIM,
         NOPE_DIM=config.NOPE_DIM,
@@ -228,19 +251,25 @@ def unpack_gather_c4_native(
     topk_lengths: torch.Tensor,
     freqs_cis,
     native_workspace: NativeC4Workspace,
-    temporary_indices: torch.Tensor | None = None,
     *,
     layer_id: int | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Materialize native hybrid pages and return cache plus remapped indices."""
     buffers = _as_buffers(packed_buffers, layer_id)
     n_queries, selected_k = physical_indices.shape
+    if n_queries > native_workspace.max_queries:
+        raise ValueError(
+            "native C4 workspace query capacity exceeded: "
+            f"{n_queries} > {native_workspace.max_queries}; "
+            "route this extend through sparse prefill"
+        )
+    if selected_k > native_workspace.selected_k:
+        raise ValueError(
+            "native C4 workspace top-k capacity exceeded: "
+            f"{selected_k} > {native_workspace.selected_k}"
+        )
     rows = n_queries * selected_k
-    temp = (
-        native_workspace.temporary_indices[:n_queries, :selected_k]
-        if temporary_indices is None
-        else temporary_indices
-    )
+    temp = native_workspace.temporary_indices[:n_queries, :selected_k]
     dense = native_workspace.dense[:rows]
     unpack_gather_c4_bf16(
         buffers,

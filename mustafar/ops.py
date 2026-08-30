@@ -1,74 +1,10 @@
-"""Store-time TopMag pruning hook + patch CLI (native c4-latent scope).
+"""Patch SGLang with Mustafar's dense TopMag and packed C4 paths."""
 
-This module is imported by the sglang hook as `import mustafar as _sg_lr`.
-The injected call `_sg_lr.maybe_prune(kv_compressed)` zeroes the smallest-|.|
-(1 - XKV_TOPMAG_KEEP) fraction of each c4 latent vector in place, right before
-the native fused store. Everything else (memory pool, layout, decode) is the
-stock DeepSeek-V4 build — no lowrank KV anywhere.
-"""
-import json
 import os
 import shutil
 import subprocess
 
-import torch
-
 from . import config
-from . import reference
-
-
-def _dbg(msg: str, **fields) -> None:
-    if os.environ.get("XKV_DEBUG") == "1":
-        line = json.dumps({"mustafar": msg, **fields}, default=str)
-        os.makedirs(config.ctrl_dir(), exist_ok=True)
-        with open(os.path.join(config.ctrl_dir(), "debug.log"), "a") as f:
-            f.write(line + "\n")
-
-
-_dbg("import", src=__file__, head_dim=config.HEAD_DIM,
-     keep=config.topmag_keep())
-
-
-def maybe_prune(kv_compressed) -> None:
-    """Hook injected into compressor_v2 just before the native c4 fused store.
-
-    Computes the exact-global keep-mask ONCE from the unmodified latent, then
-    passes that same mask to (a) the dense-zero baseline and (b), only when
-    XKV_SPARSE_SHADOW=1, the Stage-0 Triton pack->unpack shadow check. The
-    native store then quantizes+writes the pruned latent exactly as usual. With
-    the shadow flag off the server performs no sparse work and is numerically
-    identical to the previous scatter-based topmag_zero.
-    """
-    if not config.topmag_enabled():
-        return
-    if kv_compressed is None or kv_compressed.numel() == 0:
-        return
-    if kv_compressed.shape[-1] < config.HEAD_DIM:
-        # Non-c4 latent (e.g. the 128-dim indexer) — leave untouched.
-        _dbg("prune_skip", dim=int(kv_compressed.shape[-1]))
-        return
-    try:
-        keep = config.topmag_keep()
-        shadow = config.sparse_shadow()
-        orig = kv_compressed.clone() if shadow else None
-        keep_mask = reference.topmag_keep_mask(kv_compressed, keep)
-        reference.topmag_zero_from_mask(kv_compressed, keep_mask)
-        if shadow:
-            from . import sparse as _sparse
-            keep_k = _sparse._keep_count(keep)
-            packed, bitmap = _sparse.pack_ccomp(orig, keep_mask, keep_k)
-            recon = _sparse.unpack_ccomp(packed, bitmap)
-            ok = bool(torch.equal(recon, kv_compressed))
-            _dbg("shadow", ok=ok, rows=int(kv_compressed.shape[0]),
-                 packed_bytes=int(packed.numel() * packed.element_size()),
-                 mismatch=int((recon != kv_compressed).sum().item()) if not ok else 0)
-        if os.environ.get("XKV_DEBUG") == "1":
-            _dbg("prune", rows=int(kv_compressed.shape[0]),
-                 zeroed=config.topmag_zero_count())
-    except Exception as e:
-        _dbg("prune_error", err=repr(e),
-             dim=int(kv_compressed.shape[-1]),
-             ndim=kv_compressed.dim())
 
 
 # --- patch / unpatch / verify --------------------------------------------------
@@ -141,6 +77,14 @@ class MustafarPackedC4KVPool(DeepSeekV4SingleKVPool):
         self.kv_cache_total_dim = 328
         self.bytes_per_page_padded = self.page_size * 328
         self._mustafar_rope_freqs = [None] * self.layer_num
+        logger.info(
+            "Mustafar packed C4 pool: layers=%d pages/layer=%d "
+            "page_size=%d logical_row_bytes=328 allocated_bytes=%d",
+            self.layer_num,
+            num_pages,
+            self.page_size,
+            self.get_kv_size_bytes(),
+        )
 
     def get_bytes_per_token(self) -> int:
         return 328
@@ -156,9 +100,14 @@ class MustafarPackedC4KVPool(DeepSeekV4SingleKVPool):
     def set_rope_freqs(self, layer_id: int, freqs_cis) -> None:
         local = layer_id - self.start_layer
         if self._mustafar_rope_freqs[local] is None:
-            self._mustafar_rope_freqs[local] = (
-                freqs_cis.real.contiguous(), freqs_cis.imag.contiguous()
-            )
+            if not freqs_cis.is_complex() or not freqs_cis.is_contiguous():
+                raise RuntimeError(
+                    "packed C4 requires a contiguous complex RoPE table"
+                )
+            # Retain the compressor's existing table. Creating contiguous real
+            # and imaginary copies costs 256 MiB per rank at 135168 context and
+            # can OOM after KV-pool sizing has consumed the remaining HBM.
+            self._mustafar_rope_freqs[local] = freqs_cis
 
     def get_rope_freqs(self, layer_id: int):
         local = layer_id - self.start_layer
@@ -485,18 +434,64 @@ def _backend_edits():
             "                if _sg_lr.packed_c4_enabled():\n"
             "                    raw_indices = core_attn_metadata.c4_sparse_raw_indices\n"
             "                    assert raw_indices is not None\n"
-            "                    assert self.mustafar_c4_workspace is not None\n"
-            "                    extra_k_cache, extra_indices = (\n"
-            "                        _sg_lr.unpack_gather_c4_native(\n"
-            "                            token_to_kv_pool.get_packed_c4_buffers(layer_id),\n"
-            "                            extra_indices, raw_indices,\n"
-            "                            extra_topk_lengths,\n"
-            "                            token_to_kv_pool.get_packed_c4_freqs(layer_id),\n"
-            "                            self.mustafar_c4_workspace,\n"
-            "                        )\n"
-            "                    )\n"
             "                else:\n"
             "                    extra_k_cache = token_to_kv_pool.get_extra_key_buffer(layer_id)\n",
+        ),
+        (
+            "            extra_indices = match_num_queries(extra_indices, value=-1)\n"
+            "            extra_topk_lengths = match_num_queries(extra_topk_lengths, value=1)\n",
+            "            extra_indices = match_num_queries(extra_indices, value=-1)\n"
+            "            extra_topk_lengths = match_num_queries(extra_topk_lengths, value=1)\n"
+            "            if compress_ratio == 4 and _sg_lr.packed_c4_enabled():\n"
+            "                raw_indices = match_num_queries(raw_indices, value=-1)\n",
+        ),
+        (
+            "            if forward_batch.forward_mode.is_extend_without_speculative() and (\n"
+            "                q.shape[0] > _LARGE_INDEXER_QUERY_THRESHOLD\n"
+            "                or envs.SGLANG_OPT_FLASHMLA_SPARSE_PREFILL.get()\n"
+            "            ):\n",
+            "            if forward_batch.forward_mode.is_extend_without_speculative() and (\n"
+            "                q.shape[0] > _LARGE_INDEXER_QUERY_THRESHOLD\n"
+            "                or (\n"
+            "                    _sg_lr.packed_c4_enabled()\n"
+            "                    and self.mustafar_c4_workspace is not None\n"
+            "                    and q.shape[0] > self.mustafar_c4_workspace.max_queries\n"
+            "                )\n"
+            "                or envs.SGLANG_OPT_FLASHMLA_SPARSE_PREFILL.get()\n"
+            "            ):\n",
+        ),
+        (
+            "            if _is_sm120:\n",
+            "            if compress_ratio == 4 and _sg_lr.packed_c4_enabled():\n"
+            "                ## MUSTAFAR (decode/small-extend native reconstruction)\n"
+            "                assert self.mustafar_c4_workspace is not None\n"
+            "                packed_indices = (\n"
+            "                    extra_indices.squeeze(1)\n"
+            "                    if extra_indices.ndim == 3 else extra_indices\n"
+            "                )\n"
+            "                packed_raw_indices = (\n"
+            "                    raw_indices.squeeze(1)\n"
+            "                    if raw_indices.ndim == 3 else raw_indices\n"
+            "                )\n"
+            "                extra_k_cache, extra_indices = (\n"
+            "                    _sg_lr.unpack_gather_c4_native(\n"
+            "                        token_to_kv_pool.get_packed_c4_buffers(layer_id),\n"
+            "                        packed_indices, packed_raw_indices,\n"
+            "                        extra_topk_lengths,\n"
+            "                        token_to_kv_pool.get_packed_c4_freqs(layer_id),\n"
+            "                        self.mustafar_c4_workspace,\n"
+            "                    )\n"
+            "                )\n"
+            "                extra_page_size = token_to_kv_pool.page_size // 4\n"
+            "                extra_k_cache = extra_k_cache[\n"
+            "                    :, : extra_page_size * k_cache_total_dim\n"
+            "                ].view(\n"
+            "                    extra_k_cache.shape[0], extra_page_size, 1,\n"
+            "                    k_cache_total_dim,\n"
+            "                )\n"
+            "                extra_indices = extra_indices.unsqueeze(1)\n"
+            "\n"
+            "            if _is_sm120:\n",
         ),
         (
             "            extra_page_size = token_to_kv_pool.get_extra_key_page_size(layer_id)\n"
@@ -549,14 +544,6 @@ def _backend_edits():
 
 
 def patch() -> None:
-    os.makedirs(config.ctrl_dir(), exist_ok=True)
-    stale = [p for p in config.OLD_PATCH_FILES
-             if "XKV_LOWRANK" in open(p).read()]
-    if stale:
-        raise SystemExit(
-            f"[mustafar] old XKV_LOWRANK patch still present in {stale}; "
-            "run 'python -m mustafar unpatch' first")
-
     _apply(config.COMPRESSOR_V2, _compressor_edits())
     _apply(config.MEM_POOL, _memory_pool_edits())
     _apply(config.POOL_CFG, _pool_config_edits())
@@ -565,17 +552,12 @@ def patch() -> None:
 
 
 def unpatch() -> None:
-    """Restore all 4 previously-patched files to pristine, clearing the old
-    lowrank injection (transferibility's `## XKV_LOWRANK`)."""
-    for p in config.OLD_PATCH_FILES:
+    """Restore all five patched SGLang files to their pristine versions."""
+    for p in config.PATCH_FILES:
         bak = p + ".mustafar.orig"
-        old_bak = p + ".lr.bak"
         if os.path.exists(bak):
             shutil.copy2(bak, p)
             print(f"[mustafar] restored {p} from .mustafar.orig")
-        elif os.path.exists(old_bak):
-            shutil.copy(old_bak, p)
-            print(f"[mustafar] restored {p} from .lr.bak")
         else:
             subprocess.run(["git", "checkout", "--", p], cwd=config.SRC_ROOT,
                            check=False)
@@ -583,14 +565,7 @@ def unpatch() -> None:
 
 
 def verify() -> None:
-    for p in config.OLD_PATCH_FILES:
+    for p in config.PATCH_FILES:
         with open(p) as f:
             s = f.read()
-        print(f"{p}: mustafar_markers={s.count(config.MARKER)} "
-              f"old_lowrank={'PRESENT' if 'XKV_LOWRANK' in s else 'absent'}")
-
-
-if __name__ == "__main__":
-    import sys
-    cmd = sys.argv[1] if len(sys.argv) > 1 else "verify"
-    {"patch": patch, "unpatch": unpatch, "verify": verify}[cmd]()
+        print(f"{p}: mustafar_markers={s.count(config.MARKER)}")

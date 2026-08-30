@@ -22,13 +22,7 @@ PACKED_C4_BYTES = (
     PACKED_VALUE_BYTES + PACKED_BITMAP_BYTES + PACKED_SCALE_BYTES
 )                                           # 328 B
 NATIVE_C4_BYTES = 584
-NATIVE_VALUE_BYTES = 576
 FP8_E4M3_MAX = 448.0
-
-# --- env switches ---------------------------------------------------------------
-# Gate: SGLANG_OPT_TOPMAG=1 enables the prune hook. Keep fraction:
-# XKV_TOPMAG_KEEP=0.5 keeps the largest 50% of coords per vector (zeros the rest).
-TOPMAG_KEEP = float(os.environ.get("XKV_TOPMAG_KEEP", "1.0"))
 
 # --- sglang patch targets -------------------------------------------------------
 # Stage 1 patches the store, persistent pool, capacity model, raw-index output,
@@ -40,7 +34,6 @@ POOL_CFG = f"{SRC_ROOT}/sglang/srt/model_executor/pool_configurator.py"
 DSV4_BACKEND = f"{SRC_ROOT}/sglang/srt/layers/attention/deepseek_v4_backend.py"
 INDEXER = f"{SRC_ROOT}/sglang/srt/layers/attention/dsv4/indexer.py"
 PATCH_FILES = (COMPRESSOR_V2, MEM_POOL, POOL_CFG, DSV4_BACKEND, INDEXER)
-OLD_PATCH_FILES = PATCH_FILES
 
 # Package import root: inside the eval container this resolves to the mounted
 # /mnt/host_root/home/jovyan/winstonxcai/flash-optimizations, so the sglang
@@ -50,30 +43,12 @@ PACKAGE_ROOT = os.environ.get("XKV_PACKAGE_DIR",
 MARKER = "## MUSTAFAR"
 
 
-def ctrl_dir() -> str:
-    """Directory for runtime debug logs (XKV_DEBUG=1)."""
-    return os.environ.get("SG_CTRL_DIR", str(Path(__file__).resolve().parent / "ctrl"))
-
-
 def topmag_enabled() -> bool:
     return os.environ.get("SGLANG_OPT_TOPMAG") == "1"
 
 
 def topmag_keep() -> float:
     return float(os.environ.get("XKV_TOPMAG_KEEP", "1.0"))
-
-
-def topmag_zero_count() -> int:
-    """Coords zeroed per latent row (0 when keep>=1)."""
-    k = HEAD_DIM - int(round(HEAD_DIM * topmag_keep()))
-    return max(0, min(k, HEAD_DIM))
-
-
-def sparse_shadow() -> bool:
-    """Stage-0 shadow check: XKV_SPARSE_SHADOW=1 runs pack->unpack on real latent
-    rows at the store site and compares against the dense-pruned tensor (default
-    off -> the server performs no sparse pack/unpack work)."""
-    return os.environ.get("XKV_SPARSE_SHADOW") == "1"
 
 
 def packed_c4_enabled() -> bool:

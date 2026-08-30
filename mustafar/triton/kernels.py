@@ -1,67 +1,6 @@
-"""Triton kernels for TopMag sparse formats.
-
-The first two kernels implement the Stage-0 BF16 reference format.  The
-remaining kernels implement Stage-1's persistent 328-byte FP8 C4 records and
-reconstruct them for the unchanged FlashMLA consumers.
-
-Layout conventions (shared with sparse.py, single source of truth in code):
-  - keep-mask: bool [n, HEAD_DIM], True = keep (exact-global TopMag,
-    computed once from the unmodified latent via reference.topmag_keep_mask).
-  - packed:    [n, KEEP_K] in the latent's dtype, columns in ascending
-    keep-column order (rank = flat cumsum of the mask - 1).
-  - bitmap:    [n, 8] int64, word w covers cols 64w..64w+63; bit (63 - lane)
-    of word w is 1 iff col 64w+lane is kept (MSB = lane 0, upstream
-    mustafar-upstream convention). int64 not uint64 (torch storage); signed
-    `>>` + `& 1` extracts the correct bit even for the top bit (stored as
-    -2**63).
-
-Kernel B is the exact inverse of A: same cumsum rank, masked load instead of
-masked scatter, `other=0.0` so pruned coords land as exactly 0.
-"""
+"""Triton kernels for persistent 328-byte FP8 C4 records."""
 import triton
 import triton.language as tl
-
-
-@triton.jit
-def _pack_ccomp_kernel(
-    x_ptr,        # [n, HEAD_DIM] latent values (fp32/bf16/fp16)
-    mask_ptr,     # [n, HEAD_DIM] int8 keep-mask (0/1), True = keep
-    packed_ptr,   # [n, KEEP_K] output, same dtype as x
-    n,
-    HEAD_DIM: tl.constexpr,
-    KEEP_K: tl.constexpr,
-    BLOCK_D: tl.constexpr,
-):
-    row = tl.program_id(0)
-    offs = tl.arange(0, BLOCK_D)
-    vals = tl.load(x_ptr + row * HEAD_DIM + offs)
-    bits = tl.load(mask_ptr + row * HEAD_DIM + offs).to(tl.int1)
-    rank = tl.cumsum(bits.to(tl.int32), axis=0) - 1     # global packed rank 0..KEEP_K-1
-    idx = (row.to(tl.int64) * KEEP_K + rank.to(tl.int64))
-    tl.store(packed_ptr + idx, vals, mask=bits)
-
-
-@triton.jit
-def _unpack_ccomp_kernel(
-    packed_ptr,   # [n, KEEP_K] packed values
-    bitmap_ptr,   # [n, BITMAP_WORDS] int64 bitmaps (MSB = lane 0)
-    out_ptr,      # [n, HEAD_DIM] dense output, same dtype as packed
-    n,
-    HEAD_DIM: tl.constexpr,
-    KEEP_K: tl.constexpr,
-    BITMAP_WORDS: tl.constexpr,
-    BLOCK_D: tl.constexpr,
-):
-    row = tl.program_id(0)
-    offs = tl.arange(0, BLOCK_D)
-    word = offs // 64
-    lane = offs % 64
-    bm = tl.load(bitmap_ptr + row * BITMAP_WORDS + word)      # 8 distinct int64, broadcast
-    bits = ((bm >> (63 - lane)) & 1).to(tl.int1)
-    rank = tl.cumsum(bits.to(tl.int32), axis=0) - 1
-    idx = (row.to(tl.int64) * KEEP_K + rank.to(tl.int64))
-    val = tl.load(packed_ptr + idx, mask=bits, other=0.0)
-    tl.store(out_ptr + row * HEAD_DIM + offs, val)
 
 
 @triton.jit
@@ -213,17 +152,21 @@ def _unpack_gather_c4_bf16_kernel(
 
 
 @triton.jit
-def _rope_tail_inplace_kernel(
+def _rope_tail_complex_inplace_kernel(
     dense_ptr,
     raw_indices_ptr,
-    cos_ptr,
-    sin_ptr,
+    freq_ptr,
     n_rows,
     HEAD_DIM: tl.constexpr,
     NOPE_DIM: tl.constexpr,
     ROPE_PAIRS: tl.constexpr,
 ):
-    """Apply interleaved-pair RoPE to the reconstructed 64-d tail."""
+    """Apply RoPE from a contiguous complex64 table without real/imag copies.
+
+    PyTorch stores complex64 as interleaved float32 real/imag values. The
+    wrapper passes a zero-copy ``view_as_real`` view, so each pair is loaded at
+    offsets ``2 * freq_base`` and ``2 * freq_base + 1``.
+    """
     row = tl.program_id(0)
     pair = tl.arange(0, ROPE_PAIRS)
     raw = tl.load(raw_indices_ptr + row).to(tl.int64)
@@ -233,8 +176,8 @@ def _rope_tail_inplace_kernel(
     x_real = tl.load(dense_ptr + base, mask=valid, other=0.0).to(tl.float32)
     x_imag = tl.load(dense_ptr + base + 1, mask=valid, other=0.0).to(tl.float32)
     freq_base = position * ROPE_PAIRS + pair
-    c = tl.load(cos_ptr + freq_base, mask=valid, other=1.0).to(tl.float32)
-    s = tl.load(sin_ptr + freq_base, mask=valid, other=0.0).to(tl.float32)
+    c = tl.load(freq_ptr + freq_base * 2, mask=valid, other=1.0).to(tl.float32)
+    s = tl.load(freq_ptr + freq_base * 2 + 1, mask=valid, other=0.0).to(tl.float32)
     tl.store(dense_ptr + base, x_real * c - x_imag * s, mask=valid)
     tl.store(dense_ptr + base + 1, x_real * s + x_imag * c, mask=valid)
 

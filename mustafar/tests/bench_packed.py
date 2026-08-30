@@ -76,7 +76,7 @@ def run(output_dir: str | Path | None = None) -> dict[str, object]:
 
     max_position = max(selected_counts) * 4 + 1
     angles = torch.randn(max_position, 32, dtype=torch.float32, device=device)
-    freqs = (torch.cos(angles), torch.sin(angles))
+    freqs = torch.complex(torch.cos(angles), torch.sin(angles)).contiguous()
     rows: list[dict[str, object]] = []
 
     for batch in batch_sizes:

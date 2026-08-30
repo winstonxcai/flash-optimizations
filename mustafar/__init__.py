@@ -14,7 +14,6 @@ from .config import (
 )
 
 _OPS_SYMBOLS = {
-    "maybe_prune",
     "patch",
     "unpatch",
     "verify",
@@ -51,5 +50,5 @@ __all__ = [
     "packed_c4_enabled", "topmag_keep_mask", "topmag_zero_from_mask",
     "pack_c4_rows", "unpack_gather_c4_native", "unpack_gather_c4_bf16",
     "NativeC4Workspace",
-    "maybe_prune", "patch", "unpatch", "verify",
+    "patch", "unpatch", "verify",
 ]

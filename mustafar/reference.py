@@ -30,9 +30,10 @@ def topmag_keep_mask(latent: torch.Tensor, keep: float) -> torch.Tensor:
         return mask
     mag = latent.abs().float()
     _, idx = mag.topk(prune_k, dim=-1, largest=False)        # [n, prune_k]
-    n = latent.shape[0]
-    rows = torch.arange(n, device=latent.device)[:, None].expand(n, prune_k)
-    mask[rows.reshape(-1), idx.reshape(-1)] = False
+    # Advanced-index assignment with the Python scalar ``False`` triggers a
+    # CPU-to-CUDA scalar copy, which CUDA graph capture rejects.  scatter_
+    # emits the same device-side mask update without changing TopK semantics.
+    mask.scatter_(dim=-1, index=idx, value=False)
     return mask
 
 
@@ -45,11 +46,3 @@ def topmag_zero_from_mask(latent: torch.Tensor, keep_mask: torch.Tensor) -> torc
     """
     latent.masked_fill_(~keep_mask, 0.0)
     return latent
-
-
-def topmag_zero(latent: torch.Tensor, keep: float) -> torch.Tensor:
-    """Backward-compatible dense-zero TopMag: mask once, then zero (same result
-    as the original scatter-based implementation). keep=1.0 is a no-op.
-    """
-    keep_mask = topmag_keep_mask(latent, keep)
-    return topmag_zero_from_mask(latent, keep_mask)

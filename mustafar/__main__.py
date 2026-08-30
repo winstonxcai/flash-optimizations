@@ -1,6 +1,6 @@
 """CLI for the mustafar package: python -m mustafar <cmd>.
 
-Commands: patch | unpatch | verify | selftest | sparseselftest | packedselftest
+Commands: patch | unpatch | verify | selftest | packedselftest
 Run from flash-optimizations (or with it on PYTHONPATH).
 """
 import sys
@@ -20,9 +20,6 @@ def main():
     elif cmd == "selftest":
         from .tests import unit
         unit.run_topmag()
-    elif cmd == "sparseselftest":
-        from .tests import unit
-        unit.run_sparse()
     elif cmd == "packedselftest":
         from .tests import unit
         unit.run_packed_reference()
