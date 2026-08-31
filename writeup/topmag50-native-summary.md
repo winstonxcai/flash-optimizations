@@ -85,7 +85,7 @@ largest non-MoE compute). Measured 64k, 5 hardest tasks × n=50:
 (paged-indexer path — the DSV4 nonpaged indexer OOMs on q_chunk×seq temp at default 8192).
 
 | bucket | n | dense | **TopMag50** | delta |
-|---|---|---:|---:|---:|---:|
+|---|---|---:|---:|---:|
 | **OVERALL** | **100** | **55 (55.0%)** | **55 (55.0%)** | **+0.0 pp** |
 | 16-32k | 33 | 14 (42.4%) | 13 (39.4%) | −3.0 pp |
 | 32-64k | 33 | 22 (66.7%) | 23 (69.7%) | +3.0 pp |
@@ -134,7 +134,7 @@ cloud-vs-local confound was suspected. That is exactly what the 25-distinct + lo
 Excluded degenerate: `sri_esecgpt_80fa3321` (suite collapsed 267/267 → 4/4, `raw_summary=null`).
 
 | bucket | n | native (cloud) | **TopMag50** | delta | regr / hold / improve |
-|---|---|---:|---:|---:|---:|---:|
+|---|---:|---:|---:|---:|---:|
 | **ALL (ex-degen)** | **24** | 75.4% | **71.8%** | **−3.6 pp** | 8 / 12 / 4 |
 | easy+medium | 17 | 83.6% | **86.9%** | **+3.2 pp** | 4 / 10 / 3 |
 | hard (ex-degen) | 7 | 55.2% | **35.1%** | **−20.2 pp** | 4 / 2 / 1 |
