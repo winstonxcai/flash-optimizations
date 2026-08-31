@@ -9,6 +9,7 @@ agentic evals? Three benchmarks, three servers, all on **DeepSeek-V4-Flash-FP8 /
 |---|---|---|---|---|
 | RULER (13 tasks) | latent (512-dim) + indexer (128-dim) | 32k/64k | 2026-08-17 / 19 | 850 smp (latent), 250 smp (indexer) |
 | LongBench V2 | **indexer** (`--prune-target indexer`) | 16k–128k | 2026-08-30 | n=100 |
+| LongBench V2 | **latent** (`--prune-target compressor`) | 16k–128k | 2026-08-31 | n=100 |
 | Sangfor-Bench (distinct tasks) | latent (native c4, `SGLANG_OPT_TOPMAG=1`) | agentic | 2026-08-28→31 | 5 + 25 distinct |
 
 Builds: `transferibility/sg_capture.py` injection harness (RULER/LB2) and the Mustafar package
@@ -25,8 +26,9 @@ build with the same top-k-by-|RMSNorm(raw)·weight| mask**; only the store's sto
    Retained energy R(0.5) = 0.954, stable 32k→64k.
 2. **RULER (indexer, 64k, 5 hardest × n=50): mean −0.82 pts @50, −0.55 pts @70 — the latent's QA caveat
    does NOT transfer** (qa_2 @70%: −2.0 pts on the indexer vs −4.5 pts on the latent).
-3. **LongBench V2 (n=100): exactly lossless — 55/100 both, +0.0 pp overall; 2 single-sample flips, no task-level
-   regressions.** Retained energy 0.9695.
+3. **LongBench V2 (n=100): indexer lossless — 55/100 both, +0.0 pp overall; 2 single-sample flips, no task-level
+   regressions.** Retained energy 0.9695. **The compressor-latent target is the one caveat: −2.0 pp overall, all
+   in the 64-128k bucket (−5.9 pp), QA/Code families — consistent with the RULER latent-QA caveat.**
 4. **Sangfor-Bench 25 distinct: easy+medium *improve* (+3.2 pp, n=17); the hard bucket's −20 pp crater is a
    cloud-vs-local server effect (−23.7 pp local-native vs cloud), not pruning — apples-to-apples TopMag50 is
    +3.5 pp over the local-native control (+17 test cases of 1149).**
@@ -105,6 +107,32 @@ Retained energy (indexer): **mean 0.9695** (min 0.9664, max 0.9732, n=100).
 
 **LongBench V2 verdict: lossless.** Pass rate identical (55/55), the two single-sample flips cancel, and no
 bucket/domain shows a systematic drop.
+
+### 2b. Latent target (`--prune-target compressor`, 512-dim) — the one caveat
+
+Same 100-sample selection, TopMag50 on the **compressor latent** instead of the indexer keys
+(`transferibility/out/lb2_prune100_latent.json`). Note the within-run dense pass (54) is 1 sample below the
+indexer run's (55) — cross-run noise, so compare dense-vs-prune **within** this run.
+
+| bucket | n | dense | **TopMag50** | delta |
+|---|---|---:|---:|---:|
+| **OVERALL** | **100** | **54 (54.0%)** | **52 (52.0%)** | **−2.0 pp** |
+| 16-32k | 33 | 14 (42.4%) | 14 (42.4%) | +0.0 pp |
+| 32-64k | 33 | 22 (66.7%) | 22 (66.7%) | +0.0 pp |
+| 64-128k | 34 | 18 (52.9%) | 16 (47.1%) | −5.9 pp |
+
+By domain: Single-Document QA −9.1 pp, Code Repository −9.1 pp, Multi-Document QA −4.5 pp, Long Structured Data
++40 pp (each driven by 1-2 flips); Long-dialogue and Long in-context flat.
+
+**6 flips** — 2 improve (both Long Structured Data, ctx 42,417 + 78,264), 4 regress (2 Single-Doc QA + 1 Multi-Doc
+QA at 64-128k, 1 Code Repo at 32-64k). Retained energy (compressor latent): **mean 0.9531** (min 0.9496, max
+0.9568) — higher sparsity budget than the indexer's 0.9695 at the same keep ratio, consistent with the latent's
+smaller information margin.
+
+**Latent verdict: the QA caveat transfers.** Unlike the indexer (lossless), pruning the 512-dim compressor latent
+costs −2.0 pp overall, entirely concentrated in the 64-128k bucket and the QA/Code families. This matches RULER's
+finding that the QA caveat is a property of the **compressor latent**, not of pruning — the indexer's 128-dim
+kv_norm keys carry what QA needs.
 
 ---
 
@@ -231,7 +259,8 @@ confound, but consistent with the same server effect.
 
 - RULER latent: `transferibility/out/ruler_csa_prune50_64k.json`, `ruler_csa_prune70_64k.json` (850 smp each);
   indexer: `transferibility/out/ruler_csa_idx_prune50_64k.json`, `ruler_csa_idx_prune70_64k.json` (250 smp each).
-- LB2: `transferibility/out/lb2_prune100.json` (per-sample dense/prune scores + retained energy);
+- LB2: `transferibility/out/lb2_prune100.json` (indexer target), `transferibility/out/lb2_prune100_latent.json`
+  (compressor-latent target; per-sample dense/prune scores + retained energy);
   `transferibility/scripts/analyze_lb2_prune100.py`.
 - Sangfor: 5d/25d result dirs under `/data/zyj/YJYBench/results/test/Sangfor-Bench_cc_vibe_*_{dsv4-topmag50-5d|dsv4-topmag50-25d}-*_2026082{8,9}/…`; hard-native
   control `dsv4-hardnative-*_20260830`; master logs `dsv4-topmag50-{5d,25d}_master.log`,
