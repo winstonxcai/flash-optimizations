@@ -244,7 +244,7 @@ rerun the **same 8 hard + 10 medium + 7 easy** tasks at `--context-length 262144
 ~230k) so the local-vs-cloud comparison is apples-to-apples. Pass rate %, n=1 per task.
 
 | task | cloud (1M) | native (262k) | TopMag50 (262k) | Δ (T−cloud) | Δ (T−native) |
-|---|---|---:|---:|---:|---:|---:|
+|---|---|---:|---:|---:|---:|
 | **HARD (8)** | | | | | |
 | sri_swe-bench_5f5a7df7 | 100.0 | 92.2 | 90.5 | −9.5 | −1.7 |
 | sri_esecgpt_48486b59 | 33.0 | 0.0 <sup>1</sup> | 33.0 | 0.0 | +33.0 |
