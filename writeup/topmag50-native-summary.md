@@ -242,7 +242,8 @@ The 135k runs above were cratered by sglang's input ceiling (`135168 − 32000` 
 ≈ 103k effective, below the cc-agent's ~104k natural peak → 400s → dead turns). Both local servers
 rerun the **same 8 hard + 10 medium + 7 easy** tasks at `--context-length 262144` (effective input
 ~230k) so the local-vs-cloud comparison is apples-to-apples. Pass rate % per task (n=1);
-Δ columns are the difference in pass rate, in **percentage points (pp)**.
+Δ columns are the difference in pass rate, in **percentage points (pp)**; mean rows and the running
+full-avg row are **test-case-weighted** (Σ passed / Σ tests).
 
 | task (# test cases) | native (262k) | TopMag50 (262k) | Δ (T−native) (pp) |
 |---|---:|---:|---:|
@@ -255,8 +256,8 @@ rerun the **same 8 hard + 10 medium + 7 easy** tasks at `--context-length 262144
 | sri_ap-gpt_2bcf1160 (164) | 82.3 | 79.3 | −3.0 |
 | tw_esecgpt_f291630 (243) | 100.0 | 100.0 | 0.0 |
 | sri_ap-gpt_d7527749 (137) | 54.0 | 78.8 | +24.8 |
-| **mean (8)** | **75.3** | **81.4** | **+6.1** |
-| **mean (7, ex-48486b59)** <sup>1</sup> | **86.1** | **88.3** | **+2.2** |
+| **mean (8, test-case-wtd)** | **75.1** | **82.1** | **+7.1** |
+| **mean (7, ex-48486b59, test-case-wtd)** <sup>1</sup> | **89.4** | **91.5** | **+2.1** |
 | **MEDIUM (10)** | | | |
 | gcjs_kube-log-check-recover_5b6a23ad (254) | 97.6 | 96.9 | −0.7 |
 | sri_s1_00ce55e2 (126) | 89.7 | 93.7 | +4.0 |
@@ -268,7 +269,7 @@ rerun the **same 8 hard + 10 medium + 7 easy** tasks at `--context-length 262144
 | fy_gptanalystagent_fb3d6a3d (111) | 70.3 | 64.0 | −6.3 |
 | gcjs_go-zero_22ab9e7d (48) | 100.0 | 100.0 | 0.0 |
 | sri_ap-gpt_0dd68d23 (122) | 98.4 | 94.3 | −4.1 |
-| **mean (10)** | **93.7** | **90.5** | **−3.2** |
+| **mean (10, test-case-wtd)** | **94.0** | **92.1** | **−2.0** |
 | **EASY (7)** | | | |
 | gcjs_kube-log-check-recover_c6a12bfe (122) | — | 95.1 | |
 | gcjs_kube-log-check-recover_fc67bfda (132) | — | 99.2 | |
@@ -277,7 +278,7 @@ rerun the **same 8 hard + 10 medium + 7 easy** tasks at `--context-length 262144
 | tw_esecgpt_6741243f (40) | — | 100.0 | |
 | gcjs_kube-log-check-recover_e04abbb7 (74) | — | — | |
 | mss_drme-service_2a2095f8 (35) | — | — | |
-| **mean (7)** | **pending** | **pending** | |
+| **mean (7, test-case-wtd)** | **pending** | **pending** | |
 | **running full avg (18 tasks, test-case-wtd)** | **84.0** | **86.8** | **+2.8** |
 
 <sup>1</sup> Native 48486b59 is a **broken-build trajectory**: the agent left the gptprocessor package
@@ -287,11 +288,11 @@ parity (75/227).
 
 Read-through (hard bucket): **the context fix recovers the crater to at-or-above cloud on both local
 legs** (the cloud numbers that cratered — cec32c82, 2bcf1160, d7527749 — all run ≥79 on TopMag here).
-Apples-to-apples, TopMag − native is +6.1 pp on mean(8) — dominated by native's invalid 48486b59 — and
-**+2.2 pp on mean(7)**. Medium bucket (10/10 both legs): native mean 93.7 vs TopMag 90.5 (−3.2 pp), the
-only bucket where native edges TopMag, driven by n=1 trajectories on d7329e44 (−27) and fy_gptanalystagent
-(−6.3). Easy leg in progress; **test-case-weighted running full avg (18 tasks): native 84.0 vs TopMag
-86.8 (+2.8 pp)**.
+Apples-to-apples, TopMag − native is +7.1 pp on test-case-weighted mean(8) — dominated by native's
+invalid 48486b59 — and **+2.1 pp on mean(7)**. Medium bucket (10/10 both legs): native weighted mean 94.0
+vs TopMag 92.1 (−2.0 pp), the only bucket where native edges TopMag, driven by n=1 trajectories on
+d7329e44 (−27) and fy_gptanalystagent (−6.3). Easy leg in progress; **test-case-weighted running full
+avg (18 tasks): native 84.0 vs TopMag 86.8 (+2.8 pp)**.
 
 ---
 
