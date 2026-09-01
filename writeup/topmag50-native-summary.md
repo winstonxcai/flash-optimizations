@@ -271,12 +271,12 @@ full-avg row are **test-case-weighted** (Σ passed / Σ tests).
 | sri_ap-gpt_0dd68d23 (122) | 98.4 | 94.3 | −4.1 |
 | **mean (10, test-case-wtd)** | **94.0** | **92.1** | **−2.0** |
 | **EASY (7)** | | | |
-| gcjs_kube-log-check-recover_c6a12bfe (122) | — | 95.1 | |
+| gcjs_kube-log-check-recover_c6a12bfe (122) | 95.1 | 95.1 | 0.0 |
 | gcjs_kube-log-check-recover_fc67bfda (132) | — | 99.2 | |
 | tw_esecgpt_4966005 (40) | — | 100.0 | |
 | sri_chat-agent_035a16f0 (27) | — | 88.9 | |
 | tw_esecgpt_6741243f (40) | — | 100.0 | |
-| gcjs_kube-log-check-recover_e04abbb7 (74) | — | — | |
+| gcjs_kube-log-check-recover_e04abbb7 (74) | — | 100.0 | |
 | mss_drme-service_2a2095f8 (35) | — | — | |
 | **mean (7, test-case-wtd)** | **pending** | **pending** | |
 | **running full avg (17 tasks, test-case-wtd, ex-48486b59)** <sup>1</sup> | **91.8** | **91.8** | **0.0** |
