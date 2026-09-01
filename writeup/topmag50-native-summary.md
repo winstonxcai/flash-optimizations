@@ -266,15 +266,15 @@ rerun the **same 8 hard + 10 medium + 7 easy** tasks at `--context-length 262144
 | sri_s1_d060bef0 (131) | 90.1 | 85.5 | 89.3 | −0.8 | +3.8 |
 | sri_esecgpt_cf8ba0fb (268) | 100.0 | 100.0 | 100.0 | 0.0 | 0.0 |
 | fy_gptanalystagent_fb3d6a3d (111) | 100.0 | 70.3 | 64.0 | −36.0 | −6.3 |
-| gcjs_go-zero_22ab9e7d (48) | 100.0 | — | 100.0 | 0.0 | — |
-| sri_ap-gpt_0dd68d23 (122) | 97.5 | — | 94.3 | −3.2 | — |
-| **mean (10)** | **73.2** | **pending** | **90.5** | **+17.3** | |
+| gcjs_go-zero_22ab9e7d (48) | 100.0 | 100.0 | 100.0 | 0.0 | 0.0 |
+| sri_ap-gpt_0dd68d23 (122) | 97.5 | 98.4 | 94.3 | −3.2 | −4.1 |
+| **mean (10)** | **73.2** | **93.7** | **90.5** | **+17.3** | **−3.2** |
 | **EASY (7)** | | | | | |
 | gcjs_kube-log-check-recover_c6a12bfe (122) | 100.0 | — | 95.1 | −4.9 | |
 | gcjs_kube-log-check-recover_fc67bfda (132) | 99.2 | — | 99.2 | 0.0 | |
 | tw_esecgpt_4966005 (40) | 100.0 | — | 100.0 | 0.0 | |
 | sri_chat-agent_035a16f0 (27) | 92.6 | — | 88.9 | −3.7 | |
-| tw_esecgpt_6741243f (40) | 100.0 | — | — | | |
+| tw_esecgpt_6741243f (40) | 100.0 | — | 100.0 | 0.0 | |
 | gcjs_kube-log-check-recover_e04abbb7 (74) | 98.6 | — | — | | |
 | mss_drme-service_2a2095f8 (35) | 100.0 | — | — | | |
 | **mean (7)** | **98.6** | **pending** | **pending** | | |
