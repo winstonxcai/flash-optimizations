@@ -241,9 +241,10 @@ confound, but consistent with the same server effect.
 The 135k runs above were cratered by sglang's input ceiling (`135168 − 32000` completion budget
 ≈ 103k effective, below the cc-agent's ~104k natural peak → 400s → dead turns). Both local servers
 rerun the **same 8 hard + 10 medium + 7 easy** tasks at `--context-length 262144` (effective input
-~230k) so the local-vs-cloud comparison is apples-to-apples. Pass rate %, n=1 per task.
+~230k) so the local-vs-cloud comparison is apples-to-apples. Pass rate % per task (n=1);
+Δ columns are the difference in pass rate, in **percentage points (pp)**.
 
-| task | cloud (1M) | native (262k) | TopMag50 (262k) | Δ (T−cloud) | Δ (T−native) |
+| task | cloud (1M) | native (262k) | TopMag50 (262k) | Δ (T−cloud) (pp) | Δ (T−native) (pp) |
 |---|---|---:|---:|---:|---:|
 | **HARD (8)** | | | | | |
 | sri_swe-bench_5f5a7df7 | 100.0 | 92.2 | 90.5 | −9.5 | −1.7 |
