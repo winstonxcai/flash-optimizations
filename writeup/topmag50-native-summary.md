@@ -261,12 +261,12 @@ rerun the **same 8 hard + 10 medium + 7 easy** tasks at `--context-length 262144
 | gcjs_kube-log-check-recover_5b6a23ad | 39.8 | 97.6 | 96.9 | +57.1 | −0.7 |
 | sri_s1_00ce55e2 | 100.0 | 89.7 | 93.7 | −6.3 | +4.0 |
 | aiyycp_sales-flow_d7329e44 | 4.1 | 100.0 | 73.0 | +68.9 | −27.0 |
-| sri_chat-agent_86ce36d3 | 0.0 | *running* | 93.5 | +93.5 | — |
-| sri_chat-agent_b2f8ec64 | 100.0 | *running* | 100.0 | 0.0 | — |
-| sri_s1_d060bef0 | 90.1 | *running* | 89.3 | −0.8 | — |
-| sri_esecgpt_cf8ba0fb | 100.0 | — | 100.0 | 0.0 | — |
-| fy_gptanalystagent_fb3d6a3d | 100.0 | — | — | — | — |
-| gcjs_go-zero_22ab9e7d | 100.0 | — | — | — | — |
+| sri_chat-agent_86ce36d3 | 0.0 | 96.8 | 93.5 | +93.5 | −3.3 |
+| sri_chat-agent_b2f8ec64 | 100.0 | 98.7 | 100.0 | 0.0 | +1.3 |
+| sri_s1_d060bef0 | 90.1 | 85.5 | 89.3 | −0.8 | +3.8 |
+| sri_esecgpt_cf8ba0fb | 100.0 | 100.0 | 100.0 | 0.0 | 0.0 |
+| fy_gptanalystagent_fb3d6a3d | 100.0 | — | 64.0 | −36.0 | — |
+| gcjs_go-zero_22ab9e7d | 100.0 | — | 100.0 | 0.0 | — |
 | sri_ap-gpt_0dd68d23 | 97.5 | — | — | — | — |
 | **mean (10)** | **pending** | **pending** | **pending** | | |
 | **EASY (7)** | | | | | |
