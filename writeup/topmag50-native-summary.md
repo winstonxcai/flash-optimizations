@@ -256,7 +256,7 @@ full-avg row are **test-case-weighted** (Σ passed / Σ tests).
 | sri_ap-gpt_2bcf1160 (164) | 82.3 | 79.3 | −3.0 |
 | tw_esecgpt_f291630 (243) | 100.0 | 100.0 | 0.0 |
 | sri_ap-gpt_d7527749 (137) | 54.0 | 78.8 | +24.8 |
-| **mean (8, test-case-wtd)** | **75.1** | **82.1** | **+7.1** |
+| **mean (8, test-case-wtd)** | **76.4** | **82.1** | **+5.7** |
 | **mean (7, ex-48486b59, test-case-wtd)** <sup>1</sup> | **89.4** | **91.5** | **+2.1** |
 | **MEDIUM (10)** | | | |
 | gcjs_kube-log-check-recover_5b6a23ad (254) | 97.6 | 96.9 | −0.7 |
@@ -273,28 +273,29 @@ full-avg row are **test-case-weighted** (Σ passed / Σ tests).
 | **EASY (7)** | | | |
 | gcjs_kube-log-check-recover_c6a12bfe (122) | 95.1 | 95.1 | 0.0 |
 | gcjs_kube-log-check-recover_fc67bfda (132) | 99.2 | 99.2 | 0.0 |
-| tw_esecgpt_4966005 (40) | — | 100.0 | |
-| sri_chat-agent_035a16f0 (27) | — | 88.9 | |
-| tw_esecgpt_6741243f (40) | — | 100.0 | |
-| gcjs_kube-log-check-recover_e04abbb7 (74) | — | 100.0 | |
-| mss_drme-service_2a2095f8 (35) | — | 100.0 | |
-| **mean (7, test-case-wtd)** | **pending** | **97.9** | |
-| **running full avg (19 tasks, test-case-wtd, ex-48486b59)** <sup>1</sup> | **91.9** | **91.9** | **0.0** |
+| tw_esecgpt_4966005 (40) | 100.0 | 100.0 | 0.0 |
+| sri_chat-agent_035a16f0 (27) | 77.8 | 88.9 | +11.1 |
+| tw_esecgpt_6741243f (40) | 100.0 | 100.0 | 0.0 |
+| gcjs_kube-log-check-recover_e04abbb7 (74) | 100.0 | 100.0 | 0.0 |
+| mss_drme-service_2a2095f8 (35) | 100.0 | 100.0 | 0.0 |
+| **mean (7, test-case-wtd)** | **97.2** | **97.9** | **+0.6** |
+| **running full avg (24 tasks, test-case-wtd, ex-48486b59)** <sup>1</sup> | **92.7** | **92.8** | **+0.1** |
 
 <sup>1</sup> Native 48486b59 is a **broken-build trajectory**: the agent left the gptprocessor package
 uncompilable (missing private dep `aes-go-module-core`, its own final-summary admission), so its 0.0 is
-not a valid control and the task is excluded from the mean (7) row. TopMag's 33.0 on it is exact cloud
-parity (75/227).
+not a valid control and the task is excluded from the mean (7) row. Its native suite also shrank 227→202
+(broken build dropped tests), so native's mean (8) counts 0/202; TopMag ran the full cloud suite (75/227),
+exact cloud parity.
 
 Read-through (hard bucket): **the context fix recovers the crater to at-or-above cloud on both local
 legs** (the cloud numbers that cratered — cec32c82, 2bcf1160, d7527749 — all run ≥79 on TopMag here).
-Apples-to-apples, TopMag − native is +7.1 pp on test-case-weighted mean(8) — dominated by native's
+Apples-to-apples, TopMag − native is +5.7 pp on test-case-weighted mean(8) — dominated by native's
 invalid 48486b59 — and **+2.1 pp on mean(7)**. Medium bucket (10/10 both legs): native weighted mean 94.0
 vs TopMag 92.1 (−2.0 pp), the only bucket where native edges TopMag, driven by n=1 trajectories on
-d7329e44 (−27) and fy_gptanalystagent (−6.3). TopMag easy leg complete (7/7, weighted mean 97.9);
-native easy leg in progress. **Test-case-weighted running full avg (18 tasks, ex-48486b59): native 91.9
-vs TopMag 91.9 (0.0 pp)** — essentially lossless at the aggregate once the invalid native control is
-dropped.
+d7329e44 (−27) and fy_gptanalystagent (−6.3). Easy leg (7/7 both legs): native 97.2 vs TopMag 97.9
+(+0.6 pp), native's only miss `035a16f0` (77.8 vs 88.9, n=1). **Test-case-weighted running full avg
+(24 tasks, ex-48486b59): native 92.7 vs TopMag 92.8 (+0.1 pp)** — essentially lossless at the aggregate
+once the invalid native control is dropped.
 
 ---
 
