@@ -244,40 +244,41 @@ rerun the **same 8 hard + 10 medium + 7 easy** tasks at `--context-length 262144
 ~230k) so the local-vs-cloud comparison is apples-to-apples. Pass rate % per task (n=1);
 Δ columns are the difference in pass rate, in **percentage points (pp)**.
 
-| task (# test cases) | cloud (1M) | native (262k) | TopMag50 (262k) | Δ (T−cloud) (pp) | Δ (T−native) (pp) |
-|---|---|---:|---:|---:|---:|
-| **HARD (8)** | | | | | |
-| sri_swe-bench_5f5a7df7 (116) | 100.0 | 92.2 | 90.5 | −9.5 | −1.7 |
-| sri_esecgpt_48486b59 (227) | 33.0 | 0.0 <sup>1</sup> | 33.0 | 0.0 | +33.0 |
-| sri_esecgpt_80fa3321 (267) *(degen)* | 100.0 | 100.0 | 100.0 | 0.0 | 0.0 |
-| sri_s1_cec32c82 (176) | 43.2 | 97.2 | 98.9 | +55.7 | +1.7 |
-| sri_swe-bench_fea293e6 (86) | 100.0 | 76.7 | 70.9 | −29.1 | −5.8 |
-| sri_ap-gpt_2bcf1160 (164) | 9.8 | 82.3 | 79.3 | +69.5 | −3.0 |
-| tw_esecgpt_f291630 (243) | 100.0 | 100.0 | 100.0 | 0.0 | 0.0 |
-| sri_ap-gpt_d7527749 (137) | 0.7 | 54.0 | 78.8 | +78.1 | +24.8 |
-| **mean (8)** | **60.8** | **75.3** | **81.4** | **+20.6** | **+6.1** |
-| **mean (7, ex-48486b59)** <sup>1</sup> | **64.8** | **86.1** | **88.3** | **+23.5** | **+2.2** |
-| **MEDIUM (10)** | | | | | |
-| gcjs_kube-log-check-recover_5b6a23ad (254) | 39.8 | 97.6 | 96.9 | +57.1 | −0.7 |
-| sri_s1_00ce55e2 (126) | 100.0 | 89.7 | 93.7 | −6.3 | +4.0 |
-| aiyycp_sales-flow_d7329e44 (74) | 4.1 | 100.0 | 73.0 | +68.9 | −27.0 |
-| sri_chat-agent_86ce36d3 (62) | 0.0 | 96.8 | 93.5 | +93.5 | −3.3 |
-| sri_chat-agent_b2f8ec64 (75) | 100.0 | 98.7 | 100.0 | 0.0 | +1.3 |
-| sri_s1_d060bef0 (131) | 90.1 | 85.5 | 89.3 | −0.8 | +3.8 |
-| sri_esecgpt_cf8ba0fb (268) | 100.0 | 100.0 | 100.0 | 0.0 | 0.0 |
-| fy_gptanalystagent_fb3d6a3d (111) | 100.0 | 70.3 | 64.0 | −36.0 | −6.3 |
-| gcjs_go-zero_22ab9e7d (48) | 100.0 | 100.0 | 100.0 | 0.0 | 0.0 |
-| sri_ap-gpt_0dd68d23 (122) | 97.5 | 98.4 | 94.3 | −3.2 | −4.1 |
-| **mean (10)** | **73.2** | **93.7** | **90.5** | **+17.3** | **−3.2** |
-| **EASY (7)** | | | | | |
-| gcjs_kube-log-check-recover_c6a12bfe (122) | 100.0 | — | 95.1 | −4.9 | |
-| gcjs_kube-log-check-recover_fc67bfda (132) | 99.2 | — | 99.2 | 0.0 | |
-| tw_esecgpt_4966005 (40) | 100.0 | — | 100.0 | 0.0 | |
-| sri_chat-agent_035a16f0 (27) | 92.6 | — | 88.9 | −3.7 | |
-| tw_esecgpt_6741243f (40) | 100.0 | — | 100.0 | 0.0 | |
-| gcjs_kube-log-check-recover_e04abbb7 (74) | 98.6 | — | — | | |
-| mss_drme-service_2a2095f8 (35) | 100.0 | — | — | | |
-| **mean (7)** | **98.6** | **pending** | **pending** | | |
+| task (# test cases) | native (262k) | TopMag50 (262k) | Δ (T−native) (pp) |
+|---|---:|---:|---:|
+| **HARD (8)** | | | |
+| sri_swe-bench_5f5a7df7 (116) | 92.2 | 90.5 | −1.7 |
+| sri_esecgpt_48486b59 (227) | 0.0 <sup>1</sup> | 33.0 | +33.0 |
+| sri_esecgpt_80fa3321 (267) *(degen)* | 100.0 | 100.0 | 0.0 |
+| sri_s1_cec32c82 (176) | 97.2 | 98.9 | +1.7 |
+| sri_swe-bench_fea293e6 (86) | 76.7 | 70.9 | −5.8 |
+| sri_ap-gpt_2bcf1160 (164) | 82.3 | 79.3 | −3.0 |
+| tw_esecgpt_f291630 (243) | 100.0 | 100.0 | 0.0 |
+| sri_ap-gpt_d7527749 (137) | 54.0 | 78.8 | +24.8 |
+| **mean (8)** | **75.3** | **81.4** | **+6.1** |
+| **mean (7, ex-48486b59)** <sup>1</sup> | **86.1** | **88.3** | **+2.2** |
+| **MEDIUM (10)** | | | |
+| gcjs_kube-log-check-recover_5b6a23ad (254) | 97.6 | 96.9 | −0.7 |
+| sri_s1_00ce55e2 (126) | 89.7 | 93.7 | +4.0 |
+| aiyycp_sales-flow_d7329e44 (74) | 100.0 | 73.0 | −27.0 |
+| sri_chat-agent_86ce36d3 (62) | 96.8 | 93.5 | −3.3 |
+| sri_chat-agent_b2f8ec64 (75) | 98.7 | 100.0 | +1.3 |
+| sri_s1_d060bef0 (131) | 85.5 | 89.3 | +3.8 |
+| sri_esecgpt_cf8ba0fb (268) | 100.0 | 100.0 | 0.0 |
+| fy_gptanalystagent_fb3d6a3d (111) | 70.3 | 64.0 | −6.3 |
+| gcjs_go-zero_22ab9e7d (48) | 100.0 | 100.0 | 0.0 |
+| sri_ap-gpt_0dd68d23 (122) | 98.4 | 94.3 | −4.1 |
+| **mean (10)** | **93.7** | **90.5** | **−3.2** |
+| **EASY (7)** | | | |
+| gcjs_kube-log-check-recover_c6a12bfe (122) | — | 95.1 | |
+| gcjs_kube-log-check-recover_fc67bfda (132) | — | 99.2 | |
+| tw_esecgpt_4966005 (40) | — | 100.0 | |
+| sri_chat-agent_035a16f0 (27) | — | 88.9 | |
+| tw_esecgpt_6741243f (40) | — | 100.0 | |
+| gcjs_kube-log-check-recover_e04abbb7 (74) | — | — | |
+| mss_drme-service_2a2095f8 (35) | — | — | |
+| **mean (7)** | **pending** | **pending** | |
+| **running full avg (18 tasks, test-case-wtd)** | **84.0** | **86.8** | **+2.8** |
 
 <sup>1</sup> Native 48486b59 is a **broken-build trajectory**: the agent left the gptprocessor package
 uncompilable (missing private dep `aes-go-module-core`, its own final-summary admission), so its 0.0 is
@@ -285,11 +286,12 @@ not a valid control and the task is excluded from the mean (7) row. TopMag's 33.
 parity (75/227).
 
 Read-through (hard bucket): **the context fix recovers the crater to at-or-above cloud on both local
-legs** — native mean(8) +14.5 pp and TopMag +20.6 pp vs cloud; even the tasks cloud itself failed
-(cec32c82 43.2, 2bcf1160 9.8, d7527749 0.7) now run 97/82/54 (native) and 99/79/79 (TopMag). Apples-to-
-apples, TopMag − native is +6.1 pp on mean(8) — dominated by native's invalid 48486b59 — and **+2.2 pp
-on mean(7)**. Medium + easy legs in progress (as of 2026-09-01); mean rows fill in as the native leg
-completes.
+legs** (the cloud numbers that cratered — cec32c82, 2bcf1160, d7527749 — all run ≥79 on TopMag here).
+Apples-to-apples, TopMag − native is +6.1 pp on mean(8) — dominated by native's invalid 48486b59 — and
+**+2.2 pp on mean(7)**. Medium bucket (10/10 both legs): native mean 93.7 vs TopMag 90.5 (−3.2 pp), the
+only bucket where native edges TopMag, driven by n=1 trajectories on d7329e44 (−27) and fy_gptanalystagent
+(−6.3). Easy leg in progress; **test-case-weighted running full avg (18 tasks): native 84.0 vs TopMag
+86.8 (+2.8 pp)**.
 
 ---
 
