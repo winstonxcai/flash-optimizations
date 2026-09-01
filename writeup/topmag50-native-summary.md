@@ -279,7 +279,7 @@ full-avg row are **test-case-weighted** (Σ passed / Σ tests).
 | gcjs_kube-log-check-recover_e04abbb7 (74) | — | — | |
 | mss_drme-service_2a2095f8 (35) | — | — | |
 | **mean (7, test-case-wtd)** | **pending** | **pending** | |
-| **running full avg (18 tasks, test-case-wtd)** | **84.0** | **86.8** | **+2.8** |
+| **running full avg (17 tasks, test-case-wtd, ex-48486b59)** <sup>1</sup> | **91.8** | **91.8** | **0.0** |
 
 <sup>1</sup> Native 48486b59 is a **broken-build trajectory**: the agent left the gptprocessor package
 uncompilable (missing private dep `aes-go-module-core`, its own final-summary admission), so its 0.0 is
@@ -292,7 +292,8 @@ Apples-to-apples, TopMag − native is +7.1 pp on test-case-weighted mean(8) —
 invalid 48486b59 — and **+2.1 pp on mean(7)**. Medium bucket (10/10 both legs): native weighted mean 94.0
 vs TopMag 92.1 (−2.0 pp), the only bucket where native edges TopMag, driven by n=1 trajectories on
 d7329e44 (−27) and fy_gptanalystagent (−6.3). Easy leg in progress; **test-case-weighted running full
-avg (18 tasks): native 84.0 vs TopMag 86.8 (+2.8 pp)**.
+avg (17 tasks, ex-48486b59): native 91.8 vs TopMag 91.8 (0.0 pp)** — essentially lossless at the
+aggregate once the invalid native control is dropped.
 
 ---
 
