@@ -265,10 +265,10 @@ rerun the **same 8 hard + 10 medium + 7 easy** tasks at `--context-length 262144
 | sri_chat-agent_b2f8ec64 | 100.0 | 98.7 | 100.0 | 0.0 | +1.3 |
 | sri_s1_d060bef0 | 90.1 | 85.5 | 89.3 | −0.8 | +3.8 |
 | sri_esecgpt_cf8ba0fb | 100.0 | 100.0 | 100.0 | 0.0 | 0.0 |
-| fy_gptanalystagent_fb3d6a3d | 100.0 | — | 64.0 | −36.0 | — |
+| fy_gptanalystagent_fb3d6a3d | 100.0 | 70.3 | 64.0 | −36.0 | −6.3 |
 | gcjs_go-zero_22ab9e7d | 100.0 | — | 100.0 | 0.0 | — |
-| sri_ap-gpt_0dd68d23 | 97.5 | — | — | — | — |
-| **mean (10)** | **pending** | **pending** | **pending** | | |
+| sri_ap-gpt_0dd68d23 | 97.5 | — | 94.3 | −3.2 | — |
+| **mean (10)** | **73.2** | **pending** | **90.5** | **+17.3** | |
 | **EASY (7)** | | | | | |
 | gcjs_kube-log-check-recover_c6a12bfe | 100.0 | — | — | | |
 | gcjs_kube-log-check-recover_fc67bfda | 99.2 | — | — | | |
