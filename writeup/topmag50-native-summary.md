@@ -270,7 +270,7 @@ rerun the **same 8 hard + 10 medium + 7 easy** tasks at `--context-length 262144
 | sri_ap-gpt_0dd68d23 | 97.5 | — | 94.3 | −3.2 | — |
 | **mean (10)** | **73.2** | **pending** | **90.5** | **+17.3** | |
 | **EASY (7)** | | | | | |
-| gcjs_kube-log-check-recover_c6a12bfe | 100.0 | — | — | | |
+| gcjs_kube-log-check-recover_c6a12bfe | 100.0 | — | 95.1 | −4.9 | |
 | gcjs_kube-log-check-recover_fc67bfda | 99.2 | — | — | | |
 | tw_esecgpt_4966005 | 100.0 | — | — | | |
 | sri_chat-agent_035a16f0 | 92.6 | — | — | | |
