@@ -297,6 +297,61 @@ d7329e44 (−27) and fy_gptanalystagent (−6.3). Easy leg (7/7 both legs): nati
 (24 tasks, ex-48486b59): native 92.7 vs TopMag 92.8 (+0.1 pp)** — essentially lossless at the aggregate
 once the invalid native control is dropped.
 
+### 3f. New 25 distinct @262k — packed set (native 262k leg running)
+
+The **Stage-1 packed** TopMag50 run (real 328-byte store, 1.78×; `SGLANG_OPT_TOPMAG=1
+XKV_TOPMAG_KEEP=0.5 SGLANG_OPT_TOPMAG_PACKED_C4=1`, no native shadow pool) covered **25 NEW
+tasks** (the §3d 24-task set excluded), split 13 cloud-pass / 12 cloud-fail (hard 8 / medium 10 /
+easy 7), all ≥8 cloud tests, at ctx 262144 on two concurrent TP4 servers (A=30211/GPUs 4-7,
+B=30212/GPUs 0-3), 2026-09-01→02. The **local-native 262k leg** for these same 25 tasks
+(`dsv4-native25-262k-*_20260902`, pristine stock servers) is **running** — its cells fill in as
+it completes. Pass rate % per task (n=1); Δ in pp. Cloud = `task_20260825_195126_744`.
+
+| task (# test cases) | cloud | native (262k) | packed (262k) | Δ (packed−native) (pp) | Δ (packed−cloud) (pp) |
+|---|---:|---:|---:|---:|---:|
+| **HARD (8)** | | | | | |
+| apex_chat-agent_9347a21 (56) | 100.0 | — | 100.0 | — | 0.0 |
+| apex_chat-agent_f268ef1 (32) | 100.0 | — | 25.0 | — | −75.0 |
+| apex_gpt-train-data-collector_1dbcd396 (111) <sup>2</sup> | 98.2 | — | 89.1 | — | −9.1 |
+| apex_soar-app_9207ca23 (23) | 91.3 | — | 100.0 | — | +8.7 |
+| apex_source-tracing-investigation_17ae176f (42) | 100.0 | — | 100.0 | — | 0.0 |
+| apex_source-tracing-investigation_a4432711 (20) | 100.0 | — | 85.0 | — | −15.0 |
+| apex_source-tracing-investigation_ab21ecf0 (28) | 96.4 | — | 100.0 | — | +3.6 |
+| sri_ap-gpt_0cd2c2ac (107) | 15.9 | — | 12.1 | — | −3.7 |
+| **HARD mean (8, test-case-wtd)** | **77.3** | — | **65.0** | — | **−12.3** |
+| **MEDIUM (10)** | | | | | |
+| aiyycp_sales-audit-platform_2439f30d (24) <sup>2</sup> | 100.0 | — | 95.0 | — | −5.0 |
+| aiyycp_sales-audit-platform_53266d85 (23) | 100.0 | — | 100.0 | — | 0.0 |
+| aiyycp_sales-audit-platform_ebac64e2 (34) | 91.2 | — | 91.2 | — | 0.0 |
+| aiyycp_sales-audit-platform_ef78d2c0 (15) <sup>2</sup> | 93.3 | — | 93.3 | — | 0.0 |
+| aiyycp_sales-auth_daf3ea25 (25) | 96.0 | — | 96.0 | — | 0.0 |
+| aiyycp_sales-conversation_fa2bb019 (25) | 100.0 | — | 100.0 | — | 0.0 |
+| aiyycp_sales-flow_033981bd (29) | 100.0 | — | 96.6 | — | −3.5 |
+| aiyycp_sales-flow_09299ad2 (24) | 100.0 | — | 29.2 | — | −70.8 |
+| aiyycp_sales-flow_191d12be (37) | 43.2 | — | 64.9 | — | +21.6 |
+| aiyycp_sales-flow_edb6ec00 (24) | 95.8 | — | 100.0 | — | +4.2 |
+| **MEDIUM mean (10, test-case-wtd)** | **89.6** | — | **86.0** | — | **−3.6** |
+| **EASY (7)** | | | | | |
+| apex_soar-app_282ef229 (11) | 100.0 | — | 100.0 | — | 0.0 |
+| apex_soar-app_4896a623 (10) | 100.0 | — | 100.0 | — | 0.0 |
+| apex_soar-app_4b0d01bf (8) | 87.5 | — | 75.0 | — | −12.5 |
+| apex_soar-app_76e6e4f8 (15) | 33.3 | — | 100.0 | — | +66.7 |
+| apex_soar-app_8073b35d (12) | 91.7 | — | 100.0 | — | +8.3 |
+| apex_soar-app_969ed0d4 (8) | 100.0 | — | 100.0 | — | 0.0 |
+| apex_soar-app_989a23c5 (14) | 100.0 | — | 100.0 | — | 0.0 |
+| **EASY mean (7, test-case-wtd)** | **84.6** | — | **97.4** | — | **+12.8** |
+| **running full avg (25, test-case-wtd)** | **82.3** | — | **76.5** | — | **−5.8** |
+
+<sup>2</sup> Suite size changed between cloud and packed legs (1dbcd396 111→55, 2439f30d 24→20,
+ef78d2c0 15→30); Δ uses each run's own total.
+
+Packed−cloud read-through: −5.8 pp overall, driven by two genuine task-level collapses —
+`apex_chat-agent_f268ef1` (32/32→8/32, 24/32 same-name flips) and `aiyycp_sales-flow_09299ad2`
+(24/24→7/24, 17/24 flips). Excluding those two, packed 80.8 vs cloud 80.9 (−0.1 pp); hard −6.6,
+medium +2.9, easy +12.8. 5 cloud-fail tasks fixed to full pass (9207ca23, ab21ecf0, edb6ec00,
+76e6e4f8, 8073b35d); 191d12be improved 16/37→24/37. The native 262k leg will resolve packing
+vs cloud-vs-prompt confound for the two collapses.
+
 ---
 
 ## Caveats
