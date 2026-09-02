@@ -2,8 +2,8 @@
 # NATIVE (pristine, untouched csa) rerun of the 25 NEW packed-set Sangfor tasks at
 # --context-length 262144. Two TP4 native servers on 10.72.1.175: A=30211 (GPUs 4-7),
 # B=30212 (GPUs 0-3), both pristine stock (git-checkout, no MUSTAFAR patch). Same 25
-# tasks and same A/B split as the Stage-1 packed run (dsv4-packed-262k-*_20260901) so
-# native-vs-packed is apples-to-apples per server. Order hard->medium->easy.
+# tasks as the Stage-1 packed run (dsv4-packed-262k-*_20260901). The two packed-collapse
+# tasks run FIRST, one per server: f268ef1 on B, 09299ad2 on A; then the rest.
 # RID dsv4-native25-262k-<task>_20260902.
 set -u
 cd /data/zyj/YJYBench
@@ -13,7 +13,9 @@ CFG_A=/data/zyj/YJYBench/test_env/docker_env_config_dsv4-windowed.json
 CFG_B=/data/zyj/YJYBench/test_env/docker_env_config_dsv4-windowed-30212.json
 
 # --- server A (30211) ---
+# The two packed-collapse tasks (f268ef1, 09299ad2) run FIRST, one per server.
 A_TASKS="
+aiyycp_sales-flow_09299ad2|medium|go|24/24
 apex_chat-agent_9347a21|hard|python|56/56
 apex_gpt-train-data-collector_1dbcd396|hard|go|109/111
 apex_source-tracing-investigation_17ae176f|hard|go|42/42
@@ -37,7 +39,6 @@ sri_ap-gpt_0cd2c2ac|hard|python|17/107
 aiyycp_sales-audit-platform_53266d85|medium|go|23/23
 aiyycp_sales-audit-platform_ef78d2c0|medium|go|14/15
 aiyycp_sales-conversation_fa2bb019|medium|go|25/25
-aiyycp_sales-flow_09299ad2|medium|go|24/24
 aiyycp_sales-flow_edb6ec00|medium|go|23/24
 apex_soar-app_4896a623|easy|python|10/10
 apex_soar-app_76e6e4f8|easy|python|5/15
