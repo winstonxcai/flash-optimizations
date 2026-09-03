@@ -22,7 +22,7 @@ Untouched versus packed measures the complete Stage-1 effect. Untouched versus T
 
 ## Serving methodology
 
-Serving was measured on **4× NVIDIA H100 80 GB HBM3 GPUs with TP4**, using SGLang’s official `bench_serving` script with exact 32k, 64k, and 128k inputs and exactly 2048 output tokens. Each point used one warm-up wave followed by three measured waves. Full decode CUDA graphs were enabled for batch sizes 1–12; prefill graphs were disabled because this is a decode optimization. The three legs ran in parallel and consumed **5.63 H100-hours total**: 1.74 untouched, 1.76 native, and 2.12 packed. Elapsed wall time was approximately 33 minutes, including startup.
+Serving was measured on **4× NVIDIA H100 80 GB HBM3 GPUs with TP4**, using SGLang’s official `bench_serving` script with exact 32k, 64k, and 128k inputs and exactly 2048 output tokens. Each point used one warm-up wave followed by three measured waves. Full decode CUDA graphs were enabled for batch sizes 1–12; prefill graphs were disabled because this is a decode optimization.
 
 ## Serving results
 
@@ -70,11 +70,40 @@ At 64k and 128k, native concurrency was already sufficient to saturate the avail
 |---|---:|---:|---:|
 | **RULER 64k (n=850)** | 95.1% | 95.3% | **+0.16 pp** |
 | **Longbench v2 (n=100)** | 54/100 | 52/100 | −2.0 pp |
-| **Sangfor-Bench (n=25 tasks)** | 92.7%* | 92.8%* | **+0.1 pp*** |
+| **Sangfor-Bench — first run, native layout (n=25 tasks)** | 9/24 local-native tasks passed* | 8/24 TopMag50 tasks passed* | −1 task |
+| **Sangfor-Bench — second run, packed layout (n=25 tasks)** | 13/25 cloud-baseline tasks passed | 13/25 packed TopMag50 tasks passed | 0 tasks |
+| **DeepSWE (n=113 tasks)** | — | — | — |
 
-Across the three precision evaluations, TopMag50 is essentially lossless relative to native: **RULER 64k (n=850)** improves by **+0.16 percentage points**, and **Sangfor-Bench (n=25 tasks)** is effectively unchanged at **92.7% native versus 92.8% TopMag50**. Sangfor tasks contain many model calls and test-case evaluations, so its task count understates the amount of underlying evaluation.
+Across the three precision evaluations, TopMag50 is essentially lossless relative to native: **RULER 64k (n=850)** improves by **+0.16 percentage points**. Sangfor-Bench was run twice: the first run used the native 584-byte layout and changed from **9/24 to 8/24 task passes** after excluding one invalid native trajectory; only the second run used the packed 328-byte layout. Sangfor tasks contain many model calls and test-case evaluations, so their task count understates the amount of underlying evaluation.
 
-The only negative signal is **Longbench v2 (n=100)**, where the compressor-latent result is **−2.0 percentage points**. This is a noisy small-sample result compared with RULER’s 850 samples. *Sangfor values are test-case-weighted across 24 non-degenerate tasks; one invalid native task was excluded.* These evaluations validate the TopMag50 pruning policy, not the 328-byte packed reconstruction path end to end.
+The only aggregate negative signal is **Longbench v2 (n=100)**, where the compressor-latent result is **−2.0 percentage points**. This is a noisy small-sample result compared with RULER’s 850 samples. *Sangfor results in this section are task-level pass/fail counts; one invalid native task was excluded from the first run.* These evaluations validate the TopMag50 pruning policy, not the 328-byte packed reconstruction path end to end.
+
+### First 25-task run: local native baseline
+
+| Baseline result | TopMag pass | TopMag fail |
+|---|---:|---:|
+| **Native pass** | 7 | 2 |
+| **Native fail** | 1 | 14 |
+
+This includes 24 valid paired tasks; the invalid native trajectory is excluded.
+
+### New 25-task run: cloud baseline
+
+| Baseline result | TopMag pass | TopMag fail |
+|---|---:|---:|
+| **Cloud pass** | 8 | 5 |
+| **Cloud fail** | 5 | 7 |
+
+The task-level confusion matrices show the individual pass/fail transitions for each baseline. These counts are not test-case-weighted.
+
+### DeepSWE full benchmark: untouched versus packed
+
+| Baseline result | Packed TopMag50 pass | Packed TopMag50 fail |
+|---|---:|---:|
+| **Untouched V4-Flash pass** | — | — |
+| **Untouched V4-Flash fail** | — | — |
+
+This matrix will cover all **113 DeepSWE tasks**. Report the four cells together with the untouched and packed pass totals, pass rates, and percentage-point difference.
 
 ## Conclusion
 
@@ -82,46 +111,4 @@ Stage-1 packing delivers a clear memory-capacity result: **43.84% fewer C4 bytes
 
 Against untouched V4-Flash, **Stage 1 fair-load serving is approximately throughput-neutral**. The packed layout increases KV capacity and maximum concurrency, but does not materially improve throughput when the server is compute-saturated. Stage 2, which optimizes the decode kernel itself, is the part expected to produce actual serving gains relative to untouched V4-Flash; those gains have not been measured in this report.
 
-The available precision evidence supports TopMag50 as a native-layout pruning policy: RULER is effectively lossless, the compressor-latent Longbench v2 result is −2.0 pp, and Sangfor-Bench is essentially unchanged at 92.7% versus 92.8%. Packed-layout end-to-end quality remains unvalidated. The serving measurements use 2048 output tokens, making them a decode-oriented workload.
-
-## Appendix: Full Sangfor-Bench results
-
-8 hard, 10 medium, and 7 easy tasks were rerun at `--context-length 262144`, leaving approximately 230k effective input tokens. Pass rates are based on one trajectory per task; mean rows are test-case-weighted.
-
-| Task (# test cases) | Native (262k) | TopMag50 (262k) | Δ TopMag−native (pp) |
-|---|---:|---:|---:|
-| **HARD (8)** | | | |
-| `sri_swe-bench_5f5a7df7` (116) | 92.2 | 90.5 | −1.7 |
-| `sri_esecgpt_48486b59` (227) | 0.0* | 33.0 | +33.0 |
-| `sri_esecgpt_80fa3321` (267), degenerate | 100.0 | 100.0 | 0.0 |
-| `sri_s1_cec32c82` (176) | 97.2 | 98.9 | +1.7 |
-| `sri_swe-bench_fea293e6` (86) | 76.7 | 70.9 | −5.8 |
-| `sri_ap-gpt_2bcf1160` (164) | 82.3 | 79.3 | −3.0 |
-| `tw_esecgpt_f291630` (243) | 100.0 | 100.0 | 0.0 |
-| `sri_ap-gpt_d7527749` (137) | 54.0 | 78.8 | +24.8 |
-| **Mean (8, test-case-weighted)** | **76.4** | **82.1** | **+5.7** |
-| **Mean (7, excluding invalid native task)** | **89.4** | **91.5** | **+2.1** |
-| **MEDIUM (10)** | | | |
-| `gcjs_kube-log-check-recover_5b6a23ad` (254) | 97.6 | 96.9 | −0.7 |
-| `sri_s1_00ce55e2` (126) | 89.7 | 93.7 | +4.0 |
-| `aiyycp_sales-flow_d7329e44` (74) | 100.0 | 73.0 | −27.0 |
-| `sri_chat-agent_86ce36d3` (62) | 96.8 | 93.5 | −3.3 |
-| `sri_chat-agent_b2f8ec64` (75) | 98.7 | 100.0 | +1.3 |
-| `sri_s1_d060bef0` (131) | 85.5 | 89.3 | +3.8 |
-| `sri_esecgpt_cf8ba0fb` (268) | 100.0 | 100.0 | 0.0 |
-| `fy_gptanalystagent_fb3d6a3d` (111) | 70.3 | 64.0 | −6.3 |
-| `gcjs_go-zero_22ab9e7d` (48) | 100.0 | 100.0 | 0.0 |
-| `sri_ap-gpt_0dd68d23` (122) | 98.4 | 94.3 | −4.1 |
-| **Mean (10, test-case-weighted)** | **94.0** | **92.1** | **−2.0** |
-| **EASY (7)** | | | |
-| `gcjs_kube-log-check-recover_c6a12bfe` (122) | 95.1 | 95.1 | 0.0 |
-| `gcjs_kube-log-check-recover_fc67bfda` (132) | 99.2 | 99.2 | 0.0 |
-| `tw_esecgpt_4966005` (40) | 100.0 | 100.0 | 0.0 |
-| `sri_chat-agent_035a16f0` (27) | 77.8 | 88.9 | +11.1 |
-| `tw_esecgpt_6741243f` (40) | 100.0 | 100.0 | 0.0 |
-| `gcjs_kube-log-check-recover_e04abbb7` (74) | 100.0 | 100.0 | 0.0 |
-| `mss_drme-service_2a2095f8` (35) | 100.0 | 100.0 | 0.0 |
-| **Mean (7, test-case-weighted)** | **97.2** | **97.9** | **+0.6** |
-| **Running full average (24 tasks, excluding invalid native task)** | **92.7** | **92.8** | **+0.1** |
-
-*The native `sri_esecgpt_48486b59` trajectory produced an invalid build and is excluded from the seven-task mean and running aggregate.*
+The available precision evidence supports TopMag50 as a native-layout pruning policy: RULER is effectively lossless, the compressor-latent Longbench v2 result is −2.0 pp, and the first Sangfor-Bench native-layout run changed from 9/24 to 8/24 task passes. The second run, which used the packed layout, matched the cloud baseline in aggregate at 13/25 task passes despite task-level disagreements. Packed-layout end-to-end quality remains unvalidated. The serving measurements use 2048 output tokens, making them a decode-oriented workload.
