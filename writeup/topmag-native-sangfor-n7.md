@@ -1,7 +1,7 @@
 # TopMag 50% on the native c4 latent — Sangfor-Bench n=7 (7× same instance)
 
 Date: 2026-08-28 · DeepSeek-V4-Flash (21 c4 latent layers, compress_ratio=4)
-Build: `SGLANG_OPT_TOPMAG=1` + `XKV_TOPMAG_KEEP=0.5` (Mustafar package, `flash-optimizations/mustafar/`)
+Build: `SGLANG_OPT_TOPMAG=1` + `KEEP=0.5` (Mustafar package, `flash-optimizations/mustafar/`)
 Change: **store-time only.** Each stored c4 latent vector has its smallest-|·| 256 of 512 coords
 zeroed in place, immediately before the stock fused `compress_norm_rope_store`. The memory pool
 (584 B/token native layout), decode, and every other path are the **stock DeepSeek-V4 build** — no
@@ -32,7 +32,7 @@ reproduced native's 29/29 across **7/7** independent runs with zero failures.
   `keep=1.0` is a no-op. Same code and site as the n=1 run.
 - **Server contract verified live during the run**: ctrl debug.log showed 750 k+ `prune zeroed 256`
   events (512-dim latents) and 384 k+ `prune_skip dim 128` (indexer untouched), 0 `prune_error`. The
-  running server was the latent build (env: `SGLANG_OPT_TOPMAG=1`, `XKV_TOPMAG_KEEP=0.5`, **no**
+  running server was the latent build (env: `SGLANG_OPT_TOPMAG=1`, `KEEP=0.5`, **no**
   `XKV_TOPMAG_TARGET`; confirmed after converting the box from an earlier archived indexer build).
 - **Deploy**: 10×2 wave launcher (`run_topmag50_20.sh`) — each sample is a separate `yjybench.cli`
   invocation with a unique run_id, because the harness names eval containers

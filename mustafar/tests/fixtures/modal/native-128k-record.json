@@ -1,0 +1,24 @@
+{
+  "completed": 8,
+  "duration": 95.36901417299998,
+  "errors": ["", "", "", "", "", "", "", ""],
+  "input_lens": [131072, 131072, 131072, 131072, 131072, 131072, 131072, 131072],
+  "output_lens": [2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048],
+  "total_input_tokens": 1048576,
+  "request_throughput": 0.08388468801290061,
+  "input_throughput": 10994.933827226909,
+  "output_throughput": 171.79584105042045,
+  "total_throughput": 11166.729668277329,
+  "median_ttft_ms": 40742.59000099994,
+  "median_tpot_ms": 26.65916960112359,
+  "median_itl_ms": 11.194976000012957,
+  "median_e2e_latency_ms": 95323.85,
+  "p99_ttft_ms": 71704.97215945994,
+  "p99_tpot_ms": 41.87303638185635,
+  "server_info": {
+    "cuda_graph_config": {
+      "decode": {"backend": "full", "max_bs": 16, "bs": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]},
+      "prefill": {"backend": "disabled"}
+    }
+  }
+}

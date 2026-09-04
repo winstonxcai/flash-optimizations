@@ -2,7 +2,7 @@
 
 ## Summary
 
-Mustafar applies TopMag50 sparsity to the 21 compressed sparse-attention (CSA) layers in DeepSeek-V4-Flash and stores the resulting C4 state in a packed representation. Packed reduces each C4 record from **584 bytes to 328 bytes**: a **43.84% reduction** or **1.7805× C4 compression**.
+Mustafar applies TopMag50 sparsity to the 21 compressed sparse-attention (CSA) layers in DeepSeek-V4-Flash and stores the resulting state in a packed representation. Packed reduces each record from **584 bytes to 328 bytes**: a **43.84% reduction** or **1.7805× compression**.
 
 On a TP4 server with four 80 GB H100s, this increased the measured server KV pool from **332,288 to 402,688 full-token-equivalent slots**, or **1.2119× total KV capacity**. At the 2048-token decode workload, maximum resident concurrency increased from **9 to 11 requests at 32k**, **4 to 5 at 64k**, and **2 to 3 at 128k**.
 
@@ -14,8 +14,8 @@ At each mode’s maximum concurrency, Packed delivered **14–23% higher total-t
 
 The serving measurements compare two configurations:
 
-1. **Native:** Mustafar runtime features disabled, with the stock 584-byte C4 representation.
-2. **Packed:** TopMag50 pruning enabled, with the 328-byte packed C4 representation.
+1. **Native:** Mustafar runtime features disabled, with the stock 584-byte representation.
+2. **Packed:** TopMag50 pruning enabled, with the 328-byte packed representation.
 
 Native versus Packed measures the complete packed-layout effect. The Native leg used the same image with both Mustafar feature flags explicitly disabled, keeping the model, SGLang build, and hardware configuration constant.
 
@@ -94,7 +94,7 @@ Both legs ran the same 50 SWE-bench instances through the Claude Code harness at
 
 ## Conclusion
 
-Packed delivers a clear memory-capacity result: **43.84% fewer C4 bytes** and **1.2119× total server KV-token capacity** on TP4 H100, translating to maximum concurrency gains of 9→11 at 32k, 4→5 at 64k, and 2→3 at 128k for 2048-token decode.
+Packed delivers a clear memory-capacity result: **43.84% fewer bytes** and **1.2119× total server KV-token capacity** on TP4 H100, translating to maximum concurrency gains of 9→11 at 32k, 4→5 at 64k, and 2→3 at 128k for 2048-token decode.
 
 Against Native, **Packed fair-load serving is approximately throughput-neutral**. The Packed layout increases KV capacity and maximum concurrency, but does not materially improve throughput when the server is compute-saturated.
 
