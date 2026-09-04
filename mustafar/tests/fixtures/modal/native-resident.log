@@ -1,0 +1,2 @@
+[2026-09-04 05:09:50 TP0] Decode batch, #running-req: 8, #full token: 1062912, full token usage: 0.25, #swa token: 6144, swa token usage: 0.01, cuda graph: True, gen throughput (token/s): 714.01, #queue-req: 0
+[2026-09-04 05:09:51 TP0] Decode batch, #running-req: 8, #full token: 1064960, full token usage: 0.25, #swa token: 8192, swa token usage: 0.01, cuda graph: True, gen throughput (token/s): 714.34, #queue-req: 0

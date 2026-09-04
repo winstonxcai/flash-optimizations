@@ -22,7 +22,7 @@ class NativeC4Workspace:
     """Reusable buffers used to preserve the existing FlashMLA consumer."""
 
     raw: torch.Tensor
-    dense: torch.Tensor
+    dense: torch.Tensor | None
     temporary_indices: torch.Tensor
     page_size: int
     bytes_per_page: int
@@ -43,6 +43,8 @@ class NativeC4Workspace:
         selected_k: int,
         page_size: int,
         device: torch.device | str,
+        *,
+        with_dense: bool | None = None,
     ) -> "NativeC4Workspace":
         rows = max_batch * selected_k
         pages = (rows + page_size - 1) // page_size
@@ -52,8 +54,14 @@ class NativeC4Workspace:
         raw = torch.zeros(
             pages, bytes_per_page, dtype=torch.uint8, device=device
         )
-        dense = torch.empty(
-            rows, config.HEAD_DIM, dtype=torch.bfloat16, device=device
+        if with_dense is None:
+            with_dense = not config.stage2a_enabled()
+        dense = (
+            torch.empty(
+                rows, config.HEAD_DIM, dtype=torch.bfloat16, device=device
+            )
+            if with_dense
+            else None
         )
         temporary_indices = torch.arange(
             rows, dtype=torch.int32, device=device
@@ -270,6 +278,21 @@ def unpack_gather_c4_native(
         )
     rows = n_queries * selected_k
     temp = native_workspace.temporary_indices[:n_queries, :selected_k]
+    if config.stage2a_enabled():
+        config.validate_packed_static_config()
+        unpack_gather_c4_native_stage2a(
+            buffers,
+            physical_indices,
+            raw_indices,
+            topk_lengths,
+            freqs_cis,
+            native_workspace,
+        )
+        return native_workspace.raw, temp
+    if native_workspace.dense is None:
+        raise RuntimeError(
+            "Stage-1 reconstruction requires a dense BF16 workspace"
+        )
     dense = native_workspace.dense[:rows]
     unpack_gather_c4_bf16(
         buffers,
@@ -306,6 +329,43 @@ def unpack_gather_c4_native(
     # Invalid padding slots are reconstructed as zeros but are outside that
     # prefix and therefore never consumed.
     return native_workspace.raw, temp
+
+
+def unpack_gather_c4_native_stage2a(
+    packed_buffers,
+    physical_indices: torch.Tensor,
+    raw_indices: torch.Tensor,
+    topk_lengths: torch.Tensor,
+    freqs_cis,
+    native_workspace: NativeC4Workspace,
+    *,
+    layer_id: int | None = None,
+) -> None:
+    """Run the allocation-free Stage-2A packed-to-native CUDA adapter."""
+    buffers = _as_buffers(packed_buffers, layer_id)
+    if physical_indices.shape != raw_indices.shape:
+        raise ValueError("physical_indices and raw_indices must have equal shape")
+    n_queries, selected_k = physical_indices.shape
+    if n_queries > native_workspace.max_queries:
+        raise ValueError("native C4 workspace query capacity exceeded")
+    if selected_k > native_workspace.selected_k:
+        raise ValueError("native C4 workspace top-k capacity exceeded")
+    if not freqs_cis.is_complex() or not freqs_cis.is_contiguous():
+        raise ValueError("freqs_cis must be a contiguous complex tensor")
+    from .stage2a import packed_c4_to_native
+
+    packed_c4_to_native(
+        buffers.values,
+        buffers.bitmaps,
+        buffers.scales,
+        physical_indices,
+        raw_indices,
+        topk_lengths,
+        torch.view_as_real(freqs_cis),
+        native_workspace.raw,
+        native_workspace.page_size,
+        native_workspace.bytes_per_page,
+    )
 
 
 def unpack_c4_rows_ref(

@@ -56,8 +56,18 @@ def packed_c4_enabled() -> bool:
     return os.environ.get("SGLANG_OPT_TOPMAG_PACKED_C4") == "1"
 
 
+def stage2a_enabled() -> bool:
+    """Single-kernel packed-to-native reconstruction gate (off by default)."""
+    return os.environ.get("SGLANG_OPT_TOPMAG_STAGE2A") == "1"
+
+
 def validate_packed_static_config() -> None:
     """Fail early for settings that would change the Stage-1 ABI."""
+    if stage2a_enabled() and not packed_c4_enabled():
+        raise RuntimeError(
+            "SGLANG_OPT_TOPMAG_STAGE2A=1 requires "
+            "SGLANG_OPT_TOPMAG_PACKED_C4=1"
+        )
     if not packed_c4_enabled():
         return
     if not topmag_enabled():

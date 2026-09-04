@@ -3,6 +3,7 @@
 import os
 import shutil
 import subprocess
+from pathlib import Path
 
 from . import config
 
@@ -372,6 +373,59 @@ def _indexer_edits():
 
 
 def _backend_edits():
+    prefill_anchor = (
+        "            if forward_batch.forward_mode.is_extend_without_speculative() and (\n"
+        "                q.shape[0] > _LARGE_INDEXER_QUERY_THRESHOLD\n"
+        "                or envs.SGLANG_OPT_FLASHMLA_SPARSE_PREFILL.get()\n"
+        "            ):\n"
+    )
+    prefill_replacement = (
+        "            if forward_batch.forward_mode.is_extend_without_speculative() and (\n"
+        "                q.shape[0] > _LARGE_INDEXER_QUERY_THRESHOLD\n"
+        "                or (\n"
+        "                    _sg_lr.packed_c4_enabled()\n"
+        "                    and self.mustafar_c4_workspace is not None\n"
+        "                    and q.shape[0] > self.mustafar_c4_workspace.max_queries\n"
+        "                )\n"
+        "                or envs.SGLANG_OPT_FLASHMLA_SPARSE_PREFILL.get()\n"
+        "            ):\n"
+    )
+    # v0.5.17 added an SM120 guard to this condition. Keep the patch usable
+    # against both the previously validated preview tree and the 0731 tree.
+    current_backend = Path(config.DSV4_BACKEND).read_text()
+    v17_prefill_anchor = (
+        "            if (\n"
+        "                forward_batch.forward_mode.is_extend_without_speculative()\n"
+        "                and not _is_sm120\n"
+        "                and (\n"
+        "                    q.shape[0] > _LARGE_INDEXER_QUERY_THRESHOLD\n"
+        "                    or envs.SGLANG_OPT_FLASHMLA_SPARSE_PREFILL.get()\n"
+        "                )\n"
+        "            ):\n"
+    )
+    if prefill_anchor not in current_backend:
+        if v17_prefill_anchor not in current_backend:
+            raise AssertionError(
+                "[mustafar] unsupported DSV4 sparse-prefill anchor; "
+                "inspect the pinned SGLang source before patching"
+            )
+        prefill_anchor = v17_prefill_anchor
+        prefill_replacement = (
+            "            if (\n"
+            "                forward_batch.forward_mode.is_extend_without_speculative()\n"
+            "                and not _is_sm120\n"
+            "                and (\n"
+            "                    q.shape[0] > _LARGE_INDEXER_QUERY_THRESHOLD\n"
+            "                    or (\n"
+            "                        _sg_lr.packed_c4_enabled()\n"
+            "                        and self.mustafar_c4_workspace is not None\n"
+            "                        and q.shape[0] > self.mustafar_c4_workspace.max_queries\n"
+            "                    )\n"
+            "                    or envs.SGLANG_OPT_FLASHMLA_SPARSE_PREFILL.get()\n"
+            "                )\n"
+            "            ):\n"
+        )
+
     return [
         (
             "from __future__ import annotations\n",
@@ -446,19 +500,8 @@ def _backend_edits():
             "                raw_indices = match_num_queries(raw_indices, value=-1)\n",
         ),
         (
-            "            if forward_batch.forward_mode.is_extend_without_speculative() and (\n"
-            "                q.shape[0] > _LARGE_INDEXER_QUERY_THRESHOLD\n"
-            "                or envs.SGLANG_OPT_FLASHMLA_SPARSE_PREFILL.get()\n"
-            "            ):\n",
-            "            if forward_batch.forward_mode.is_extend_without_speculative() and (\n"
-            "                q.shape[0] > _LARGE_INDEXER_QUERY_THRESHOLD\n"
-            "                or (\n"
-            "                    _sg_lr.packed_c4_enabled()\n"
-            "                    and self.mustafar_c4_workspace is not None\n"
-            "                    and q.shape[0] > self.mustafar_c4_workspace.max_queries\n"
-            "                )\n"
-            "                or envs.SGLANG_OPT_FLASHMLA_SPARSE_PREFILL.get()\n"
-            "            ):\n",
+            prefill_anchor,
+            prefill_replacement,
         ),
         (
             "            if _is_sm120:\n",

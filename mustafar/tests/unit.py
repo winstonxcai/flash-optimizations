@@ -10,6 +10,8 @@ The package CLI preserves the individual entry points::
     python3 -m mustafar packedselftest
 """
 
+from unittest.mock import patch
+
 import torch
 
 from .. import config, reference
@@ -134,6 +136,7 @@ def run_packed_reference() -> None:
     # extend must be rejected before launching Triton so the backend can route
     # it through the existing sparse-prefill workspace instead.
     native_workspace = NativeC4Workspace.allocate(2, 4, 64, "cpu")
+    assert native_workspace.dense is not None
     assert native_workspace.max_queries == 2
     assert native_workspace.selected_k == 4
     too_many = torch.zeros((3, 4), dtype=torch.int32)
@@ -154,6 +157,31 @@ def run_packed_reference() -> None:
         assert "route this extend through sparse prefill" in str(exc)
     else:
         raise AssertionError("oversized native gather did not fail early")
+
+    with patch.dict(
+        "os.environ",
+        {
+            "SGLANG_OPT_TOPMAG": "1",
+            "XKV_TOPMAG_KEEP": "0.5",
+            "SGLANG_OPT_TOPMAG_PACKED_C4": "1",
+            "SGLANG_OPT_TOPMAG_STAGE2A": "1",
+        },
+        clear=False,
+    ):
+        config.validate_packed_static_config()
+        stage2a_workspace = NativeC4Workspace.allocate(2, 4, 64, "cpu")
+        assert stage2a_workspace.dense is None
+    with patch.dict(
+        "os.environ",
+        {"SGLANG_OPT_TOPMAG_PACKED_C4": "0", "SGLANG_OPT_TOPMAG_STAGE2A": "1"},
+        clear=False,
+    ):
+        try:
+            config.validate_packed_static_config()
+        except RuntimeError as exc:
+            assert "requires SGLANG_OPT_TOPMAG_PACKED_C4=1" in str(exc)
+        else:
+            raise AssertionError("Stage 2A accepted a disabled packed-C4 pool")
 
     # Position identity required by unpack RoPE.
     raw = torch.arange(1, 33, dtype=torch.int32, device=DEV)

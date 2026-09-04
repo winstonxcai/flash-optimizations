@@ -1,32 +1,36 @@
-# Packed TopMag50 C4 cache — reproducible server image
+# Packed TopMag50 C4 cache — DeepSeek-V4-Flash-0731 server image
 #
 # Build:
 #   cd flash-optimizations
-#   docker build -t topmag-server:v0.5.15 -f mustafar/Dockerfile .
+#   docker build -t topmag-server:v0.5.17-0731 -f mustafar/Dockerfile .
 #
-# Run (any H100 host with >=4 GPUs + the fp8 weights on disk):
-#   docker run --gpus all -p 30211:30211 \
-#     -v /path/to/DeepSeek-V4-Flash-FP8:/model \
+# Open a shell (any H100 host with >=4 GPUs + the 0731 weights on disk):
+#   docker run --rm -it --gpus all \
+#     -v /path/to/DeepSeek-V4-Flash-0731:/model \
 #     -e MODEL_PATH=/model \
-#     -e TP=4 -e CUDA_VISIBLE_DEVICES=0,1,2,3 -e MASTER_PORT=29622 \
-#     -e SGLANG_OPT_TOPMAG=1 -e XKV_TOPMAG_KEEP=0.5 \
-#     -e SGLANG_OPT_TOPMAG_PACKED_C4=1 \
-#     topmag-server:v0.5.15
+#     -e CUDA_VISIBLE_DEVICES=0,1,2,3 \
+#     topmag-server:v0.5.17-0731 bash
+# Launch benchmarks explicitly with mustafar/scripts/local/bench_serving.sh.
 #
-# The weights (274 GB fp8) are intentionally NOT baked in; they are mounted.
-# Base image ships the sglang source at the exact commit the server ran
-# (/sgl-workspace/sglang, f63458b, incl. dsv4/), so the build is offline-safe.
-FROM lmsysorg/sglang:v0.5.15-cu130
+# The weights are intentionally NOT baked in; they are mounted.
+# v0.5.17 is the pinned SGLang tree used for the official 0731 bring-up.
+FROM lmsysorg/sglang:v0.5.17-cu130
 
 # 1. Reproduce the active source tree (sglang-lowrank) as a local clone of the
-#    base image's own /sgl-workspace/sglang at the same commit the server used.
+#    base image's own /sgl-workspace/sglang at the same tag the server uses.
 RUN git clone /sgl-workspace/sglang /sgl-workspace/sglang-lowrank \
-    && cd /sgl-workspace/sglang-lowrank && git checkout f63458b
+    && cd /sgl-workspace/sglang-lowrank && git checkout v0.5.17
 
 # 2. Ship the mustafar package. PACKAGE_ROOT resolves to the parent dir of the
 #    mustafar/ folder, so the sglang hook's `import mustafar` finds it without
 #    an XKV_PACKAGE_DIR override.
 COPY mustafar/ /opt/mustafar/flash-optimizations/mustafar/
+
+# Build the Stage 2A adapter for L4/H100 and validate its CPU ABI before GPU use.
+ENV TORCH_CUDA_ARCH_LIST="8.9;9.0"
+RUN cd /opt/mustafar/flash-optimizations \
+    && MAX_JOBS=4 python3 mustafar/cuda/setup.py build_ext --inplace \
+    && python3 -m mustafar.tests.stage2a_cpu
 
 # 3. Bake in the TopMag hook into the ACTIVE tree (PYTHONPATH-pinned at run),
 #    then verify the marker is present.
@@ -54,6 +58,5 @@ ENV SGLANG_OPT_TOPMAG=1 \
     NCCL_ALGO=Ring \
     PYTHONPATH=/opt/sglang-runtime-fixes:/sgl-workspace/sglang-lowrank/python:/opt/mustafar/flash-optimizations
 
-# 5. Launch SGLang. Packed mode remains an environment-controlled A/B switch;
-#    set SGLANG_OPT_TOPMAG_PACKED_C4=1 to use the 328-byte C4 pool.
-CMD ["bash","-c","cd /sgl-workspace/sglang-lowrank/python && exec python3 -m sglang.launch_server --model-path ${MODEL_PATH:?} --served-model-name deepseek-v4-flash --tp ${TP:-4} --trust-remote-code --mem-fraction-static 0.93 --context-length 135168 --max-running-requests 64 --chunked-prefill-size 4096 --fp8-gemm-backend triton --host 0.0.0.0 --port ${PORT:-30211} --disable-cuda-graph --reasoning-parser deepseek-v4 --tool-call-parser deepseekv4"]
+# No automatic server startup; override the base image's default command.
+CMD ["bash"]

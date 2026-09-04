@@ -1,4 +1,84 @@
-# Modal Stage-1 workflow
+# Mustafar serving benchmark
+
+One Bash script: `mustafar/scripts/local/bench_serving.sh`.
+It directly starts SGLang and calls `python -m sglang.bench_serving`.
+There is no custom Python serving runner, matrix scheduler, or auto-concurrency logic.
+
+## Local H100s
+
+```bash
+MODEL_PATH=/path/to/DeepSeek-V4-Flash-0731 \
+SGLANG_ROOT=/path/to/sglang-lowrank \
+CUDA_VISIBLE_DEVICES=0,1,2,3 \
+bash mustafar/scripts/local/bench_serving.sh packed 32768 2048 8
+```
+
+The four arguments are **mode, input tokens, output tokens, concurrency**.
+Modes: `native`, `packed`, `packed_fused`. Run the command separately for each
+configuration. Default: native, 32k input, 2,048 output, concurrency 8.
+
+Requires Linux, Bash, curl, jq, setsid, and the prepared SGLang/CUDA
+environment from `mustafar/Dockerfile`. Use `PYTHON=/venv/bin/python` if needed.
+Packed modes require the Mustafar patch; packed_fused also requires the CUDA
+extension. The script does not install dependencies or download weights.
+
+Use the official `deepseek-ai/DeepSeek-V4-Flash-0731` checkpoint at revision
+`7872f01b1d1fe23eabc4c98b48bffcef5a386062`, SGLang v0.5.17, TP4 / four H100s,
+and FlashInfer MXFP4. Checkpoint revision is now the caller's responsibility.
+
+Fixed setup: one warm-up wave, one measured wave, seed 7301, 0.90 static memory,
+4,096-token chunked prefill, max 16 running requests, full decode graphs for
+batch sizes 1–16, and prefill graphs disabled. Each wave means `concurrency`
+prompts.
+
+Only paths, Python, and the port are configurable through environment variables.
+Edit the fixed server settings in the shell file to change both local and Modal
+runs. GPU visibility and NCCL settings are inherited unchanged. Local runs have
+no total timeout; use Linux `timeout` around the command if desired.
+
+## Modal
+
+`app.py` mounts and executes the same shell file, supplying paths and resources:
+
+```bash
+MODAL_PROFILE=your-profile modal run --detach mustafar/scripts/modal/app.py::bench_serving \
+  --mode packed --input-tokens 32768 --output-tokens 2048 --concurrency 8 \
+  --timeout-minutes 60
+```
+
+Modal wraps the shell command in a 60-minute timeout by default.
+Run separate calls for native and packed_fused. No account is automatically
+selected. Matching benchmark code does not eliminate differences in hardware,
+software, or environment settings.
+
+Other entrypoints remain: `download_model` (CPU), `validate_packed` (H100),
+`validate_packed_fused` (L4), and `bench_kernels --suite packed|packed_fused` (H100).
+The model volume is `deepseek-v4-flash-0731`; results use `mustafar-stage2a-results`.
+
+## Results
+
+Each call creates a unique result directory containing `server.log`,
+`warmup.log/jsonl`, and `measured.log/jsonl`. Local default:
+`mustafar/logs/bench-serving/`; override with `RESULTS_DIR`. Modal uses `/results`
+and commits the volume when the script exits, including on failure.
+
+The script flushes radix cache before each benchmark phase and rejects failed
+requests or wrong input/output lengths. Read throughput, TTFT, and TPOT directly
+from the official bench_serving JSONL. Server logs retain pool capacity and graph
+replay information; **residency and graph replay are no longer automatically
+certified**. No custom aggregate `result.json` is produced.
+
+The script stops its server and benchmark process groups on exit or timeout.
+Use an unused port (`PORT=30211` by default).
+
+## Historical runs (archived)
+
+The records below describe earlier experiments and retain their original
+commands, model names, and account selections for provenance. They are not
+current instructions: FP8 serving support and the old specialized entrypoints
+have been removed. Use the parameterized interface above for new runs.
+
+### Modal Stage-1 workflow
 
 Run from the repository root. Modal builds `mustafar/Dockerfile` on CPU; the model stays in the persistent `deepseek-v4-flash-fp8` Volume and is not baked into the image.
 
@@ -50,7 +130,7 @@ took `925.67 s` for packed and `197.11 s` for native. The six official
 `bench_serving` subprocesses took `443.07 s` including client setup and result
 handling; their measured request-workload durations totaled `231.36 s`.
 
-## Graph-enabled decode smoke
+#### Graph-enabled decode smoke
 
 The short TP4 run used exact 64k inputs, 128 output tokens, full decode CUDA
 graphs for batch sizes 1 and 2, and the official `sglang.bench_serving` client.
@@ -68,7 +148,7 @@ graph replay confirmed in both server logs. The paired function took
 Packed and native server startup took `593.32 s` and `123.05 s`, respectively.
 This is a graph/no-error performance smoke, not a quality evaluation.
 
-## Stage-1 report serving benchmark (2048-token decode)
+#### Stage-1 report serving benchmark (2048-token decode)
 
 This is the reproducibility record for the fair-load and maximum-concurrency
 tables in `mustafar/report.md`. Three parallel TP4 legs were run: untouched
@@ -77,7 +157,7 @@ with the 328-byte packed C4 layout. The runs used separate Modal profiles with
 the model already present in each profile's persistent volume; `winstoncai233`
 was not used.
 
-### Setup
+##### Setup
 
 | Item | Configuration |
 |---|---|
@@ -112,7 +192,7 @@ The three jobs ran in parallel for approximately 33 minutes of elapsed wall
 time. All three used the preinstalled V4-Flash model, so no model download time
 was included.
 
-### Commands used
+##### Commands used
 
 The paired benchmark was launched on Modal with:
 
