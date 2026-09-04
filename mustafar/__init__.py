@@ -1,61 +1,50 @@
-"""TopMag pruning on the native c4-latent store (Mustafar).
+"""TopMag pruning on the native compressed-latent store (Mustafar).
 
-The `_sg_lr` module surface the injected sglang hook calls. config exposes the
-geometry constants; the heavy runtime symbols are lazy-loaded from ops so the
-package imports without touching torch.
+This is the `_sg_lr` module surface used by the injected SGLang hooks.
+Geometry lives in config, runtime wrappers in packed, reference math in
+reference, and patch commands in patching. Heavy imports remain lazy.
 """
+
+from importlib import import_module
+
 from .config import (
     HEAD_DIM,
-    PACKED_C4_BYTES,
-    packed_c4_enabled,
-    stage2a_enabled,
+    PACKED_RECORD_BYTES,
+    fused_enabled,
+    packed_enabled,
     topmag_enabled,
     topmag_keep,
     validate_packed_static_config,
 )
 
-_OPS_SYMBOLS = {
-    "patch",
-    "unpatch",
-    "verify",
-    "topmag_keep_mask",
-    "topmag_zero_from_mask",
-    "pack_c4_rows",
-    "unpack_gather_c4_native",
-    "unpack_gather_c4_bf16",
-    "NativeC4Workspace",
-    "unpack_gather_c4_native_stage2a",
-    "stage2a_available",
+_LAZY_EXPORTS = {
+    "patch": "patching",
+    "unpatch": "patching",
+    "verify": "patching",
+    "topmag_keep_mask": "reference",
+    "topmag_zero_from_mask": "reference",
+    "pack_rows": "packed",
+    "unpack_gather_native": "packed",
+    "unpack_gather_bf16": "packed",
+    "NativeWorkspace": "packed",
+    "unpack_gather_native_fused": "packed",
+    "fused_available": "fused",
 }
 
 
 def __getattr__(name):
-    if name in _OPS_SYMBOLS:
-        if name in {"topmag_keep_mask", "topmag_zero_from_mask"}:
-            from . import reference
-            return getattr(reference, name)
-        if name in {
-            "pack_c4_rows",
-            "unpack_gather_c4_native",
-            "unpack_gather_c4_bf16",
-            "NativeC4Workspace",
-            "unpack_gather_c4_native_stage2a",
-        }:
-            from . import packed_c4
-            return getattr(packed_c4, name)
-        if name == "stage2a_available":
-            from . import stage2a
-            return stage2a.available
-        from . import ops
-        return getattr(ops, name)
+    if name in _LAZY_EXPORTS:
+        return getattr(import_module(f".{_LAZY_EXPORTS[name]}", __name__), name)
     raise AttributeError(name)
 
 
 __all__ = [
-    "HEAD_DIM", "PACKED_C4_BYTES", "topmag_enabled", "topmag_keep",
+    "HEAD_DIM",
+    "PACKED_RECORD_BYTES",
+    "fused_enabled",
+    "packed_enabled",
+    "topmag_enabled",
+    "topmag_keep",
     "validate_packed_static_config",
-    "packed_c4_enabled", "stage2a_enabled", "topmag_keep_mask", "topmag_zero_from_mask",
-    "pack_c4_rows", "unpack_gather_c4_native", "unpack_gather_c4_bf16",
-    "NativeC4Workspace", "unpack_gather_c4_native_stage2a", "stage2a_available",
-    "patch", "unpatch", "verify",
+    *_LAZY_EXPORTS,
 ]

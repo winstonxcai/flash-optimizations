@@ -1,7 +1,7 @@
 # TopMag 50% on the native c4 latent — Sangfor-Bench 5-distinct-task generalization
 
 Date: 2026-08-28 · DeepSeek-V4-Flash (21 c4 latent layers, compress_ratio=4)
-Build: `SGLANG_OPT_TOPMAG=1` + `XKV_TOPMAG_KEEP=0.5`, **`XKV_DEBUG=0`** (Mustafar package, `flash-optimizations/mustafar/`)
+Build: `SGLANG_OPT_TOPMAG=1` + `KEEP=0.5`, **`XKV_DEBUG=0`** (Mustafar package, `flash-optimizations/mustafar/`)
 Change: **store-time only.** Smallest-|·| 256/512 coords zeroed in place before the stock fused `compress_norm_rope_store`. The memory pool (584 B/token native layout), decode, and every other path are the **stock DeepSeek-V4 build** — no lowrank KV, no basis/SVD, no pool change.
 
 ## Result — 4/5 tasks native-equivalent; the one task with headroom regressed
@@ -40,7 +40,7 @@ The n=7 same-task run (`writeup/topmag-native-sangfor-n7.md`) established σ=0 o
 ## Reproduce
 
 ```
-SGLANG_OPT_TOPMAG=1 XKV_TOPMAG_KEEP=0.5 XKV_DEBUG=0 \
+SGLANG_OPT_TOPMAG=1 KEEP=0.5 XKV_DEBUG=0 \
   python3 -m sglang.launch_server --model-path .../DeepSeek-V4-Flash-FP8 \
   --served-model-name deepseek-v4-flash --tp 4 --fp8-gemm-backend triton --disable-cuda-graph
 # then, one invocation per instance:

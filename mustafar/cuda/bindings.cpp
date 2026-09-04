@@ -1,6 +1,6 @@
 #include <torch/extension.h>
 
-void packed_c4_to_native_cuda(
+void packed_to_native_cuda(
     const torch::Tensor& values,
     const torch::Tensor& bitmaps,
     const torch::Tensor& scales,
@@ -14,7 +14,7 @@ void packed_c4_to_native_cuda(
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, module) {
   module.def(
-      "packed_c4_to_native",
-      &packed_c4_to_native_cuda,
-      "Packed C4 to FlashMLA-native reconstruction (CUDA)");
+      "packed_to_native",
+      &packed_to_native_cuda,
+      "Packed to FlashMLA-native reconstruction (CUDA)");
 }

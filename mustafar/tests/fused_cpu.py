@@ -1,4 +1,4 @@
-"""CPU-only ABI and E4M3 decode gate for the Stage-2A image build."""
+"""CPU-only ABI and E4M3 decode gate for the Fused image build."""
 
 from __future__ import annotations
 
@@ -23,11 +23,11 @@ def decode_e4m3fn(code: int) -> float:
     return -value if sign else value
 
 
-def run() -> None:
-    assert config.PACKED_C4_BYTES == 328
-    assert config.NATIVE_C4_BYTES == 584
+def run_fused_cpu_validation() -> None:
+    assert config.PACKED_RECORD_BYTES == 328
+    assert config.NATIVE_RECORD_BYTES == 584
     assert config.NOPE_DIM == 448 and config.ROPE_DIM == 64
-    assert config.PACKED_KEEP == 256 and config.BITMAP_WORDS == 8
+    assert config.PACKED_KEPT_VALUES == 256 and config.BITMAP_WORDS == 8
 
     codes = torch.arange(256, dtype=torch.uint8)
     torch_values = codes.view(torch.float8_e4m3fn).float()
@@ -39,12 +39,12 @@ def run() -> None:
             assert actual == expected, (code, actual, expected)
 
     extension_candidates = list(
-        Path(__file__).resolve().parents[1].glob("_stage2a_cuda*.so")
+        Path(__file__).resolve().parents[1].glob("_fused_cuda*.so")
     )
     if not extension_candidates:
-        raise AssertionError("Stage-2A CUDA extension was not built in-place")
-    print("[stage2a-cpu] OK: ABI constants, all E4M3FN codes, extension artifact")
+        raise AssertionError("Fused CUDA extension was not built in-place")
+    print("[fused-cpu] OK: ABI constants, all E4M3FN codes, extension artifact")
 
 
 if __name__ == "__main__":
-    run()
+    run_fused_cpu_validation()

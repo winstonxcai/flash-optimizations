@@ -7,14 +7,14 @@
 
 #include <cstdint>
 
-#include "packed_c4_abi.cuh"
+#include "packed_abi.cuh"
 
 namespace {
 
-using mustafar::packed_c4::kBitmapWords;
-using mustafar::packed_c4::kHeadDim;
-using mustafar::packed_c4::kKeptValues;
-using mustafar::packed_c4::kNopeDim;
+using mustafar::packed::kBitmapWords;
+using mustafar::packed::kHeadDim;
+using mustafar::packed::kKeptValues;
+using mustafar::packed::kNopeDim;
 
 constexpr int kNativeValueBytes = 576;
 constexpr int kNativeScaleBytes = 8;
@@ -67,7 +67,7 @@ __device__ __forceinline__ bool coordinate_is_kept(
 }
 
 template <typename index_t>
-__global__ void packed_c4_to_native_kernel(
+__global__ void packed_to_native_kernel(
     const uint8_t* __restrict__ values,
     const uint64_t* __restrict__ bitmaps,
     const uint8_t* __restrict__ scales,
@@ -160,7 +160,7 @@ void check_cuda_contiguous(const torch::Tensor& tensor, const char* name) {
 
 }  // namespace
 
-void packed_c4_to_native_cuda(
+void packed_to_native_cuda(
     const torch::Tensor& values,
     const torch::Tensor& bitmaps,
     const torch::Tensor& scales,
@@ -230,7 +230,7 @@ void packed_c4_to_native_cuda(
   const dim3 grid((rows + kWarpsPerBlock - 1) / kWarpsPerBlock);
   cudaStream_t stream = at::cuda::getCurrentCUDAStream(values.get_device());
   if (physical_indices.scalar_type() == at::kInt) {
-    packed_c4_to_native_kernel<int32_t><<<grid, block, 0, stream>>>(
+    packed_to_native_kernel<int32_t><<<grid, block, 0, stream>>>(
         values.data_ptr<uint8_t>(), bitmaps.data_ptr<uint64_t>(),
         scales.data_ptr<uint8_t>(), physical_indices.data_ptr<int32_t>(),
         raw_indices.data_ptr<int32_t>(), topk_lengths.data_ptr<int32_t>(),
@@ -238,7 +238,7 @@ void packed_c4_to_native_cuda(
         physical_indices.size(1), pool_rows, freq_pairs.size(0),
         static_cast<int>(page_size), bytes_per_page);
   } else {
-    packed_c4_to_native_kernel<int64_t><<<grid, block, 0, stream>>>(
+    packed_to_native_kernel<int64_t><<<grid, block, 0, stream>>>(
         values.data_ptr<uint8_t>(), bitmaps.data_ptr<uint64_t>(),
         scales.data_ptr<uint8_t>(), physical_indices.data_ptr<int64_t>(),
         raw_indices.data_ptr<int64_t>(), topk_lengths.data_ptr<int64_t>(),

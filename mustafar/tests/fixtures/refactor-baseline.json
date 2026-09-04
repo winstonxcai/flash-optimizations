@@ -1,0 +1,70 @@
+{
+  "baseline_commit": "ecd3047",
+  "sglang_commit": "29481685462732237d80d86076d6563e1f658102",
+  "anchors": {
+    "prefill_anchor": "            if forward_batch.forward_mode.is_extend_without_speculative() and (\n                q.shape[0] > _LARGE_INDEXER_QUERY_THRESHOLD\n                or envs.SGLANG_OPT_FLASHMLA_SPARSE_PREFILL.get()\n            ):\n",
+    "v17_prefill_anchor": "            if (\n                forward_batch.forward_mode.is_extend_without_speculative()\n                and not _is_sm120\n                and (\n                    q.shape[0] > _LARGE_INDEXER_QUERY_THRESHOLD\n                    or envs.SGLANG_OPT_FLASHMLA_SPARSE_PREFILL.get()\n                )\n            ):\n"
+  },
+  "edits": {
+    "prefill_anchor": {
+      "_compressor_edits": "aa93cd4bfdfb130e5f85732f4102e73ead47d625e5803ccfe4119d6286a1c9e2",
+      "_memory_pool_edits": "8bf6c78fd1a72b810d13b81b17a0fad05bce94cc89c2b807a9ca587c82180112",
+      "_pool_config_edits": "d458a4805898c93a3c11b27e716bf1030d8bda8c91ab47c5bcd9042cd0cda9c9",
+      "_indexer_edits": "d750156e933d5e3677a5eb82604fa3f8d50cb216256f2dbb9d4d06d49d240f39",
+      "_backend_edits": "535749b5d73ddfd0b8a01b2ed435b739e63b37913f736a960076a43bfd1af131"
+    },
+    "v17_prefill_anchor": {
+      "_compressor_edits": "aa93cd4bfdfb130e5f85732f4102e73ead47d625e5803ccfe4119d6286a1c9e2",
+      "_memory_pool_edits": "8bf6c78fd1a72b810d13b81b17a0fad05bce94cc89c2b807a9ca587c82180112",
+      "_pool_config_edits": "d458a4805898c93a3c11b27e716bf1030d8bda8c91ab47c5bcd9042cd0cda9c9",
+      "_indexer_edits": "d750156e933d5e3677a5eb82604fa3f8d50cb216256f2dbb9d4d06d49d240f39",
+      "_backend_edits": "819410574947d3cae92c7b3c247c0350ae3c8e42bf4ec97d87be88026bec8b2f"
+    }
+  },
+  "ast": {
+    "packed.py": {
+      "PackedBuffers": "1d3752b8692f195f54dc14f2fb63b4ed89f4af9c94b2163bff0ff703ce8963db",
+      "NativeWorkspace": "4c25f2a432dc563b5d2407132ad9843d8355044e99ddeaea822abe1eff009b8a",
+      "_as_buffers": "fc56523428b5c84a57620a64dadf177b9f6b1478262faed4a25cf6c019a8eaba",
+      "_plan_rows": "0305845511ef10ab03afadfa1fb9787d136e69cf7b6d6bb0291688e1ed7bc28b",
+      "pack_rows": "ead3ff83c62fec8ce469cc05935699baebab987736b432b2a216c8703f25b273",
+      "unpack_gather_bf16": "5e762c8e141509dd99ce6235b62834b810fcad820d0c58683bcd9fc4cc9125ff",
+      "unpack_gather_native": "741ea63843fadda1f883a71ac2f755183a27ac793207406b975093300d90888b",
+      "unpack_gather_native_fused": "a3d7244a8f35439bb6517406357d9e3f3efc6eca59c1db3ce6d62014cb764703"
+    },
+    "reference.py": {
+      "topmag_keep_mask": "d5ebf44aeb64d2ef2014517990a862bc0ef9b828aaa20c4f04428c6bb8c7d1b4",
+      "topmag_zero_from_mask": "b3f42f03c79285dd06df7663d98550fb46b31d68b02582c661a76a69c0b5f073",
+      "_ue8m0_quantize": "b81a4a9beef0ba5bac81f7517cae997ddcd810bffb5a68806581f3ab7d411e5f",
+      "pack_rows_ref": "3855522c946b196c7aaaeebbbe717ededa8f1c085193d3a86747396ee2817e5d",
+      "unpack_rows_ref": "17308d3450589a659e692ce80e0044b46606566114204922692236665fe6ec74"
+    }
+  },
+  "sources": {
+    "_compressor_edits": {
+      "path": "sglang/srt/layers/attention/dsv4/compressor_v2.py",
+      "before": "b41377aabe59a03041e5ab46ded60bb4d7e77beac2b14d4acebde2299793db3f",
+      "after": "6d8d84f92c34895552c31adb31198e068c6b42ebfbfeb6f9857966857a3b418f"
+    },
+    "_memory_pool_edits": {
+      "path": "sglang/srt/mem_cache/deepseek_v4_memory_pool.py",
+      "before": "f0a3defe7497577b32eec74c536fdb1ae87cdb1ff6c0243148f308c9582004d4",
+      "after": "d127eb13e1ccc812ad0b6f9043caf270f6d7bdb962d5b5ea2a654588038419f6"
+    },
+    "_pool_config_edits": {
+      "path": "sglang/srt/model_executor/pool_configurator.py",
+      "before": "afb83cba19b4d11c49c2886c71f1796730c7598f72dc3f2d9bf32314b04a992d",
+      "after": "e935cb36628fceed6f1caabeadf98b167e094288017c7ba8cdc7a4c2de87213d"
+    },
+    "_indexer_edits": {
+      "path": "sglang/srt/layers/attention/dsv4/indexer.py",
+      "before": "5b6e134edac7640139a56e0ee2971bd72865656571c5aff27e79b17ef430eea7",
+      "after": "c62ed6777e8d0e9ac7ed33900dcd91f00889b76a9bb5c2b829ed32f45fa25ac0"
+    },
+    "_backend_edits": {
+      "path": "sglang/srt/layers/attention/deepseek_v4_backend.py",
+      "before": "a37de7718dbc6f061ad4b1a93f2ae30a1376378f0458cb2d44703b45877a08db",
+      "after": "a4311ecf6a68dec12008f5c34f206d7a37fac10402f8917728130efd7d05c434"
+    }
+  }
+}

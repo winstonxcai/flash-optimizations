@@ -1,4 +1,4 @@
-"""Stage-1 Triton versus Stage-2A CUDA reconstruction microbenchmark."""
+"""Packed Triton versus Fused CUDA reconstruction microbenchmark."""
 
 from __future__ import annotations
 
@@ -6,17 +6,18 @@ import json
 import os
 from pathlib import Path
 from statistics import median
+from unittest.mock import patch
 
 import torch
 
 from .. import reference
-from ..packed_c4 import (
-    NativeC4Workspace,
-    PackedC4Buffers,
-    pack_c4_rows_ref,
-    unpack_gather_c4_native,
-    unpack_gather_c4_native_stage2a,
+from ..packed import (
+    NativeWorkspace,
+    PackedBuffers,
+    unpack_gather_native,
+    unpack_gather_native_fused,
 )
+from ..reference import pack_rows_ref
 
 
 def _samples(fn, *, repeats: int = 500) -> list[float]:
@@ -40,12 +41,18 @@ def _summary(samples: list[float]) -> dict[str, float]:
     }
 
 
-def run(output_dir: str | Path | None = None) -> dict[str, object]:
-    os.environ.setdefault("SGLANG_OPT_TOPMAG", "1")
-    os.environ.setdefault("XKV_TOPMAG_KEEP", "0.5")
-    os.environ.setdefault("SGLANG_OPT_TOPMAG_PACKED_C4", "1")
+# Pin the dispatcher to Triton; the fused leg calls the CUDA adapter directly.
+# Restore the caller's environment even if the benchmark fails.
+@patch.dict(
+    os.environ,
+    SGLANG_OPT_TOPMAG="1",
+    KEEP="0.5",
+    SGLANG_OPT_TOPMAG_PACKED="1",
+    SGLANG_OPT_TOPMAG_FUSED="0",
+)
+def run_fused_benchmark(output_dir: str | Path | None = None) -> dict[str, object]:
     if not torch.cuda.is_available():
-        raise RuntimeError("bench_stage2a requires CUDA")
+        raise RuntimeError("bench_fused requires CUDA")
     device = torch.device("cuda")
     torch.manual_seed(2027)
     selected_k = 512
@@ -54,7 +61,7 @@ def run(output_dir: str | Path | None = None) -> dict[str, object]:
     latent = torch.randn(pool_rows, 512, dtype=torch.bfloat16, device=device)
     mask = reference.topmag_keep_mask(latent, 0.5)
     weight = torch.ones(512, dtype=torch.bfloat16, device=device)
-    buffers = PackedC4Buffers(*pack_c4_rows_ref(latent, mask, weight, 1.0e-6))
+    buffers = PackedBuffers(*pack_rows_ref(latent, mask, weight, 1.0e-6))
     angles = torch.randn(4096, 32, dtype=torch.float32, device=device)
     freqs = torch.complex(torch.cos(angles), torch.sin(angles)).contiguous()
     all_rows: list[dict[str, object]] = []
@@ -66,18 +73,20 @@ def run(output_dir: str | Path | None = None) -> dict[str, object]:
         raw = torch.arange(selected_k, dtype=torch.int32, device=device)[None]
         raw = raw.expand(batch, -1).contiguous()
         lengths = torch.full((batch,), selected_k, dtype=torch.int32, device=device)
-        stage1 = NativeC4Workspace.allocate(
+        packed = NativeWorkspace.allocate(
             batch, selected_k, 64, device, with_dense=True
         )
-        stage2a = NativeC4Workspace.allocate(
+        fused = NativeWorkspace.allocate(
             batch, selected_k, 64, device, with_dense=False
         )
         eager_fns = {
-            "stage1": lambda: unpack_gather_c4_native(
-                buffers, physical, raw, lengths, freqs, stage1
+            "packed": lambda physical=physical, raw=raw, lengths=lengths, packed=packed: (
+                unpack_gather_native(buffers, physical, raw, lengths, freqs, packed)
             ),
-            "stage2a": lambda: unpack_gather_c4_native_stage2a(
-                buffers, physical, raw, lengths, freqs, stage2a
+            "fused": lambda physical=physical, raw=raw, lengths=lengths, fused=fused: (
+                unpack_gather_native_fused(
+                    buffers, physical, raw, lengths, freqs, fused
+                )
             ),
         }
         graph_fns = {}
@@ -103,22 +112,21 @@ def run(output_dir: str | Path | None = None) -> dict[str, object]:
                     )
 
     b1_graph = [
-        row for row in all_rows
-        if row["batch"] == 1 and row["execution"] == "graph"
+        row for row in all_rows if row["batch"] == 1 and row["execution"] == "graph"
     ]
-    stage1_medians = [row["p50_us"] for row in b1_graph if row["mode"] == "stage1"]
-    stage2a_medians = [row["p50_us"] for row in b1_graph if row["mode"] == "stage2a"]
+    packed_medians = [row["p50_us"] for row in b1_graph if row["mode"] == "packed"]
+    fused_medians = [row["p50_us"] for row in b1_graph if row["mode"] == "fused"]
     repeatable_speedup = all(
-        new < old for new, old in zip(stage2a_medians, stage1_medians)
+        new < old for new, old in zip(fused_medians, packed_medians)
     )
     result = {
         "gpu": torch.cuda.get_device_name(),
         "selected_k": selected_k,
         "samples_per_round": 500,
         "rounds": 3,
-        "batch1_graph_stage1_median_us": median(stage1_medians),
-        "batch1_graph_stage2a_median_us": median(stage2a_medians),
-        "batch1_graph_speedup": median(stage1_medians) / median(stage2a_medians),
+        "batch1_graph_packed_median_us": median(packed_medians),
+        "batch1_graph_fused_median_us": median(fused_medians),
+        "batch1_graph_speedup": median(packed_medians) / median(fused_medians),
         "performance_gate_passed": repeatable_speedup,
         "rows": all_rows,
     }
@@ -130,9 +138,9 @@ def run(output_dir: str | Path | None = None) -> dict[str, object]:
         )
     print(json.dumps(result, sort_keys=True), flush=True)
     if not repeatable_speedup:
-        raise RuntimeError("Stage 2A failed the repeatable batch-1 graph speedup gate")
+        raise RuntimeError("Fused failed the repeatable batch-1 graph speedup gate")
     return result
 
 
 if __name__ == "__main__":
-    run(os.environ.get("MUSTAFAR_STAGE2A_RESULTS_DIR"))
+    run_fused_benchmark(os.environ.get("MUSTAFAR_FUSED_RESULTS_DIR"))

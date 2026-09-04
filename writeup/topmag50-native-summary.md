@@ -138,7 +138,7 @@ kv_norm keys carry what QA needs.
 
 ## Benchmark 3 — Sangfor-Bench distinct tasks
 
-`SGLANG_OPT_TOPMAG=1 XKV_TOPMAG_KEEP=0.5 XKV_DEBUG=0`, tp=4, port 30211, agentic e2e evals (cc/vibe). Native
+`SGLANG_OPT_TOPMAG=1 KEEP=0.5 XKV_DEBUG=0`, tp=4, port 30211, agentic e2e evals (cc/vibe). Native
 baselines = the cloud 0725 web run (`task_20260825_195126_744`, `newapi-ai.sangfor.com`). Run log:
 `log/2026-08-31.md`.
 
@@ -300,7 +300,7 @@ once the invalid native control is dropped.
 ### 3f. New 25 distinct @262k — packed set (native 262k leg running)
 
 The **Stage-1 packed** TopMag50 run (real 328-byte store, 1.78×; `SGLANG_OPT_TOPMAG=1
-XKV_TOPMAG_KEEP=0.5 SGLANG_OPT_TOPMAG_PACKED_C4=1`, no native shadow pool) covered **25 NEW
+KEEP=0.5 SGLANG_OPT_TOPMAG_PACKED=1`, no native shadow pool) covered **25 NEW
 tasks** (the §3d 24-task set excluded), split 13 cloud-pass / 12 cloud-fail (hard 8 / medium 10 /
 easy 7), all ≥8 cloud tests, at ctx 262144 on two concurrent TP4 servers (A=30211/GPUs 4-7,
 B=30212/GPUs 0-3), 2026-09-01→02. The **local-native 262k leg** for these same 25 tasks
@@ -402,7 +402,7 @@ python3 -u sg_capture.py run-lb2 --prune-keep 0.5 --prune-target indexer \
   --chunked-prefill-size 4096 --context-length 131072 --max-new 512 --out .../lb2_prune100.json
 
 # Sangfor: TopMag50 server, then one e2e invocation per instance (mustafar package)
-SGLANG_OPT_TOPMAG=1 XKV_TOPMAG_KEEP=0.5 XKV_DEBUG=0 python3 -m sglang.launch_server \
+SGLANG_OPT_TOPMAG=1 KEEP=0.5 XKV_DEBUG=0 python3 -m sglang.launch_server \
   --model-path .../DeepSeek-V4-Flash-FP8 --served-model-name deepseek-v4-flash --tp 4 \
   --fp8-gemm-backend triton --disable-cuda-graph
 python3 -m yjybench.cli --benchmark Sangfor-Bench --mode e2e --max_workers 1 --timeout 18000 \

@@ -15,7 +15,7 @@ def mask_to_bitmap(mask: torch.Tensor) -> torch.Tensor:
     return (bits * shifts[None, None, :]).sum(dim=2)
 
 
-def bitmap_to_bits(bitmap: torch.Tensor) -> torch.Tensor:
+def bitmap_to_mask(bitmap: torch.Tensor) -> torch.Tensor:
     """Decode signed or unsigned int64-compatible words to boolean rows."""
     signed = bitmap.view(torch.int64)
     shifts = 63 - torch.arange(64, device=bitmap.device)

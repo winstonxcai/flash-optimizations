@@ -2,12 +2,12 @@
 # Usage: MODEL_PATH=/weights SGLANG_ROOT=/sglang bash bench_serving.sh [mode] [input] [output] [concurrency]
 set -euo pipefail
 if [[ "${1:-}" == "--help" ]]; then
-  echo "Usage: MODEL_PATH=/weights SGLANG_ROOT=/sglang bash $0 [native|packed|packed_fused] [32768] [2048] [8]"
+  echo "Usage: MODEL_PATH=/weights SGLANG_ROOT=/sglang bash $0 [native|packed|fused] [32768] [2048] [8]"
   echo "Optional env: PYTHON, RESULTS_DIR, PORT. Fixed TP4, one warm-up and one measured wave."
   exit 0
 fi
 mode=${1:-native}; input=${2:-32768}; output=${3:-2048}; concurrency=${4:-8}
-case "$mode" in native|packed|packed_fused) ;; *) echo "Unknown mode: $mode" >&2; exit 2 ;; esac
+case "$mode" in native|packed|fused) ;; *) echo "Unknown mode: $mode" >&2; exit 2 ;; esac
 for n in "$input" "$output" "$concurrency"; do
   [[ "$n" =~ ^[1-9][0-9]*$ ]] || { echo "Counts and limits must be positive integers" >&2; exit 2; }
 done
@@ -20,12 +20,12 @@ if [[ -n "${SGLANG_ROOT:-}" ]]; then
   export SG_LOWRANK_SRC="$SGLANG_ROOT/python"
   export PYTHONPATH="$SG_LOWRANK_SRC:$PYTHONPATH"
 fi
-for name in ${!SGLANG_OPT_TOPMAG@} ${!XKV_TOPMAG@}; do unset "$name"; done
-export SGLANG_OPT_TOPMAG=0 XKV_TOPMAG_KEEP=1.0 SGLANG_OPT_TOPMAG_PACKED_C4=0 SGLANG_OPT_TOPMAG_STAGE2A=0
+for name in ${!SGLANG_OPT_TOPMAG@} ${!KEEP@}; do unset "$name"; done
+export SGLANG_OPT_TOPMAG=0 KEEP=1.0 SGLANG_OPT_TOPMAG_PACKED=0 SGLANG_OPT_TOPMAG_FUSED=0
 if [[ "$mode" != native ]]; then
-  export SGLANG_OPT_TOPMAG=1 XKV_TOPMAG_KEEP=0.5 SGLANG_OPT_TOPMAG_PACKED_C4=1
+  export SGLANG_OPT_TOPMAG=1 KEEP=0.5 SGLANG_OPT_TOPMAG_PACKED=1
 fi
-[[ "$mode" != packed_fused ]] || export SGLANG_OPT_TOPMAG_STAGE2A=1
+[[ "$mode" != fused ]] || export SGLANG_OPT_TOPMAG_FUSED=1
 python=${PYTHON:-python3}; port=${PORT:-30211}
 if curl -fsS --max-time 2 "http://127.0.0.1:$port/health" >/dev/null 2>&1; then
   echo "A server is already running on port $port; choose a different PORT" >&2

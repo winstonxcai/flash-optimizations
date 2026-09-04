@@ -1,42 +1,47 @@
-"""Synthetic Stage-2A correctness, stream, and CUDA-graph tests."""
+"""Synthetic Fused correctness, stream, and CUDA-graph tests."""
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
+from unittest.mock import patch
 
 import torch
 
-from .. import config, reference
-from ..packed_c4 import (
-    NativeC4Workspace,
-    PackedC4Buffers,
-    pack_c4_rows_ref,
-    unpack_gather_c4_native,
-    unpack_gather_c4_native_stage2a,
+from .. import reference
+from ..packed import (
+    NativeWorkspace,
+    PackedBuffers,
+    unpack_gather_native,
+    unpack_gather_native_fused,
 )
+from ..reference import pack_rows_ref
 
 
-def _native_rows(workspace: NativeC4Workspace, rows: int) -> tuple[torch.Tensor, torch.Tensor]:
+def _native_rows(
+    workspace: NativeWorkspace, rows: int
+) -> tuple[torch.Tensor, torch.Tensor]:
     values = []
     scales = []
     for row in range(rows):
         page, offset = divmod(row, workspace.page_size)
         values.append(
-            workspace.raw[
+            workspace.native_bytes[
                 page,
                 offset * 576 : offset * 576 + 576,
             ]
         )
         scales.append(
-            workspace.raw[
+            workspace.native_bytes[
                 page,
-                workspace.page_size * 576 + offset * 8 :
-                workspace.page_size * 576 + offset * 8 + 8,
+                workspace.page_size * 576 + offset * 8 : workspace.page_size * 576
+                + offset * 8
+                + 8,
             ]
         )
     if not values:
-        device = workspace.raw.device
+        device = workspace.native_bytes.device
         return (
             torch.empty((0, 576), dtype=torch.uint8, device=device),
             torch.empty((0, 8), dtype=torch.uint8, device=device),
@@ -44,7 +49,7 @@ def _native_rows(workspace: NativeC4Workspace, rows: int) -> tuple[torch.Tensor,
     return torch.stack(values), torch.stack(scales)
 
 
-def _make_buffers(pool_rows: int, device: torch.device) -> PackedC4Buffers:
+def _make_buffers(pool_rows: int, device: torch.device) -> PackedBuffers:
     latent = torch.randn(pool_rows, 512, dtype=torch.bfloat16, device=device)
     masks = reference.topmag_keep_mask(latent, 0.5)
 
@@ -56,8 +61,8 @@ def _make_buffers(pool_rows: int, device: torch.device) -> PackedC4Buffers:
     assert int(special.sum()) == 256
     masks[0] = special
     weight = torch.linspace(0.75, 1.25, 512, dtype=torch.bfloat16, device=device)
-    values, bitmaps, scales = pack_c4_rows_ref(latent, masks, weight, 1.0e-6)
-    return PackedC4Buffers(values, bitmaps, scales)
+    values, bitmaps, scales = pack_rows_ref(latent, masks, weight, 1.0e-6)
+    return PackedBuffers(values, bitmaps, scales)
 
 
 def _run_shape(batch: int, selected_k: int = 512) -> dict[str, object]:
@@ -68,7 +73,7 @@ def _run_shape(batch: int, selected_k: int = 512) -> dict[str, object]:
     flat_buffers = _make_buffers(pool_rows, device)
     # Production SGLang pools are page-major, while the kernel consumes their
     # contiguous storage as logical rows. Exercise that exact runtime ABI.
-    buffers = PackedC4Buffers(
+    buffers = PackedBuffers(
         flat_buffers.values.reshape(-1, 64, 256),
         flat_buffers.bitmaps.reshape(-1, 64, 8),
         flat_buffers.scales.reshape(-1, 64, 8),
@@ -84,26 +89,17 @@ def _run_shape(batch: int, selected_k: int = 512) -> dict[str, object]:
     angles = torch.randn(4096, 32, dtype=torch.float32, device=device)
     freqs = torch.complex(torch.cos(angles), torch.sin(angles)).contiguous()
 
-    stage1 = NativeC4Workspace.allocate(
-        batch, selected_k, 61, device, with_dense=True
-    )
-    stage2a = NativeC4Workspace.allocate(
-        batch, selected_k, 61, device, with_dense=False
-    )
-    unpack_gather_c4_native(
-        buffers, physical, raw, lengths, freqs, stage1
-    )
-    unpack_gather_c4_native_stage2a(
-        buffers, physical, raw, lengths, freqs, stage2a
-    )
+    packed = NativeWorkspace.allocate(batch, selected_k, 61, device, with_dense=True)
+    fused = NativeWorkspace.allocate(batch, selected_k, 61, device, with_dense=False)
+    unpack_gather_native(buffers, physical, raw, lengths, freqs, packed)
+    unpack_gather_native_fused(buffers, physical, raw, lengths, freqs, fused)
     torch.cuda.synchronize()
     rows = batch * selected_k
-    native1, scales1 = _native_rows(stage1, rows)
-    native2, scales2 = _native_rows(stage2a, rows)
+    native1, scales1 = _native_rows(packed, rows)
+    native2, scales2 = _native_rows(fused, rows)
 
     valid = (
-        torch.arange(selected_k, device=device)[None, :]
-        < lengths[:, None]
+        torch.arange(selected_k, device=device)[None, :] < lengths[:, None]
     ).reshape(-1)
     assert torch.equal(native2[valid, :448], native1[valid, :448])
     assert torch.equal(scales2[valid, :7], scales1[valid, :7])
@@ -122,9 +118,9 @@ def _run_shape(batch: int, selected_k: int = 512) -> dict[str, object]:
         [[0, 511, 1, 2, -1, 4096]], dtype=torch.int32, device=device
     )
     edge_lengths = torch.tensor([6], dtype=torch.int32, device=device)
-    edge = NativeC4Workspace.allocate(1, 6, 4, device, with_dense=False)
-    edge.raw.fill_(0xA5)
-    unpack_gather_c4_native_stage2a(
+    edge = NativeWorkspace.allocate(1, 6, 4, device, with_dense=False)
+    edge.native_bytes.fill_(0xA5)
+    unpack_gather_native_fused(
         buffers, edge_physical, edge_raw, edge_lengths, freqs, edge
     )
     torch.cuda.synchronize()
@@ -134,13 +130,13 @@ def _run_shape(batch: int, selected_k: int = 512) -> dict[str, object]:
     assert bool((edge_values[:2] != 0).any())
 
     # A non-default stream must own the launch.
-    stream_workspace = NativeC4Workspace.allocate(
+    stream_workspace = NativeWorkspace.allocate(
         batch, selected_k, 61, device, with_dense=False
     )
     stream = torch.cuda.Stream()
     with torch.cuda.stream(stream):
-        stream_workspace.raw.fill_(0xCC)
-        unpack_gather_c4_native_stage2a(
+        stream_workspace.native_bytes.fill_(0xCC)
+        unpack_gather_native_fused(
             buffers, physical, raw, lengths, freqs, stream_workspace
         )
     torch.cuda.current_stream().wait_stream(stream)
@@ -149,14 +145,10 @@ def _run_shape(batch: int, selected_k: int = 512) -> dict[str, object]:
     assert torch.equal(stream_scales, scales2)
 
     # Warm once before capture so module loading and marker output stay outside.
-    unpack_gather_c4_native_stage2a(
-        buffers, physical, raw, lengths, freqs, stage2a
-    )
+    unpack_gather_native_fused(buffers, physical, raw, lengths, freqs, fused)
     graph = torch.cuda.CUDAGraph()
     with torch.cuda.graph(graph):
-        unpack_gather_c4_native_stage2a(
-            buffers, physical, raw, lengths, freqs, stage2a
-        )
+        unpack_gather_native_fused(buffers, physical, raw, lengths, freqs, fused)
     torch.cuda.synchronize()
     allocated_before = torch.cuda.memory_allocated(device)
     for _ in range(20):
@@ -164,7 +156,7 @@ def _run_shape(batch: int, selected_k: int = 512) -> dict[str, object]:
     torch.cuda.synchronize()
     allocated_after = torch.cuda.memory_allocated(device)
     assert allocated_after == allocated_before
-    graph_values, graph_scales = _native_rows(stage2a, rows)
+    graph_values, graph_scales = _native_rows(fused, rows)
     assert torch.equal(graph_values, native2)
     assert torch.equal(graph_scales, scales2)
 
@@ -178,9 +170,17 @@ def _run_shape(batch: int, selected_k: int = 512) -> dict[str, object]:
     }
 
 
-def run(sanitizer_case: bool = False) -> dict[str, object]:
+# The reference leg must stay Triton regardless of the caller's serving mode.
+@patch.dict(
+    os.environ,
+    SGLANG_OPT_TOPMAG="1",
+    KEEP="0.5",
+    SGLANG_OPT_TOPMAG_PACKED="1",
+    SGLANG_OPT_TOPMAG_FUSED="0",
+)
+def run_fused_validation(sanitizer_case: bool = False) -> dict[str, object]:
     if not torch.cuda.is_available():
-        raise RuntimeError("gpu_stage2a requires CUDA")
+        raise RuntimeError("gpu_fused requires CUDA")
     torch.manual_seed(2026)
     batches = (1,) if sanitizer_case else (1, 2, 4, 8, 16)
     shapes = [_run_shape(batch, 8 if sanitizer_case else 512) for batch in batches]
@@ -202,4 +202,4 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--sanitizer-case", action="store_true")
     args = parser.parse_args()
-    run(args.sanitizer_case)
+    run_fused_validation(args.sanitizer_case)
