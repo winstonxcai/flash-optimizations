@@ -78,26 +78,25 @@ The mechanism is capacity → cache retention → fewer duplicate prefills, and 
 
 ## Benchmark results
 
+Both 50-task agentic suites dip slightly under the packed C4; at n=50 the deltas sit within run-to-run noise but are consistently negative.
+
 | Evaluation | Native | Packed | Difference |
 |---|---:|---:|---:|
-| RULER 64k (n=850) † | 95.1% | 95.3% | **+0.16 pp** |
-| Longbench v2 (n=100) † | 54/100 | 52/100 | −2.0 pp |
-| Sangfor-Bench (n=50) † | 22/49* | 21/49* | −1 task |
+| Sangfor-Bench (n=50) | 28/50 | 24/50 | −4 tasks |
 | SWE-bench (n=50) | 32/50 | 30/50 | −2 tasks |
 
-† Evaluated on the original DeepSeek-V4-Flash checkpoint, not the 0731 build used for SWE-bench and the serving measurements.
-\* Sangfor results are task-level pass/fail counts (combined 9/24 + 13/25 Native vs 8/24 + 13/25 Packed; one invalid Native task excluded).
-
-All deltas are small: RULER is effectively lossless, the rest within a couple of points or tasks.
+Native = the untouched DeepSeek-V4-Flash-0731 checkpoint; Packed = Mustafar 328-byte C4 on the same 0731 model. Counts are task-level pass/fail: a task passes only when its full test suite passes (SWE-bench resolution; Sangfor 100% pass rate). The Sangfor Native column is the ACG112 `bash_ds_flash` reference run — native untouched 0731 on the identical 50-task set and harness; the SWE-bench legs are our own native-untouched vs packed runs through the same Claude Code harness at TP8. The RULER and LongBench v2 rows are dropped (RULER 64k is too easy at this window; a LongBench v2 full run is deferred).
 
 ### Sangfor-Bench
 
-Combines the two 25-task runs (one invalid Native task excluded). Rows = Native, columns = Packed:
+The 50-task hard set on the 0731 build: Native = ACG112 `bash_ds_flash` untouched-0731 reference, Packed = Mustafar 328-byte C4 on the same 0731 model. A task passes only when every repo test passes (pass_rate = 100). Rows = Native, columns = Packed:
 
 | Baseline result | Packed pass | Packed fail |
 |---|---:|---:|
-| **Native pass** | 15 | 7 |
-| **Native fail** | 6 | 21 |
+| **Native pass** | 22 | 6 |
+| **Native fail** | 2 | 20 |
+
+Packed passes 24/50 to Native's 28/50 (−4 tasks); 42/50 land in the same category and the eight disagreements split 6 native-only to 2 packed-only.
 
 ### SWE-bench
 
@@ -112,4 +111,4 @@ Same 50 instances through the Claude Code harness at **TP8** on DeepSeek-V4-Flas
 
 ## Conclusion
 
-Mustafar buys capacity, not decode speed: fair-load serving is throughput-neutral, the prefill-bound workload turns the extra pool into little at max concurrency, and quality holds across every eval. The capacity pays only where shared prefixes are reused. A custom CUDA kernel that directly handles the TopMag50 sparse attention would close the remaining TPOT gap between Packed and Native and could let Packed beat Native even at fair serving.
+Mustafar buys capacity, not decode speed: fair-load serving is throughput-neutral, the prefill-bound workload turns the extra pool into little at max concurrency, and quality holds within a few tasks on the two 50-task agentic evals (Packed trails by −4 Sangfor-Bench and −2 SWE-bench tasks). The capacity pays only where shared prefixes are reused. A custom CUDA kernel that directly handles the TopMag50 sparse attention would close the remaining TPOT gap between Packed and Native and could let Packed beat Native even at fair serving.
