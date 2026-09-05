@@ -78,25 +78,25 @@ The mechanism is capacity → cache retention → fewer duplicate prefills, and 
 
 ## Benchmark results
 
-Both 50-task agentic suites dip slightly under the packed C4; at n=50 the deltas sit within run-to-run noise but are consistently negative.
+Across the two 50-task agentic suites Packed is net-neutral: **+2 on Sangfor-Bench and −2 on SWE-bench (54/100 vs 54/100 combined)**. At n=50 each ±2–4 delta sits well within run-to-run noise.
 
 | Evaluation | Native | Packed | Difference |
 |---|---:|---:|---:|
-| Sangfor-Bench (n=50) | 28/50 | 24/50 | −4 tasks |
+| Sangfor-Bench (n=50) | 22/50 | 24/50 | +2 tasks |
 | SWE-bench (n=50) | 32/50 | 30/50 | −2 tasks |
 
-Native = the untouched DeepSeek-V4-Flash-0731 checkpoint; Packed = Mustafar 328-byte C4 on the same 0731 model. Counts are task-level pass/fail: a task passes only when its full test suite passes (SWE-bench resolution; Sangfor 100% pass rate). The Sangfor Native column is the ACG112 `bash_ds_flash` reference run — native untouched 0731 on the identical 50-task set and harness; the SWE-bench legs are our own native-untouched vs packed runs through the same Claude Code harness at TP8.
+Native = the untouched DeepSeek-V4-Flash-0731 checkpoint; Packed = Mustafar 328-byte C4 on the same 0731 model. Counts are task-level pass/fail: a task passes only when its full test suite passes (SWE-bench resolution; Sangfor 100% pass rate). The Sangfor Native column is our own native-untouched 0731 re-run served at TP4 through the **identical** Claude Code harness (same harness build, worker config, and serving host as the packed leg) — it replaces the earlier ACG112 `bash_ds_flash` external reference, which scored the same native model at 28/50 under an older harness generation, underscoring the run-to-run spread on this eval. The SWE-bench legs are our own native-untouched vs packed runs through the same Claude Code harness at TP8.
 
 ### Sangfor-Bench
 
-The 50-task hard set on the 0731 build: Native = ACG112 `bash_ds_flash` untouched-0731 reference, Packed = Mustafar 328-byte C4 on the same 0731 model. A task passes only when every repo test passes (pass_rate = 100). Rows = Native, columns = Packed:
+The 50-task hard set on the 0731 build: Native = our untouched-0731 re-run, Packed = Mustafar 328-byte C4 on the same 0731 model — both served at TP4 through the identical Claude Code harness and same serving host. A task passes only when every repo test passes (pass_rate = 100). Rows = Native, columns = Packed:
 
 | Baseline result | Packed pass | Packed fail |
 |---|---:|---:|
-| **Native pass** | 22 | 6 |
-| **Native fail** | 2 | 20 |
+| **Native pass** | 20 | 2 |
+| **Native fail** | 4 | 24 |
 
-Packed passes 24/50 to Native's 28/50 (−4 tasks); 42/50 land in the same category and the eight disagreements split 6 native-only to 2 packed-only.
+Packed passes 24/50 to Native's 22/50 (**+2 tasks**); 44/50 land in the same category and the six disagreements split 4 packed-only to 2 native-only. With only six discordant pairs the paired difference is not statistically distinguishable from zero (McNemar CI brackets it), so the reading is parity — Packed does not lose ground. Native's absolute score here (22) is lower than the ACG112 external reference's 28 on the same set; the gap is harness-generation and run-to-run spread, which is why both accuracy legs now use our own controlled runs.
 
 ### SWE-bench
 
@@ -111,4 +111,4 @@ Same 50 instances through the Claude Code harness at **TP8** on DeepSeek-V4-Flas
 
 ## Conclusion
 
-Mustafar buys capacity, not decode speed: fair-load serving is throughput-neutral, the prefill-bound workload turns the extra pool into little at max concurrency, and quality holds within a few tasks on the two 50-task agentic evals (Packed trails by −4 Sangfor-Bench and −2 SWE-bench tasks). The capacity pays only where shared prefixes are reused. A custom CUDA kernel that directly handles the TopMag50 sparse attention would close the remaining TPOT gap between Packed and Native and could let Packed beat Native even at fair serving.
+Mustafar buys capacity, not decode speed: fair-load serving is throughput-neutral, the prefill-bound workload turns the extra pool into little at max concurrency, and quality holds on the two 50-task agentic evals — Packed is +2 on Sangfor-Bench and −2 on SWE-bench (54/100 vs 54/100 combined), both deltas within run-to-run noise. The capacity pays only where shared prefixes are reused. A custom CUDA kernel that directly handles the TopMag50 sparse attention would close the remaining TPOT gap between Packed and Native and could let Packed beat Native even at fair serving.
