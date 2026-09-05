@@ -85,7 +85,7 @@ Both 50-task agentic suites dip slightly under the packed C4; at n=50 the deltas
 | Sangfor-Bench (n=50) | 28/50 | 24/50 | −4 tasks |
 | SWE-bench (n=50) | 32/50 | 30/50 | −2 tasks |
 
-Native = the untouched DeepSeek-V4-Flash-0731 checkpoint; Packed = Mustafar 328-byte C4 on the same 0731 model. Counts are task-level pass/fail: a task passes only when its full test suite passes (SWE-bench resolution; Sangfor 100% pass rate). The Sangfor Native column is the ACG112 `bash_ds_flash` reference run — native untouched 0731 on the identical 50-task set and harness; the SWE-bench legs are our own native-untouched vs packed runs through the same Claude Code harness at TP8. The RULER and LongBench v2 rows are dropped (RULER 64k is too easy at this window; a LongBench v2 full run is deferred).
+Native = the untouched DeepSeek-V4-Flash-0731 checkpoint; Packed = Mustafar 328-byte C4 on the same 0731 model. Counts are task-level pass/fail: a task passes only when its full test suite passes (SWE-bench resolution; Sangfor 100% pass rate). The Sangfor Native column is the ACG112 `bash_ds_flash` reference run — native untouched 0731 on the identical 50-task set and harness; the SWE-bench legs are our own native-untouched vs packed runs through the same Claude Code harness at TP8.
 
 ### Sangfor-Bench
 
