@@ -83,7 +83,7 @@ Across the two 50-task agentic suites Packed is net-neutral on average: **+0.5 o
 | Sangfor-Bench (n=50, 2 runs each) | **23.0** | **23.5** | +0.5 task |
 | SWE-bench (n=50, 2 runs each) | **32.5** | **30.5** | −2 tasks |
 
-A task passes only when its full test suite passes (SWE-bench resolution; Sangfor 100% pass rate, with one adjudicated instance — see below). Per-run scores — Sangfor: Native 22 & 24 (mean 23.0), Packed 24 & 23 (mean 23.5); SWE-bench: Native 32 (TP8) & 33 (TP4) → mean 32.5, Packed 30 (TP8) & 31 (TP4) → mean 30.5.
+A task passes only when its full test suite passes (SWE-bench resolution; Sangfor 100% pass rate, with one adjudicated instance — see below). Per-run scores — Sangfor: Native 22 & 24 (mean 23.0), Packed 24 & 23 (mean 23.5); SWE-bench: Native 32 & 33 → mean 32.5, Packed 30 & 31 → mean 30.5.
 
 ### Sangfor-Bench
 
@@ -109,16 +109,16 @@ One instance is adjudicated: Native-run-2's `apex_gpt-train-data-collector_1dbcd
 
 ### SWE-bench
 
-The same 50 instances through the Claude Code harness on DeepSeek-V4-Flash-0731 across two matched run-pairs — the original **TP8** run and a later **TP4** run. Resolution = the task's full test suite passes; error/empty outcomes grouped as fail. Per-run confusion matrices, rows = Native, columns = Packed:
+The same 50 instances through the Claude Code harness on DeepSeek-V4-Flash-0731 across two matched run-pairs. Resolution = the task's full test suite passes; error/empty outcomes grouped as fail. Per-run confusion matrices, rows = Native, columns = Packed:
 
-**TP8 run — Native 32/50, Packed 30/50**
+**Run 1 — Native 32/50, Packed 30/50**
 
 | Baseline result | Packed pass | Packed fail |
 |---|---:|---:|
 | Native pass | 29 | 3 |
 | Native fail | 1 | 17 |
 
-**TP4 run — Native 33/50, Packed 31/50**
+**Run 2 — Native 33/50, Packed 31/50**
 
 | Baseline result | Packed pass | Packed fail |
 |---|---:|---:|
