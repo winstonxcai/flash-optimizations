@@ -8,6 +8,12 @@ This is a KV-capacity optimization, not a decode speedup. At Native's own concur
 
 Quality is unaffected on agentic coding: across two matched run-pairs per suite, Packed averages **+0.5** on Sangfor-Bench (Native 23.0 vs Packed 23.5) and **−2 tasks** on SWE-bench (Native 32.5 vs Packed 30.5) — both deltas inside run-to-run noise (details in Benchmark results).
 
+## Methodology
+
+Modern long-context models increasingly reduce KV-cache cost by projecting keys and values into lower-dimensional learned latent representations. Our hypothesis is that this architectural compression does not exhaust inference-time redundancy: although the full latent basis may be useful globally, each token may require only a subset of latent coordinates. We therefore apply token-wise magnitude pruning within the compressed latent state, retaining only the largest-magnitude features for each token. Initial experiments on DeepSeek-V4-Flash show that roughly 50% of the latent coordinates can be removed while preserving similar downstream quality, suggesting that latent compression and feature sparsity are complementary.
+
+We exploit this residual feature sparsity by storing only the retained latent values together with a compact bitmap and quantization metadata, reducing the persistent KV footprint without retraining the model. The additional capacity can then improve serving efficiency indirectly: more KV state and shared prefixes remain resident, reducing eviction and repeated prefill on long-context agentic workloads. The broader methodology is model-agnostic and targets inference-time sparsity within already-compressed latent KV representations; DeepSeek-V4-Flash serves as our initial evaluation, with additional latent-KV architectures used to test whether the phenomenon generalizes.
+
 ## Scope and configurations
 
 Two legs on the same mustafar fork (SGLang v0.5.15 @ f63458b), hardware, and fp4-native `flashinfer_mxfp4` MoE runner:
