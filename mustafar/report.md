@@ -1,22 +1,22 @@
-# Mustafar: 1.21× KV Capacity for Long-Context DeepSeek-V4-Flash Decode
+# Remnant: Residual Feature Sparsity Survives Latent Compression
 
 ## Overview
 
-Mustafar applies TopMag50 sparsity to the 21 compressed sparse-attention (CSA) layers of DeepSeek-V4-Flash and stores the C4 state packed — **584 → 328 bytes per record (43.84% smaller)**. On a TP4 H100 server (fp4-native MoE runner, mem-frac 0.88, fp8 KV cache) this grew the measured KV pool from **3,730,944 to 4,519,168 full-token slots (1.2112×; allocator-reported, see Serving results)**, raising the allocator-derived maximum resident concurrency at 2048-token decode from **107→129 (32k), 55→66 (64k), 28→33 (128k), 14→17 (256k)**.
+DeepSeek-V4-Flash already compresses its KV cache: the 21 compressed sparse-attention (CSA) layers cache each token's keys and values as a single learned latent — the 584-byte C4 state. Remnant prunes that latent a second time, keeping only the largest-magnitude ~50% of coordinates per token (TopMag50) and storing the survivors packed — **584 → 328 bytes per record (43.84% smaller)**. On a TP4 H100 server (fp4-native MoE runner, mem-frac 0.88, fp8 KV cache) this grew the measured KV pool from **3,730,944 to 4,519,168 full-token slots (1.2112×; allocator-reported, see Serving results)**, raising the allocator-derived maximum resident concurrency at 2048-token decode from **107→129 (32k), 55→66 (64k), 28→33 (128k), 14→17 (256k)**.
 
 This is a KV-capacity optimization, not a decode speedup. At Native's own concurrency the modes are throughput-neutral (**−3.2% to +0.2%** tokens/s); even at Packed's higher ceiling they stay near-neutral (**−0.7% to +3.4%**), because this input-heavy workload is prefill-bound. The capacity payoff appears under prefix reuse: in the LongSWE-Bench replay below, the larger pool keeps more shared prefixes resident (device cache hit 86.7 → 94.7%), and Packed finished **77.7% more requests while doing 25.9% fewer real (uncached) prefills**.
 
-Quality is unaffected on agentic coding: across two matched run-pairs per suite, Packed averages **+0.5** on Sangfor-Bench (Native 23.0 vs Packed 23.5) and **−2 tasks** on SWE-bench (Native 32.5 vs Packed 30.5) — both deltas inside run-to-run noise (details in Benchmark results).
+On agentic coding the measured gap sits inside run-to-run noise: across two matched run-pairs per suite, Packed averages **+0.5** on Sangfor-Bench (Native 23.0 vs Packed 23.5) and **−2 tasks** on SWE-bench (Native 32.5 vs Packed 30.5) (details in Benchmark results).
 
 ## Methodology
 
-Modern long-context models increasingly reduce KV-cache cost by projecting keys and values into lower-dimensional learned latent representations. Our hypothesis is that this architectural compression does not exhaust inference-time redundancy: although the full latent basis may be useful globally, each token may require only a subset of latent coordinates. We therefore apply token-wise magnitude pruning within the compressed latent state, retaining only the largest-magnitude features for each token. Initial experiments on DeepSeek-V4-Flash show that roughly 50% of the latent coordinates can be removed while preserving similar downstream quality, suggesting that latent compression and feature sparsity are complementary.
+Modern long-context models increasingly reduce KV-cache cost by projecting keys and values into lower-dimensional learned latent representations. Our hypothesis is that this architectural compression does not exhaust inference-time redundancy: although the full latent basis may be useful globally, each token may require only a subset of latent coordinates. We therefore apply token-wise magnitude pruning within the compressed latent state, retaining only the largest-magnitude features for each token. Initial experiments on DeepSeek-V4-Flash show that roughly 50% of the latent coordinates can be removed while preserving similar downstream quality, suggesting that **latent compression and feature sparsity are complementary**.
 
-We exploit this residual feature sparsity by storing only the retained latent values together with a compact bitmap and quantization metadata, reducing the persistent KV footprint without retraining the model. The additional capacity can then improve serving efficiency indirectly: more KV state and shared prefixes remain resident, reducing eviction and repeated prefill on long-context agentic workloads. The broader methodology is model-agnostic and targets inference-time sparsity within already-compressed latent KV representations; DeepSeek-V4-Flash serves as our initial evaluation, with additional latent-KV architectures used to test whether the phenomenon generalizes.
+We exploit this residual feature sparsity by storing only the retained latent values together with a compact bitmap and quantization metadata, reducing the persistent KV footprint without retraining the model. The additional capacity can then improve serving efficiency indirectly: more KV state and shared prefixes remain resident, reducing eviction and repeated prefill on long-context agentic workloads. The broader methodology is model-agnostic and targets **inference-time sparsity within already-compressed latent KV representations**; DeepSeek-V4-Flash serves as our initial evaluation, with additional latent-KV architectures used to test whether the phenomenon generalizes.
 
 ## Scope and configurations
 
-Two legs on the same mustafar fork (SGLang v0.5.15 @ f63458b), hardware, and fp4-native `flashinfer_mxfp4` MoE runner:
+Two legs on the same serving fork — SGLang v0.5.15 @ f63458b running Remnant's backend, still tagged 'mustafar' in code and results paths — on identical hardware with the fp4-native `flashinfer_mxfp4` MoE runner:
 
 1. **Native** — TopMag/packing off, stock 584-byte C4.
 2. **Packed** — TopMag50 pruning on, 328-byte packed C4.
@@ -84,7 +84,7 @@ The mechanism is capacity → cache retention → fewer duplicate prefills, and 
 
 ## Benchmark results
 
-Across the two 50-task agentic suites Packed is net-neutral on average: **+0.5 on Sangfor-Bench and −2 on SWE-bench**, both deltas inside run-to-run noise. Both suites are controlled Native (untouched 0731) vs Packed (Mustafar 328-byte C4) pairs on the same checkpoint through the identical Claude Code harness, two runs per leg — Sangfor both at TP4; SWE-bench one TP8 run and one TP4 run.
+Across the two 50-task agentic suites Packed is net-neutral on average: **+0.5 on Sangfor-Bench and −2 on SWE-bench**, both deltas inside run-to-run noise. Both suites are controlled Native (untouched 0731) vs Packed (Remnant, 328-byte C4) pairs on the same checkpoint through the identical Claude Code harness, two runs per leg — Sangfor both at TP4; SWE-bench one TP8 run and one TP4 run.
 
 | Evaluation | Native | Packed | Difference |
 |---|---:|---:|---:|
@@ -137,4 +137,4 @@ Native leads both runs by the same 2 tasks. All four runs share the same 3 error
 
 ## Conclusion
 
-Mustafar buys capacity, not decode speed: fair-load serving is throughput-neutral, the prefill-bound workload turns the extra pool into little at max concurrency, and quality holds on the two 50-task agentic evals — across two matched run-pairs per suite Packed averages **+0.5** on Sangfor-Bench and is **−2** on SWE-bench, both deltas smaller than each leg's own two-run spread (per-run scores in Benchmark results). The capacity pays only where shared prefixes are reused. A custom CUDA kernel that directly handles the TopMag50 sparse attention would close the remaining TPOT gap between Packed and Native and could let Packed beat Native even at fair serving.
+Remnant buys capacity, not decode speed: fair-load serving is throughput-neutral, the prefill-bound workload turns the extra pool into little at max concurrency, and the agentic evals show no quality signal beyond run-to-run noise — across two matched run-pairs per suite Packed averages **+0.5** on Sangfor-Bench and is **−2** on SWE-bench, both deltas smaller than each leg's own two-run spread (per-run scores in Benchmark results). The capacity pays only where shared prefixes are reused. A custom CUDA kernel that directly handles the TopMag50 sparse attention would close the remaining TPOT gap between Packed and Native and could let Packed beat Native even at fair serving.
