@@ -83,9 +83,9 @@ Across the two 50-task agentic suites Packed is net-neutral on average: **+1.0 o
 | Evaluation | Native | Packed | Difference |
 |---|---:|---:|---:|
 | Sangfor-Bench (n=50, two runs each) | 22 & 23 → mean **22.5** | 24 & 23 → mean **23.5** | +1.0 task (avg) |
-| SWE-bench (n=50) | 32/50 | 30/50 | −2 tasks |
+| SWE-bench (n=50) | 33/50 | 31/50 | −2 tasks |
 
-Native = the untouched DeepSeek-V4-Flash-0731 checkpoint; Packed = Mustafar 328-byte C4 on the same 0731 model. Counts are task-level pass/fail: a task passes only when its full test suite passes (SWE-bench resolution; Sangfor 100% pass rate). All four Sangfor runs are controlled native-untouched vs packed legs on the same 0731 pair, each served at TP4 through the **identical** Claude Code harness (same harness build, worker config, and serving host): Native scored 22 & 23, Packed 24 & 23. Each leg's own spread (Native 22–23, Packed 23–24) brackets the other leg's mean, so the +1.0 average delta is within run-to-run noise. These replace the earlier ACG112 `bash_ds_flash` external reference, which scored the same native model at 28/50 under an older harness generation, underscoring the run-to-run spread on this eval. The SWE-bench legs are our own native-untouched vs packed runs through the same Claude Code harness at TP8.
+Native = the untouched DeepSeek-V4-Flash-0731 checkpoint; Packed = Mustafar 328-byte C4 on the same 0731 model. Counts are task-level pass/fail: a task passes only when its full test suite passes (SWE-bench resolution; Sangfor 100% pass rate). All four Sangfor runs are controlled native-untouched vs packed legs on the same 0731 pair, each served at TP4 through the **identical** Claude Code harness (same harness build, worker config, and serving host): Native scored 22 & 23, Packed 24 & 23. Each leg's own spread (Native 22–23, Packed 23–24) brackets the other leg's mean, so the +1.0 average delta is within run-to-run noise. These replace the earlier ACG112 `bash_ds_flash` external reference, which scored the same native model at 28/50 under an older harness generation, underscoring the run-to-run spread on this eval. The SWE-bench row is the same controlled native-untouched vs packed pair (one run each) through the same Claude Code harness at TP4: Native 33/50, Packed 31/50.
 
 ### Sangfor-Bench
 
@@ -101,14 +101,14 @@ The 50-task hard set on the 0731 build, now two controlled runs per leg: Native 
 
 ### SWE-bench
 
-Same 50 instances through the Claude Code harness at **TP8** on DeepSeek-V4-Flash-0731 (error/empty outcomes grouped as fail). Rows = Native, columns = Packed:
+Same 50 instances through the Claude Code harness at **TP4** on DeepSeek-V4-Flash-0731 (error/empty outcomes grouped as fail). Rows = Native, columns = Packed:
 
 | Baseline result | Packed pass | Packed fail |
 |---|---:|---:|
-| Native pass | 29 | 3 |
-| Native fail | 1 | 17 |
+| Native pass | 29 | 4 |
+| Native fail | 2 | 15 |
 
-46/50 land in the same pass/fail category; the four disagreements are balanced (Native passed 3 that Packed failed, Packed 1 that Native failed).
+44/50 land in the same pass/fail category. Of the six disagreements, Native passed 4 instances that Packed failed and Packed passed 2 that Native failed (Native 33/50 vs Packed 31/50, −2). The three error instances (sphinx-7985/8269/8475) are shared between legs and grouped as fail.
 
 ## Conclusion
 
