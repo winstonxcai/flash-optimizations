@@ -76,40 +76,57 @@ The mechanism is capacity → cache retention → fewer duplicate prefills, and 
 
 ## Benchmark results
 
-Across the two 50-task agentic suites Packed is net-neutral on average: **+0.5 on Sangfor-Bench and −2 on SWE-bench**, both deltas inside run-to-run noise. Both suites are controlled Native (untouched 0731) vs Packed (Mustafar 328-B C4) runs on the same checkpoint through the identical Claude Code harness — Sangfor at TP4, SWE-bench at TP8.
+Across the two 50-task agentic suites Packed is net-neutral on average: **+0.5 on Sangfor-Bench and −2 on SWE-bench**, both deltas inside run-to-run noise. Both suites are controlled Native (untouched 0731) vs Packed (Mustafar 328-B C4) pairs on the same checkpoint through the identical Claude Code harness, two runs per leg — Sangfor both at TP4; SWE-bench one TP8 run and one TP4 run.
 
 | Evaluation | Native | Packed | Difference |
 |---|---:|---:|---:|
-| Sangfor-Bench (n=50, mean of 2 runs) | **23.0** | **23.5** | +0.5 task |
-| SWE-bench (n=50, TP8) | **32** | **30** | −2 tasks |
+| Sangfor-Bench (n=50, 2 runs each) | **23.0** | **23.5** | +0.5 task |
+| SWE-bench (n=50, 2 runs each) | **32.5** | **30.5** | −2 tasks |
 
-A task passes only when its full test suite passes (SWE-bench resolution; Sangfor 100% pass rate, with one adjudicated instance — see below). Sangfor scores: Native 22 & 24 (mean 23.0), Packed 24 & 23 (mean 23.5). SWE-bench is a single run per leg: Native 32/50, Packed 30/50.
+A task passes only when its full test suite passes (SWE-bench resolution; Sangfor 100% pass rate, with one adjudicated instance — see below). Per-run scores — Sangfor: Native 22 & 24 (mean 23.0), Packed 24 & 23 (mean 23.5); SWE-bench: Native 32 (TP8) & 33 (TP4) → mean 32.5, Packed 30 (TP8) & 31 (TP4) → mean 30.5.
 
 ### Sangfor-Bench
 
-The 50-task hard set, two runs per leg at TP4. The tally counts, per instance, how many of each leg's two runs passed (rows = Native's runs passed 0/1/2, columns = Packed's):
+The 50-task hard set, two matched run-pairs at TP4 (Native = untouched 0731, Packed = Mustafar 328-B C4). A task passes only when its full test suite passes (100% pass rate, with one adjudicated instance — see below); error/empty outcomes grouped as fail. Per-run confusion matrices, rows = Native, columns = Packed:
 
-| | Packed 0/2 | Packed 1/2 | Packed 2/2 |
-|---|---:|---:|---:|
-| **Native 0/2** | 22 | 1 | 0 |
-| **Native 1/2** | 2 | 2 | 4 |
-| **Native 2/2** | 1 | 0 | 18 |
+**Run 1 — Native 22/50, Packed 24/50**
 
-18 tasks passed all four runs and 22 failed all four: 40/50 are deterministic in the same direction. Of the ten that ever flip, Packed passed strictly more often on 5 tasks and Native on 3, which is why Packed's mean (23.5) edges Native's (23.0) by **+0.5**. Native's own two runs (22 & 24) already span a wider range than that gap, so the between-leg delta sits inside run-to-run noise — the reading is parity, Packed does not lose ground.
+| Baseline result | Packed pass | Packed fail |
+|---|---:|---:|
+| Native pass | 20 | 2 |
+| Native fail | 4 | 24 |
+
+**Run 2 — Native 24/50, Packed 23/50**
+
+| Baseline result | Packed pass | Packed fail |
+|---|---:|---:|
+| Native pass | 21 | 3 |
+| Native fail | 2 | 24 |
+
+Run 1 swings to Packed (Packed-only 4 vs Native-only 2) and run 2 to Native (Native-only 3 vs Packed-only 2), so the two runs bracket each other. Means: Native 22 & 24 → **23.0**, Packed 24 & 23 → **23.5** — a +0.5 Packed edge smaller than each leg's own two-run spread, so the reading is parity, Packed does not lose ground.
 
 One instance is adjudicated: Native-run-2's `apex_gpt-train-data-collector_1dbcd396` is counted as a pass — its patch passed all 109 runnable tests with 0 failures (2 uncollectable, pass_rate 98.2). The same instance failed tests in the other three runs.
 
 ### SWE-bench
 
-Same 50 instances through the Claude Code harness at **TP8** on DeepSeek-V4-Flash-0731 (one run per leg; error/empty outcomes grouped as fail). Rows = Native, columns = Packed:
+The same 50 instances through the Claude Code harness on DeepSeek-V4-Flash-0731 across two matched run-pairs — the original **TP8** run and a later **TP4** run. Resolution = the task's full test suite passes; error/empty outcomes grouped as fail. Per-run confusion matrices, rows = Native, columns = Packed:
+
+**TP8 run — Native 32/50, Packed 30/50**
 
 | Baseline result | Packed pass | Packed fail |
 |---|---:|---:|
 | Native pass | 29 | 3 |
 | Native fail | 1 | 17 |
 
-46/50 land in the same pass/fail category; the four disagreements are balanced (Native passed 3 that Packed failed, Packed 1 that Native failed).
+**TP4 run — Native 33/50, Packed 31/50**
+
+| Baseline result | Packed pass | Packed fail |
+|---|---:|---:|
+| Native pass | 29 | 4 |
+| Native fail | 2 | 15 |
+
+Native leads both runs by the same 2 tasks (32 vs 30; 33 vs 31), so means are **32.5 vs 30.5 (−2)**. All four runs share the same 3 error instances (sphinx-7985/8269/8475), grouped as fail.
 
 ## Conclusion
 
-Mustafar buys capacity, not decode speed: fair-load serving is throughput-neutral, the prefill-bound workload turns the extra pool into little at max concurrency, and quality holds on the two 50-task agentic evals — across two controlled runs per leg Packed averages **+0.5** on Sangfor-Bench (Native 22 & 24 → mean 23.0; Packed 24 & 23 → mean 23.5) and is −2 on SWE-bench (TP8), both deltas inside run-to-run noise. The capacity pays only where shared prefixes are reused. A custom CUDA kernel that directly handles the TopMag50 sparse attention would close the remaining TPOT gap between Packed and Native and could let Packed beat Native even at fair serving.
+Mustafar buys capacity, not decode speed: fair-load serving is throughput-neutral, the prefill-bound workload turns the extra pool into little at max concurrency, and quality holds on the two 50-task agentic evals — across two matched run-pairs per suite Packed averages **+0.5** on Sangfor-Bench (Native 22 & 24 → 23.0; Packed 24 & 23 → 23.5) and is **−2** on SWE-bench (Native 32 & 33 → 32.5; Packed 30 & 31 → 30.5), both deltas inside run-to-run noise. The capacity pays only where shared prefixes are reused. A custom CUDA kernel that directly handles the TopMag50 sparse attention would close the remaining TPOT gap between Packed and Native and could let Packed beat Native even at fair serving.
