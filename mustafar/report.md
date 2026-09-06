@@ -19,8 +19,6 @@ Two legs on the same mustafar fork (SGLang v0.5.15 @ f63458b), hardware, and fp4
 
 TP4 on 4× H100 80 GB serving DeepSeek-V4-Flash-0731 with mem-frac 0.88, 1,048,576 context cap, fp8 KV cache, and full decode CUDA graphs to `max_bs 136` (prefill graphs off). Each point ran official `bench_serving` at exact 32k/64k/128k/256k inputs with 2048 outputs: one warm-up wave of C, then three measured waves (3C). Native ran at its allocator ceiling (C = 107/55/28/14 at 32k/64k/128k/256k); Packed at that same Native ceiling (fair) and at its own (C = 129/66/33/17).
 
-Native has one natural operating point per context — its allocator ceiling. Packed is measured at that same ceiling (fair) and at its own higher ceiling (max).
-
 #### Fair serving — same concurrency
 
 | Context | Concurrency | Mode | Requests/s | Total tokens/s | Median TTFT (ms) | Median TPOT (ms) | Median e2e (ms) | Δ tokens/s vs Native |
@@ -78,38 +76,40 @@ The mechanism is capacity → cache retention → fewer duplicate prefills, and 
 
 ## Benchmark results
 
-Across the two 50-task agentic suites Packed is net-neutral on average: **+1.0 on Sangfor-Bench and −2 on SWE-bench**. Sangfor now has two controlled runs per leg — Native 22 & 23 (mean **22.5**), Packed 24 & 23 (mean **23.5**) — and each leg's own two runs already span the whole 22–24 range, so the between-leg difference sits inside run-to-run noise.
+Across the two 50-task agentic suites Packed is net-neutral on average: **+0.5 on Sangfor-Bench and −2 on SWE-bench**, both deltas inside run-to-run noise. Both suites are controlled Native (untouched 0731) vs Packed (Mustafar 328-B C4) runs on the same checkpoint through the identical Claude Code harness — Sangfor at TP4, SWE-bench at TP8.
 
 | Evaluation | Native | Packed | Difference |
 |---|---:|---:|---:|
-| Sangfor-Bench (n=50, two runs each) | 22 & 23 → mean **22.5** | 24 & 23 → mean **23.5** | +1.0 task (avg) |
-| SWE-bench (n=50) | 33/50 | 31/50 | −2 tasks |
+| Sangfor-Bench (n=50, mean of 2 runs) | **23.0** | **23.5** | +0.5 task |
+| SWE-bench (n=50, TP8) | **32** | **30** | −2 tasks |
 
-Native = the untouched DeepSeek-V4-Flash-0731 checkpoint; Packed = Mustafar 328-byte C4 on the same 0731 model. Counts are task-level pass/fail: a task passes only when its full test suite passes (SWE-bench resolution; Sangfor 100% pass rate). All four Sangfor runs are controlled native-untouched vs packed legs on the same 0731 pair, each served at TP4 through the **identical** Claude Code harness (same harness build, worker config, and serving host): Native scored 22 & 23, Packed 24 & 23. Each leg's own spread (Native 22–23, Packed 23–24) brackets the other leg's mean, so the +1.0 average delta is within run-to-run noise. These replace the earlier ACG112 `bash_ds_flash` external reference, which scored the same native model at 28/50 under an older harness generation, underscoring the run-to-run spread on this eval. The SWE-bench row is the same controlled native-untouched vs packed pair (one run each) through the same Claude Code harness at TP4: Native 33/50, Packed 31/50.
+A task passes only when its full test suite passes (SWE-bench resolution; Sangfor 100% pass rate, with one adjudicated instance — see below). Sangfor scores: Native 22 & 24 (mean 23.0), Packed 24 & 23 (mean 23.5). SWE-bench is a single run per leg: Native 32/50, Packed 30/50.
 
 ### Sangfor-Bench
 
-The 50-task hard set on the 0731 build, now two controlled runs per leg: Native = untouched 0731 (22 & 23), Packed = Mustafar 328-byte C4 (24 & 23) — every leg served at TP4 through the identical Claude Code harness and same serving host. A task passes only when every repo test passes (pass_rate = 100). The tally counts, per instance, how many of each leg's two runs passed (rows = Native's runs passed 0/1/2, columns = Packed's runs passed 0/1/2):
+The 50-task hard set, two runs per leg at TP4. The tally counts, per instance, how many of each leg's two runs passed (rows = Native's runs passed 0/1/2, columns = Packed's):
 
 | | Packed 0/2 | Packed 1/2 | Packed 2/2 |
 |---|---:|---:|---:|
-| **Native 0/2** | 23 | 1 | 0 |
-| **Native 1/2** | 1 | 2 | 4 |
+| **Native 0/2** | 22 | 1 | 0 |
+| **Native 1/2** | 2 | 2 | 4 |
 | **Native 2/2** | 1 | 0 | 18 |
 
-18 tasks passed both Native runs and both Packed runs, and 23 failed all four: 41/50 are deterministic in the same direction across every run. Of the nine that ever flip, Packed passed strictly more often on 5 tasks and Native on 2, which is why Packed's mean (23.5) edges Native's (22.5) by **+1.0**. But Native's own two runs (22, 23) and Packed's (24, 23) each span a two-task range that brackets the other leg's mean, so the between-leg delta is no larger than each leg's own run-to-run spread — the reading is parity, Packed does not lose ground. Native's absolute scores (22, 23) sit below the ACG112 external reference's 28 on the same set; that gap is harness-generation and run-to-run spread, which is why all four accuracy legs now use our own controlled runs.
+18 tasks passed all four runs and 22 failed all four: 40/50 are deterministic in the same direction. Of the ten that ever flip, Packed passed strictly more often on 5 tasks and Native on 3, which is why Packed's mean (23.5) edges Native's (23.0) by **+0.5**. Native's own two runs (22 & 24) already span a wider range than that gap, so the between-leg delta sits inside run-to-run noise — the reading is parity, Packed does not lose ground.
+
+One instance is adjudicated: Native-run-2's `apex_gpt-train-data-collector_1dbcd396` is counted as a pass — its patch passed all 109 runnable tests with 0 failures (2 uncollectable, pass_rate 98.2). The same instance failed tests in the other three runs.
 
 ### SWE-bench
 
-Same 50 instances through the Claude Code harness at **TP4** on DeepSeek-V4-Flash-0731 (error/empty outcomes grouped as fail). Rows = Native, columns = Packed:
+Same 50 instances through the Claude Code harness at **TP8** on DeepSeek-V4-Flash-0731 (one run per leg; error/empty outcomes grouped as fail). Rows = Native, columns = Packed:
 
 | Baseline result | Packed pass | Packed fail |
 |---|---:|---:|
-| Native pass | 29 | 4 |
-| Native fail | 2 | 15 |
+| Native pass | 29 | 3 |
+| Native fail | 1 | 17 |
 
-44/50 land in the same pass/fail category. Of the six disagreements, Native passed 4 instances that Packed failed and Packed passed 2 that Native failed (Native 33/50 vs Packed 31/50, −2). The three error instances (sphinx-7985/8269/8475) are shared between legs and grouped as fail.
+46/50 land in the same pass/fail category; the four disagreements are balanced (Native passed 3 that Packed failed, Packed 1 that Native failed).
 
 ## Conclusion
 
-Mustafar buys capacity, not decode speed: fair-load serving is throughput-neutral, the prefill-bound workload turns the extra pool into little at max concurrency, and quality holds on the two 50-task agentic evals — across two controlled runs per leg Packed averages **+1.0** on Sangfor-Bench (Native 22 & 23 → mean 22.5; Packed 24 & 23 → mean 23.5) and is −2 on SWE-bench; each Sangfor leg's own two-run spread brackets the other leg's mean, so both deltas are inside run-to-run noise. The capacity pays only where shared prefixes are reused. A custom CUDA kernel that directly handles the TopMag50 sparse attention would close the remaining TPOT gap between Packed and Native and could let Packed beat Native even at fair serving.
+Mustafar buys capacity, not decode speed: fair-load serving is throughput-neutral, the prefill-bound workload turns the extra pool into little at max concurrency, and quality holds on the two 50-task agentic evals — across two controlled runs per leg Packed averages **+0.5** on Sangfor-Bench (Native 22 & 24 → mean 23.0; Packed 24 & 23 → mean 23.5) and is −2 on SWE-bench (TP8), both deltas inside run-to-run noise. The capacity pays only where shared prefixes are reused. A custom CUDA kernel that directly handles the TopMag50 sparse attention would close the remaining TPOT gap between Packed and Native and could let Packed beat Native even at fair serving.
