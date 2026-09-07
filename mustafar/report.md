@@ -6,7 +6,7 @@ DeepSeek-V4-Flash already compresses its KV cache: the 21 compressed sparse-atte
 
 This is a KV-capacity optimization, not a decode speedup. At Native's own concurrency the modes are throughput-neutral (**−3.2% to +0.2%** tokens/s); even at Packed's higher ceiling they stay near-neutral (**−0.7% to +3.4%**), because this input-heavy workload is prefill-bound. The capacity payoff appears under prefix reuse: in the LongSWE-Bench replay below, the larger pool keeps more shared prefixes resident (device cache hit 86.7 → 94.7%), and Packed finished **77.7% more requests while doing 25.9% fewer real (uncached) prefills**.
 
-On agentic coding the measured gap sits inside run-to-run noise: across two matched run-pairs per suite, Packed averages **+0.5** on Sangfor-Bench (Native 23.0 vs Packed 23.5) and **−2 tasks** on SWE-bench (Native 32.5 vs Packed 30.5) (details in Benchmark results).
+On agentic coding the measured gap sits inside run-to-run noise: across two matched run-pairs per suite, Packed averages **+0.5** on Sangfor-Bench (Native 23.0 vs Packed 23.5) and **−2 tasks** on SWE-bench (Native 32.5 vs Packed 30.5). A third, cap-dominated suite tilts Packed the other way: DeepSWE-Bench full passes are Native **5** vs Packed **7** (details in Benchmark results).
 
 ## Methodology
 
@@ -84,14 +84,15 @@ The mechanism is capacity → cache retention → fewer duplicate prefills, and 
 
 ## Benchmark results
 
-Across the two 50-task agentic suites Packed is net-neutral on average: **+0.5 on Sangfor-Bench and −2 on SWE-bench**, both deltas inside run-to-run noise. Both suites are controlled Native (untouched 0731) vs Packed (Remnant, 328-byte C4) pairs on the same checkpoint through the identical Claude Code harness, two runs per leg — Sangfor both at TP4; SWE-bench one TP8 run and one TP4 run.
+Across the two 50-task agentic suites that ran twice per leg, Packed is net-neutral on average: **+0.5 on Sangfor-Bench and −2 on SWE-bench**, both deltas inside run-to-run noise. Those suites are controlled Native (untouched 0731) vs Packed (Remnant, 328-byte C4) pairs on the same checkpoint through the identical Claude Code harness, two runs per leg — Sangfor both at TP4; SWE-bench one TP8 run and one TP4 run. A third suite, DeepSWE-Bench, ran once per leg on the same TP4 hardware; its 60-task pool is cap-dominated (tasks exceeding a 5400 s agent budget score 0 by construction), and on the under-cap subset Packed passes at a higher rate — a weak, single-run Packed tilt.
 
 | Evaluation | Native | Packed | Difference |
 |---|---:|---:|---:|
 | Sangfor-Bench (n=50, 2 runs each) | **23.0** | **23.5** | +0.5 task |
 | SWE-bench (n=50, 2 runs each) | **32.5** | **30.5** | −2 tasks |
+| DeepSWE-Bench (n=60, 1 run each) | **5** | **7** | +2 tasks |
 
-A task passes only when its full test suite passes (SWE-bench resolution; Sangfor 100% pass rate, with one adjudicated instance in the Sangfor section); error/empty outcomes count as fail. Per-run scores — Sangfor: Native 22 & 24, Packed 24 & 23; SWE-bench: Native 32 & 33, Packed 30 & 31. The table above gives each leg's two-run mean; the matrices below are per run.
+A task passes only when its full test suite passes (SWE-bench resolution; Sangfor 100% pass rate, with one adjudicated instance in the Sangfor section); error/empty outcomes count as fail. Per-run scores — Sangfor: Native 22 & 24, Packed 24 & 23; SWE-bench: Native 32 & 33, Packed 30 & 31. The table above gives each leg's two-run mean; the matrices below are per run. DeepSWE-Bench is the single-run exception: its row counts full passes (Native 5, Packed 7 of 60), where 35 Native / 36 Packed tasks cap-hit the 5400 s agent budget and score 0 by construction — the interpretable comparison is the natural-completion pass rate in that section.
 
 ### Sangfor-Bench
 
@@ -135,6 +136,17 @@ Fifty SWE-bench_Verified instances across two matched run-pairs. Per-run confusi
 
 Native leads both runs by the same 2 tasks. All four runs share the same 3 error instances (sphinx-7985/8269/8475), grouped as fail.
 
+### DeepSWE-Bench
+
+Sixty DeepSWE-Bench tasks, one matched run per leg on the same TP4 servers against the same 60-task pool. Each task caps at a 5400 s agent budget; a cap-hit (`AgentTimeoutError`) yields no patch and reward 0 by construction — a budget artifact, not a resolved fail — and it dominates the pool: **Native 35/60, Packed 36/60**. Only the under-cap **natural completions** carry a quality signal. Full-pass confusion matrix over the shared 60 tasks (rows = Native solved, columns = Packed solved):
+
+| Native result | Packed solved | Packed not solved |
+|---|---:|---:|
+| solved | 1 | 4 |
+| not solved | 6 | 49 |
+
+A task is solved only on a full verifier pass (reward 1). Packed solves 7/60 to Native's 5/60 (shared `anko-typed-variable-bindings`; native-only `clack-async-autocomplete-options`, `go-genai-streamed-function-args`, `httpx-multipart-response-parsing`, `kombu-single-active-consumer-priority`; packed-only `abs-module-cache-flags`, `bandit-interprocedural-taint-checks`, `cattrs-partial-structuring-recovery`, `fd-deterministic-multi-key-sorting`, `goreleaser-retry-publish-auditing`, `happy-dom-abort-pending-body-reads`). On natural completions the pass rate is **Native 5/25 = 20.0% vs Packed 7/24 = 29.2%**. One run per leg, a ~60%-capped pool, and single-digit solves make this the weakest of the three suites: the +2-task Packed lead is directional and consistent with Sangfor-Bench, but unlike the matched-pair suites it is not tested against run-to-run spread.
+
 ## Conclusion
 
-Remnant buys capacity, not decode speed: fair-load serving is throughput-neutral, the prefill-bound workload turns the extra pool into little at max concurrency, and the agentic evals show no quality signal beyond run-to-run noise — across two matched run-pairs per suite Packed averages **+0.5** on Sangfor-Bench and is **−2** on SWE-bench, both deltas smaller than each leg's own two-run spread (per-run scores in Benchmark results). The capacity pays only where shared prefixes are reused. A custom CUDA kernel that directly handles the TopMag50 sparse attention would close the remaining TPOT gap between Packed and Native and could let Packed beat Native even at fair serving.
+Remnant buys capacity, not decode speed: fair-load serving is throughput-neutral, the prefill-bound workload turns the extra pool into little at max concurrency, and the agentic evals show no consistent quality signal — across two matched run-pairs per suite Packed averages **+0.5** on Sangfor-Bench and is **−2** on SWE-bench, both deltas smaller than each leg's own two-run spread, while the single-run, cap-dominated DeepSWE-Bench suite tilts Packed (full passes **5** vs **7**; 20.0% vs 29.2% on natural completions). Together the three suites read as parity within noise: the Sangfor/SWE deltas sit inside each leg's own spread, and DeepSWE's Packed tilt rests on single-run, single-digit solves. The capacity pays only where shared prefixes are reused. A custom CUDA kernel that directly handles the TopMag50 sparse attention would close the remaining TPOT gap between Packed and Native and could let Packed beat Native even at fair serving.
