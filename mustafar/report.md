@@ -145,7 +145,7 @@ Sixty DeepSWE-Bench tasks, one matched run per leg on the same TP4 servers again
 | solved | 1 | 4 |
 | not solved | 6 | 49 |
 
-A task is solved only on a full verifier pass (reward 1). Packed solves 7/60 to Native's 5/60 (shared `anko-typed-variable-bindings`; native-only `clack-async-autocomplete-options`, `go-genai-streamed-function-args`, `httpx-multipart-response-parsing`, `kombu-single-active-consumer-priority`; packed-only `abs-module-cache-flags`, `bandit-interprocedural-taint-checks`, `cattrs-partial-structuring-recovery`, `fd-deterministic-multi-key-sorting`, `goreleaser-retry-publish-auditing`, `happy-dom-abort-pending-body-reads`). On natural completions the pass rate is **Native 5/25 = 20.0% vs Packed 7/24 = 29.2%**. One run per leg, a ~60%-capped pool, and single-digit solves make this the weakest of the three suites: the +2-task Packed lead is directional and consistent with Sangfor-Bench, but unlike the matched-pair suites it is not tested against run-to-run spread.
+A task is solved only on a full verifier pass (reward 1). Packed solves 7/60 to Native's 5/60, with one shared solve. On natural completions the pass rate is **Native 5/25 = 20.0% vs Packed 7/24 = 29.2%**. One run per leg, a ~60%-capped pool, and single-digit solves make this the weakest of the three suites: the +2-task Packed lead is directional and consistent with Sangfor-Bench, but unlike the matched-pair suites it is not tested against run-to-run spread.
 
 ## Conclusion
 
