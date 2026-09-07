@@ -8,12 +8,6 @@ This is a KV-capacity optimization, not a decode speedup. At Native's own concur
 
 On agentic coding the measured gap sits inside run-to-run noise: across two matched run-pairs per suite, Packed averages **+0.5** on Sangfor-Bench (Native 23.0 vs Packed 23.5) and **−2 tasks** on SWE-bench (Native 32.5 vs Packed 30.5). A third, cap-dominated suite tilts Packed the other way: DeepSWE-Bench full passes are Native **5** vs Packed **7** (details in Benchmark results).
 
-## Methodology
-
-Modern long-context models increasingly reduce KV-cache cost by projecting keys and values into lower-dimensional learned latent representations. Our hypothesis is that this architectural compression does not exhaust inference-time redundancy: although the full latent basis may be useful globally, each token may require only a subset of latent coordinates. We therefore apply token-wise magnitude pruning within the compressed latent state, retaining only the largest-magnitude features for each token. Initial experiments on DeepSeek-V4-Flash show that roughly 50% of the latent coordinates can be removed while preserving similar downstream quality, suggesting that **latent compression and feature sparsity are complementary**.
-
-We exploit this residual feature sparsity by storing only the retained latent values together with a compact bitmap and quantization metadata, reducing the persistent KV footprint without retraining the model. The additional capacity can then improve serving efficiency indirectly: more KV state and shared prefixes remain resident, reducing eviction and repeated prefill on long-context agentic workloads. The broader methodology is model-agnostic and targets **inference-time sparsity within already-compressed latent KV representations**; DeepSeek-V4-Flash serves as our initial evaluation, with additional latent-KV architectures used to test whether the phenomenon generalizes.
-
 ## Scope and configurations
 
 Two legs on the same serving fork — SGLang v0.5.15 @ f63458b running Remnant's backend, still tagged 'mustafar' in code and results paths — on identical hardware with the fp4-native `flashinfer_mxfp4` MoE runner:
@@ -59,7 +53,11 @@ Packed's +21% pool deepens the queue but barely moves throughput (−0.7% to +3.
 
 ### LongSWE-Bench
 
-Replays **4,916 recorded Claude-agent business conversations** (~144k prompt tokens/request, short decodes) over OpenAI SSE at concurrency 15 for a fixed 1200 s window — a prefix-reusing workload in which most of each request is served from radix cache only if its shared prefix (system prompt, tool schemas, earlier turns) survives eviction. Both legs are the same 0731 fork TP4 servers on identical hardware; only the C4 representation differs — Packed's smaller 328-byte rows pack more capacity into the same KV budget.
+Replays **4,916 recorded Claude-agent business conversations** (~144k prompt tokens/request, short decodes) over OpenAI SSE in fixed 1200-s windows — a prefix-reusing workload in which most of each request is served from radix cache only if its shared prefix (system prompt, tool schemas, earlier turns) survives eviction. Both legs are the same 0731 fork TP4 servers on identical hardware; only the C4 representation differs — Packed's smaller 328-byte rows pack more capacity into the same KV budget. Two lenses follow: **fair serving** with both modes at the same concurrency, and **SLO-limited concurrency** at each mode's own ceiling under a TTFT-p90 < 10 s budget.
+
+#### Same concurrency
+
+Both legs at concurrency 15, first traffic on a fresh boot, over a fixed 1200-s window:
 
 | Metric | Native (584-byte C4) | Packed (328-byte C4) | Change |
 |---|---:|---:|---:|
@@ -81,6 +79,36 @@ The mechanism is capacity → cache retention → fewer duplicate prefills, and 
 | TPOT | Packed | 0 ms | 23 ms | **88 ms** | 298 ms | 943 ms | 65 ms | 3.81 s |
 | e2e latency | Native | 1.10 s | 5.98 s | **75.48 s** | 90.17 s | 105.4 s | 21.15 s | 167.1 s |
 | e2e latency | Packed | 0.72 s | 5.37 s | **22.93 s** | 62.47 s | 89.92 s | 11.86 s | 165.0 s |
+
+#### SLO-limited concurrency
+
+Native's SLO ceiling under **TTFT p90 < 10 s** is **c12** (p90 **8.55 s**); Packed's is **c15** (**8.17 s**) — one concurrency per fresh-boot 1200-s run of the same 4,916-conversation replay. One step past either ceiling fails: Native c13 = 10.33 s, Packed c16 = 20.6 s (a same-boot c16 reading of ~11 s was warm-cache optimistic and past the SLO regardless).
+
+Each mode at its own ceiling — both legs 09-07, same small decode graphs, same boot allocator state:
+
+| Metric | Native @ 12 | Packed @ 15 | Change |
+|---|---:|---:|---:|
+| Completed in window | 1,239 | 1,578 | **+27.4%** |
+| Requests/s | 1.03 | 1.30 | **+26.2%** |
+| Prompt-token throughput (k tok/s) | 148.9 | 188.6 | **+26.7%** |
+| Completion tokens (k) | 187.4 | 248.8 | +32.8% |
+| Real (uncached) prefill (M tok) | 12.4 | 11.2 | **−9.9%** |
+| Device cache-hit rate | 93.07% | 95.11% | **+2.0 pp** |
+
+Packed serves **+25% concurrency (15 vs 12)** at the same SLO and still completes ~26% more work with **9.9% fewer real prefills**.
+
+**Latency distributions** — whole completed set per leg (Native n=1,239, Packed n=1,578):
+
+| Metric | Leg | min | p50 | **p90** | p95 | p99 | mean | max |
+|---|---|---|---:|---:|---:|---:|---:|---:|
+| TTFT | Native @ 12 | 0.53 s | 2.47 s | **8.55 s** | 17.88 s | 45.01 s | 4.50 s | 66.0 s |
+| TTFT | Packed @ 15 | 0.49 s | 2.45 s | **8.17 s** | 10.67 s | 36.35 s | 4.03 s | 85.5 s |
+| TPOT | Native @ 12 | 0 ms | 18 ms | **119 ms** | 395 ms | 1.04 s | 64 ms | 1.77 s |
+| TPOT | Packed @ 15 | 0 ms | 23 ms | **103 ms** | 212 ms | 852 ms | 58 ms | 2.33 s |
+| e2e latency | Native @ 12 | 0.82 s | 4.72 s | **34.73 s** | 62.32 s | 75.13 s | 11.46 s | 110.5 s |
+| e2e latency | Packed @ 15 | 1.13 s | 5.42 s | **23.73 s** | 48.91 s | 93.39 s | 11.37 s | 123.8 s |
+
+Packed is below Native at the p90 and p95 for all three metrics (TTFT 8.17/10.67 s vs 8.55/17.88 s; e2e 23.73/48.91 vs 34.73/62.32 s) while serving three more users; its higher median (TPOT p50 23 vs 18 ms, e2e p50 5.42 vs 4.72 s) and larger worst request (TTFT max 85.5 vs 66.0 s) are the three-extra-users cost landing mid-distribution.
 
 ## Agentic Benchmark results
 
