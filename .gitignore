@@ -5,4 +5,5 @@ mustafar/__pycache__/
 **/__pycache__/
 
 # LIVE auth token / env config — never commit
+mustafar/scripts/**/config.json
 mustafar/scripts/config.json
