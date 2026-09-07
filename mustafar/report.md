@@ -82,7 +82,7 @@ The mechanism is capacity → cache retention → fewer duplicate prefills, and 
 | e2e latency | Native | 1.10 s | 5.98 s | **75.48 s** | 90.17 s | 105.4 s | 21.15 s | 167.1 s |
 | e2e latency | Packed | 0.72 s | 5.37 s | **22.93 s** | 62.47 s | 89.92 s | 11.86 s | 165.0 s |
 
-## Benchmark results
+## Agentic Benchmark results
 
 Across the two 50-task agentic suites that ran twice per leg, Packed is net-neutral on average: **+0.5 on Sangfor-Bench and −2 on SWE-bench**, both deltas inside run-to-run noise. Those suites are controlled Native (untouched 0731) vs Packed (Remnant, 328-byte C4) pairs on the same checkpoint through the identical Claude Code harness, two runs per leg — Sangfor both at TP4; SWE-bench one TP8 run and one TP4 run. A third suite, DeepSWE-Bench, ran once per leg on the same TP4 hardware; its 60-task pool is cap-dominated (tasks exceeding a 5400 s agent budget score 0 by construction), and on the under-cap subset Packed passes at a higher rate — a weak, single-run Packed tilt.
 
@@ -92,11 +92,7 @@ Across the two 50-task agentic suites that ran twice per leg, Packed is net-neut
 | SWE-bench (n=50, 2 runs each) | **32.5** | **30.5** | −2 tasks |
 | DeepSWE-Bench (n=60, 1 run each) | **5** | **7** | +2 tasks |
 
-A task passes only when its full test suite passes (SWE-bench resolution; Sangfor 100% pass rate, with one adjudicated instance in the Sangfor section); error/empty outcomes count as fail. Per-run scores — Sangfor: Native 22 & 24, Packed 24 & 23; SWE-bench: Native 32 & 33, Packed 30 & 31. The table above gives each leg's two-run mean; the matrices below are per run. DeepSWE-Bench is the single-run exception: its row counts full passes (Native 5, Packed 7 of 60), where 35 Native / 36 Packed tasks cap-hit the 5400 s agent budget and score 0 by construction — the interpretable comparison is the natural-completion pass rate in that section.
-
-### Sangfor-Bench
-
-The 50-task hard set, two matched run-pairs at TP4. Per-run confusion matrices, rows = Native, columns = Packed:
+### Sangfor-Bench Hard 50
 
 **Run 1 — Native 22/50, Packed 24/50**
 
@@ -118,8 +114,6 @@ Run 1 swings to Packed (Packed-only 4 vs Native-only 2) and run 2 to Native (Nat
 
 ### SWE-bench
 
-Fifty SWE-bench_Verified instances across two matched run-pairs. Per-run confusion matrices, rows = Native, columns = Packed:
-
 **Run 1 — Native 32/50, Packed 30/50**
 
 | Baseline result | Packed pass | Packed fail |
@@ -138,7 +132,7 @@ Native leads both runs by the same 2 tasks. All four runs share the same 3 error
 
 ### DeepSWE-Bench
 
-Sixty DeepSWE-Bench tasks, one matched run per leg on the same TP4 servers against the same 60-task pool. Each task caps at a 5400 s agent budget; a cap-hit (`AgentTimeoutError`) yields no patch and reward 0 by construction — a budget artifact, not a resolved fail — and it dominates the pool: **Native 35/60, Packed 36/60**. Only the under-cap **natural completions** carry a quality signal. Full-pass confusion matrix over the shared 60 tasks (rows = Native solved, columns = Packed solved):
+60 DeepSWE-Bench tasks, one matched run per leg on the same TP4 servers against the same 60-task pool. Each task caps at a 5400 s agent budget; a cap-hit (`AgentTimeoutError`) yields no patch and reward 0 by construction — a budget artifact, not a resolved fail — and it dominates the pool: **Native 35/60, Packed 36/60**. Only the under-cap **natural completions** carry a quality signal. Full-pass confusion matrix over the shared 60 tasks (rows = Native solved, columns = Packed solved):
 
 | Native result | Packed solved | Packed not solved |
 |---|---:|---:|
