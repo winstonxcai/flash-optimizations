@@ -69,7 +69,7 @@ Both legs at concurrency 15, first traffic on a fresh boot, over a fixed 1200-s 
 
 The mechanism is capacity → cache retention → fewer duplicate prefills, and the gain is real per request, not a bigger-set artifact: on the 845 requests both legs completed (matched by request_id), Packed's device hit is **93.80% vs 86.72%**, mean TTFT/e2e are **4.80 s/12.33 s vs 7.88 s/21.15 s**, and median decode TPOT is unchanged (~23 ms).
 
-**Latency distributions** — whole completed set per leg (Native n=845, Packed n=1,502). Packed's rows include its 657 queue-tail requests, so the legs are not apples-to-apples and that tail inflates Packed's p95/p99:
+Latency distributions — whole completed set per leg (Native n=845, Packed n=1,502). Packed's rows include its 657 queue-tail requests, so the legs are not apples-to-apples and that tail inflates Packed's p95/p99:
 
 | Metric | Leg | min | p50 | **p90** | p95 | p99 | mean | max |
 |---|---|---|---:|---:|---:|---:|---:|---:|
@@ -97,7 +97,7 @@ Each mode at its own ceiling — both legs 09-07, same small decode graphs, same
 
 Packed serves **+25% concurrency (15 vs 12)** at the same SLO and still completes ~26% more work with **9.9% fewer real prefills**.
 
-**Latency distributions** — whole completed set per leg (Native n=1,239, Packed n=1,578):
+Latency distributions — whole completed set per leg (Native n=1,239, Packed n=1,578):
 
 | Metric | Leg | min | p50 | **p90** | p95 | p99 | mean | max |
 |---|---|---|---:|---:|---:|---:|---:|---:|
