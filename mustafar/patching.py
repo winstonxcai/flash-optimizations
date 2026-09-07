@@ -8,7 +8,9 @@ from pathlib import Path
 from . import config
 from .patches.attention import _backend_edits, _indexer_edits
 from .patches.compressor import _compressor_edits
+from .patches.hicache import _assembler_edits
 from .patches.pool import _memory_pool_edits, _pool_config_edits
+
 
 
 def _render(path: Path, source: str, edits) -> str:
@@ -31,6 +33,7 @@ def _plan(*, restoring: bool = False):
         (config.POOL_CFG, _pool_config_edits),
         (config.INDEXER, _indexer_edits),
         (config.DSV4_BACKEND, _backend_edits),
+        (config.HICACHE_ASSEMBLER, _assembler_edits),
     )
     plan = []
     for filename, factory in targets:

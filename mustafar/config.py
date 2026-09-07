@@ -35,7 +35,20 @@ MEM_POOL = f"{SRC_ROOT}/sglang/srt/mem_cache/deepseek_v4_memory_pool.py"
 POOL_CFG = f"{SRC_ROOT}/sglang/srt/model_executor/pool_configurator.py"
 DSV4_BACKEND = f"{SRC_ROOT}/sglang/srt/layers/attention/deepseek_v4_backend.py"
 INDEXER = f"{SRC_ROOT}/sglang/srt/layers/attention/dsv4/indexer.py"
-PATCH_FILES = (COMPRESSOR_V2, MEM_POOL, POOL_CFG, DSV4_BACKEND, INDEXER)
+# Packed+HiCache: the DSV4 hierarchical-cache assembler must mirror a packed
+# c4 pool with a packed-aware host pool (see patches/hicache.py). Both the
+# assembler branch and the packed host-pool subclass live in this one file.
+HICACHE_ASSEMBLER = (
+    f"{SRC_ROOT}/sglang/srt/mem_cache/hybrid_cache/hybrid_pool_assembler.py"
+)
+PATCH_FILES = (
+    COMPRESSOR_V2,
+    MEM_POOL,
+    POOL_CFG,
+    DSV4_BACKEND,
+    INDEXER,
+    HICACHE_ASSEMBLER,
+)
 
 # Package import root: inside the eval container this resolves to the mounted
 # /mnt/host_root/home/jovyan/winstonxcai/flash-optimizations, so the sglang
