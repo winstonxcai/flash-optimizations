@@ -1,21 +1,30 @@
 # Mustafar serving benchmark
 
-One Bash script: `mustafar/scripts/local/bench_serving.sh`.
-It directly starts SGLang and calls `python -m sglang.bench_serving`.
-There is no custom Python serving runner, matrix scheduler, or auto-concurrency logic.
+One Bash script: `mustafar/scripts/local/bench-serving.sh`. It starts SGLang and
+calls `python -m sglang.bench_serving`. There is no custom Python serving runner,
+matrix scheduler, or auto-concurrency logic. Two interfaces in the one file:
 
-## Local H100s
+- `bench-serving.sh <fair|max> <ctx> [C_fair]` — report-grade dual-leg protocol
+  on the local H100 box: each leg boots inside the eval container via `serve.sh`
+  (`env.sh`).
+- `bench-serving.sh <native|packed|fused> <in> <out> <concurrency>` — standalone
+  single-config measurement that self-boots its own server on the current host;
+  this is the interface Modal drives and the rest of this page documents.
+
+## Standalone single-config (local H100s / Modal)
 
 ```bash
 MODEL_PATH=/path/to/DeepSeek-V4-Flash-0731 \
 SGLANG_ROOT=/path/to/sglang-lowrank \
 CUDA_VISIBLE_DEVICES=0,1,2,3 \
-bash mustafar/scripts/local/bench_serving.sh packed 32768 2048 8
+bash mustafar/scripts/local/bench-serving.sh packed 32768 2048 8
 ```
 
 The four arguments are **mode, input tokens, output tokens, concurrency**.
 Modes: `native`, `packed`, `fused`. Run the command separately for each
-configuration. Default: native, 32k input, 2,048 output, concurrency 8.
+configuration. Defaults: native, 32k input, 2,048 output, concurrency 8
+(`concurrency` ≤ 136, the extended decode-graph coverage cap). `MODEL_PATH`
+is required.
 
 Requires Linux, Bash, curl, jq, setsid, and the prepared SGLang/CUDA
 environment from `mustafar/Dockerfile`. Use `PYTHON=/venv/bin/python` if needed.
@@ -32,15 +41,21 @@ Use the official `deepseek-ai/DeepSeek-V4-Flash-0731` checkpoint at revision
 `7872f01b1d1fe23eabc4c98b48bffcef5a386062`, SGLang v0.5.17, TP4 / four H100s,
 and FlashInfer MXFP4. Checkpoint revision is now the caller's responsibility.
 
-Fixed setup: one warm-up wave, one measured wave, seed 7301, 0.90 static memory,
-4,096-token chunked prefill, max 16 running requests, full decode graphs for
-batch sizes 1–16, and prefill graphs disabled. Each wave means `concurrency`
-prompts.
+Measurement matches the local report protocol (`serve.sh`/`env.sh`): TP4, fp8 KV
+cache, FlashInfer MXFP4 MoE runner, 0.88 static memory, 1M context cap,
+8,192-token chunked prefill, 256 max running requests, extended decode graphs to
+`max_bs 136` (prefill graphs disabled), and DeepSeek reasoning/tool parsers. One
+warm-up wave of `concurrency` prompts, then three measured waves (`3 ×
+concurrency`).
 
-Only paths, Python, and the port are configurable through environment variables.
-Edit the fixed server settings in the shell file to change both local and Modal
-runs. GPU visibility and NCCL settings are inherited unchanged. Local runs have
-no total timeout; use Linux `timeout` around the command if desired.
+Configurable through environment variables: `PYTHON`, `RESULTS_DIR` (default
+`mustafar/logs/bench-serving/`), `PORT` (default 30211), `SEED` (default 42),
+`SGLANG_ROOT` (sets `SG_LOWRANK_SRC`), and the server knobs `MEM_FRAC` (0.88),
+`CTX_LEN` (1M), `MAX_RUN` (256), `CHUNK` (8192), `DECODE_CFG` (extended),
+`MODEL_NAME`. Edit the fixed server settings in the shell file to change both
+local and Modal runs. GPU visibility and NCCL settings are inherited unchanged.
+Local runs have no total timeout; use Linux `timeout` around the command if
+desired.
 
 ## Modal
 

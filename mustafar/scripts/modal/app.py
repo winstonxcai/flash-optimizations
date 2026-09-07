@@ -108,7 +108,7 @@ def bench_serving(
                 "--kill-after=30s",
                 f"{timeout_minutes}m",
                 "bash",
-                str(REMOTE_REPO / "mustafar/scripts/local/bench_serving.sh"),
+                str(REMOTE_REPO / "mustafar/scripts/local/bench-serving.sh"),
                 mode,
                 str(input_tokens),
                 str(output_tokens),

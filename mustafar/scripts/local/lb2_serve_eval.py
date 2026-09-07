@@ -19,8 +19,8 @@ Usage (host python3, host-networked server):
   python3 lb2_serve_eval.py \
     --server http://127.0.0.1:30212 --model deepseek-v4-flash \
     --tag packed-0731 \
-    --data /home/jovyan/winstonxcai/transferibility/data/longbench/lb2_data.json \
-    --tokens /home/jovyan/winstonxcai/transferibility/data/longbench/lb2_tokens.json \
+    --data /home/jovyan/winstonxcai/flash-optimizations/mustafar/data/lb2_data.json \
+    --tokens /home/jovyan/winstonxcai/flash-optimizations/mustafar/data/lb2_tokens.json \
     --out /home/jovyan/winstonxcai/flash-optimizations/mustafar/results/lb2-full/<leg>/<ts>/results.json \
     [--max-concurrency 6] [--max-tokens 512] [--ctx-cap 1048576]
 Resume: --out json is read at start; already-done ids are skipped.
@@ -115,7 +115,7 @@ def main():
     ap.add_argument("--data", required=True)
     ap.add_argument("--tokens", required=True)
     ap.add_argument("--out", required=True)
-    ap.add_argument("--max-concurrency", type=int, default=6)
+    ap.add_argument("--max-concurrency", type=int, default=8)
     ap.add_argument("--max-tokens", type=int, default=512,
                     help="mirror cmd_run_lb2 --max-new (thinking model budget)")
     ap.add_argument("--ctx-cap", type=int, default=1048576)

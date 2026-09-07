@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = ROOT / "mustafar/scripts/local/bench_serving.sh"
+SCRIPT = ROOT / "mustafar/scripts/local/bench-serving.sh"
 
 
 class ShellTests(unittest.TestCase):
@@ -61,7 +61,7 @@ class ShellTests(unittest.TestCase):
         for args in (
             ["bogus"],
             ["native", "0"],
-            ["packed", "32768", "2048", "17"],
+            ["packed", "32768", "2048", "137"],
             ["native", "32768", "2048", "auto"],
         ):
             with self.subTest(args=args):
@@ -80,7 +80,7 @@ class ShellTests(unittest.TestCase):
             app.bench_serving.local(mode="packed", input_tokens=65536, concurrency=4)
             command = run.call_args.args[0]
             self.assertEqual(command[-4:], ["packed", "65536", "2048", "4"])
-            self.assertTrue(command[-5].endswith("bench_serving.sh"))
+            self.assertTrue(command[-5].endswith("bench-serving.sh"))
             self.assertEqual(
                 command[:4], ["timeout", "--signal=TERM", "--kill-after=30s", "60m"]
             )

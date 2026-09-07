@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 # =====================================================================
 # agentic-eval.sh <sangfor|swe> <instance-list> [run-id]
-#   Internal driver behind eval-sangfor.sh and eval-swe.sh: launches an
-#   agentic eval (Claude Code agents driving a live local sglang server) on
-#   the remote YJYBench box. The server must already be up (serve.sh
-#   native|packed); the agents reach it via the docker_env_config's
-#   ANTHROPIC_BASE_URL.
+#   Entry point for the agentic evals: launches an agentic eval (Claude Code
+#   agents driving a live local sglang server) on the remote YJYBench box. The
+#   server must already be up (serve.sh native|packed); the agents reach it via
+#   the docker_env_config's ANTHROPIC_BASE_URL.
 #
 #   instance-list   path to a NEWLINE list of task ids, one per line.
 #                   LOCAL paths are uploaded to the eval box's instance_file/

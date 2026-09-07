@@ -12,17 +12,25 @@ knowledge lives in one file, [`env.sh`](env.sh).
   remote eval box, default GPUs/port). `serve.sh` is unchanged.
 - `serve.sh <native|packed> [stop]` — boot the server (native untouched / packed
   328-B), wait `/health`, print pool + packed guard. Leave running or `stop` it.
-- `bench-fair.sh <ctx> [C]` — serving at a **fair** (shared) concurrency
-  (Native vs Packed at Native's ceiling unless `C` given).
-- `bench-max.sh <ctx>` — serving at each leg's **own** allocator ceiling.
+- `bench-serving.sh <fair|max> <ctx> [C_fair]` — dual-leg serving comparison:
+  `fair` measures Native vs Packed at the same concurrency (Native's allocator
+  ceiling unless `C_fair` given); `max` measures each leg at its **own**
+  allocator ceiling. Each leg boots its own report-config server.
+- `bench-serving.sh <native|packed|fused> <in> <out> <concurrency>` — standalone
+  single-config measurement, self-boots one report-config server with no
+  container — the Modal / `tests/test_bench_serving.py` entrypoint.
 - `bench-lswb.sh <tag> [port] [C] [dur]` — LongSWE-Bench replay client against a
   running server (prefix-reuse workload).
 - `eval-lb2.sh <tag> [port] [out.json]` — LongBench v2 **full** eval against a
   running server (473 feasible of 503; 30 samples exceed the 1M ctx cap).
-- `eval-sangfor.sh <instance-list> [run-id]` — Sangfor-Bench agentic eval against
-  a running server (list of task ids, one per line).
-- `eval-swe.sh <instance-list> [run-id]` — SWE-bench_Verified agentic eval.
+- `agentic-eval.sh <sangfor|swe> <instance-list> [run-id]` — agentic eval against
+  a running server (list of task ids, one per line) run on the remote YJYBench
+  box: `sangfor` = Sangfor-Bench, `swe` = SWE-bench_Verified.
 - `lb2_serve_eval.py` — the LongBench v2 HTTP client (threaded, resumable).
+- `config/` — eval inputs and env config: `sangfor-bench-hard50.txt` and
+  `swe_instances_50_sweb_verified_mini.txt` (tracked instance lists — Sangfor &
+  SWE-bench_Verified), plus `config_deepswe.json` and `config_swe_sangfor.json`
+  (env/auth configs — carry the live token, git-ignored).
 
 ## Usage pattern
 
@@ -34,13 +42,16 @@ knowledge lives in one file, [`env.sh`](env.sh).
 # 2) attach any eval / bench to the running server
 ./eval-lb2.sh packed-0731                # LongBench v2 full
 ./bench-lswb.sh packed                   # LSWB replay c15 @ 1200s
-./eval-sangfor.sh ../inputs/tasks50.txt  # Sangfor on 50 tasks
-./eval-swe.sh    swe_instances_50.txt    # SWE-bench_Verified on 50 instances
+./agentic-eval.sh sangfor config/sangfor-bench-hard50.txt  # Sangfor on the hard-50 set
+./agentic-eval.sh swe    config/swe_instances_50_sweb_verified_mini.txt  # SWE-bench_Verified on 50 instances
 
 # serving capacity measurements boot their own legs per point (extended decode
 # graphs, warm-up + 3 measured waves, official sglang.bench_serving)
-./bench-fair.sh 32768
-./bench-max.sh  65536
+./bench-serving.sh fair 32768
+./bench-serving.sh max  65536
+
+# standalone single-config, no container (Modal/tests interface; MODEL_PATH set)
+MODEL_PATH=/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731 ./bench-serving.sh packed 32768 2048 8
 ```
 
 Evals that attach assume the server on `$PORT` (default 30212). `sangfor`/`swe`
@@ -48,13 +59,6 @@ clients run on the remote YJYBench box and reach this server through the
 `docker_env_config` base URL (see `env.sh`: `EVAL_*`, `BASE_URL` override).
 Eval results land under `mustafar/results/` (local) or the eval box's
 `results/<run-id>/` (agentic); server logs under `mustafar/logs/serve_<mode>.log`.
-
-## archive/
-
-The previous one-off experiment scripts (262k hard/EM runners, watchdogs,
-serving-sweep drivers, tp8 launchers, verify/rerun helpers, old inner launchers)
-are preserved here for reproduction. They are NOT maintained; use the new drivers
-above.
 
 ## Notes
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =====================================================================
 # env.sh -- shared config + tiny helpers for the mustafar driver scripts
-#           (serve.sh, bench-serving.sh, bench-fair.sh, bench-max.sh,
-#            bench-lswb.sh, eval-lb2.sh, eval-sangfor.sh, eval-swe.sh)
+#           (serve.sh, bench-serving.sh, bench-lswb.sh, eval-lb2.sh,
+#            agentic-eval.sh)
 #
 # TO PORT TO A NEW MACHINE/GPU NODE: edit ONLY the "MACHINE CONFIG"
 # block below. Everything else is generic. All drivers source this file:
@@ -31,8 +31,8 @@ REPLAY_DATASET=$REPLAY_DIR/datasets/h20-dsv4pro/longcodebench_openai
 REPLAY_MANIFEST=$REPLAY_DIR/cache/official-longswebench/longswebench-openai-v1.json
 
 # LongBench v2 dataset (host paths; the full 503-question set + per-id token counts).
-LB2_DATA=${LB2_DATA:-/home/jovyan/winstonxcai/transferibility/data/longbench/lb2_data.json}
-LB2_TOKENS=${LB2_TOKENS:-/home/jovyan/winstonxcai/transferibility/data/longbench/lb2_tokens.json}
+LB2_DATA=${LB2_DATA:-$HOST_REPO/mustafar/data/lb2_data.json}
+LB2_TOKENS=${LB2_TOKENS:-$HOST_REPO/mustafar/data/lb2_tokens.json}
 
 # Remote agentic-eval box that runs the Sangfor / SWE-bench clients (they reach
 # our local sglang server over http). A docker_env_config JSON on that box holds

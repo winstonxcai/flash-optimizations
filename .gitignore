@@ -4,6 +4,11 @@ mustafar/logs/
 mustafar/__pycache__/
 **/__pycache__/
 
+# LongBench v2 dataset copy (903M, regenerable from transferibility/data/longbench)
+mustafar/data/
+
 # LIVE auth token / env config — never commit
 mustafar/scripts/**/config.json
 mustafar/scripts/config.json
+mustafar/scripts/local/config/config_deepswe.json
+mustafar/scripts/local/config/config_swe_sangfor.json

@@ -10,7 +10,7 @@
 #     -e MODEL_PATH=/model \
 #     -e CUDA_VISIBLE_DEVICES=0,1,2,3 \
 #     topmag-server:v0.5.17-0731 bash
-# Launch benchmarks explicitly with mustafar/scripts/local/bench_serving.sh.
+# Launch benchmarks explicitly with mustafar/scripts/local/bench-serving.sh.
 #
 # The weights are intentionally NOT baked in; they are mounted.
 # v0.5.17 is the pinned SGLang tree used for the official 0731 bring-up.
