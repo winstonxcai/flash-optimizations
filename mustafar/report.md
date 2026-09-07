@@ -132,14 +132,14 @@ Native leads both runs by the same 2 tasks. All four runs share the same 3 error
 
 ### DeepSWE-Bench
 
-60 DeepSWE-Bench tasks, one matched run per leg on the same TP4 servers against the same 60-task pool. Each task caps at a 5400 s agent budget; a cap-hit (`AgentTimeoutError`) yields no patch and reward 0 by construction — a budget artifact, not a resolved fail — and it dominates the pool: **Native 35/60, Packed 36/60**. Only the under-cap **natural completions** carry a quality signal. Full-pass confusion matrix over the shared 60 tasks (rows = Native solved, columns = Packed solved):
+60 DeepSWE-Bench tasks, one matched run per leg on the same TP4 servers against the same 60-task pool. Each task caps at a 5400 s agent budget; a cap-hit (`AgentTimeoutError`) yields no patch and reward 0 by construction — a budget artifact, not a resolved fail — and it dominates the pool: **Native 35/60, Packed 36/60**. Only the under-cap **natural completions** carry a quality signal. Confusion matrix over the shared 60 tasks, rows = Native, columns = Packed (pass = full verifier pass, reward 1):
 
-| Native result | Packed solved | Packed not solved |
+| Baseline result | Packed pass | Packed fail |
 |---|---:|---:|
-| solved | 1 | 4 |
-| not solved | 6 | 49 |
+| Native pass | 1 | 4 |
+| Native fail | 6 | 49 |
 
-A task is solved only on a full verifier pass (reward 1). Packed solves 7/60 to Native's 5/60, with one shared solve. On natural completions the pass rate is **Native 5/25 = 20.0% vs Packed 7/24 = 29.2%**. One run per leg, a ~60%-capped pool, and single-digit solves make this the weakest of the three suites: the +2-task Packed lead is directional and consistent with Sangfor-Bench, but unlike the matched-pair suites it is not tested against run-to-run spread.
+A task **passes** only on a full verifier pass (reward 1); fail groups under-cap test failures with cap-hits (both reward 0). Packed passes 7/60 to Native's 5/60, with one task passing on both legs. On natural completions the pass rate is **Native 5/25 = 20.0% vs Packed 7/24 = 29.2%**. One run per leg, a ~60%-capped pool, and single-digit passes make this the weakest of the three suites: the +2-task Packed lead is directional and consistent with Sangfor-Bench, but unlike the matched-pair suites it is not tested against run-to-run spread.
 
 ## Conclusion
 
