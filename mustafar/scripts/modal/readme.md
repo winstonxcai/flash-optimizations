@@ -1,4 +1,112 @@
-# Modal Stage-1 workflow
+# Mustafar serving benchmark
+
+One Bash script: `mustafar/scripts/local/bench_serving.sh`.
+It directly starts SGLang and calls `python -m sglang.bench_serving`.
+There is no custom Python serving runner, matrix scheduler, or auto-concurrency logic.
+
+## Local H100s
+
+```bash
+MODEL_PATH=/path/to/DeepSeek-V4-Flash-0731 \
+SGLANG_ROOT=/path/to/sglang-lowrank \
+CUDA_VISIBLE_DEVICES=0,1,2,3 \
+bash mustafar/scripts/local/bench_serving.sh packed 32768 2048 8
+```
+
+The four arguments are **mode, input tokens, output tokens, concurrency**.
+Modes: `native`, `packed`, `fused`. Run the command separately for each
+configuration. Default: native, 32k input, 2,048 output, concurrency 8.
+
+Requires Linux, Bash, curl, jq, setsid, and the prepared SGLang/CUDA
+environment from `mustafar/Dockerfile`. Use `PYTHON=/venv/bin/python` if needed.
+Packed modes require the Mustafar patch; fused also requires the CUDA
+extension. The script does not install dependencies or download weights.
+
+`python -m mustafar patch` validates all targets before writing and is safe to
+repeat. `verify` checks the complete expected patch against `.mustafar.orig`
+backups, not just markers. `unpatch` restores verified backups only; missing
+backups or unexpected edits in patched files fail without overwriting them.
+Older/incompatible patches must be reconciled explicitly; no Git reset is used.
+
+Use the official `deepseek-ai/DeepSeek-V4-Flash-0731` checkpoint at revision
+`7872f01b1d1fe23eabc4c98b48bffcef5a386062`, SGLang v0.5.17, TP4 / four H100s,
+and FlashInfer MXFP4. Checkpoint revision is now the caller's responsibility.
+
+Fixed setup: one warm-up wave, one measured wave, seed 7301, 0.90 static memory,
+4,096-token chunked prefill, max 16 running requests, full decode graphs for
+batch sizes 1–16, and prefill graphs disabled. Each wave means `concurrency`
+prompts.
+
+Only paths, Python, and the port are configurable through environment variables.
+Edit the fixed server settings in the shell file to change both local and Modal
+runs. GPU visibility and NCCL settings are inherited unchanged. Local runs have
+no total timeout; use Linux `timeout` around the command if desired.
+
+## Modal
+
+`app.py` mounts and executes the same shell file, supplying paths and resources:
+
+```bash
+MODAL_PROFILE=your-profile modal run --detach mustafar/scripts/modal/app.py::bench_serving \
+  --mode packed --input-tokens 32768 --output-tokens 2048 --concurrency 8 \
+  --timeout-minutes 60
+```
+
+Modal wraps the shell command in a 60-minute timeout by default.
+Run separate calls for native and fused. No account is automatically
+selected. Matching benchmark code does not eliminate differences in hardware,
+software, or environment settings.
+
+Other entrypoints remain: `download_model` (CPU), `validate_packed` (H100),
+`validate_fused` (L4), and `bench_kernels --suite packed|fused` (H100).
+The model volume is `deepseek-v4-flash-0731`; results keep the existing `mustafar-stage2a-results` volume name.
+
+## Results
+
+Each call creates a unique result directory containing `server.log`,
+`warmup.log/jsonl`, and `measured.log/jsonl`. Local default:
+`mustafar/logs/bench-serving/`; override with `RESULTS_DIR`. Modal uses `/results`
+and commits the volume when the script exits, including on failure.
+
+The script flushes radix cache before each benchmark phase and rejects failed
+requests or wrong input/output lengths. Read throughput, TTFT, and TPOT directly
+from the official bench_serving JSONL. Server logs retain pool capacity and graph
+replay information; **residency and graph replay are no longer automatically
+certified**. No custom aggregate `result.json` is produced.
+
+The script stops its server and benchmark process groups on exit or timeout.
+Use an unused port (`PORT=30211` by default).
+
+## Code layout and checks
+
+`packed.py` owns buffers, storage, workspace allocation, and reconstruction
+dispatch; `fused.py` binds the CUDA adapter. `reference.py` contains the shared
+production pruning helpers and Torch numerical references. SGLang source edits
+live in `patches/`; `patching.py` applies, restores, and verifies them.
+The public commands remain `python -m mustafar patch|unpatch|verify`.
+
+From the repository root, with PyTorch and Modal installed:
+
+```bash
+MUSTAFAR_TEST_FETCH_SGLANG=1 python -m unittest discover -s mustafar/tests -t .
+ruff check mustafar
+ruff format --check mustafar
+```
+
+Discovery includes the numerical suites and skips GPU checks unless their CUDA,
+Triton, SGLang, or extension dependencies are available. The existing individual
+unit/GPU module entrypoints remain supported. `mustafar/ruff.toml` defines Python
+formatting and lint conventions. Upstream names and external resource identifiers
+are not renamed with local Python symbols.
+
+## Historical runs (archived)
+
+The records below describe earlier experiments and retain their original
+commands, model names, and account selections for provenance. They are not
+current instructions: FP8 serving support and the old specialized entrypoints
+have been removed. Use the parameterized interface above for new runs.
+
+### Modal Packed workflow
 
 Run from the repository root. Modal builds `mustafar/Dockerfile` on CPU; the model stays in the persistent `deepseek-v4-flash-fp8` Volume and is not baked into the image.
 
@@ -21,18 +129,18 @@ modal run --detach mustafar/scripts/modal/app.py::tp4_graph_decode_ab
 
 The TP4 function uses the official [`sglang.bench_serving`](https://lmsysorg.mintlify.app/docs/developer_guide/bench_serving) entry point at exact 32k, 64k, and 128k input lengths with 16 output tokens, CUDA graphs off, `mem-fraction-static=0.93`, and `max-running-requests=64`. Keep `--random-range-ratio 1.0`; `0` samples lengths from 1 to the target.
 
-Results are committed after every point to `mustafar-stage1-results`:
+Results are committed after every point to `mustafar-packed-results`:
 
 ```bash
-modal volume get mustafar-stage1-results tp4-capacity-ceiling.json ./results/
-modal volume get mustafar-stage1-results official-capacity ./results/
-modal volume get mustafar-stage1-results capacity-topmag50_packed-server.log ./results/
-modal volume get mustafar-stage1-results capacity-native-server.log ./results/
+modal volume get mustafar-packed-results tp4-capacity-ceiling.json ./results/
+modal volume get mustafar-packed-results official-capacity ./results/
+modal volume get mustafar-packed-results capacity-topmag50_packed-server.log ./results/
+modal volume get mustafar-packed-results capacity-native-server.log ./results/
 
-modal volume get mustafar-stage1-results tp4-graph-decode-ab.json ./results/
-modal volume get mustafar-stage1-results official-graph-decode ./results/
-modal volume get mustafar-stage1-results graph-decode-topmag50_packed-server.log ./results/
-modal volume get mustafar-stage1-results graph-decode-native-server.log ./results/
+modal volume get mustafar-packed-results tp4-graph-decode-ab.json ./results/
+modal volume get mustafar-packed-results official-graph-decode ./results/
+modal volume get mustafar-packed-results graph-decode-topmag50_packed-server.log ./results/
+modal volume get mustafar-packed-results graph-decode-native-server.log ./results/
 ```
 
 Measured no-OOM admission ceilings on TP4 H100 SXM were:
@@ -50,7 +158,7 @@ took `925.67 s` for packed and `197.11 s` for native. The six official
 `bench_serving` subprocesses took `443.07 s` including client setup and result
 handling; their measured request-workload durations totaled `231.36 s`.
 
-## Graph-enabled decode smoke
+#### Graph-enabled decode smoke
 
 The short TP4 run used exact 64k inputs, 128 output tokens, full decode CUDA
 graphs for batch sizes 1 and 2, and the official `sglang.bench_serving` client.
@@ -68,22 +176,22 @@ graph replay confirmed in both server logs. The paired function took
 Packed and native server startup took `593.32 s` and `123.05 s`, respectively.
 This is a graph/no-error performance smoke, not a quality evaluation.
 
-## Stage-1 report serving benchmark (2048-token decode)
+#### Packed report serving benchmark (2048-token decode)
 
 This is the reproducibility record for the fair-load and maximum-concurrency
 tables in `mustafar/report.md`. Three parallel TP4 legs were run: untouched
-V4-Flash, TopMag50 with the 584-byte native C4 layout, and Stage-1 TopMag50
-with the 328-byte packed C4 layout. The runs used separate Modal profiles with
+V4-Flash, TopMag50 with the 584-byte native layout, and Packed TopMag50
+with the 328-byte packed layout. The runs used separate Modal profiles with
 the model already present in each profile's persistent volume; `winstoncai233`
 was not used.
 
-### Setup
+##### Setup
 
 | Item | Configuration |
 |---|---|
 | Model | `sgl-project/DeepSeek-V4-Flash-FP8` |
 | Model revision | `ae01d80c06cdfe30581edfd0e1c5449dc7ed7f17` |
-| Mustafar Stage-1 commit | `abd18764701eb4db9586a664a1b042c0acb89cd1` |
+| Mustafar Packed commit | `abd18764701eb4db9586a664a1b042c0acb89cd1` |
 | SGLang revision | `f63458b5beaceabbd9d749b9fc956370e1b649e6` |
 | Hardware | 4× NVIDIA H100 80 GB HBM3 |
 | Parallelism | Tensor parallelism 4 (TP4) |
@@ -105,49 +213,49 @@ seconds × 4 GPUs ÷ 3,600 and include server startup and benchmark execution:
 |---|---:|---:|---:|---|
 | Untouched V4-Flash | 907.64 | 1,566.62 | 1.74 | `winstoncai` |
 | TopMag50 native | 893.83 | 1,586.77 | 1.76 | `caiw` |
-| Stage-1 packed | 717.41 | 1,909.34 | 2.12 | `poohthewinniechurchill` |
+| Packed packed | 717.41 | 1,909.34 | 2.12 | `poohthewinniechurchill` |
 | **Total** | — | **5,062.73** | **5.63** | three parallel jobs |
 
 The three jobs ran in parallel for approximately 33 minutes of elapsed wall
 time. All three used the preinstalled V4-Flash model, so no model download time
 was included.
 
-### Commands used
+##### Commands used
 
 The paired benchmark was launched on Modal with:
 
 ```bash
-modal run --detach mustafar/scripts/modal/app.py::tp4_stage1_report_tables --mode all
+modal run --detach mustafar/scripts/modal/app.py::tp4_packed_report_tables --mode all
 
 # Separate untouched V4-Flash behavior in the same image and configuration.
-modal run --detach mustafar/scripts/modal/app.py::tp4_stage1_report_tables \
+modal run --detach mustafar/scripts/modal/app.py::tp4_packed_report_tables \
   --mode untouched
 
 # The three production runs were launched concurrently with explicit profiles:
-MODAL_PROFILE=winstoncai modal run --detach mustafar/scripts/modal/app.py::tp4_stage1_report_tables --mode untouched
-MODAL_PROFILE=caiw modal run --detach mustafar/scripts/modal/app.py::tp4_stage1_report_tables --mode native
-MODAL_PROFILE=poohthewinniechurchill modal run --detach mustafar/scripts/modal/app.py::tp4_stage1_report_tables --mode packed
+MODAL_PROFILE=winstoncai modal run --detach mustafar/scripts/modal/app.py::tp4_packed_report_tables --mode untouched
+MODAL_PROFILE=caiw modal run --detach mustafar/scripts/modal/app.py::tp4_packed_report_tables --mode native
+MODAL_PROFILE=poohthewinniechurchill modal run --detach mustafar/scripts/modal/app.py::tp4_packed_report_tables --mode packed
 ```
 
 This entrypoint came from the temporary report benchmark harness layered on
-Stage-1 commit `abd1876`; it is not part of that runtime commit itself.
+Packed commit `abd1876`; it is not part of that runtime commit itself.
 
 The untouched leg explicitly used:
 
 ```bash
 SGLANG_OPT_TOPMAG=0 \
-XKV_TOPMAG_KEEP=1.0 \
-SGLANG_OPT_TOPMAG_PACKED_C4=0
+KEEP=1.0 \
+SGLANG_OPT_TOPMAG_PACKED=0
 ```
 
 For each mode, the server command was equivalent to the following.
-`SGLANG_OPT_TOPMAG_PACKED_C4=0` selected the native C4 layout and `1` selected
-Stage-1 packing.
+`SGLANG_OPT_TOPMAG_PACKED=0` selected the native layout and `1` selected
+Packed packing.
 
 ```bash
 SGLANG_OPT_TOPMAG=1 \
-XKV_TOPMAG_KEEP=0.5 \
-SGLANG_OPT_TOPMAG_PACKED_C4=<0-or-1> \
+KEEP=0.5 \
+SGLANG_OPT_TOPMAG_PACKED=<0-or-1> \
 CUDA_VISIBLE_DEVICES=0,1,2,3 \
 python3 -m sglang.launch_server \
   --model-path /models/DeepSeek-V4-Flash-FP8 \
@@ -196,7 +304,7 @@ python3 -m sglang.bench_serving \
 
 Warm-up used `NUM_PROMPTS=CONCURRENCY`. Measurement used
 `NUM_PROMPTS=3*CONCURRENCY`, meaning three measured waves at the configured
-concurrency. At 2048 output tokens, the native maximums were C9/C4/C2 and the
+concurrency. At 2048 output tokens, the native maximums were C9//C2 and the
 packed maximums were C11/C5/C3 at 32k/64k/128k respectively.
 
 | Context | Fair concurrency | 584-byte mode maximum | Packed maximum | Measured requests at each maximum |
@@ -212,19 +320,19 @@ replay confirmed in the server logs.
 The untouched result and logs are stored as:
 
 ```bash
-modal volume get mustafar-stage1-results stage1-report-untouched.json ./results/
-modal volume get mustafar-stage1-results stage1-report-untouched-raw ./results/
-modal volume get mustafar-stage1-results stage1-report-untouched-untouched.log ./results/
+modal volume get mustafar-packed-results packed-report-untouched.json ./results/
+modal volume get mustafar-packed-results packed-report-untouched-raw ./results/
+modal volume get mustafar-packed-results packed-report-untouched-untouched.log ./results/
 ```
 
 Final result files:
 
 ```bash
-modal volume get mustafar-stage1-results stage1-report-native.json ./results/
-modal volume get mustafar-stage1-results stage1-report-packed.json ./results/
+modal volume get mustafar-packed-results packed-report-native.json ./results/
+modal volume get mustafar-packed-results packed-report-packed.json ./results/
 ```
 
 All 192 measured requests completed with exactly 2048 output tokens, no request
 errors, intended simultaneous residency, and decode graph replay confirmed in
 the server logs. The raw JSONL remains under
-`stage1-report-{untouched,native,packed}-raw`.
+`packed-report-{untouched,native,packed}-raw`.

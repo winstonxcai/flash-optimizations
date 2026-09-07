@@ -1,0 +1,4 @@
+[TP0] DSV4 memory calculation: bytes_per_full_token=7705.45, available_bytes=30.98 GB, c128_state_fixed=0.19 GB, full_token=4291328
+[TP0] DSV4 pool sizes: full=4291328, swa=429056, c4=1072832, c128=33526, c4_state=26816, c128_state=0
+[TP0] Memory pool end.
+[TP0] max_total_num_tokens=4291328, chunked_prefill_size=4096, max_prefill_tokens=16384, max_running_requests=16, context_len=135168

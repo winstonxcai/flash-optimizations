@@ -1,10 +1,12 @@
-"""Triton kernels for persistent 328-byte FP8 C4 records."""
-import triton
+"""Triton kernels for persistent 328-byte FP8 records."""
+
 import triton.language as tl
+
+import triton
 
 
 @triton.jit
-def _pack_c4_fp8_kernel(
+def _pack_fp8_kernel(
     latent_ptr,
     keep_mask_ptr,
     norm_weight_ptr,
@@ -23,7 +25,7 @@ def _pack_c4_fp8_kernel(
     IS_DECODE: tl.constexpr,
     BLOCK_D: tl.constexpr,
 ):
-    """RMSNorm, UE8M0/FP8 quantize and scatter one packed C4 row.
+    """RMSNorm, UE8M0/FP8 quantize and scatter one packed row.
 
     The input mask is the exact mask computed once at the compressor store
     boundary.  ``seq_lens % 4`` guards decode non-boundary rows, matching the
@@ -32,17 +34,15 @@ def _pack_c4_fp8_kernel(
     row = tl.program_id(0)
     offs = tl.arange(0, BLOCK_D)
     in_bounds = offs < HEAD_DIM
-    bits = tl.load(
-        keep_mask_ptr + row * HEAD_DIM + offs, mask=in_bounds, other=0
-    ).to(tl.int1)
+    bits = tl.load(keep_mask_ptr + row * HEAD_DIM + offs, mask=in_bounds, other=0).to(
+        tl.int1
+    )
     x = tl.load(latent_ptr + row * HEAD_DIM + offs, mask=in_bounds, other=0.0)
     x = tl.where(bits, x, 0.0).to(tl.float32)
-    weight = tl.load(norm_weight_ptr + offs, mask=in_bounds, other=0.0).to(
-        tl.float32
-    )
+    weight = tl.load(norm_weight_ptr + offs, mask=in_bounds, other=0.0).to(tl.float32)
     inv_rms = tl.rsqrt(tl.sum(x * x, axis=0) / HEAD_DIM + norm_eps)
     # Native DSV4 store quantizes a BF16 round trip of the normalized NoPE
-    # coordinates.  Apply it to all eight tiles, including our new tail tile.
+    # coordinates. Apply it to all eight tiles, including our new tail tile.
     normalized = (x * inv_rms * weight).to(tl.bfloat16).to(tl.float32)
 
     tile = offs // TILE_SIZE
@@ -101,7 +101,7 @@ def _pack_c4_fp8_kernel(
 
 
 @triton.jit
-def _unpack_gather_c4_bf16_kernel(
+def _unpack_gather_bf16_kernel(
     values_ptr,
     bitmap_ptr,
     scales_ptr,
@@ -116,7 +116,7 @@ def _unpack_gather_c4_bf16_kernel(
     BITMAP_WORDS: tl.constexpr,
     BLOCK_D: tl.constexpr,
 ):
-    """Gather packed rows and reconstruct pre-RoPE BF16 C4 rows."""
+    """Gather packed rows and reconstruct pre-RoPE BF16 rows."""
     selected_row = tl.program_id(0)
     query = selected_row // selected_k
     k = selected_row % selected_k
@@ -183,7 +183,7 @@ def _rope_tail_complex_inplace_kernel(
 
 
 @triton.jit
-def _bf16_to_native_c4_kernel(
+def _bf16_to_native_kernel(
     dense_ptr,
     bitmap_ptr,
     values_ptr,

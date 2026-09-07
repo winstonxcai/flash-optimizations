@@ -1,7 +1,7 @@
 # TopMag 50% on the native c4 latent — first Sangfor-Bench eval (n=1)
 
 Date: 2026-08-27 · DeepSeek-V4-Flash (21 c4 latent layers, compress_ratio=4)
-Build: `SGLANG_OPT_TOPMAG=1` + `XKV_TOPMAG_KEEP=0.5` (Mustafar package, `flash-optimizations/mustafar/`)
+Build: `SGLANG_OPT_TOPMAG=1` + `KEEP=0.5` (Mustafar package, `flash-optimizations/mustafar/`)
 Change: **store-time only.** Each stored c4 latent vector has its smallest-|·| 256 of 512 coords
 zeroed in place, immediately before the stock fused `compress_norm_rope_store`. The memory pool
 (584 B/token native layout), decode, and every other path are the **stock DeepSeek-V4 build** — no

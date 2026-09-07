@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace mustafar::packed_c4 {
+namespace mustafar::packed {
 
 inline constexpr int kHeadDim = 512;
 inline constexpr int kNopeDim = 448;
@@ -25,4 +25,4 @@ static_assert(kHeadDim == kNopeDim + kRopeDim);
 static_assert(kBitmapWords * 64 == kHeadDim);
 static_assert(kRecordBytes == 328);
 
-}  // namespace mustafar::packed_c4
+}  // namespace mustafar::packed
