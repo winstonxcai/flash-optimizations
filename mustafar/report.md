@@ -10,7 +10,7 @@ On agentic coding the measured gap sits inside run-to-run noise: across two matc
 
 ## Scope and configurations
 
-Two legs on the same serving fork — SGLang v0.5.15 @ f63458b running Remnant's backend, still tagged 'mustafar' in code and results paths — on identical hardware with the fp4-native `flashinfer_mxfp4` MoE runner:
+Two legs on the same serving fork — SGLang v0.5.15 @ f63458b — on identical hardware with the fp4-native `flashinfer_mxfp4` MoE runner:
 
 1. **Native** — TopMag/packing off, stock 584-byte C4.
 2. **Packed** — TopMag50 pruning on, 328-byte packed C4.
