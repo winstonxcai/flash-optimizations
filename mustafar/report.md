@@ -108,35 +108,6 @@ Latency distributions — whole completed set per leg:
 
 Packed's edge concentrates in the tail the SLO measures — lower p90 and p95 across TTFT, TPOT and e2e alike — paid for with a higher TPOT/e2e median and a larger worst request (TTFT max 85.5 vs 66.0 s).
 
-#### HiCache × Remnant (CPU-L2 cache)
-
-Same 4,916-conversation replay and identical servers, now with SGLang's hierarchical cache enabled — GPU L1 ↔ CPU DRAM L2, no L3/storage. *HiCache: L2 CPU only / ratio 2.75 / write policy write_through / I/O backend direct / memory layout page_first_direct / UnifiedRadixTree: enabled.* Remnant under HiCache additionally runs a packed-aware c4 host mirror (mustafar fork patch, 09-08): the stock assembler mirrors the c4 pool as one contiguous native 584-byte page span, which would corrupt Packed's three 328-byte fragments (values/bitmaps/scales); the mirror transfers each fragment page-row by page-row (bitmap gathers routed through byte views — CUDA has no `uint64` advanced-index kernel).
-
-One fresh-boot 1200-s window per concurrency (09-08), small decode graphs at c15 and extended at c18+, matching the no-HiCache legs. HiCache lifts **both** modes above their no-HiCache ceilings, but to the **same** ceiling:
-
-| System | SLO ceiling | TTFT p90 @ ceiling |
-|---|---:|---:|
-| Native (no HiCache) | **12** | 8.55 s |
-| Remnant/Packed (no HiCache) | **15** | 8.17 s |
-| Native + HiCache | **21** | 8.77 s |
-| Remnant + HiCache | **21** | 9.32 s |
-
-**C\*_Remnant+HiCache (21) is not greater than C\*_Native+HiCache (21)** — the CPU L2 absorbs the capacity difference that gave Remnant its +25% (12→15) edge without HiCache. Under HiCache both modes hold SLO through c21 and both breach at c24 (Native 10.86 s TTFT p90, Packed 10.34 s), so the tie is genuine; Packed only degrades marginally more gracefully past the shared ceiling. Resolution is +3 in concurrency; both modes failed the single step past 21.
-
-Ladder (recorded fields only; c24 rows are the step past each ceiling):
-
-| Run (fresh boot, 1200 s) | SLO | Done | TTFT p90 | E2E p90 | L1 hit | L2 hit | Uncached prefill |
-|---|---|---:|---:|---:|---:|---:|---:|
-| Native + HiCache c15 | PASS | 2,098 | 5.95 s | 16.12 s | 97.31% | 0.25% | 7.40 M |
-| Native + HiCache c18 | PASS | 2,143 | 8.34 s | 17.50 s | 97.29% | 0.21% | 7.70 M |
-| Native + HiCache c21 | PASS | 2,205 | 8.77 s | 20.23 s | 97.08% | 0.33% | 8.18 M |
-| Native + HiCache c24 | FAIL | 2,061 | 10.86 s | 19.98 s | 92.37% | 4.91% | 7.97 M |
-| Packed + HiCache c18 | PASS | 1,966 | 8.86 s | 20.48 s | 97.17% | 0.17% | 7.52 M |
-| Packed + HiCache c21 | PASS | 1,961 | 9.32 s | 22.63 s | 96.88% | 0.37% | 7.71 M |
-| Packed + HiCache c24 | FAIL | 2,041 | 10.34 s | 23.70 s | 96.81% | 0.42% | 8.03 M |
-
-L2 engages only once L1 churns: hit rate sits at ~0.2–0.5% through every passing point (device L1 holds ~97%) and only rises at Native's failing c24 (4.91% L2 as L1 drops to 92.4%) — exactly the regime where the no-HiCache pool-capacity edge used to live. That is the sense in which HiCache substitutes CPU L2 for Remnant's larger pool. A 600-s packed+HiCache smoke gate at c15 (first clean run after the fork patch) passed at 8.13 s TTFT p90 with 0.97 L1 hit, confirming the packed mirror before the ladder spend.
-
 ## Agentic Benchmark results
 
 Across the two 50-task agentic suites that ran twice per leg, Packed is net-neutral on average: **+0.5 on Sangfor-Bench and −2 on SWE-bench**, both deltas inside run-to-run noise. Those suites are controlled Native (untouched 0731) vs Packed (Remnant, 328-byte C4) pairs on the same checkpoint through the identical Claude Code harness, two runs per leg — Sangfor both at TP4; SWE-bench one TP8 run and one TP4 run. A third suite, DeepSWE-Bench, ran once per leg on the same TP4 hardware; its 60-task pool is cap-dominated (tasks exceeding a 5400 s agent budget score 0 by construction), and on the under-cap subset Packed passes at a higher rate — a weak, single-run Packed tilt.
