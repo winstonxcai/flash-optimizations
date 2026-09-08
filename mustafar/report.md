@@ -1,4 +1,4 @@
-# Remnant: Residual Feature Sparsity Survives Latent Compression
+# Mustafar: Residual Feature Sparsity Survives Latent Compression
 
 ## Overview
 
