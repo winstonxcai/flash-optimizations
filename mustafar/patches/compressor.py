@@ -52,47 +52,50 @@ def _compressor_edits():
             "        compress_norm_rope_store(\n",
         ),
         (
-            "            bf16_store = False\n"
-            "            if compressor.is_in_indexer:\n",
-            "            bf16_store = False\n"
-            "            packed_pool = None\n"
-            "            packed_layer_id = None\n"
-            "            if compressor.is_in_indexer:\n",
+            "        bf16_store = False\n"
+            "        if compressor.is_in_indexer:\n",
+            "        bf16_store = False\n"
+            "        packed_pool = None\n"
+            "        packed_layer_id = None\n"
+            "        if compressor.is_in_indexer:\n",
         ),
         (
-            "                _, _, compress_kv_pool = token_to_kv_pool.layer_mapping[layer_id]\n",
-            "                _, compress_layer_id, compress_kv_pool = (\n"
-            "                    token_to_kv_pool.layer_mapping[layer_id]\n"
-            "                )\n",
-        ),
-        (
-            "                kv_cache = token_to_kv_pool.get_extra_key_buffer(layer_id)\n"
-            "                page_size = token_to_kv_pool.get_extra_key_page_size(layer_id)\n",
-            "                if (\n"
-            "                    _sg_lr.packed_enabled()\n"
-            "                    and compressor.ratio == 4\n"
-            "                ):\n"
-            "                    kv_cache = None\n"
-            "                    packed_pool = compress_kv_pool\n"
-            "                    packed_layer_id = compress_layer_id\n"
-            "                else:\n"
-            "                    kv_cache = token_to_kv_pool.get_extra_key_buffer(layer_id)\n"
-            "                page_size = token_to_kv_pool.get_extra_key_page_size(layer_id)\n",
-        ),
-        (
-            "                kv_cache=kv_cache.view(dtype=torch.uint8),\n"
-            "                is_indexer=compressor.is_in_indexer,\n",
-            "                kv_cache=(\n"
-            "                    kv_cache.view(dtype=torch.uint8)\n"
-            "                    if kv_cache is not None else None\n"
-            "                ),\n"
-            "                is_indexer=compressor.is_in_indexer,\n",
-        ),
-        (
-            "                bf16_store=bf16_store,\n            )\n",
-            "                bf16_store=bf16_store,\n"
-            "                packed_pool=packed_pool,\n"
-            "                packed_layer_id=packed_layer_id,\n"
+            "            _, _, compress_kv_pool = token_to_kv_pool.layer_mapping[layer_id]\n",
+            "            _, compress_layer_id, compress_kv_pool = (\n"
+            "                token_to_kv_pool.layer_mapping[layer_id]\n"
             "            )\n",
+        ),
+        (
+            "            kv_cache = token_to_kv_pool.get_extra_key_buffer(layer_id)\n"
+            "            page_size = token_to_kv_pool.get_extra_key_page_size(layer_id)\n",
+            "            if (\n"
+            "                _sg_lr.packed_enabled()\n"
+            "                and compressor.ratio == 4\n"
+            "            ):\n"
+            "                kv_cache = None\n"
+            "                packed_pool = compress_kv_pool\n"
+            "                packed_layer_id = compress_layer_id\n"
+            "            else:\n"
+            "                kv_cache = token_to_kv_pool.get_extra_key_buffer(layer_id)\n"
+            "            page_size = token_to_kv_pool.get_extra_key_page_size(layer_id)\n",
+        ),
+        (
+            "            kv_cache=kv_cache.view(dtype=torch.uint8),\n"
+            "            is_indexer=compressor.is_in_indexer,\n",
+            "            kv_cache=(\n"
+            "                kv_cache.view(dtype=torch.uint8)\n"
+            "                if kv_cache is not None else None\n"
+            "            ),\n"
+            "            is_indexer=compressor.is_in_indexer,\n",
+        ),
+        (
+            "            use_fp4_indexer=use_fp4_indexer,\n"
+            "            bf16_store=bf16_store,\n"
+            "        )\n",
+            "            use_fp4_indexer=use_fp4_indexer,\n"
+            "            bf16_store=bf16_store,\n"
+            "            packed_pool=packed_pool,\n"
+            "            packed_layer_id=packed_layer_id,\n"
+            "        )\n",
         ),
     ]

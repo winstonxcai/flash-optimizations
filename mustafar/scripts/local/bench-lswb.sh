@@ -8,7 +8,7 @@
 #   larger packed KV pool retains more shared prefixes (device cache hits).
 #
 #   tag   = results label (e.g. native, packed)
-#   port  = server port, default $PORT (30212)
+#   port  = server port, default $PORT (from env.sh)
 #   C,DUR = concurrency and window (default 15 / 1200 s, the official heaviest
 #           point used in the report)
 #

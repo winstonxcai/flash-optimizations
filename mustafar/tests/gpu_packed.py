@@ -98,7 +98,7 @@ def run_packed_validation() -> dict[str, object]:
     assert torch.equal(graph_scales, rs), "graph-captured scales mismatch"
 
     # Compare the packed path against SGLang's actual fused native store.
-    from sglang.jit_kernel.dsv4 import compress_norm_rope_store
+    from sglang.kernels.ops.attention.dsv4.compress import compress_norm_rope_store
 
     native_page_bytes = ((584 * 64 + 575) // 576) * 576
     native_cache = torch.zeros(1, native_page_bytes, dtype=torch.uint8, device=device)

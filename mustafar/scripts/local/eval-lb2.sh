@@ -11,7 +11,7 @@
 #   --out and finished samples are skipped.
 #
 #   tag     = results label (e.g. native-0731, packed-0731)
-#   port    = server port, default $PORT (30212)
+#   port    = server port, default $PORT (from env.sh)
 #   out     = results json (default <RESULTS_HOST>/lb2-full/<tag>/<ts>/results.json)
 #
 # Client = lb2_serve_eval.py (this folder); runs on the host, concurrency 6.

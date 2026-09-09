@@ -9,8 +9,10 @@
 #
 # Both modes use the fp4-native MoE runner (flashinfer_mxfp4), mem-frac 0.88,
 # 1M ctx cap, fp8 KV, and DeepSeek reasoning/tool parsers (needed by the
-# agentic evals; harmless for benches). The ONLY difference between the legs
-# is the four TopMag envs + the fork PYTHONPATH for packed.
+# agentic evals; harmless for benches). The legs differ by WHICH source tree
+# serves and the four TopMag envs: native serves the pristine tree
+# (SGLANG_PY_STOCK, byte-identical sglang); packed serves the mustafar fork
+# (SGLANG_PY_FORK) with packing on. See env.sh for the two-tree paths.
 #
 # HICACHE=1 (optional) additionally enables SGLang's hierarchical cache
 # (GPU L1 <-> CPU DRAM L2) with the locked mustafar settings:
@@ -44,18 +46,22 @@ fi
 
 kill_port
 
-# --- per-mode env -----------------------------------------------------
+# --- per-mode env + tree -----------------------------------------------
 # TopMag envs use the CURRENT runtime names (mustafar/config.py). Legacy
 # pre-refactor names XKV_TOPMAG_KEEP / SGLANG_OPT_TOPMAG_PACKED_C4 are dead and
 # are cleared inside the container before launch. Packed REQUIRES exactly
-# KEEP=0.5 (256/512 dims); native sets everything off explicitly.
+# KEEP=0.5 (256/512 dims); native sets everything off explicitly and serves the
+# pristine tree so no mustafar hook is even on the path.
 MODE_ENVS=()          # each entry exported inside the container before launch
+TREE="$SGLANG_PY_STOCK"
 if [ "$MODE" = packed ]; then
   MODE_ENVS=(SGLANG_OPT_TOPMAG=1 KEEP=0.5 SGLANG_OPT_TOPMAG_PACKED=1 SGLANG_OPT_TOPMAG_FUSED=0)
-  CT_PYTHONPATH="$SGLANG_PY:$REPO_CT"
+  TREE="$SGLANG_PY_FORK"
+  CT_PYTHONPATH="$TREE:$REPO_CT"
 else
   MODE_ENVS=(SGLANG_OPT_TOPMAG=0 KEEP=1.0 SGLANG_OPT_TOPMAG_PACKED=0 SGLANG_OPT_TOPMAG_FUSED=0)
-  CT_PYTHONPATH="$SGLANG_PY"
+  TREE="$SGLANG_PY_STOCK"
+  CT_PYTHONPATH="$TREE"
 fi
 
 # --- hierarchical-cache (HiCache L2) env + flags ---------------------
@@ -70,7 +76,7 @@ echo "== serve $MODE on gpus=$GPUS port=$PORT master=$MASTER_PORT (log: $SERVE_L
 : > "$SERVE_LOG"   # truncate for a clean boot log (host side)
 
 ct "
-  cd $SGLANG_PY
+  cd $TREE
   export CUDA_VISIBLE_DEVICES=$GPUS MASTER_PORT=$MASTER_PORT
   export ${MODE_ENVS[*]}
   [ \"$HICACHE\" = 1 ] && export SGLANG_ENABLE_UNIFIED_RADIX_TREE=1
@@ -78,7 +84,7 @@ ct "
   export PYTHONPATH=$CT_PYTHONPATH
   export NCCL_IB_DISABLE=1 NCCL_SOCKET_IFNAME=lo NCCL_P2P_LEVEL=NVL NCCL_PROTO=Simple NCCL_ALGO=Ring
   export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-  nohup python3 -m sglang.launch_server \
+  nohup sglang serve \
     --model-path $MODEL_CT --served-model-name $MODEL_NAME \
     --tp $TP --trust-remote-code --mem-fraction-static $MEM_FRAC \
     --context-length $CTX_LEN --max-running-requests $MAX_RUN \

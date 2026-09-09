@@ -37,7 +37,9 @@ REPO=$(cd -- "$DIR/../../.." && pwd)
 
 # Extended decode graphs so decode stays on-graph up to the packed ceiling --
 # the report config for BOTH interfaces (env.sh's small default targets the
-# agentic evals only). Overridable via DECODE_CFG.
+# agentic evals only). This standalone path cannot source env.sh, so the EXT
+# literal is duplicated here -- keep it in sync with env.sh's DECODE_CFG_EXT.
+# Overridable via DECODE_CFG.
 export DECODE_CFG=${DECODE_CFG:-'{"decode":{"backend":"full","max_bs":136,"bs":[1,2,3,4,5,6,7,8,10,12,14,15,16,18,20,24,28,32,34,40,48,56,64,68,80,96,112,120,136]},"prefill":{"backend":"disabled"}}'}
 
 ts () { date +%Y%m%d_%H%M%S; }
@@ -259,7 +261,9 @@ standalone_main () {  # $1=mode [$2=input $3=output $4=concurrency]
   echo "boot: mode=$mode tp=${TP:-4} mem=${MEM_FRAC:-0.88} ctx=${CTX_LEN:-1048576} max_run=${MAX_RUN:-256} chunk=${CHUNK:-8192} fp8_kv port=$port"
 
   # Report-config server (mirrors serve.sh flags, host python, localhost-only).
-  setsid "$python" -m sglang.launch_server \
+  # Host python has no `sglang` console script and cli/main.py has no __main__
+  # guard, so reach the new `serve` entry through its exact console-script body.
+  setsid "$python" -c 'from sglang.cli.main import main; main()' serve \
     --model-path "$MODEL_PATH" --served-model-name "${MODEL_NAME:-deepseek-v4-flash}" \
     --tp "${TP:-4}" --trust-remote-code --mem-fraction-static "${MEM_FRAC:-0.88}" \
     --context-length "${CTX_LEN:-1048576}" --max-running-requests "${MAX_RUN:-256}" \

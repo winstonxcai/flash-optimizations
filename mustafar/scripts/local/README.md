@@ -1,12 +1,18 @@
 # mustafar driver scripts (local)
 
 Small, reusable entry points for serving DeepSeek-V4-Flash-0731 on this GPU node
-and running the mustafar (Stage-1 packed 328-B C4) evals. Everything runs on the
-local H100 box inside the `ruler-eval` SGLang container; the only machine-specific
-knowledge lives in one file, [`env.sh`](env.sh).
+and running the mustafar (Stage-1 packed 328-B C4) evals. Servers boot inside a
+dockerized SGLang container on this node; the only machine-specific knowledge
+lives in one file, [`env.sh`](env.sh) (defaults: the `remnant` v0.5.18
+container, GPUs 0-3, port 30212 -- override per env.sh to target the frozen
+`ruler-eval` v0.5.15 box).
 
 ## Layout
 
+- `container.sh [prep|patch|recreate]` — bring up the `remnant` container and
+  prep its two SGLang trees (pristine stock + mustafar fork). `patch` applies
+  the mustafar patch to the fork clone -- the runtime step that makes `packed`
+  servable after a recreate. See its header.
 - `env.sh` — shared config + tiny helpers. **Porting to a new node = edit the
   MACHINE CONFIG block at the top** (container name, repo paths, model path,
   remote eval box, default GPUs/port). `serve.sh` is unchanged.
@@ -21,6 +27,11 @@ knowledge lives in one file, [`env.sh`](env.sh).
   container — the Modal / `tests/test_bench_serving.py` entrypoint.
 - `bench-lswb.sh <tag> [port] [C] [dur]` — LongSWE-Bench replay client against a
   running server (prefix-reuse workload).
+- `lswb-row.sh <run_dir|tag>` — print the 7 recorded SLO-run fields from a
+  finished `bench-lswb.sh` run's `summary.json`.
+- `hicache-ladder.sh <native|packed> <tag> <C> [dur_s] [master_port]` — one
+  fresh-boot SLO-concurrency leg under the LOCKED HiCache config (small decode
+  graphs if C<=15 else extended).
 - `eval-lb2.sh <tag> [port] [out.json]` — LongBench v2 **full** eval against a
   running server (473 feasible of 503; 30 samples exceed the 1M ctx cap).
 - `agentic-eval.sh <sangfor|swe> <instance-list> [run-id]` — agentic eval against
@@ -35,6 +46,10 @@ knowledge lives in one file, [`env.sh`](env.sh).
 ## Usage pattern
 
 ```sh
+# 0) first time (or after a container recreate): prep + patch the fork tree
+./container.sh up
+./container.sh patch
+
 # 1) boot a server (native or packed), leave it running
 ./serve.sh packed
 ./serve.sh packed stop          # later
@@ -54,7 +69,7 @@ knowledge lives in one file, [`env.sh`](env.sh).
 MODEL_PATH=/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731 ./bench-serving.sh packed 32768 2048 8
 ```
 
-Evals that attach assume the server on `$PORT` (default 30212). `sangfor`/`swe`
+Evals that attach assume the server on `$PORT` (from `env.sh`). `sangfor`/`swe`
 clients run on the remote YJYBench box and reach this server through the
 `docker_env_config` base URL (see `env.sh`: `EVAL_*`, `BASE_URL` override).
 Eval results land under `mustafar/results/` (local) or the eval box's
@@ -62,9 +77,9 @@ Eval results land under `mustafar/results/` (local) or the eval box's
 
 ## Notes
 
-- Servers run on `$GPUS` (default 4,5,6,7) inside the `ruler-eval` container
+- Servers run on `$GPUS` (default 0,1,2,3) inside the `remnant` container
   (`docker exec`), fp4-native MoE runner, mem-frac 0.88, 1M ctx, fp8 KV, DeepSeek
   reasoning/tool parsers.
 - Decode CUDA-graph config default = small (agentic-eval concurrency). The
-  serving drivers override with extended graphs so decode stays on-graph up to
-  the packed allocator ceiling.
+  serving drivers and C>15 legs override with the extended config so decode
+  stays on-graph up to the packed allocator ceiling.

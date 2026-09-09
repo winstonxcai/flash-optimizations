@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """LongBench v2 full eval over an sglang OpenAI-compatible server.
 
-Server-mode twin of transferibility/sg_capture.py::cmd_run_lb2 (the in-process
-engine path that produced the report's earlier n=100 rows): same data, same
-prompt, same answer extraction -- but the prompt is delivered as a role=user
-chat-completions message so the server's DeepSeek chat template supplies the
-<|User|>/<|Assistant|> markers (exactly what the in-process harness emulated by
-hand-wrapping the bare prompt). The server's deepseek-v4 reasoning parser
-handles the <think> block; extraction still splits on </think> defensively.
+Server-mode twin of the in-process harness that produced the report's earlier
+n=100 rows: same data, same prompt, same answer extraction -- but the prompt is
+delivered as a role=user chat-completions message so the server's DeepSeek chat
+template supplies the <|User|>/<|Assistant|> markers (exactly what that harness
+emulated by hand-wrapping the bare prompt). The server's deepseek-v4 reasoning
+parser handles the <think> block; extraction still splits on </think>
+defensively.
 
 Scope: "the entire LongBench v2" = all feasible samples. Samples whose
 tot_tokens exceed the server context cap (1,048,576) cannot be served as-is and
@@ -48,7 +48,7 @@ _ANS_RE = (r"The correct answer is \(([A-D])\)", r"The correct answer is ([A-D])
 
 
 def lb2_extract(text):
-    """Official LongBench v2 answer extraction, mirroring sg_capture._lb2_extract."""
+    """Official LongBench v2 answer extraction."""
     if not text:
         return None, False
     t = text.replace("*", "")
@@ -117,7 +117,7 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--max-concurrency", type=int, default=8)
     ap.add_argument("--max-tokens", type=int, default=512,
-                    help="mirror cmd_run_lb2 --max-new (thinking model budget)")
+                    help="max generated tokens (thinking-model budget)")
     ap.add_argument("--ctx-cap", type=int, default=1048576)
     ap.add_argument("--request-timeout", type=int, default=3600)
     ap.add_argument("--retries", type=int, default=1)

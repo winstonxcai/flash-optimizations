@@ -27,7 +27,7 @@ configuration. Defaults: native, 32k input, 2,048 output, concurrency 8
 is required.
 
 Requires Linux, Bash, curl, jq, setsid, and the prepared SGLang/CUDA
-environment from `mustafar/Dockerfile`. Use `PYTHON=/venv/bin/python` if needed.
+environment from `mustafar/docker/modal.Dockerfile`. Use `PYTHON=/venv/bin/python` if needed.
 Packed modes require the Mustafar patch; fused also requires the CUDA
 extension. The script does not install dependencies or download weights.
 
@@ -123,7 +123,7 @@ have been removed. Use the parameterized interface above for new runs.
 
 ### Modal Packed workflow
 
-Run from the repository root. Modal builds `mustafar/Dockerfile` on CPU; the model stays in the persistent `deepseek-v4-flash-fp8` Volume and is not baked into the image.
+Run from the repository root. Modal builds `mustafar/docker/modal.Dockerfile` on CPU; the model stays in the persistent `deepseek-v4-flash-fp8` Volume and is not baked into the image.
 
 ```bash
 modal profile activate <profile>
@@ -272,7 +272,7 @@ SGLANG_OPT_TOPMAG=1 \
 KEEP=0.5 \
 SGLANG_OPT_TOPMAG_PACKED=<0-or-1> \
 CUDA_VISIBLE_DEVICES=0,1,2,3 \
-python3 -m sglang.launch_server \
+sglang serve \
   --model-path /models/DeepSeek-V4-Flash-FP8 \
   --served-model-name deepseek-v4-flash \
   --tp 4 \

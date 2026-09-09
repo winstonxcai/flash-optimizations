@@ -11,6 +11,17 @@ from .patches.compressor import _compressor_edits
 from .patches.hicache import _assembler_edits
 from .patches.pool import _memory_pool_edits, _pool_config_edits
 
+# Ordered targets for patch/unpatch/verify/drift. Each factory returns the
+# (anchor, replacement) edit list for its file; _backend_edits inspects the
+# source, the rest are source-independent.
+_TARGETS = (
+    (config.COMPRESSOR_V2, _compressor_edits),
+    (config.MEM_POOL, _memory_pool_edits),
+    (config.POOL_CFG, _pool_config_edits),
+    (config.INDEXER, _indexer_edits),
+    (config.DSV4_BACKEND, _backend_edits),
+    (config.HICACHE_ASSEMBLER, _assembler_edits),
+)
 
 
 def _render(path: Path, source: str, edits) -> str:
@@ -27,16 +38,8 @@ def _render(path: Path, source: str, edits) -> str:
 
 def _plan(*, restoring: bool = False):
     """Rebuild expected patches from originals, never from already-patched text."""
-    targets = (
-        (config.COMPRESSOR_V2, _compressor_edits),
-        (config.MEM_POOL, _memory_pool_edits),
-        (config.POOL_CFG, _pool_config_edits),
-        (config.INDEXER, _indexer_edits),
-        (config.DSV4_BACKEND, _backend_edits),
-        (config.HICACHE_ASSEMBLER, _assembler_edits),
-    )
     plan = []
-    for filename, factory in targets:
+    for filename, factory in _TARGETS:
         path = Path(filename)
         current = path.read_text()
         backup = Path(filename + ".mustafar.orig")
@@ -121,3 +124,49 @@ def verify() -> None:
             raise RuntimeError(f"[mustafar] missing or incomplete patch: {path}")
     for path, current, *_ in plan:
         print(f"{path}: mustafar_markers={current.count(config.MARKER)}")
+
+
+def drift() -> int:
+    """Read-only anchor census against the tree at SRC_ROOT (e.g. a v0.5.18 clone).
+
+    Checks EVERY target file instead of raising on the first mismatch. For each
+    file it reports every anchor whose count in the pristine source is != 1
+    (missing=0, duplicated>1, or context changed) and the anchor count, printing
+    a file -> anchor -> count table. Never writes. Returns the number of files
+    that drifted (missing target or any broken anchor); 0 means every anchor of
+    every edit still matches this tree one-to-one.
+
+    Anchors are validated against the file's pristine base -- its
+    .mustafar.orig backup when the tree is already patched, else the file as it
+    is on disk -- so the census reads the same "original" text patch() targets.
+    Used by container.sh to scope the v0.5.15 -> v0.5.18 re-base.
+    """
+    drifted = 0
+    for filename, factory in _TARGETS:
+        path = Path(filename)
+        status = "patched" if Path(str(path) + ".mustafar.orig").exists() else "pristine"
+        if not path.exists():
+            print(f"[drift] MISSING  {path}  (target dropped by this tree?)")
+            drifted += 1
+            continue
+        source = path.read_text()
+        base = source
+        backup = Path(str(path) + ".mustafar.orig")
+        if backup.exists():
+            base = backup.read_text()
+        edits = factory(source=base) if factory is _backend_edits else factory()
+        broken = [(anchor, base.count(anchor)) for anchor, _ in edits if base.count(anchor) != 1]
+        if broken:
+            drifted += 1
+            print(f"[drift] DRIFT {len(broken)}/{len(edits)}  {path}  ({status})")
+            for anchor, count in broken:
+                line = next((l.strip() for l in anchor.splitlines() if l.strip()), "")
+                print(f"        count={count:<2}  {line[:78]!r}")
+        else:
+            print(f"[drift] OK    {len(edits)}/{len(edits)}  {path}  ({status})")
+    if drifted:
+        print(f"[drift] {drifted} file(s) drifted -- anchors need re-basing "
+              f"(see container.sh drift-v0.5.18.md)")
+    else:
+        print("[drift] all anchors intact against this tree")
+    return drifted

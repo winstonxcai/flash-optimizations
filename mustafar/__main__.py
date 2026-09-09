@@ -21,6 +21,10 @@ def main():
         from . import patching
 
         patching.verify()
+    elif cmd == "drift":
+        from . import patching
+
+        raise SystemExit(patching.drift())
     elif cmd == "selftest":
         from .tests import unit
 

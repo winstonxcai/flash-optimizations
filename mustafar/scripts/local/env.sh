@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =====================================================================
 # env.sh -- shared config + tiny helpers for the mustafar driver scripts
-#           (serve.sh, bench-serving.sh, bench-lswb.sh, eval-lb2.sh,
-#            agentic-eval.sh)
+#           (container.sh, serve.sh, bench-serving.sh, bench-lswb.sh,
+#            eval-lb2.sh, agentic-eval.sh, hicache-ladder.sh, lswb-row.sh)
 #
 # TO PORT TO A NEW MACHINE/GPU NODE: edit ONLY the "MACHINE CONFIG"
 # block below. Everything else is generic. All drivers source this file:
@@ -14,11 +14,22 @@ set -u
 # SGLang runs inside a container on this host; host python has no torch/sglang,
 # so model work happens via `docker exec`. Host paths mirror into the container
 # under /mnt/host_root (hence the *_CT twins).
-CONTAINER=${CONTAINER:-ruler-eval}                       # sglang container name
+CONTAINER=${CONTAINER:-remnant}                          # sglang container name (v0.5.18; anchors are remnant-only)
 HOST_REPO=${HOST_REPO:-/home/jovyan/winstonxcai/flash-optimizations}
 REPO_CT=/mnt/host_root/home/jovyan/winstonxcai/flash-optimizations   # repo, as seen in $CONTAINER
 MODEL_CT=${MODEL_CT:-/mnt/host_root/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731}
-SGLANG_PY=/sgl-workspace/sglang-lowrank/python           # mustafar-fork sglang source (in $CONTAINER)
+# Two serving source trees live side-by-side in the container. STOCK is the
+# pristine, byte-identical sglang (the image's own /sgl-workspace/sglang);
+# FORK is the mustafar-patched clone at /sgl-workspace/sglang-lowrank created
+# at runtime by container.sh. `native` serves STOCK; `packed` serves FORK.
+# SGLANG_PY is the resolved active python (used for bench clients; either tree
+# imports sglang.bench_serving). remnant (the active study container) ships
+# both at v0.5.18; ruler-eval is the frozen v0.5.15 legacy box (also on 30212,
+# GPUs 4-7 / MASTER 29628). Defaults below target remnant on 30212; don't run
+# both containers at once -- give one a distinct PORT.
+SGLANG_PY_STOCK=${SGLANG_PY_STOCK:-/sgl-workspace/sglang/python}
+SGLANG_PY_FORK=${SGLANG_PY_FORK:-/sgl-workspace/sglang-lowrank/python}
+SGLANG_PY=${SGLANG_PY:-$SGLANG_PY_FORK}
 
 RESULTS_HOST=${RESULTS_HOST:-$HOST_REPO/mustafar/results}
 LOG_HOST=${LOG_HOST:-$HOST_REPO/mustafar/logs}
@@ -41,13 +52,13 @@ LB2_TOKENS=${LB2_TOKENS:-$HOST_REPO/mustafar/data/lb2_tokens.json}
 EVAL_SSH=${EVAL_SSH:-"sshpass -p a ssh -o StrictHostKeyChecking=no root@10.57.3.76"}
 EVAL_YJY=/data/zc/workplace_zhq/YJYBench
 EVAL_VENV=$EVAL_YJY/.venv/bin/python
-EVAL_CFG=${EVAL_CFG:-$EVAL_YJY/test_env/docker_env_config_dsv4_0731.json}  # points at the canonical serve port on this host
+EVAL_CFG=${EVAL_CFG:-$EVAL_YJY/test_env/docker_env_config_dsv4_0731.json}  # base-url points at the canonical serve port ($PORT; remnant 30212 default)
 # -----------------------------------------------------------------------------
 
 # Run defaults (override before sourcing / on the command line).
-GPUS=${GPUS:-4,5,6,7}
+GPUS=${GPUS:-0,1,2,3}
 PORT=${PORT:-30212}
-MASTER_PORT=${MASTER_PORT:-29628}
+MASTER_PORT=${MASTER_PORT:-29638}
 TP=${TP:-4}
 MODEL_NAME=${MODEL_NAME:-deepseek-v4-flash}
 MEM_FRAC=${MEM_FRAC:-0.88}
@@ -57,10 +68,14 @@ CHUNK=${CHUNK:-8192}
 OUTLEN=${OUTLEN:-2048}     # bench_serving output length
 SEED=${SEED:-42}
 
-# Decode CUDA-graph config. Default = small (agentic-eval concurrency); the
-# serving bench drivers override with an extended list so decode stays on-graph
-# up to the packed allocator ceiling (~129). prefill graphs stay off.
-DECODE_CFG=${DECODE_CFG:-'{"decode":{"backend":"full","max_bs":15,"bs":[1,2,3,4,5,6,7,8,10,12,14,15]},"prefill":{"backend":"disabled"}}'}
+# Decode CUDA-graph configs (prefill graphs stay off). DECODE_CFG default =
+# SMALL (agentic-eval concurrency, and SLO legs with C<=15); the serving/bench
+# drivers and C>15 legs use EXT so decode stays on-graph up to the packed
+# allocator ceiling (~129). bench-serving.sh's standalone path carries its own
+# copy of EXT because it cannot source env.sh -- keep the two in sync.
+DECODE_CFG_SMALL='{"decode":{"backend":"full","max_bs":15,"bs":[1,2,3,4,5,6,7,8,10,12,14,15]},"prefill":{"backend":"disabled"}}'
+DECODE_CFG_EXT='{"decode":{"backend":"full","max_bs":136,"bs":[1,2,3,4,5,6,7,8,10,12,14,15,16,18,20,24,28,32,34,40,48,56,64,68,80,96,112,120,136]},"prefill":{"backend":"disabled"}}'
+DECODE_CFG=${DECODE_CFG:-$DECODE_CFG_SMALL}
 
 mkdir -p "$RESULTS_HOST" "$LOG_HOST"
 
@@ -90,9 +105,12 @@ wait_health () {  # [$1=poll cap in 5s steps]
   return 1
 }
 
-# Kill any sglang.launch_server inside the container on $PORT.
+# Kill any sglang server inside the container on $PORT: matches both the
+# legacy `python3 -m sglang.launch_server` and the current `sglang serve`
+# entrypoints (ruler-eval v0.5.15 still boots the former; remnant v0.5.18 the
+# latter).
 kill_port () {
-  ct "pkill -9 -f 'sglang.launch_server.*--port $PORT'" 2>/dev/null
+  ct "pkill -9 -f 'sglang(\.launch_server| serve).*--port $PORT'" 2>/dev/null
   sleep 4
 }
 

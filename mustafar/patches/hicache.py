@@ -26,16 +26,18 @@ def _assembler_edits():
         ),
         (
             "    if c4_layer_mapping:\n"
+            "        c4_device_buffers, c4_item_bytes = _dsv4_compressed_region_buffers(kvcache, 4)\n"
             "        c4_host_pool = DeepSeekV4PagedHostPool(\n"
             "            pool_name=str(PoolName.DEEPSEEK_V4_C4),\n"
-            "            device_buffers=kvcache.c4_kv_pool.kv_buffer,\n"
-            "            item_bytes=kvcache.c4_kv_pool.bytes_per_page_padded,\n"
+            "            device_buffers=c4_device_buffers,\n"
+            "            item_bytes=c4_item_bytes,\n"
             "            num_host_pages=num_host_pages,\n"
             "            slot_page_size=page_size,\n"
             "            layout=server_args.hicache_mem_layout,\n"
-            "            allocator_type=server_args.hicache_storage_backend,\n"
+            "            allocator_type=_get_allocator_type(server_args),\n"
             "        )\n",
             "    if c4_layer_mapping:\n"
+            "        c4_device_buffers, c4_item_bytes = _dsv4_compressed_region_buffers(kvcache, 4)\n"
             "        if getattr(kvcache.c4_kv_pool, \"get_packed_buffers\", None) is not None:\n"
             "            ## MUSTAFAR (packed-aware c4 host mirror)\n"
             "            c4_host_pool = MustafarPackedHostPool(\n"
@@ -44,17 +46,17 @@ def _assembler_edits():
             "                num_host_pages=num_host_pages,\n"
             "                slot_page_size=page_size,\n"
             "                layout=server_args.hicache_mem_layout,\n"
-            "                allocator_type=server_args.hicache_storage_backend,\n"
+            "                allocator_type=_get_allocator_type(server_args),\n"
             "            )\n"
             "        else:\n"
             "            c4_host_pool = DeepSeekV4PagedHostPool(\n"
             "                pool_name=str(PoolName.DEEPSEEK_V4_C4),\n"
-            "                device_buffers=kvcache.c4_kv_pool.kv_buffer,\n"
-            "                item_bytes=kvcache.c4_kv_pool.bytes_per_page_padded,\n"
+            "                device_buffers=c4_device_buffers,\n"
+            "                item_bytes=c4_item_bytes,\n"
             "                num_host_pages=num_host_pages,\n"
             "                slot_page_size=page_size,\n"
             "                layout=server_args.hicache_mem_layout,\n"
-            "                allocator_type=server_args.hicache_storage_backend,\n"
+            "                allocator_type=_get_allocator_type(server_args),\n"
             "            )\n",
         ),
     ]

@@ -4,6 +4,9 @@ mustafar/logs/
 mustafar/__pycache__/
 **/__pycache__/
 
+# Raw per-leg measurement outputs (470M jsonl/csv/log, regenerable)
+mustafar/results/
+
 # LongBench v2 dataset copy (903M, regenerable from transferibility/data/longbench)
 mustafar/data/
 

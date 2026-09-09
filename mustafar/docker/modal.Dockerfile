@@ -2,24 +2,25 @@
 #
 # Build:
 #   cd flash-optimizations
-#   docker build -t topmag-server:v0.5.17-0731 -f mustafar/Dockerfile .
+#   docker build -t topmag-server:v0.5.18-0731 -f mustafar/docker/modal.Dockerfile .
 #
 # Open a shell (any H100 host with >=4 GPUs + the 0731 weights on disk):
 #   docker run --rm -it --gpus all \
 #     -v /path/to/DeepSeek-V4-Flash-0731:/model \
 #     -e MODEL_PATH=/model \
 #     -e CUDA_VISIBLE_DEVICES=0,1,2,3 \
-#     topmag-server:v0.5.17-0731 bash
+#     topmag-server:v0.5.18-0731 bash
 # Launch benchmarks explicitly with mustafar/scripts/local/bench-serving.sh.
 #
 # The weights are intentionally NOT baked in; they are mounted.
-# v0.5.17 is the pinned SGLang tree used for the official 0731 bring-up.
-FROM lmsysorg/sglang:v0.5.17-cu130
+# v0.5.18 is the pinned SGLang tree (matches the remnant container); the HEAD
+# mustafar anchors are v0.5.18-only (see container.sh drift report).
+FROM lmsysorg/sglang:v0.5.18-cu130
 
 # 1. Reproduce the active source tree (sglang-lowrank) as a local clone of the
 #    base image's own /sgl-workspace/sglang at the same tag the server uses.
 RUN git clone /sgl-workspace/sglang /sgl-workspace/sglang-lowrank \
-    && cd /sgl-workspace/sglang-lowrank && git checkout v0.5.17
+    && cd /sgl-workspace/sglang-lowrank && git checkout v0.5.18
 
 # 2. Ship the mustafar package. PACKAGE_ROOT resolves to the parent dir of the
 #    mustafar/ folder, so the sglang hook's `import mustafar` finds it without
