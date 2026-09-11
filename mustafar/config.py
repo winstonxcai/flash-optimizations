@@ -77,11 +77,33 @@ def fused_enabled() -> bool:
     return os.environ.get("SGLANG_OPT_TOPMAG_FUSED") == "1"
 
 
+def sparse_enabled() -> bool:
+    """Direct 328-byte sparse MLA gate (off by default).
+
+    When set, the c4 attention leg reads packed records directly instead of
+    reconstructing them into the native layout for flash_mla. ``fused_enabled``
+    is unaffected -- cuda/fused.cu stays the _FUSED fallback for the
+    reconstruct path.
+    """
+    return os.environ.get("SGLANG_OPT_TOPMAG_SPARSE") == "1"
+
+
 def validate_packed_static_config() -> None:
     """Fail early for settings that would change the Packed ABI."""
     if fused_enabled() and not packed_enabled():
         raise RuntimeError(
             "SGLANG_OPT_TOPMAG_FUSED=1 requires SGLANG_OPT_TOPMAG_PACKED=1"
+        )
+    if sparse_enabled() and not packed_enabled():
+        raise RuntimeError(
+            "SGLANG_OPT_TOPMAG_SPARSE=1 requires SGLANG_OPT_TOPMAG_PACKED=1"
+        )
+    # Both switches claim the same c4 decode call site. Refuse the ambiguous
+    # combination rather than silently letting one win.
+    if sparse_enabled() and fused_enabled():
+        raise RuntimeError(
+            "SGLANG_OPT_TOPMAG_SPARSE=1 and SGLANG_OPT_TOPMAG_FUSED=1 are "
+            "mutually exclusive; they rewrite the same c4 decode call"
         )
     if not packed_enabled():
         return

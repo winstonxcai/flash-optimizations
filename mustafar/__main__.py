@@ -26,13 +26,13 @@ def main():
 
         raise SystemExit(patching.drift())
     elif cmd == "selftest":
-        from .tests import unit
+        from .tests import validity
 
-        unit.run_topmag()
+        validity.run_reference()
     elif cmd in {"packed_selftest", "packedselftest"}:
-        from .tests import unit
+        from .tests import validity
 
-        unit.run_packed_reference()
+        validity.run_packed_reference()
     else:
         raise SystemExit(f"unknown command: {cmd}")
 

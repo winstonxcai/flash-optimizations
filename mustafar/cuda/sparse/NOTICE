@@ -1,0 +1,29 @@
+Vendored components
+===================
+
+The following files in this directory are copied verbatim from
+dhjoo98/mustafar (https://github.com/dhjoo98/mustafar), which is itself
+derived from Flash-LLM (https://github.com/flash-llm/flash-llm). Both are
+licensed under the Apache License, Version 2.0. The original copyright and
+license headers are retained in each file.
+
+  AsyncCopy_PTX.cuh       - cp.async / ldmatrix helpers
+  MMA_PTX.cuh             - mma.m16n8k16 FP16 / FP32-accumulate wrappers
+  MatMulUtilities.cuh     - PipelinedCoreComputations, tile copy / store
+  Reduction_Kernel.cuh    - split-K reduction
+  TilingConfig.h          - Flash-LLM tiling constants
+
+Those files are kept for reference and for the primitives that are reused
+directly. Of the five, only MMA_PTX.cuh is `#include`d by a translation unit
+that gets compiled: sparse_kernel.cu includes it, alongside
+`../packed_abi.cuh` (which is ours). Nothing includes the other four.
+
+The purpose-built code in this directory (sparse_kernel.cu,
+bindings.cpp) is original to mustafar and targets the 328-byte TopMag50
+packed layout. It reuses dhjoo98/mustafar's MSB-first bitmap scan
+convention and its mma.m16n8k16 FP16 / FP32-accumulate wrapper; the
+tiling, the K_Global-dependent word indexing and the per-tile `idx`
+offset table of the Flash-LLM SpMM kernels are not used, because those
+are tied to a 4096-wide contraction that this workload does not have.
+
+SPDX-License-Identifier: Apache-2.0

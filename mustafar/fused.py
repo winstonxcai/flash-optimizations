@@ -23,11 +23,11 @@ def _load():
             "Fused was requested, but the CUDA extension is unavailable"
         ) from _load_error
     try:
-        _extension = importlib.import_module("mustafar._fused_cuda")
+        _extension = importlib.import_module("mustafar._fused")
     except Exception as exc:
         _load_error = exc
         raise RuntimeError(
-            "Fused was requested, but mustafar._fused_cuda could not be loaded"
+            "Fused was requested, but mustafar._fused could not be loaded"
         ) from exc
     return _extension
 

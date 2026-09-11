@@ -1,4 +1,11 @@
-"""CPU checks that paired tests cannot inherit the fused serving dispatcher."""
+"""CPU checks that paired tests cannot inherit the fused serving dispatcher.
+
+Both kernel suites must pin the packed flags for the whole call and restore
+``os.environ`` byte-exactly on success and on failure. They are also required to
+refuse a CUDA-less host -- checked before any allocation, by calling
+``torch.cuda.is_available()`` and raising ``RuntimeError`` matching
+``"requires CUDA"``.
+"""
 
 import importlib
 import importlib.util
@@ -13,10 +20,9 @@ from mustafar import config
 class BackendSelectionTests(unittest.TestCase):
     def test_comparison_entrypoints_pin_flags_and_restore_on_failure(self):
         for module_name, entrypoint in (
-            ("bench_fused", "run_fused_benchmark"),
-            ("gpu_fused", "run_fused_validation"),
-            ("bench_packed", "run_packed_benchmark"),
-            ("gpu_packed", "run_packed_validation"),
+            ("validity", "run_validity"),
+            ("validity", "run_sparse_t4"),
+            ("speed", "run_speed"),
         ):
             module = importlib.import_module(f"mustafar.tests.{module_name}")
 
@@ -47,28 +53,40 @@ class BackendSelectionTests(unittest.TestCase):
                     getattr(module, entrypoint)()
                 self.assertEqual(dict(os.environ), before)
 
-    def test_validation_restores_flags_after_success(self):
-        from mustafar.tests import gpu_fused
+    def test_validity_restores_flags_after_success(self):
+        from mustafar.tests import validity
 
-        def check_shape(*_):
-            self.assertFalse(config.fused_enabled())
-            return {"mocked_cpu_check": True}
-
+        # An empty workload list exercises the full entry/exit path -- flag
+        # pinning, the CUDA check, and the summary -- with no kernels launched.
         with patch.dict(os.environ, SGLANG_OPT_TOPMAG_FUSED="1"):
             before = dict(os.environ)
             with (
-                patch.object(gpu_fused.torch.cuda, "is_available", return_value=True),
-                patch.object(
-                    gpu_fused.torch.cuda, "get_device_name", return_value="mock"
-                ),
-                patch.object(
-                    gpu_fused.torch.cuda, "get_device_capability", return_value=(0, 0)
-                ),
-                patch.object(gpu_fused, "_run_shape", side_effect=check_shape) as shape,
+                patch.object(validity.torch.cuda, "is_available", return_value=True),
+                patch.object(validity.torch.cuda, "get_device_name", return_value="mock"),
+                patch.object(validity.harness, "WORKLOADS", ()),
+                patch.object(validity, "_fused_available", return_value=False),
                 patch("builtins.print"),
             ):
-                gpu_fused.run_fused_validation()
-                self.assertEqual(shape.call_count, 5)
+                validity.run_validity()
+            self.assertEqual(dict(os.environ), before)
+
+    def test_sparse_t4_restores_flags_after_success(self):
+        from mustafar.tests import validity
+
+        # As above, an empty workload list drives the whole entry/exit path --
+        # both guards, the flag pin, the summary -- with no kernel launched. The
+        # outer SPARSE=0 is what the pin has to overwrite and restore.
+        with patch.dict(os.environ, SGLANG_OPT_TOPMAG_SPARSE="0"):
+            before = dict(os.environ)
+            with (
+                patch.object(validity.torch.cuda, "is_available", return_value=True),
+                patch(
+                    "mustafar.sparse.sparse_available", return_value=True
+                ),
+                patch.object(validity.harness, "WORKLOADS", ()),
+                patch("builtins.print"),
+            ):
+                validity.run_sparse_t4()
             self.assertEqual(dict(os.environ), before)
 
 

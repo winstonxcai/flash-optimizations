@@ -7,6 +7,14 @@ mustafar/__pycache__/
 # Raw per-leg measurement outputs (470M jsonl/csv/log, regenerable)
 mustafar/results/
 
+# setuptools build_ext scratch (in-place builds; regenerable, and its generated
+# ninja files embed whatever extension names were current when it ran)
+/build/
+
+# Compiled CUDA extensions — regenerable via cuda/setup.py build_ext, and
+# specific to one torch/CUDA version and one SM arch. Never tracked here.
+*.so
+
 # LongBench v2 dataset copy (903M, regenerable from transferibility/data/longbench)
 mustafar/data/
 

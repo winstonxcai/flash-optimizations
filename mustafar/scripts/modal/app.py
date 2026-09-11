@@ -33,7 +33,7 @@ server_image = (
     modal.Image.from_dockerfile(
         str(REPO_ROOT / "mustafar" / "docker" / "modal.Dockerfile"),
         context_dir=str(REPO_ROOT),
-        # Keep fused_cpu.py in the build context: the Dockerfile runs it.
+        # Keep test_fused.py in the build context: the Dockerfile runs it.
         ignore=(
             "mustafar/scripts/**",
             "mustafar/tests/bench_*.py",
@@ -183,9 +183,9 @@ def _kernel_run(
     volumes={str(RESULTS_ROOT): results_volume},
 )
 def validate_packed() -> str:
-    """H100: existing packed-format correctness suite."""
+    """H100: packed-vs-native validity (T1/T2/T3) over the workload grid."""
     return _kernel_run(
-        ["mustafar.tests.gpu_packed"], kind="validate-packed", timeout=3500
+        ["mustafar.tests.validity"], kind="validate-packed", timeout=3500
     )
 
 
@@ -199,7 +199,7 @@ def validate_packed() -> str:
 def validate_fused() -> str:
     """L4: fused adapter correctness, graph/stream checks, and memcheck."""
     return _kernel_run(
-        ["mustafar.tests.gpu_fused"],
+        ["mustafar.tests.validity"],
         kind="validate-packed-fused",
         timeout=1700,
         sanitizer=True,
@@ -213,12 +213,17 @@ def validate_fused() -> str:
     retries=0,
     volumes={str(RESULTS_ROOT): results_volume},
 )
-def bench_kernels(suite: str = "fused") -> str:
-    """H100: packed component timings or the packed/fused comparison gate."""
+def bench_kernels(suite: str = "speed") -> str:
+    """H100: native | packed/triton | packed/fused timings on one workload grid.
+
+    The three legs live in one module now, so the legacy ``packed``/``fused``
+    suite names all select it.
+    """
     modules = {
-        "packed": "mustafar.tests.bench_packed",
-        "fused": "mustafar.tests.bench_fused",
+        "speed": "mustafar.tests.speed",
+        "packed": "mustafar.tests.speed",
+        "fused": "mustafar.tests.speed",
     }
     if suite not in modules:
         raise ValueError(f"suite must be one of {tuple(modules)}")
-    return _kernel_run([modules[suite]], kind=f"bench-{suite}", timeout=1700)
+    return _kernel_run([modules[suite]], kind="bench-speed", timeout=1700)

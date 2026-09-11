@@ -31,7 +31,7 @@ COPY mustafar/ /opt/mustafar/flash-optimizations/mustafar/
 ENV TORCH_CUDA_ARCH_LIST="8.9;9.0"
 RUN cd /opt/mustafar/flash-optimizations \
     && MAX_JOBS=4 python3 mustafar/cuda/setup.py build_ext --inplace \
-    && python3 -m mustafar.tests.fused_cpu
+    && python3 -m unittest mustafar.tests.test_fused
 
 # 3. Bake in the TopMag hook into the ACTIVE tree (PYTHONPATH-pinned at run),
 #    then verify the complete patch against its original backups.

@@ -1,4 +1,8 @@
-"""Discoverable numerical suites; GPU checks require their runtime dependencies."""
+"""Discoverable numerical suites; GPU checks require their runtime dependencies.
+
+Registration only -- the work lives in the runner modules. See tests/README.md
+for the naming rule and the entrypoint contract.
+"""
 
 import importlib.util
 import unittest
@@ -12,19 +16,20 @@ except ImportError:
 HAS_CUDA = torch is not None and torch.cuda.is_available()
 HAS_TRITON = importlib.util.find_spec("triton") is not None
 HAS_SGLANG = importlib.util.find_spec("sglang") is not None
-HAS_FUSED = importlib.util.find_spec("mustafar._fused_cuda") is not None
+HAS_FUSED = importlib.util.find_spec("mustafar._fused") is not None
+HAS_SPARSE = importlib.util.find_spec("mustafar._sparse") is not None
 
 
 @unittest.skipIf(torch is None, "requires PyTorch")
 class ReferenceTests(unittest.TestCase):
     def test_topmag(self):
-        from .unit import run_topmag
+        from .validity import run_reference
 
-        run_topmag()
+        run_reference()
 
     @patch.dict("os.environ", SGLANG_OPT_TOPMAG_FUSED="0")
     def test_packed_reference(self):
-        from .unit import run_packed_reference
+        from .validity import run_packed_reference
 
         run_packed_reference()
 
@@ -73,19 +78,27 @@ class KernelTests(unittest.TestCase):
     @unittest.skipUnless(
         HAS_CUDA and HAS_TRITON and HAS_SGLANG, "requires CUDA, Triton, and SGLang"
     )
-    def test_packed(self):
-        from .gpu_packed import run_packed_validation
+    def test_validity(self):
+        from .validity import run_validity
 
-        run_packed_validation()
+        run_validity()
 
     @unittest.skipUnless(
-        HAS_CUDA and HAS_TRITON and HAS_FUSED,
-        "requires CUDA, Triton, and the fused extension",
+        HAS_CUDA and HAS_TRITON and HAS_SGLANG, "requires CUDA, Triton, and SGLang"
     )
-    def test_fused(self):
-        from .gpu_fused import run_fused_validation
+    def test_speed(self):
+        from .speed import run_speed
 
-        run_fused_validation()
+        run_speed()
+
+    @unittest.skipUnless(
+        HAS_CUDA and HAS_TRITON and HAS_SGLANG and HAS_SPARSE,
+        "requires CUDA, Triton, SGLang, and the sparse MLA extension",
+    )
+    def test_sparse_t4(self):
+        from .validity import run_sparse_t4
+
+        run_sparse_t4()
 
 
 if __name__ == "__main__":

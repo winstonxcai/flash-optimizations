@@ -37,6 +37,13 @@ container, GPUs 0-3, port 30212 -- override per env.sh to target the frozen
 - `agentic-eval.sh <sangfor|swe> <instance-list> [run-id]` — agentic eval against
   a running server (list of task ids, one per line) run on the remote YJYBench
   box: `sangfor` = Sangfor-Bench, `swe` = SWE-bench_Verified.
+- `kernel-run.sh [--t4-only|--speed-only]` — run the mustafar **GPU suites**
+  (validity T4 + speed) in a throwaway container pinned to a GPUQ-granted
+  device. The one script here that needs no server: it resolves its device from
+  `CUDA_VISIBLE_DEVICES` under `gpuq run`, or from `MUSTAFAR_DEVICES` +
+  `MUSTAFAR_LEASE` outside it, then writes `t4.log` and `speed.{json,csv}` under
+  `mustafar/results/sparse-<stamp>/`. Never uses `--gpus all`. See its header for
+  the lease recipe and why the second path exists.
 - `lb2_serve_eval.py` — the LongBench v2 HTTP client (threaded, resumable).
 - `config/` — eval inputs and env config: `sangfor-bench-hard50.txt` and
   `swe_instances_50_sweb_verified_mini.txt` (tracked instance lists — Sangfor &
