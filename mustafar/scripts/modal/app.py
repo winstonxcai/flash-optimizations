@@ -183,7 +183,7 @@ def _kernel_run(
     volumes={str(RESULTS_ROOT): results_volume},
 )
 def validate_packed() -> str:
-    """H100: packed-vs-native validity (T1/T2/T3) over the workload grid."""
+    """H100: every validity stage, every available leg, over the case grid."""
     return _kernel_run(
         ["mustafar.tests.validity"], kind="validate-packed", timeout=3500
     )
@@ -197,7 +197,12 @@ def validate_packed() -> str:
     volumes={str(RESULTS_ROOT): results_volume},
 )
 def validate_fused() -> str:
-    """L4: fused adapter correctness, graph/stream checks, and memcheck."""
+    """L4: fused adapter correctness, graph/stream checks, and memcheck.
+
+    The sanitizer pass runs the same entrypoint narrowed to the smallest workload
+    at the default pattern, with every available leg rather than the fused one
+    alone; ``legs`` in the printed summary says which were actually built.
+    """
     return _kernel_run(
         ["mustafar.tests.validity"],
         kind="validate-packed-fused",

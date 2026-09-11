@@ -12,7 +12,7 @@
 #   MUSTAFAR_DEVICES=5 MUSTAFAR_LEASE=lease-... \
 #     bash mustafar/scripts/local/kernel-run.sh  # the container is the CUDA process
 #
-#   kernel-run.sh --t4-only        T4 only
+#   kernel-run.sh --validity-only  validity only
 #   kernel-run.sh --speed-only     speed only
 #
 # This script never chooses a card and never uses `--gpus all`. It takes the
@@ -34,10 +34,10 @@
 # `remnant`: remnant is a long-lived serving box brought up with `--gpus all`,
 # and `docker exec` inherits none of the caller's environment, so a run inside it
 # would see all eight cards and validity.py's `cuda:0` would land on whichever
-# comes first -- on this host, someone else's sglang. The suites driven here (T4,
-# speed) import only the *stock* sglang tree, which the image already exposes
-# through its editable install, so no clone or patch step is needed and the run
-# cannot disturb the patched lowrank tree.
+# comes first -- on this host, someone else's sglang. The suites driven here
+# (validity, speed) import only the *stock* sglang tree, which the image already
+# exposes through its editable install, so no clone or patch step is needed and
+# the run cannot disturb the patched lowrank tree.
 #
 # Unlike a `gpuq run` job, nothing supervises this process, so the script bounds
 # itself: `timeout` on the docker run and a trap that removes the container.
@@ -67,8 +67,8 @@ fi
 
 MODE=${1:-both}
 case "$MODE" in
-  both|--t4-only|--speed-only) ;;
-  *) die "unknown argument: $MODE (expected --t4-only or --speed-only)" ;;
+  both|--validity-only|--speed-only) ;;
+  *) die "unknown argument: $MODE (expected --validity-only or --speed-only)" ;;
 esac
 
 IMAGE=${IMAGE:-remnant:v0.5.18}
@@ -83,16 +83,16 @@ RUN_TIMEOUT=${RUN_TIMEOUT:-1800}
 echo "== ${CONTEXT}  project=${GPUQ_PROJECT:-mustafar}  devices=${DEVICES}"
 echo "== image ${IMAGE}   out ${OUT}   timeout ${RUN_TIMEOUT}s"
 
-# The T4 leg is the direct-read kernel vs the gather + FlashMLA bar; the speed
-# leg is the same comparison timed against the reassembling path. pipefail so a
-# failed assertion in T4 cannot be masked by `tee` and let speed run on a kernel
+# The validity leg is every stage across every leg against native; the speed leg
+# is the same comparison timed against the reassembling path. pipefail so a failed
+# assertion in validity cannot be masked by `tee` and let speed run on a kernel
 # that just failed.
 INNER="set -eo pipefail"
 if [ "$MODE" != "--speed-only" ]; then
   INNER="$INNER
-python3 -m mustafar.tests.validity --sparse 2>&1 | tee $OUT/t4.log"
+python3 -m mustafar.tests.validity 2>&1 | tee $OUT/validity.log"
 fi
-if [ "$MODE" != "--t4-only" ]; then
+if [ "$MODE" != "--validity-only" ]; then
   INNER="$INNER
 python3 -m mustafar.tests.speed 2>&1 | tee $OUT/speed.log"
 fi

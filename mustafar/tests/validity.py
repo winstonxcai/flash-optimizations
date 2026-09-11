@@ -1,36 +1,75 @@
-"""Validity suite: packed must match native, asserted.
+"""Validity suite: every kernel leg held to native, stage by stage.
 
-Three tiers, each a hard assert, over :data:`mustafar.tests.harness.WORKLOADS`:
+Four **legs**, four **stages**, over a case grid built so that it can fail.
 
-  * :func:`run_reference` -- CPU tier. TopMag pruning semantics and the fixed
-    328-byte ABI. No CUDA required.
-  * T1 store fidelity -- the *same* kept-coordinate set through both stores
-    (native ``compress_norm_rope_store`` and Triton ``pack_rows``). NoPE FP8
-    codes and UE8M0 scales must be bit-identical.
-  * T2 reconstruct fidelity -- the 584-byte store decoded with the production
-    ``dequantize_k_cache_paged`` versus the 328-byte store reconstructed by each
-    packed backend. NoPE is bit-exact; the RoPE tail is bounded by
-    ``harness.TAIL_ATOL``/``TAIL_RTOL``.
-  * T3 end-to-end quality -- both legs start from the *untouched* latent, so
-    this is the real "does TopMag50 preserve attention" comparison. qk logits and
-    softmax attention output are hard-asserted, for every packed backend.
-  * T4 direct read -- :func:`run_sparse_t4`, the sparse MLA kernel reading the
-    328-byte records with no reassembly, against the Triton gather +
-    ``flash_mla_sparse_fwd``. A one-hot probe separates an in-kernel RoPE error
-    from an FP8 decode error; ``(o, lse)`` are asserted separately.
+Legs (:data:`LEGS`) -- one column each, matching the two the report already names
+(Native, stock 584-B; Packed, ``mustafar packed-328``) plus the two CUDA
+extensions under test:
 
-The packed store is inherently lossy in the tail: native keeps the 64 RoPE dims
-in BF16, the 328-byte ABI quantises them to FP8. That is the design, not a
-defect, so T2/T3 carry a tolerance rather than an equality. Everything else --
-codes, scales, the 448 NoPE dims -- is held to bit-exactness.
+  ``native``       stock SGLang with every ``SGLANG_OPT_TOPMAG*`` flag off:
+                   ``compress_norm_rope_store``, ``dequantize_k_cache_paged``,
+                   ``flash_mla_sparse_fwd``. No mustafar code, no Triton. This is
+                   the bar every candidate is held to.
+  ``packed.bf16``  the 328-byte ABI through Triton only -- ``pack_rows`` then
+                   ``unpack_gather_bf16`` into dense BF16. This is the
+                   multi-token-extend call site (``patches/attention.py``
+                   ``compressed_slice``), where it is the *only* implementation:
+                   no fused or sparse variant exists for it.
+  ``packed.native`` the same store, ``unpack_gather_native`` into the 584-byte
+                   layout plus remapped indices -- the decode/small-extend call
+                   site. A strict superset of ``packed.bf16``: with ``FUSED=0`` it
+                   calls ``unpack_gather_bf16`` internally and then repacks, so a
+                   failure here that ``packed.bf16`` does not show is in the
+                   repack or in the remapped indices, not in the decompression.
+                   Their *tails* are not bit-comparable (this one is quantised
+                   twice), so the two are compared only through their shared bar.
+  ``fused``        ``mustafar._fused``, replacing ``packed.native``. Needs
+                   ``mustafar._fused``.
+  ``sparse``       ``mustafar._sparse``, reading 328-byte records directly with
+                   no reassembly. Needs ``mustafar._sparse``. Single-token decode
+                   only: the gate is ``q.shape[1] == 1 and not _is_sm120``
+                   (``patches/attention.py:190``) and there is no multi-token
+                   variant to test.
 
-Direct run prints per-workload JSON::
+Stages (:data:`STAGES`) -- each asks one question and names the bar it uses:
+
+  ``store``      native store vs the packed store, both fed the *same* kept set.
+                 NoPE FP8 codes and UE8M0 scales bit-exact, and the packed bitmap
+                 must equal the input mask exactly.
+  ``rows``       each leg's row readout vs :func:`harness.native_gather`. The 448
+                 NoPE dims bit-exact, the 64 RoPE dims bounded by
+                 ``TAIL_ATOL``/``TAIL_RTOL``. The sparse leg has no dense row
+                 output, so instead of a row it reports one-hot probe scores
+                 covering all 512 coordinates.
+  ``attention``  each leg's c4 ``(o, lse)`` vs native rows through
+                 ``flash_mla_sparse_fwd``. ``o`` and ``lse`` are asserted
+                 *separately* under ``ATTN_ATOL``/``ATTN_RTOL`` -- a
+                 correct-lse/wrong-o split is the likeliest real failure and the
+                 merged output of :func:`mustafar.sparse.merge_lse` would hide it.
+  ``pruning``    how far each leg drifts from an *uncompressed* native answer --
+                 the cost of TopMag50 itself, not of any kernel. Bounded by
+                 ``QUALITY_ATOL``/``QUALITY_RTOL``, which are deliberately loose
+                 sanity ceilings, and pinned tightly on the first GPU run by
+                 ``--write-baseline``. A failure here is a finding about TopMag50.
+
+The first three stages feed native the *pruned* latent (``case.masked_latent``),
+so every kernel difference is a defect and the asserts stay exact. ``pruning``
+feeds it the untouched latent, which is the true all-flags-off baseline. Holding
+both to one tolerance, as the single-constant layout did, silently makes "defect"
+and "pruning cost" the same number.
+
+The RoPE tail is BF16 on the native path and FP8 on the packed path: that is the
+design, not a defect, so every tail comparison carries a tolerance rather than an
+equality. Everything else -- codes, scales, the 448 NoPE dims -- is bit-exact.
+
+Direct run prints per-case JSON::
 
     python3 -m mustafar.tests.validity
 """
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 from pathlib import Path
@@ -47,10 +86,61 @@ N = 256
 
 BASELINE = Path(__file__).resolve().parent / "fixtures" / "validity-baseline.json"
 
-# Packed reconstruct backends held to the same native bar. ``triton-dense`` is
-# the compressed_slice call site; the two ``native`` legs are the
-# decode/small-extend call site, which is where the fused kernel is dispatched.
-BACKENDS = ("triton-dense", "triton-native", "fused-native")
+STAGES = ("store", "rows", "attention", "pruning")
+
+# Candidate legs, in report order. ``native`` is deliberately absent: it is the bar
+# every one of these is compared against, never a candidate.
+LEGS = ("packed.bf16", "packed.native", "fused", "sparse")
+
+# The flags each leg needs. The entrypoint's own pin turns all four off, so a leg
+# states exactly what it turns back on and nothing is inherited by accident.
+_PACKED_ENV = {
+    "SGLANG_OPT_TOPMAG": "1",
+    "KEEP": "0.5",
+    "SGLANG_OPT_TOPMAG_PACKED": "1",
+    "SGLANG_OPT_TOPMAG_FUSED": "0",
+    "SGLANG_OPT_TOPMAG_SPARSE": "0",
+}
+LEG_ENV = {
+    "packed.bf16": _PACKED_ENV,
+    "packed.native": _PACKED_ENV,
+    "fused": {**_PACKED_ENV, "SGLANG_OPT_TOPMAG_FUSED": "1"},
+    "sparse": {**_PACKED_ENV, "SGLANG_OPT_TOPMAG_SPARSE": "1"},
+}
+
+
+@contextlib.contextmanager
+def _leg_env(leg: str):
+    """Pin the flags one leg needs, and prove the pinned set is a legal one.
+
+    ``validate_packed_static_config`` is what rejects the fused and sparse gates
+    together -- they rewrite the same c4 decode call site -- so running it here
+    rather than trusting the caller makes the mutual exclusion a runtime fact
+    instead of a comment.
+    """
+    with patch.dict(os.environ, LEG_ENV[leg]):
+        config.validate_packed_static_config()
+        yield
+
+
+def _fused_available() -> bool:
+    from ..fused import fused_available
+
+    return bool(fused_available())
+
+
+def _sparse_available() -> bool:
+    from ..sparse import sparse_available
+
+    return bool(sparse_available())
+
+
+def _leg_available(leg: str) -> bool:
+    if leg == "fused":
+        return _fused_available()
+    if leg == "sparse":
+        return _sparse_available()
+    return True
 
 
 # --- storage reporting (moved from unit.py) ----------------------------------
@@ -259,32 +349,7 @@ def run_packed_reference() -> None:
     )
 
 
-# --- packed backends ---------------------------------------------------------
-def _packed_dense(case: harness.Case, buffers, backend: str) -> torch.Tensor:
-    """Reconstruct the gathered dense rows through one packed backend."""
-    if backend == "triton-dense":
-        return harness.packed_dense(case, buffers)
-    if backend == "fused-native" and not _fused_available():
-        raise RuntimeError("fused backend requested without a built _fused")
-    # The Triton path reconstructs through the dense BF16 workspace; the fused
-    # path writes the native layout directly and does not need one. Allocating
-    # the dense buffer for the fused leg would also mask a real allocation
-    # regression, so match production dispatch exactly.
-    workspace = harness.native_workspace(case, with_dense=backend == "triton-native")
-    with patch.dict(
-        os.environ,
-        {"SGLANG_OPT_TOPMAG_FUSED": "1" if backend == "fused-native" else "0"},
-    ):
-        harness.packed_native(case, buffers, workspace)
-        return harness.workspace_dense(workspace)
-
-
-def _fused_available() -> bool:
-    from ..fused import fused_available
-
-    return bool(fused_available())
-
-
+# --- per-stage comparison helpers --------------------------------------------
 def _native_codes_scales(
     kvcache: torch.Tensor, locations: torch.Tensor, page_size: int
 ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -304,299 +369,380 @@ def _native_codes_scales(
     )
 
 
-# --- GPU tiers ---------------------------------------------------------------
+def _store(case: harness.Case, buffers, native_cache, locations) -> dict:
+    """NoPE codes and scales bit-exact, and the bitmap equal to the input mask.
+
+    Only the seven NoPE tiles are comparable: native keeps the 64 RoPE dims in
+    BF16, so it has no FP8 tail scale for the eighth tile to match.
+    """
+    from ..bitmap import bitmap_to_mask
+
+    rows = case.rows
+    native_codes, native_scales = _native_codes_scales(
+        native_cache, locations, harness.PAGE_SIZE
+    )
+    dense_codes = torch.zeros(rows, config.HEAD_DIM, dtype=torch.uint8, device=case.device)
+    columns = torch.nonzero(case.mask, as_tuple=False)[:, 1].reshape(
+        rows, config.PACKED_KEPT_VALUES
+    )
+    dense_codes.scatter_(1, columns, buffers.values)
+
+    assert torch.equal(native_codes, dense_codes[:, : config.NOPE_DIM]), (
+        f"[{_name(case)}/store] packed NoPE FP8 codes != native store"
+    )
+    assert torch.equal(native_scales, buffers.scales[:, :7]), (
+        f"[{_name(case)}/store] packed NoPE scales != native store"
+    )
+    decoded = bitmap_to_mask(buffers.bitmaps)
+    assert torch.equal(decoded, case.mask), (
+        f"[{_name(case)}/store] packed bitmap is not the input mask "
+        f"({int((decoded != case.mask).sum().item())} coordinates differ)"
+    )
+    return {
+        "codes_bit_exact": True,
+        "scales_bit_exact": True,
+        "bitmap_bit_exact": True,
+    }
+
+
+def _read_rows(case: harness.Case, buffers, candidates) -> dict[str, torch.Tensor]:
+    """Dense BF16 ``(gather_rows, HEAD_DIM)`` rows for every leg that has them.
+
+    ``packed.native`` gets the dense BF16 workspace because its Triton path
+    reconstructs through it; ``fused`` writes the native layout directly and does
+    not. Allocating it for the fused leg anyway would also mask a real allocation
+    regression, so this matches production dispatch exactly.
+    """
+    rows: dict[str, torch.Tensor] = {}
+    for leg in candidates:
+        if leg == "packed.bf16":
+            rows[leg] = harness.packed_dense(case, buffers)
+            continue
+        if leg in ("packed.native", "fused"):
+            workspace = harness.native_workspace(
+                case, with_dense=leg == "packed.native"
+            )
+            with _leg_env(leg):
+                harness.packed_native(case, buffers, workspace)
+                rows[leg] = harness.workspace_dense(workspace)
+    return rows
+
+
+def _sparse_probe(case: harness.Case, buffers) -> torch.Tensor:
+    """``(batch, HEAD_DIM, TOPK)`` one-hot probe scores for the sparse leg.
+
+    The sparse kernel has no dense row output, so there is no row to compare. A
+    one-hot query makes ``scores[b, h, j]`` the single KV coordinate head ``h``
+    reads, which degrades it to a row readout. The heads of one launch span a
+    contiguous 64-dim chunk and eight launches tile all 512 coordinates exactly
+    once, with the last chunk (448..511) being precisely the RoPE tail -- so NoPE
+    and tail split on a chunk boundary instead of being interleaved the way a
+    fixed ``stride`` sample leaves them.
+    """
+    from .. import sparse
+
+    out = torch.empty(
+        case.batch, config.HEAD_DIM, harness.TOPK,
+        dtype=torch.float32, device=case.device,
+    )
+    with _leg_env("sparse"):
+        for base in range(0, config.HEAD_DIM, harness.HEAD_COUNT):
+            dims = torch.arange(harness.HEAD_COUNT, device=case.device) + base
+            probe_q, _ = harness.probe_query(case, dims)
+            chunk = sparse.scores(
+                probe_q, buffers.values, buffers.bitmaps, buffers.scales,
+                case.physical, case.raw, case.freqs, 1.0,
+                topk_lengths=case.lengths,
+            )
+            out[:, dims, :] = chunk.float()
+    return out
+
+
+def _split_error(
+    case: harness.Case, stage: str, leg: str, got: torch.Tensor, bar: torch.Tensor
+) -> dict[str, float]:
+    """Assert NoPE bit-exactness and a bounded tail, and report both maxima."""
+    nope, tail = slice(0, config.NOPE_DIM), slice(config.NOPE_DIM, config.HEAD_DIM)
+    nope_abs = (got[..., nope] - bar[..., nope]).abs()
+    assert bool((nope_abs == 0).all()), (
+        f"[{_name(case)}/{stage}/{leg}] NoPE is not bit-exact; "
+        f"max_abs={float(nope_abs.max().item())} "
+        f"violations={int((nope_abs != 0).sum().item())}"
+    )
+    tail_abs = (got[..., tail] - bar[..., tail]).abs()
+    tail_tol = harness.TAIL_ATOL + harness.TAIL_RTOL * bar[..., tail].abs()
+    assert bool((tail_abs <= tail_tol).all()), (
+        f"[{_name(case)}/{stage}/{leg}] RoPE tail exceeded "
+        f"atol={harness.TAIL_ATOL} rtol={harness.TAIL_RTOL}; "
+        f"max_abs={float(tail_abs.max().item())} "
+        f"violations={int((tail_abs > tail_tol).sum().item())}"
+    )
+    return {
+        "nope_max_abs": float(nope_abs.max().item()),
+        "tail_max_abs": float(tail_abs.max().item()),
+    }
+
+
+def _leg_attention(case: harness.Case, leg: str, packed_rows, buffers, q, indices):
+    """One leg's c4 ``(o, lse)``, read the way production reads it."""
+    if leg == "sparse":
+        from .. import sparse
+
+        with _leg_env("sparse"):
+            return sparse.c4_leg(
+                q, buffers.values, buffers.bitmaps, buffers.scales,
+                case.physical, case.raw, case.freqs, harness.SM_SCALE,
+                topk_lengths=case.lengths,
+            )
+    kv = packed_rows.view(case.workload.gather_rows, 1, config.HEAD_DIM)
+    out, _, lse = harness.c4_bar(q, kv, indices, harness.SM_SCALE)
+    return out, lse
+
+
+def _live_rows(case: harness.Case) -> torch.Tensor:
+    """Batch rows that have at least one live slot.
+
+    An empty row has no attention to compare -- every index is ``-1`` for both the
+    bar and the candidate -- so its ``o``/``lse`` are excluded rather than compared
+    against a similarly undefined number. The ``ragged`` pattern produces rows of
+    length 0 on purpose; their row-level readout is still checked, in the ``rows``
+    stage, where "all zeros" is well defined.
+    """
+    return (case.physical >= 0).any(dim=-1) & (case.lengths > 0)
+
+
+def _attention(
+    case: harness.Case,
+    candidates,
+    leg_rows: dict[str, torch.Tensor],
+    buffers,
+    q,
+    indices,
+    bar_name: str,
+    bar_out,
+    bar_lse,
+    atol: float,
+    rtol: float,
+) -> dict:
+    """Each candidate's ``(o, lse)`` against one bar, asserted separately."""
+    live = _live_rows(case)
+    bar_o = bar_out.float()[live]
+    bar_l = bar_lse.float()[live]
+    legs: dict[str, dict[str, float]] = {}
+    for leg in candidates:
+        out, lse = _leg_attention(case, leg, leg_rows.get(leg), buffers, q, indices)
+        out = out.float()[live]
+        lse = lse.float()[live]
+        assert torch.isfinite(lse).all() and torch.isfinite(out).all(), (
+            f"[{_name(case)}/attention/{leg}] non-finite output; "
+            f"o infinite={int((~torch.isfinite(out)).sum().item())} "
+            f"lse infinite={int((~torch.isfinite(lse)).sum().item())}"
+        )
+        out_abs = (out - bar_o).abs()
+        lse_abs = (lse - bar_l).abs()
+        for label, error, reference in (("o", out_abs, bar_o), ("lse", lse_abs, bar_l)):
+            limit = atol + rtol * reference.abs()
+            assert bool((error <= limit).all()), (
+                f"[{_name(case)}/{bar_name}/{leg}] {label} diverged from "
+                f"the bar; max_abs={float(error.max().item())} "
+                f"violations={int((error > limit).sum().item())} "
+                f"(atol={atol} rtol={rtol})"
+            )
+        legs[leg] = {
+            "o_max_abs": float(out_abs.max().item()),
+            "lse_max_abs": float(lse_abs.max().item()),
+        }
+    return {"bar": bar_name, "legs": legs}
+
+
+def _name(case: harness.Case) -> str:
+    return f"{case.workload.name}/{case.pattern}"
+
+
+def _run_case(case: harness.Case, candidates) -> dict:
+    """Every stage for one case, each candidate held to its bar."""
+    gathered = case.workload.gather_rows
+
+    # Both stores are fed the *same* kept-coordinate set: ``pack_rows`` applies
+    # ``case.mask`` itself and native gets the masked latent.
+    with _leg_env("packed.bf16"):
+        buffers = harness.packed_buffers(case)
+    native_cache, locations = harness.native_store(case, case.masked_latent)
+    native_rows = harness.native_gather(
+        case, harness.native_dense(native_cache, locations).float()
+    )
+
+    store = {"bar": "native", "legs": {}}
+    if "packed.bf16" in candidates:
+        store["legs"]["packed.bf16"] = _store(case, buffers, native_cache, locations)
+
+    leg_rows = _read_rows(case, buffers, candidates)
+    rows = {"bar": "native", "legs": {}}
+    for leg, packed_rows in leg_rows.items():
+        rows["legs"][leg] = _split_error(
+            case, "rows", leg, packed_rows.float(), native_rows
+        )
+    if "sparse" in candidates:
+        # Transposed into the same ``(..., HEAD_DIM)`` convention the dense row
+        # readouts use, so NoPE and tail split on the same axis for every leg.
+        probe = _sparse_probe(case, buffers).permute(0, 2, 1)
+        bar_probe = native_rows.view(case.batch, harness.TOPK, config.HEAD_DIM)
+        rows["legs"]["sparse"] = _split_error(case, "rows", "sparse", probe, bar_probe)
+
+    q = harness.c4_query(case)
+    indices = harness.flat_indices(case)
+    bar_out, _, bar_lse = harness.c4_bar(
+        q,
+        native_rows.view(gathered, 1, config.HEAD_DIM),
+        indices,
+        harness.SM_SCALE,
+    )
+    attention = _attention(
+        case, candidates, leg_rows, buffers, q, indices,
+        "native", bar_out, bar_lse, harness.ATTN_ATOL, harness.ATTN_RTOL,
+    )
+
+    # The pruning stage's bar is native over the *untouched* latent -- the real
+    # all-flags-off answer -- so what it measures is TopMag50's cost, not a
+    # kernel's fidelity.
+    full_cache, full_locations = harness.native_store(case, case.latent)
+    full_rows = harness.native_gather(
+        case, harness.native_dense(full_cache, full_locations).float()
+    )
+    full_out, _, full_lse = harness.c4_bar(
+        q,
+        full_rows.view(gathered, 1, config.HEAD_DIM),
+        indices,
+        harness.SM_SCALE,
+    )
+    pruning = _attention(
+        case, candidates, leg_rows, buffers, q, indices,
+        "native-untouched", full_out, full_lse,
+        harness.QUALITY_ATOL, harness.QUALITY_RTOL,
+    )
+
+    return {
+        "workload": case.workload.name,
+        "pattern": case.pattern,
+        "batch": case.batch,
+        "gather_rows": gathered,
+        "context_rows": case.rows,
+        "store": store,
+        "rows": rows,
+        "attention": attention,
+        "pruning": pruning,
+    }
+
+
+# --- GPU entrypoint ----------------------------------------------------------
 @patch.dict(
     os.environ,
-    SGLANG_OPT_TOPMAG="1",
-    KEEP="0.5",
-    SGLANG_OPT_TOPMAG_PACKED="1",
+    SGLANG_OPT_TOPMAG="0",
+    SGLANG_OPT_TOPMAG_PACKED="0",
     SGLANG_OPT_TOPMAG_FUSED="0",
+    SGLANG_OPT_TOPMAG_SPARSE="0",
 )
-def run_validity(*, sanitizer_case: bool = False) -> dict[str, object]:
-    """Run T1/T2/T3 over every workload and every packed backend.
+def run_validity(
+    *,
+    sanitizer_case: bool = False,
+    legs: tuple[str, ...] | None = None,
+    write_baseline: bool = False,
+) -> dict[str, object]:
+    """Run every stage over every case in the grid, for every available leg.
 
-    ``sanitizer_case`` narrows to the smallest workload and the fused backend
-    only, so the Modal app can wrap the same entrypoint in ``compute-sanitizer``
-    without waiting on the full grid or the noisiest kernels.
+    ``legs`` selects candidate legs (``None`` means all available); ``native`` is
+    always evaluated because it is the bar. ``sanitizer_case`` narrows to the
+    smallest workload at the default pattern with every available leg, so the
+    Modal app can wrap this in ``compute-sanitizer`` without waiting on the
+    adversarial grid. ``write_baseline`` records the observed maxima as the
+    regression gate instead of checking against an existing one.
     """
     if not torch.cuda.is_available():
         raise RuntimeError("validity requires CUDA")
     device = torch.device("cuda")
-    backends = [b for b in BACKENDS if b != "fused-native" or _fused_available()]
+
+    available = tuple(leg for leg in LEGS if _leg_available(leg))
+    if legs is not None:
+        unknown = [leg for leg in legs if leg not in LEGS]
+        if unknown:
+            raise ValueError(f"unknown legs: {unknown}; known: {list(LEGS)}")
+        selected = tuple(leg for leg in LEGS if leg in legs)
+    else:
+        selected = available
+    absent = [leg for leg in selected if leg not in available]
+    if absent:
+        raise RuntimeError(f"selected legs are not built: {absent}")
+
     workloads = harness.WORKLOADS[:1] if sanitizer_case else harness.WORKLOADS
-    if sanitizer_case:
-        backends = [b for b in backends if b == "fused-native"]
-        if not backends:
-            raise RuntimeError("sanitizer case requires the fused extension")
-    elif len(backends) != len(BACKENDS):
-        print("[validity] fused extension absent; fused-native leg skipped")
+    cases = (
+        harness.case_grid(workloads)
+        if workloads
+        else []
+    )
+    if sanitizer_case and cases:
+        # The adversarial patterns would make compute-sanitizer's runtime
+        # unreasonable, so the sanitizer run takes the smallest workload at the
+        # default pattern and every available leg.
+        cases = [cases[0]]
 
-    baseline = json.loads(BASELINE.read_text()) if BASELINE.exists() else None
+    print(
+        f"[validity] legs available={list(available)} selected={list(selected)} "
+        f"cases={len(cases)}",
+        flush=True,
+    )
+    baseline = None
+    if write_baseline:
+        print(f"[validity] --write-baseline: not checking {BASELINE}", flush=True)
+    elif BASELINE.exists():
+        baseline = json.loads(BASELINE.read_text())
+
     reported: dict[str, object] = {}
+    for workload, pattern in cases:
+        case = harness.build_case(workload, device, pattern=pattern)
+        entry = _run_case(case, selected)
+        reported[_name(case)] = entry
+        print(json.dumps({_name(case): entry}, sort_keys=True), flush=True)
+        if baseline is not None and _name(case) in baseline:
+            _assert_no_regression(_name(case), entry, baseline[_name(case)])
 
-    for workload in workloads:
-        case = harness.build_case(workload, device)
-        rows = case.rows
-        gathered = workload.gather_rows
-
-        # T1 + T2 reference: both stores fed the *same* kept-coordinate set.
-        # pack_rows applies case.mask itself; native gets the masked latent.
-        buffers = harness.packed_buffers(case)
-        native_cache, locations = harness.native_store(case, case.masked_latent)
-        native_codes, native_scales = _native_codes_scales(native_cache, locations, harness.PAGE_SIZE)
-
-        dense_codes = torch.zeros(rows, config.HEAD_DIM, dtype=torch.uint8, device=device)
-        columns = torch.nonzero(case.mask, as_tuple=False)[:, 1].reshape(
-            rows, config.PACKED_KEPT_VALUES
-        )
-        dense_codes.scatter_(1, columns, buffers.values)
-        assert torch.equal(native_codes, dense_codes[:, : config.NOPE_DIM]), (
-            f"[{workload.name}] T1: packed NoPE FP8 codes != native store"
-        )
-        assert torch.equal(native_scales, buffers.scales[:, :7]), (
-            f"[{workload.name}] T1: packed NoPE scales != native store"
-        )
-
-        native_dense_rows = harness.native_dense(native_cache, locations).float()
-        t2: dict[str, dict[str, float]] = {}
-        for backend in backends:
-            # The packed legs are already exactly `gathered` rows; the native
-            # reference is a full `context_rows` cache, so trim it to match.
-            packed_rows = _packed_dense(case, buffers, backend).float()
-            reference_rows = native_dense_rows[:gathered]
-            assert torch.equal(
-                packed_rows[:, : config.NOPE_DIM],
-                reference_rows[:, : config.NOPE_DIM],
-            ), f"[{workload.name}/{backend}] T2: reconstructed NoPE is not bit-exact"
-            tail_abs = (packed_rows[:, config.NOPE_DIM :] - reference_rows[:, config.NOPE_DIM :]).abs()
-            tail_tol = harness.TAIL_ATOL + harness.TAIL_RTOL * reference_rows[:, config.NOPE_DIM :].abs()
-            assert bool((tail_abs <= tail_tol).all()), (
-                f"[{workload.name}/{backend}] T2: RoPE tail exceeded "
-                f"atol={harness.TAIL_ATOL} rtol={harness.TAIL_RTOL}; "
-                f"max_abs={tail_abs.max().item()} "
-                f"violations={int((tail_abs > tail_tol).sum().item())}"
-            )
-            t2[backend] = {"tail_max_abs": float(tail_abs.max().item())}
-
-        if "fused-native" in backends:
-            # The fused adapter must not assume the default stream.
-            side = torch.cuda.Stream()
-            with torch.cuda.stream(side):
-                off_stream = _packed_dense(case, buffers, "fused-native")
-            side.synchronize()
-            assert torch.equal(
-                off_stream[:, : config.NOPE_DIM],
-                native_dense_rows[:gathered, : config.NOPE_DIM],
-            ), f"[{workload.name}] fused backend differs on a non-default stream"
-
-        # Invalid top-k slots must be zeroed and duplicate gathers must agree.
-        slot = torch.tensor([[0, 1, -1, 1]], dtype=torch.int32, device=device)
-        slot_out = torch.empty(4, config.HEAD_DIM, dtype=torch.bfloat16, device=device)
-        from ..packed import unpack_gather_bf16
-
-        unpack_gather_bf16(
-            buffers,
-            slot,
-            slot,
-            torch.full((1,), 4, dtype=torch.int32, device=device),
-            case.freqs,
-            slot_out,
-        )
-        assert bool((slot_out[2] == 0).all()), (
-            f"[{workload.name}] T2: invalid top-k slot was not zeroed"
-        )
-        assert torch.equal(slot_out[1], slot_out[3]), (
-            f"[{workload.name}] T2: duplicate gather rows disagree"
-        )
-
-        # T3: the real quality comparison. Both legs start from the untouched
-        # latent, so this measures TopMag50's pruning, not just ABI fidelity.
-        full_cache, full_locations = harness.native_store(case, case.latent)
-        full_native = harness.native_dense(full_cache, full_locations).float()[:gathered]
-        query = torch.randn(64, config.HEAD_DIM, dtype=torch.bfloat16, device=device).float()
-        scale = config.HEAD_DIM**0.5
-        value = torch.randn(64, 64, dtype=torch.bfloat16, device=device).float()
-        native_logits = query @ full_native.T / scale
-        native_attention = torch.softmax(native_logits, dim=-1) @ value
-
-        t3: dict[str, dict[str, float]] = {}
-        for backend in backends:
-            packed = _packed_dense(case, buffers, backend).float()
-            packed_logits = query @ packed.T / scale
-            packed_attention = torch.softmax(packed_logits, dim=-1) @ value
-            assert torch.isfinite(packed_logits).all(), f"[{workload.name}/{backend}] T3: non-finite logits"
-            assert torch.allclose(
-                packed_logits, native_logits, atol=harness.TAIL_ATOL, rtol=harness.TAIL_RTOL
-            ), (
-                f"[{workload.name}/{backend}] T3: qk logits diverged; "
-                f"max_abs={(packed_logits - native_logits).abs().max().item()}"
-            )
-            assert torch.allclose(
-                packed_attention,
-                native_attention,
-                atol=harness.TAIL_ATOL,
-                rtol=harness.TAIL_RTOL,
-            ), (
-                f"[{workload.name}/{backend}] T3: attention output diverged; "
-                f"max_abs={(packed_attention - native_attention).abs().max().item()}"
-            )
-            t3[backend] = {
-                "logits_max_abs": float((packed_logits - native_logits).abs().max().item()),
-                "attention_max_abs": float(
-                    (packed_attention - native_attention).abs().max().item()
-                ),
-            }
-
-        entry = {
-            "gather_rows": gathered,
-            "context_rows": rows,
-            "batches": case.batch,
-            "t1_bit_exact": True,
-            "t2": t2,
-            "t3": t3,
-        }
-        reported[workload.name] = entry
-        print(json.dumps({workload.name: entry}, sort_keys=True), flush=True)
-
-        if baseline is not None and workload.name in baseline:
-            _assert_no_regression(workload.name, entry, baseline[workload.name])
-
-    if baseline is None:
+    if write_baseline:
+        BASELINE.parent.mkdir(parents=True, exist_ok=True)
+        BASELINE.write_text(json.dumps(reported, indent=2, sort_keys=True))
+        print(f"[validity] wrote {BASELINE}", flush=True)
+    elif baseline is None:
         print(
-            "[validity] no fixtures/validity-baseline.json; regression gate skipped. "
-            "Pin the printed maxima to enable it.",
+            "[validity] no fixtures/validity-baseline.json; regression gate "
+            "skipped. Re-run with --write-baseline to pin the printed maxima.",
             flush=True,
         )
-    print(json.dumps({"workloads": reported}, sort_keys=True), flush=True)
-    return reported
-
-
-# --- T4: direct 328-byte sparse MLA ------------------------------------------
-@patch.dict(
-    os.environ,
-    SGLANG_OPT_TOPMAG="1",
-    KEEP="0.5",
-    SGLANG_OPT_TOPMAG_PACKED="1",
-    SGLANG_OPT_TOPMAG_FUSED="0",
-    SGLANG_OPT_TOPMAG_SPARSE="1",
-)
-def run_sparse_t4() -> dict[str, object]:
-    """T4: the direct 328-byte kernel held to the gather + FlashMLA bar.
-
-    The bar is what production does today -- ``unpack_gather_bf16`` into dense
-    BF16 KV, then ``flash_mla_sparse_fwd``. Two probes per workload:
-
-      * T4a, one-hot: head ``h`` reads exactly one KV coordinate, so a kernel-side
-        RoPE error and an FP8 decode error fall in disjoint dim ranges (the 56
-        NoPE dims vs the 8 tail dims ``stride=8`` lands on) and are reported as
-        separate maxima instead of being averaged into one number.
-      * T4b, end-to-end: ``(o, lse)`` asserted separately, because a
-        correct-lse/wrong-o split is the likeliest real failure and the merged
-        output of :func:`mustafar.sparse.merge_lse` would hide it.
-
-    ``attn_sink`` is deliberately absent from both sides: it belongs to the native
-    SWA leg, so T4 exercises the c4 leg alone. Fused is pinned off because the
-    static gate rejects sparse and fused together.
-    """
-    if not torch.cuda.is_available():
-        raise RuntimeError("sparse MLA T4 requires CUDA")
-    from .. import sparse
-
-    if not sparse.sparse_available():
-        raise RuntimeError("sparse MLA T4 requires a built mustafar._sparse")
-
-    device = torch.device("cuda")
-    reported: dict[str, object] = {}
-
-    for workload in harness.WORKLOADS:
-        case = harness.build_case(workload, device)
-        gathered = workload.gather_rows
-        buffers = harness.packed_buffers(case)
-
-        # The bar's KV rows: exactly the dense BF16 rows production feeds
-        # flash_mla today, so any difference is the kernel's, not the gather's.
-        bar_rows = harness.packed_dense(case, buffers)
-        bar_kv = bar_rows.view(gathered, 1, config.HEAD_DIM)
-
-        # T4a: one-hot probe, NoPE and tail reported separately.
-        probe_q, dims = harness.probe_query(case)
-        probe = sparse.scores(
-            probe_q, buffers.values, buffers.bitmaps, buffers.scales,
-            case.physical, case.raw, case.freqs, 1.0, topk_lengths=case.lengths,
-        )
-        # scores[b, h, j] must equal the single coordinate head h reads.
-        expect = (
-            bar_rows.view(case.batch, harness.TOPK, config.HEAD_DIM)[:, :, dims]
-            .permute(0, 2, 1)
-            .float()
-        )
-        probe_abs = (probe - expect).abs()
-        is_nope = dims.cpu() < config.NOPE_DIM
-        probe_tol = harness.TAIL_ATOL + harness.TAIL_RTOL * expect.abs()
-        for label, columns in (("NoPE", is_nope), ("tail", ~is_nope)):
-            err = probe_abs[:, columns, :]
-            tol = probe_tol[:, columns, :]
-            assert bool((err <= tol).all()), (
-                f"[{workload.name}] T4a {label}: direct read != gathered rows; "
-                f"max_abs={err.max().item()} "
-                f"violations={int((err > tol).sum().item())}"
-            )
-
-        # T4b: end-to-end, output and lse asserted separately.
-        q = harness.c4_query(case)
-        ref_out, _, ref_lse = harness.c4_bar(
-            q, bar_kv, harness.flat_indices(case), harness.SM_SCALE
-        )
-        our_out, our_lse = sparse.c4_leg(
-            q, buffers.values, buffers.bitmaps, buffers.scales,
-            case.physical, case.raw, case.freqs, harness.SM_SCALE,
-            topk_lengths=case.lengths,
-        )
-        assert torch.isfinite(our_lse).all(), (
-            f"[{workload.name}] T4b: non-finite lse from the direct read"
-        )
-        out_abs = (our_out.float() - ref_out.float()).abs()
-        out_tol = harness.TAIL_ATOL + harness.TAIL_RTOL * ref_out.float().abs()
-        assert bool((out_abs <= out_tol).all()), (
-            f"[{workload.name}] T4b output: max_abs={out_abs.max().item()} "
-            f"violations={int((out_abs > out_tol).sum().item())} "
-            f"(atol={harness.TAIL_ATOL} rtol={harness.TAIL_RTOL})"
-        )
-        lse_abs = (our_lse.float() - ref_lse.float()).abs()
-        lse_tol = harness.TAIL_ATOL + harness.TAIL_RTOL * ref_lse.float().abs()
-        assert bool((lse_abs <= lse_tol).all()), (
-            f"[{workload.name}] T4b lse: max_abs={lse_abs.max().item()} "
-            f"violations={int((lse_abs > lse_tol).sum().item())}"
-        )
-
-        entry = {
-            "gather_rows": gathered,
-            "context_rows": case.rows,
-            "batches": case.batch,
-            "probe_nope_max_abs": float(probe_abs[:, is_nope, :].max().item()),
-            "probe_tail_max_abs": float(probe_abs[:, ~is_nope, :].max().item()),
-            "output_max_abs": float(out_abs.max().item()),
-            "lse_max_abs": float(lse_abs.max().item()),
-        }
-        reported[workload.name] = entry
-        print(json.dumps({workload.name: entry}, sort_keys=True), flush=True)
-
-    print(json.dumps({"sparse_t4": reported}, sort_keys=True), flush=True)
-    return reported
+    summary = {
+        "gpu": torch.cuda.get_device_name(),
+        "legs": {leg: leg in available for leg in LEGS},
+        "cases": reported,
+    }
+    print(json.dumps(summary, sort_keys=True), flush=True)
+    return summary
 
 
 def _assert_no_regression(name: str, entry: dict, pinned: dict) -> None:
-    """Fail when an observed maximum regresses past what was calibrated."""
-    for tier in ("t2", "t3"):
-        for backend, observed in entry[tier].items():
-            for metric, value in observed.items():
-                key = f"{tier}.{backend}.{metric}"
-                if key not in pinned:
+    """Fail when an observed maximum regresses past what was calibrated.
+
+    Pinned exactly, not with headroom: the same GPU on the same inputs is expected
+    to reproduce these maxima bit-for-bit, and a gate that flaps because a number
+    was inflated at write time would not be a gate. If one does flap, the cause is
+    non-determinism in the leg and is worth knowing, not worth widening.
+    """
+    for stage in STAGES:
+        pinned_legs = pinned.get(stage, {}).get("legs", {})
+        for leg, metrics in entry[stage]["legs"].items():
+            for metric, value in metrics.items():
+                if metric not in pinned_legs.get(leg, {}):
                     continue
-                limit = float(pinned[key])
+                limit = float(pinned_legs[leg][metric])
                 if value > limit:
                     raise AssertionError(
-                        f"[{name}] regression on {key}: {value} > pinned {limit}"
+                        f"[{name}] regression on {stage}.{leg}.{metric}: "
+                        f"{value} > pinned {limit}"
                     )
 
 
@@ -607,26 +753,28 @@ if __name__ == "__main__":
     parser.add_argument(
         "--sanitizer-case",
         action="store_true",
-        help="smallest workload, fused backend only, for compute-sanitizer",
+        help="smallest workload, default pattern, every available leg, "
+        "for compute-sanitizer",
     )
     parser.add_argument(
-        "--sparse",
-        action="store_true",
-        help="T4 only: the direct 328-byte sparse MLA leg",
+        "--legs",
+        default=None,
+        help="comma-separated subset of "
+        f"{','.join(LEGS)} (default: all available)",
     )
     parser.add_argument(
-        "--with-sparse",
+        "--write-baseline",
         action="store_true",
-        help="run T1/T2/T3 and then T4",
+        help=f"record the observed maxima to {BASELINE} instead of checking them",
     )
     args = parser.parse_args()
-    if args.sanitizer_case:
-        run_validity(sanitizer_case=True)
-    elif args.sparse:
-        run_sparse_t4()
+    if args.sanitizer_case or args.legs or args.write_baseline:
+        run_validity(
+            sanitizer_case=args.sanitizer_case,
+            legs=tuple(args.legs.split(",")) if args.legs else None,
+            write_baseline=args.write_baseline,
+        )
     else:
         run_reference()
         run_packed_reference()
         run_validity()
-        if args.with_sparse:
-            run_sparse_t4()

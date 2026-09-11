@@ -178,13 +178,15 @@ reconstruct path are unchanged.
 Extend the existing suites rather than adding a new one — they already have the
 harness, the workloads and the tolerances:
 
-- **Validity (T4, new tier in [tests/validity.py](../../tests/validity.py)):**
-  new kernel vs the Triton reference, over the existing 3-point context×batch
-  grid. Rows must match `unpack_gather_bf16` + `flash_mla_sparse_fwd` within the
-  suite's existing `atol/rtol=0.02`; `(o, lse)` compared separately, since a
-  correct-lse/wrong-o split is the most likely failure and the merged output
-  would hide it. Run the reference with the tail **bit-exact-checked separately**
-  so an in-kernel RoPE bug is distinguishable from an FP8 decode bug.
+- **Validity (the `sparse` leg in [tests/validity.py](../../tests/validity.py)):**
+  new kernel vs native, over the existing 3-point context×batch grid plus the
+  adversarial index/mask patterns. Row readouts and `(o, lse)` are compared
+  separately, since a correct-lse/wrong-o split is the most likely failure and
+  the merged output would hide it. The RoPE tail is checked separately from the
+  NoPE coordinates, so an in-kernel RoPE bug is distinguishable from an FP8
+  decode bug; see the tolerance section of [tests/README.md](../../tests/README.md)
+  for which constant bounds which stage. The sparse leg has no dense row output,
+  so its `rows` stage uses one-hot probe scores covering all 512 coordinates.
 - **Speed:** one `cuda/sparse` row in the existing three-leg table
   (native | packed/triton | packed/fused) — the direct-read leg must be
   compared against the reassemble-then-`flash_mla` path on identical input, which

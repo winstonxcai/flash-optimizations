@@ -37,6 +37,24 @@ SM_SCALE = config.HEAD_DIM**-0.5  # qk softmax scale, shared by both c4 legs
 TAIL_ATOL = 0.02
 TAIL_RTOL = 0.02
 
+# The c4 attention stage's budget. The RoPE tail is 64 of the 512 KV dims and the
+# softmax mixes all of them, so the output inherits more than the tail's own
+# bound. Grounded in the maxima of the last direct-read run
+# (results/sparse-mla-20260911-062418/t4.log: o <= 3.91e-3, lse <= 3.28e-4) with
+# ~2x margin; re-pin from the first run of the stage/leg suite.
+ATTN_ATOL = 8.0e-3
+ATTN_RTOL = 1.0e-3
+
+# The pruning stage's budget: how far TopMag50 may move the c4 answer away from
+# the uncompressed one. NOT CALIBRATED -- these are sanity ceilings, not measured
+# bounds, and they are deliberately loose because the honest bound can only come
+# from a run. The tight gate is fixtures/validity-baseline.json, which
+# --write-baseline emits from the first GPU run; re-pin these from that same run
+# so the constant and the fixture agree. A failure here is a finding about
+# TopMag50, not a kernel defect.
+QUALITY_ATOL = 1.0
+QUALITY_RTOL = 1.0
+
 
 def native_page_stride(page_size: int = PAGE_SIZE) -> int:
     """Bytes per native page, padded to a multiple of the 576-byte record tile."""
@@ -69,6 +87,57 @@ WORKLOADS: tuple[Workload, ...] = (
 )
 
 
+# --- case patterns -----------------------------------------------------------
+# ``identity`` is the shape every earlier version of the suites ran: physical =
+# raw = arange(gather_rows) and lengths = TOPK everywhere. A kernel that ignored
+# ``physical`` and ``raw`` entirely and indexed rows by slot position passed every
+# test under that grid, and a kernel that ignored ``topk_lengths`` did too, since
+# the values happened to coincide. The patterns below break that coincidence.
+IDENTITY = "identity"
+
+INDEX_PATTERNS = frozenset({"permuted", "duplicated", "ragged", "interior_slots"})
+MASK_PATTERNS = frozenset({"no_tail", "half_pair", "extreme_coord"})
+
+ADVERSARIAL_PATTERNS: tuple[str, ...] = (
+    "permuted",
+    "duplicated",
+    "ragged",
+    "interior_slots",
+    "no_tail",
+    "half_pair",
+    "extreme_coord",
+)
+
+
+def adversarial_workload(workloads):
+    """The workload the adversarial patterns run on: the smallest with batch > 1.
+
+    ``ragged`` needs several batch rows before varying a length across them means
+    anything, and the mask patterns want enough rows that a re-selected coordinate
+    is not a one-row fluke. ``long`` would multiply the grid for no extra
+    bug-catching, so the first multi-row workload is the one.
+    """
+    for workload in workloads:
+        if workload.batch > 1:
+            return workload
+    return workloads[0]
+
+
+def case_grid(workloads) -> list[tuple[Workload, str]]:
+    """``(workload, pattern)`` pairs: every workload at ``identity``, plus the
+    adversarial patterns once each on :func:`adversarial_workload`.
+
+    The empty guard is load-bearing: ``test_backend_selection`` patches
+    ``WORKLOADS`` to ``()`` to drive the entry/exit path with no allocation, so an
+    unguarded ``workloads[0]`` would ``IndexError`` there.
+    """
+    grid = [(workload, IDENTITY) for workload in workloads]
+    if workloads:
+        adversarial = adversarial_workload(workloads)
+        grid += [(adversarial, pattern) for pattern in ADVERSARIAL_PATTERNS]
+    return grid
+
+
 class DecodePlan:
     """Minimal stand-in for SGLang's compressor plan ABI.
 
@@ -94,6 +163,7 @@ class Case:
 
     workload: Workload
     device: torch.device
+    pattern: str  # which adversarial pattern shaped the indices and the mask
     latent: torch.Tensor  # (context_rows, HEAD_DIM) bf16, untouched
     masked_latent: torch.Tensor  # same latent with non-kept coords zeroed
     mask: torch.Tensor  # (context_rows, HEAD_DIM) bool, TopMag50 keep set
@@ -114,14 +184,124 @@ class Case:
         return self.workload.batch
 
 
-def build_case(workload: Workload, device, seed: int = 20260910) -> Case:
-    """Build the untouched latent and every index tensor for one workload."""
+def _pattern_mask(pattern: str, latent: torch.Tensor) -> torch.Tensor:
+    """The keep-mask for one pattern. Always exactly ``PACKED_KEPT_VALUES`` per row.
+
+    The mask patterns construct the kept *set* directly instead of steering the
+    magnitude ranking and hoping it lands where intended -- with 512 real-valued
+    coordinates, "the 256 largest excluding the tail" does not reliably exclude
+    exactly the tail. Constructing it also has the side benefit of feeding the
+    kernels masks that TopMag50 would never emit on random data, which is the
+    point: the ABI takes the mask as input and must accept any 256-wide set.
+
+    ``|kept| == 256`` is fixed-width -- ``reference.pack_rows_ref`` raises if any
+    row keeps a different count -- so these patterns re-select *which* 256
+    coordinates survive and never change the count.
+    """
+    if pattern not in MASK_PATTERNS:
+        if pattern != IDENTITY and pattern not in INDEX_PATTERNS:
+            raise ValueError(f"unknown case pattern: {pattern}")
+        return reference.topmag_keep_mask(latent, 0.5)
+
+    magnitude = latent.float().abs()
+    keep = torch.zeros(latent.shape, dtype=torch.bool, device=latent.device)
+    kept_nope = config.PACKED_KEPT_VALUES  # 256; trimmed below for the tail patterns
+
+    if pattern == "no_tail":
+        # Nothing survives in the 64 tail coordinates, so bitmap word 7 is
+        # all-zero and the tile has no kept value to scale. That is the case a
+        # decoder dividing by word 7's UE8M0 scale, or assuming a non-empty tile,
+        # gets wrong -- and the packed values buffer is then 256 codes deep for a
+        # record whose last tile contributes none of them.
+        picked = magnitude[:, : config.NOPE_DIM].topk(kept_nope, dim=-1).indices
+    elif pattern == "half_pair":
+        # Exactly the even lane of every RoPE real/imag pair, backfilled with NoPE
+        # coordinates to hold the count at 256. No pair is ever both-kept or
+        # both-pruned, which is the assumption an in-kernel rotate that reads its
+        # partner unconditionally would rely on.
+        kept_nope -= config.ROPE_DIM // 2
+        even = torch.arange(
+            config.NOPE_DIM, config.HEAD_DIM, 2, device=latent.device
+        )
+        keep[:, even] = True
+        picked = magnitude[:, : config.NOPE_DIM].topk(kept_nope, dim=-1).indices
+    elif pattern == "extreme_coord":
+        # The final coordinate, held in, so rank 255 is exercised rather than
+        # assumed -- and the code that lands in the last rank slot is a real one.
+        kept_nope = config.PACKED_KEPT_VALUES - 1
+        keep[:, config.HEAD_DIM - 1] = True
+        picked = magnitude[:, : config.HEAD_DIM - 1].topk(kept_nope, dim=-1).indices
+    else:
+        raise ValueError(f"unknown mask pattern: {pattern}")
+
+    keep.scatter_(dim=-1, index=picked, value=True)
+    return keep
+
+
+def _pattern_indices(pattern: str, physical: torch.Tensor, lengths: torch.Tensor):
+    """Perturb ``physical`` / ``lengths`` for one index pattern.
+
+    ``raw`` is left to the caller to clone from ``physical``, because the two must
+    stay equal for the legs to be phase-aligned -- see the note in
+    :func:`build_case`.
+    """
+    if pattern not in INDEX_PATTERNS:
+        return physical, lengths
+
+    batch, topk = physical.shape
+    device = physical.device
+
+    if pattern == "permuted":
+        # A kernel that indexes the gather output by slot position rather than by
+        # ``physical`` now reads the wrong record everywhere.
+        shuffled = torch.randperm(batch * topk, device=device)
+        return shuffled.reshape(batch, topk).to(torch.int32).contiguous(), lengths
+
+    if pattern == "duplicated":
+        # Records gathered twice, each at its own raw. A gather that assumes record
+        # ids are distinct, or memoises on ``physical``, disagrees between the two
+        # slots that must hold identical rows.
+        half = (batch * topk) // 2
+        repeated = torch.cat([torch.arange(half, device=device)] * 2)
+        return repeated.reshape(batch, topk).to(torch.int32).contiguous(), lengths
+
+    if pattern == "ragged":
+        # A ragged length per batch row, including an empty one. Beyond
+        # ``lengths[b]`` every slot is -1, which both the Triton gather (masking on
+        # ``topk_lengths``) and ``flash_mla_sparse_fwd`` (masking on -1) must treat
+        # as absent; an off-by-one in either shows up as a disagreement.
+        step = torch.tensor([topk, topk // 2, 0, topk // 3], device=device)
+        lengths = step[torch.arange(batch, device=device) % 4].to(torch.int32).contiguous()
+        slot = torch.arange(topk, device=device).view(1, topk)
+        physical = torch.where(slot < lengths.view(batch, 1), physical, -1)
+        return physical.to(torch.int32).contiguous(), lengths
+
+    if pattern == "interior_slots":
+        # -1 scattered inside the valid range. The suffix-only probe the suite used
+        # to run lets a validity predicate written as "k < topk_length" pass, while
+        # a per-slot "physical >= 0" check -- which is what the kernels do -- is
+        # what this actually needs.
+        physical = physical.clone()
+        physical[:, 3::7] = -1
+        return physical, lengths
+
+    raise ValueError(f"unknown index pattern: {pattern}")
+
+
+def build_case(
+    workload: Workload, device, seed: int = 20260910, pattern: str = IDENTITY
+) -> Case:
+    """Build the untouched latent and every index tensor for one workload.
+
+    ``pattern`` selects how the index tensors and the TopMag mask are shaped;
+    ``identity`` reproduces the original grid exactly.
+    """
     torch.manual_seed(seed)
     device = torch.device(device)
     rows = workload.context_rows
 
     latent = torch.randn(rows, config.HEAD_DIM, dtype=torch.bfloat16, device=device)
-    mask = reference.topmag_keep_mask(latent, 0.5)
+    mask = _pattern_mask(pattern, latent)
     masked_latent = latent.masked_fill(~mask, 0)
     weight = torch.linspace(
         0.75, 1.25, config.HEAD_DIM, dtype=torch.bfloat16, device=device
@@ -141,7 +321,7 @@ def build_case(workload: Workload, device, seed: int = 20260910) -> Case:
     # position = seq_len - compress_ratio (fused_norm_rope_v2.cuh). The packed
     # gather derives the same position as raw * 4 (triton/kernels.py). Setting
     # seq_len = 4 * (raw + 1) therefore makes the two legs phase-aligned on
-    # record i, which is what makes the T2 tail comparison meaningful.
+    # record i, which is what makes the rows-stage tail comparison meaningful.
     plan_rows[:, 0] = COMPRESS_RATIO * (
         1 + torch.arange(rows, dtype=torch.int32, device=device)
     )
@@ -149,10 +329,12 @@ def build_case(workload: Workload, device, seed: int = 20260910) -> Case:
     gather = torch.arange(workload.gather_rows, dtype=torch.int32, device=device)
     physical = gather.reshape(workload.batch, TOPK).contiguous()
     lengths = torch.full((workload.batch,), TOPK, dtype=torch.int32, device=device)
+    physical, lengths = _pattern_indices(pattern, physical, lengths)
 
     return Case(
         workload=workload,
         device=device,
+        pattern=pattern,
         latent=latent,
         masked_latent=masked_latent,
         mask=mask,
@@ -161,6 +343,10 @@ def build_case(workload: Workload, device, seed: int = 20260910) -> Case:
         locations=locations,
         plan=DecodePlan(plan_rows),
         physical=physical,
+        # raw == physical is a hard requirement, not a convenience: the native store
+        # bakes the rotation position in at store time from the plan while the
+        # packed gather derives it from raw, so only equality phase-aligns the two
+        # legs. No pattern may decorrelate them.
         raw=physical.clone(),
         lengths=lengths,
     )
@@ -203,6 +389,26 @@ def native_dense(kvcache: torch.Tensor, locations: torch.Tensor, page_size: int 
     return dequantize_k_cache_paged(kvcache, locations, page_size).reshape(
         locations.shape[0], config.HEAD_DIM
     )
+
+
+def native_gather(case: Case, native_rows: torch.Tensor) -> torch.Tensor:
+    """``(gather_rows, HEAD_DIM)`` native rows in gather order, invalid slots zero.
+
+    The reference for slot ``j`` is native record ``case.physical[j]``, **not**
+    ``native_rows[j]``. Those coincide only when ``physical`` is the identity --
+    which is the only shape the suites ran before the pattern grid -- so the
+    general form is spelled out once here instead of sliced at each call site.
+
+    A slot is invalid when ``physical`` is negative or when it sits past its row's
+    ``topk_length``; both read as zeros, matching what the Triton gather and
+    ``flash_mla_sparse_fwd`` do with such a slot.
+    """
+    flat = case.physical.reshape(-1).to(torch.int64)
+    lengths = case.lengths.reshape(-1).repeat_interleave(TOPK)
+    slot = torch.arange(TOPK, device=flat.device).repeat(case.batch)
+    valid = (flat >= 0) & (slot < lengths)
+    rows = native_rows[flat.clamp_min(0)]
+    return torch.where(valid.view(-1, 1), rows, torch.zeros_like(rows))
 
 
 # --- packed (328-byte) leg ---------------------------------------------------
@@ -286,10 +492,10 @@ def native_workspace(case: Case, *, with_dense: bool = False):
 def workspace_dense(workspace) -> torch.Tensor:
     """Decode a packed-produced native workspace with the production decoder.
 
-    This is what lets T2 hold the fused/Triton reconstruct to the *native*
-    bar: both the 584-byte reference store and the packed reconstruct are read
-    back through the same ``dequantize_k_cache_paged`` the patch replaces, so a
-    layout error cannot hide behind a bespoke reader.
+    This is what lets the ``rows`` stage hold the fused/Triton reconstruct to the
+    *native* bar: both the 584-byte reference store and the packed reconstruct are
+    read back through the same ``dequantize_k_cache_paged`` the patch replaces, so
+    a layout error cannot hide behind a bespoke reader.
     """
     from sglang.kernels.ops.attention.dsv4.dequant_k_cache import (
         dequantize_k_cache_paged,
@@ -318,16 +524,25 @@ def c4_query(case: Case, seed: int = 20260911) -> torch.Tensor:
     )
 
 
-def probe_query(case: Case, stride: int = 8) -> tuple[torch.Tensor, torch.Tensor]:
+def probe_query(
+    case: Case, dims: torch.Tensor | None = None
+) -> tuple[torch.Tensor, torch.Tensor]:
     """One-hot queries and the head dim each one reads.
 
-    Head ``h`` is one-hot at dim ``h * stride``, so ``scores[q, h, j]`` reduces to
-    a single KV coordinate, ``kv[q * TOPK + j, h * stride]``. With ``stride=8``
-    the 64 heads span ``0, 8, ... 504`` -- 56 NoPE dims (0..440) and 8 tail dims
+    Head ``h`` is one-hot at dim ``dims[h]``, so ``scores[q, h, j]`` reduces to a
+    single KV coordinate, ``kv[q * TOPK + j, dims[h]]``. With no ``dims`` the
+    heads span ``0, 8, ... 504`` -- 56 NoPE dims (0..440) and 8 tail dims
     (448..504) -- which is what makes an in-kernel RoPE error separable from an
-    FP8 decode error.
+    FP8 decode error, at the cost of sampling only 64 of the 512 coordinates.
+
+    Pass an explicit ``dims`` to read a different chunk, e.g.
+    ``arange(HEAD_COUNT) + base``. Sweeping ``base`` over
+    ``range(0, HEAD_DIM, HEAD_COUNT)`` covers all 512 dims exactly once, and the
+    final chunk (``base=448``) is precisely the 64 RoPE tail dims -- so NoPE and
+    tail fall on opposite sides of a chunk boundary rather than being interleaved.
     """
-    dims = torch.arange(HEAD_COUNT, device=case.device) * stride
+    if dims is None:
+        dims = torch.arange(HEAD_COUNT, device=case.device) * 8
     q = torch.zeros(
         case.batch, HEAD_COUNT, config.HEAD_DIM,
         dtype=torch.bfloat16, device=case.device,
@@ -341,10 +556,20 @@ def flat_indices(case: Case) -> torch.Tensor:
 
     ``flash_mla_sparse_fwd`` indexes a per-batch KV tensor, while the packed
     kernels use global record ids; this is the reshuffle between them.
+
+    Slots the case marks absent -- ``physical < 0``, or past ``lengths[b]`` -- come
+    out as ``-1``, which is how FlashMLA is told to skip a slot. Zeroing the row in
+    the dense buffer is not enough on its own: a valid index into a zeroed row
+    still enters the softmax as a logit of 0, whereas ``-1`` drops it. The two
+    kernels therefore have to agree on what "absent" means, and this is where the
+    agreement is expressed. For an identity case nothing is absent and the output
+    is the plain row-major enumeration.
     """
     base = torch.arange(case.batch, dtype=torch.int32, device=case.device) * TOPK
     offsets = torch.arange(TOPK, dtype=torch.int32, device=case.device)
-    return (base.view(-1, 1) + offsets.view(1, -1)).view(case.batch, 1, TOPK).contiguous()
+    flat = (base.view(-1, 1) + offsets.view(1, -1)).view(case.batch, 1, TOPK)
+    absent = (case.physical < 0) | (offsets.view(1, -1) >= case.lengths.view(-1, 1))
+    return torch.where(absent.unsqueeze(1), torch.full_like(flat, -1), flat).contiguous()
 
 
 def c4_bar(q, kv, indices, sm_scale):

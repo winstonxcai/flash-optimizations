@@ -24,59 +24,91 @@ Current tree:
 tests/
   test_patching.py          # patching.py machinery + real-anchor integration
   test_backend_selection.py # entrypoint contract (flags pinned, env restored)
+  test_harness.py           # the case grid perturbs what it claims to
   test_numerics.py          # registration only; skip guards live here
   test_bench_serving.py     # serving benchmark, unchanged
   test_fused.py             # CPU image-build gate (ABI + E4M3 decode)
-  harness.py                # workloads, geometry, native refs, timing, tolerances
+  harness.py                # workloads, geometry, native refs, patterns, timing
   validity.py               # run_reference / run_packed_reference / run_validity
-                            #   / run_sparse_t4
   speed.py                  # run_speed
   fixtures/
 ```
+
+`validity.py`'s GPU entrypoint is one function, `run_validity`, over four **legs**
+and four **stages**. The legs are `native` (the bar: stock SGLang with every
+`SGLANG_OPT_TOPMAG*` flag off, no mustafar code, no Triton), `packed.bf16`,
+`packed.native`, `fused`, and `sparse`. The stages are `store`, `rows`,
+`attention`, and `pruning`. Each stage names the bar it compares against and
+asserts per leg, so a failure says which leg differs from native and at which
+stage. `--legs` narrows the candidate set; `native` is always evaluated.
 
 ## Entrypoint contract
 
 Every `run_*()` a test registers must:
 
-1. Pin the flags for the whole call —
-   `@patch.dict(os.environ, SGLANG_OPT_TOPMAG="1", KEEP="0.5",
-   SGLANG_OPT_TOPMAG_PACKED="1", SGLANG_OPT_TOPMAG_FUSED="0")` — re-enabling
-   `_FUSED` only inside the leg that needs it.
+1. Pin the flags for the whole call, overriding whatever the ambient
+   environment holds. `validity` pins the **all-flags-off** base —
+   `native` is defined as stock SGLang — and each leg turns its own flags back
+   on inside a `validity._leg_env(leg)` block, which also runs
+   `config.validate_packed_static_config()` so the pinned set is proven legal
+   rather than assumed. `speed` pins the packed base
+   (`TOPMAG=1, KEEP=0.5, PACKED=1, FUSED=0`) directly.
 2. Raise `RuntimeError` matching `"requires CUDA"` when
    `torch.cuda.is_available()` is false, **before** any allocation.
 3. Restore `os.environ` byte-exactly on success and on failure. (`patch.dict`
    gives you this; do not hand-roll it.)
 4. Be registered in `test_numerics.py` under the narrowest correct skip guard
-   (`HAS_CUDA` / `HAS_TRITON` / `HAS_SGLANG` / `HAS_FUSED` / `HAS_SPARSE`).
+   (`HAS_CUDA` / `HAS_TRITON` / `HAS_SGLANG`). Legs whose CUDA extension is not
+   built are discovered and skipped by `run_validity` itself, so no guard is
+   needed for `_fused` / `_sparse`.
 
-`test_backend_selection.py` enforces 1–3 mechanically over its entrypoint list.
-Add your new entrypoint there.
+`test_backend_selection.py` enforces 1–3 mechanically over its entrypoint list,
+and checks each leg's pin is a legal configuration.
 
 ## Adding a test
 
-1. Pick or add a workload in `harness.WORKLOADS` (context × batch). `TOPK` is
-   fixed at 512 — no smaller select is a legal packed configuration.
-2. Add the check to `validity.py` (assert it) or `speed.py` (time it).
-3. Register it in `test_numerics.py`.
-4. Add the entrypoint name to `test_backend_selection.py`'s list.
+1. Pick or add a workload in `harness.WORKLOADS` (context × batch), or a case
+   **pattern** in `harness.ADVERSARIAL_PATTERNS` (how `physical`/`raw`/`lengths`
+   and the keep-mask are perturbed). `TOPK` is fixed at 512 — no smaller select
+   is a legal packed configuration.
+2. Add the check to `validity.py` (assert it) or `speed.py` (time it), as a stage
+   that names its bar.
+3. If you added a pattern, assert in `test_harness.py` that it actually perturbs
+   what it claims to. A pattern that silently reverts to `identity` adds no
+   coverage and nothing else will say so.
+4. Register the entrypoint in `test_numerics.py` and add it to
+   `test_backend_selection.py`'s list.
 
 ## Tolerances
 
 A tolerance is a **named constant in one place**. Never inline a numeric
 literal in a suite — add it to `harness.py` with its justification.
 
+Each stage's budget is a separate pair, because reusing one number for several
+jobs means a widening justified by one silently loosens all of them:
+
 - NoPE FP8 codes and UE8M0 scales: **bit-exact** (`torch.equal`). Native and
-  packed quantise identically.
+  packed quantise identically. A pattern whose bitmap is not the input mask
+  fails here too — the bitmap is compared, not just the codes.
 - RoPE tail: `harness.TAIL_ATOL` / `harness.TAIL_RTOL`. Native keeps the 64
   tail dims in BF16, the 328-byte ABI stores them as FP8. That loss is the
-  design, not a defect.
-- End-to-end qk logits and attention output: same two constants.
+  design, not a defect. Applies to the `rows` stage.
+- c4 `(o, lse)`: `harness.ATTN_ATOL` / `harness.ATTN_RTOL`, asserted
+  **separately** for `o` and `lse` — a correct-lse/wrong-o split is the
+  likeliest real failure and the merged output would hide it.
+- TopMag50's own cost: `harness.QUALITY_ATOL` / `harness.QUALITY_RTOL`, used
+  only by the `pruning` stage, whose bar is native over the *untouched* latent.
+  A failure there is a finding about the compression, not about a kernel — name
+  it that way rather than widening the kernel tolerances.
 
 A failure here is **surfaced, never silently widened**. If an observed maximum
 exceeds the pinned tolerance, either fix the kernel or write down the wider
-value with its justification. Pin observed maxima per workload in
-`fixtures/validity-baseline.json` to fail on regression even inside the
-absolute tolerance.
+value with its justification. Pin observed maxima per case in
+`fixtures/validity-baseline.json` (`run_validity(write_baseline=True)`, or the
+`--write-baseline` flag) to fail on regression even inside the absolute
+tolerance. The pinned values are exact, not padded: the same GPU on the same
+inputs is expected to reproduce them, and a gate that flaps is a finding about
+non-determinism rather than something to widen away.
 
 ## Real anchors
 
@@ -107,12 +139,13 @@ docker exec remnant bash -c 'cd /sgl-workspace/sglang-lowrank && \
   python3 -m unittest mustafar.tests.test_numerics -v'
 ```
 
-Direct, prints per-workload JSON (and writes `speed.{json,csv}` when
+Direct, prints per-case JSON (and writes `speed.{json,csv}` when
 `MUSTAFAR_RESULTS_DIR` is set):
 
 ```sh
-python3 -m mustafar.tests.validity   # T1/T2/T3 over the workload grid
-python3 -m mustafar.tests.validity --sparse   # T4 only, the direct read
+python3 -m mustafar.tests.validity   # every stage, every available leg
+python3 -m mustafar.tests.validity --legs sparse       # the sparse leg only
+python3 -m mustafar.tests.validity --write-baseline    # pin the regression gate
 python3 -m mustafar.tests.speed      # native | packed/triton | packed/fused
 ```
 

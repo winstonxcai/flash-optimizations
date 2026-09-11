@@ -16,8 +16,6 @@ except ImportError:
 HAS_CUDA = torch is not None and torch.cuda.is_available()
 HAS_TRITON = importlib.util.find_spec("triton") is not None
 HAS_SGLANG = importlib.util.find_spec("sglang") is not None
-HAS_FUSED = importlib.util.find_spec("mustafar._fused") is not None
-HAS_SPARSE = importlib.util.find_spec("mustafar._sparse") is not None
 
 
 @unittest.skipIf(torch is None, "requires PyTorch")
@@ -90,15 +88,6 @@ class KernelTests(unittest.TestCase):
         from .speed import run_speed
 
         run_speed()
-
-    @unittest.skipUnless(
-        HAS_CUDA and HAS_TRITON and HAS_SGLANG and HAS_SPARSE,
-        "requires CUDA, Triton, SGLang, and the sparse MLA extension",
-    )
-    def test_sparse_t4(self):
-        from .validity import run_sparse_t4
-
-        run_sparse_t4()
 
 
 if __name__ == "__main__":
