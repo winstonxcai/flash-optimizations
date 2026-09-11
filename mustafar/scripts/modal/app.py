@@ -219,9 +219,10 @@ def validate_fused() -> str:
     volumes={str(RESULTS_ROOT): results_volume},
 )
 def bench_kernels(suite: str = "speed") -> str:
-    """H100: native | packed/triton | packed/fused timings on one workload grid.
+    """H100: the stage x leg timings -- native, packed.bf16, packed.native,
+    fused, sparse -- over one workload grid.
 
-    The three legs live in one module now, so the legacy ``packed``/``fused``
+    The candidate legs live in one module now, so the legacy ``packed``/``fused``
     suite names all select it.
     """
     modules = {

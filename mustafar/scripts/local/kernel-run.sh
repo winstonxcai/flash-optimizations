@@ -83,10 +83,12 @@ RUN_TIMEOUT=${RUN_TIMEOUT:-1800}
 echo "== ${CONTEXT}  project=${GPUQ_PROJECT:-mustafar}  devices=${DEVICES}"
 echo "== image ${IMAGE}   out ${OUT}   timeout ${RUN_TIMEOUT}s"
 
-# The validity leg is every stage across every leg against native; the speed leg
-# is the same comparison timed against the reassembling path. pipefail so a failed
-# assertion in validity cannot be masked by `tee` and let speed run on a kernel
-# that just failed.
+# validity asserts every leg against native, stage by stage; speed times the same
+# stage x leg matrix instead, five columns wide, each stage taking its ratios
+# against a named bar. Both pin their own flags per leg, so neither depends on the
+# environment this script happens to pass down. pipefail so a failed assertion in
+# validity cannot be masked by `tee` and let speed run on a kernel that just
+# failed.
 INNER="set -eo pipefail"
 if [ "$MODE" != "--speed-only" ]; then
   INNER="$INNER

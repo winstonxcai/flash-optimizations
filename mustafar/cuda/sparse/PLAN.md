@@ -187,10 +187,12 @@ harness, the workloads and the tolerances:
   decode bug; see the tolerance section of [tests/README.md](../../tests/README.md)
   for which constant bounds which stage. The sparse leg has no dense row output,
   so its `rows` stage uses one-hot probe scores covering all 512 coordinates.
-- **Speed:** one `cuda/sparse` row in the existing three-leg table
-  (native | packed/triton | packed/fused) — the direct-read leg must be
-  compared against the reassemble-then-`flash_mla` path on identical input, which
-  is the number that justifies the whole exercise.
+- **Speed:** the `sparse` column of the stage x leg table
+  (`native | packed.bf16 | packed.native | fused | sparse`) — the direct-read leg
+  must be compared against the reassemble-then-`flash_mla` path on identical
+  input, which is the number that justifies the whole exercise. The comparison is
+  reported, never asserted, until the softmax moves into the kernel (v2 below): as
+  wired, v1 is expected to lose to the reassembling path.
 - **CPU:** `python -m unittest mustafar.tests.test_patching` offline (passes
   today, 12 tests); the new gate's validation logic is pure Python and gets a
   CPU test alongside the existing backend-selection tests.

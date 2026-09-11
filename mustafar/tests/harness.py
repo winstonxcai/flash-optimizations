@@ -1,12 +1,13 @@
-"""Shared workloads, geometry, native references, and timing for the kernel suites.
+"""Shared workloads, geometry, native references, legs, and timing.
 
 No server is booted for these suites, so this module is the single source of
 dimensional truth: every CSA dimension is imported from :mod:`mustafar.config`
 and the serving-side page geometry is pinned here rather than re-literalised.
 
-Tolerances live here and nowhere else. Do not inline a numeric tolerance in a
-suite -- add a named constant below so the value has one home and one
-justification.
+Tolerances and the leg vocabulary live here and nowhere else. Do not inline a
+numeric tolerance in a suite -- add a named constant below so the value has one
+home and one justification -- and do not name a leg outside :data:`LEGS`, for the
+same reason.
 
   * NoPE fp8 codes and UE8M0 scales are **bit-exact** (``torch.equal``): the
     native store and the packed store quantise them identically.
@@ -18,8 +19,11 @@ justification.
 
 from __future__ import annotations
 
+import contextlib
+import os
 from dataclasses import dataclass
 from statistics import median
+from unittest.mock import patch
 
 import torch
 
@@ -54,6 +58,123 @@ ATTN_RTOL = 1.0e-3
 # TopMag50, not a kernel defect.
 QUALITY_ATOL = 1.0
 QUALITY_RTOL = 1.0
+
+
+# --- legs (single source of truth) -------------------------------------------
+# One vocabulary for both suites. ``native`` is not a candidate: it is the bar the
+# candidates are held to (validity) or measured against (speed), so it is named
+# separately from the list of things being compared.
+NATIVE = "native"
+
+# Candidate legs, in report order. ``packed`` appears as its two real entry points
+# rather than as one column: ``packed.bf16`` renders dense BF16 for the
+# multi-token-extend call site, ``packed.native`` renders the 584-byte native
+# layout for the decode/small-extend one. Two Triton operators with different
+# costs, not two names for one thing.
+LEGS = ("packed.bf16", "packed.native", "fused", "sparse")
+
+# Report order: the bar first, then the candidates.
+COLUMNS = (NATIVE, *LEGS)
+
+# Every flag a leg needs, and the all-off base they are written against. A leg
+# states exactly what it turns on, so nothing is inherited by accident: the
+# launcher exports the packed flags for every module it drives, and a leg whose
+# config came from the ambient environment would be a different leg under a
+# direct run than under the launcher.
+OFF_ENV = {
+    "SGLANG_OPT_TOPMAG": "0",
+    "SGLANG_OPT_TOPMAG_PACKED": "0",
+    "SGLANG_OPT_TOPMAG_FUSED": "0",
+    "SGLANG_OPT_TOPMAG_SPARSE": "0",
+}
+_PACKED_ENV = {
+    **OFF_ENV,
+    "SGLANG_OPT_TOPMAG": "1",
+    "KEEP": "0.5",
+    "SGLANG_OPT_TOPMAG_PACKED": "1",
+}
+# Keyed by column, ``native`` included: it is a leg with a configuration like any
+# other, and naming it here is what lets a caller dispatch on the leg rather than
+# special-casing the bar.
+LEG_ENV = {
+    NATIVE: OFF_ENV,
+    "packed.bf16": _PACKED_ENV,
+    "packed.native": _PACKED_ENV,
+    "fused": {**_PACKED_ENV, "SGLANG_OPT_TOPMAG_FUSED": "1"},
+    "sparse": {**_PACKED_ENV, "SGLANG_OPT_TOPMAG_SPARSE": "1"},
+}
+
+
+@contextlib.contextmanager
+def leg_env(leg: str):
+    """Pin the flags one leg needs, and prove the pinned set is a legal one.
+
+    ``validate_packed_static_config`` is what rejects the fused and sparse gates
+    together -- they rewrite the same c4 decode call site -- so running it here
+    rather than trusting the caller makes the mutual exclusion a runtime fact
+    instead of a comment.
+    """
+    with patch.dict(os.environ, LEG_ENV[leg]):
+        config.validate_packed_static_config()
+        yield
+
+
+def _fused_available() -> bool:
+    from ..fused import fused_available
+
+    return bool(fused_available())
+
+
+def _sparse_available() -> bool:
+    from ..sparse import sparse_available
+
+    return bool(sparse_available())
+
+
+def leg_available(leg: str) -> bool:
+    """Whether a candidate leg's CUDA extension is built.
+
+    ``packed`` is the leg that can never regress and the leg that localises a
+    failure, so it has to stay reachable with both extensions absent -- if it
+    quietly became conditional on one being built, neither property would hold.
+    """
+    if leg == "fused":
+        return _fused_available()
+    if leg == "sparse":
+        return _sparse_available()
+    return True
+
+
+def available_legs() -> tuple[str, ...]:
+    """The candidate legs whose extension is present, in report order."""
+    return tuple(leg for leg in LEGS if leg_available(leg))
+
+
+def select_legs(legs: tuple[str, ...] | None) -> tuple[str, ...]:
+    """Resolve a requested leg subset against what is actually built.
+
+    ``None`` means every available candidate. The two ways a request can fail are
+    told apart so a caller does not have to parse one message to find out which:
+    an unknown name is a usage error (``ValueError``), an unbuilt one is a build
+    error (``RuntimeError``). The result is always in :data:`LEGS` order, and
+    ``native`` is never in it -- it is the bar, not a candidate.
+    """
+    available = available_legs()
+    if legs is None:
+        return available
+    # The bar is always run and never optional, so naming it is a usage error --
+    # reported as such rather than as an unknown name, since it is very much known.
+    if NATIVE in legs:
+        raise ValueError(
+            f"{NATIVE} is always run and cannot be selected; candidates: {list(LEGS)}"
+        )
+    unknown = [leg for leg in legs if leg not in LEGS]
+    if unknown:
+        raise ValueError(f"unknown legs: {unknown}; known: {list(LEGS)}")
+    unbuilt = [leg for leg in legs if leg not in available]
+    if unbuilt:
+        raise RuntimeError(f"selected legs are not built: {unbuilt}")
+    return tuple(leg for leg in LEGS if leg in legs)
 
 
 def native_page_stride(page_size: int = PAGE_SIZE) -> int:

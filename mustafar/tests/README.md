@@ -25,42 +25,62 @@ tests/
   test_patching.py          # patching.py machinery + real-anchor integration
   test_backend_selection.py # entrypoint contract (flags pinned, env restored)
   test_harness.py           # the case grid perturbs what it claims to
+  test_speed.py             # the speed table's stages, legs and contrasts agree
   test_numerics.py          # registration only; skip guards live here
   test_bench_serving.py     # serving benchmark, unchanged
   test_fused.py             # CPU image-build gate (ABI + E4M3 decode)
-  harness.py                # workloads, geometry, native refs, patterns, timing
+  harness.py                # workloads, geometry, native refs, legs, patterns, timing
   validity.py               # run_reference / run_packed_reference / run_validity
   speed.py                  # run_speed
   fixtures/
 ```
 
-`validity.py`'s GPU entrypoint is one function, `run_validity`, over four **legs**
-and four **stages**. The legs are `native` (the bar: stock SGLang with every
-`SGLANG_OPT_TOPMAG*` flag off, no mustafar code, no Triton), `packed.bf16`,
-`packed.native`, `fused`, and `sparse`. The stages are `store`, `rows`,
-`attention`, and `pruning`. Each stage names the bar it compares against and
-asserts per leg, so a failure says which leg differs from native and at which
-stage. `--legs` narrows the candidate set; `native` is always evaluated.
+The **legs** are one vocabulary, declared once in `harness.py` so the two suites
+cannot drift apart. `native` is the bar — stock SGLang with every
+`SGLANG_OPT_TOPMAG*` flag off, no mustafar code, no Triton — and never a
+candidate. The candidates are `packed.bf16`, `packed.native`, `fused`, and
+`sparse`; `packed` appears as its two real entry points rather than as one column
+because they are two Triton operators with different costs (`packed.bf16` renders
+dense BF16 for the multi-token-extend call site, `packed.native` the 584-byte
+layout for the decode/small-extend one). `--legs` narrows the candidate set on
+either entrypoint; `native` is always run.
+
+`validity.py`'s GPU entrypoint is one function, `run_validity`, over four
+**stages** — `store`, `rows`, `attention`, `pruning` — asserting each leg against
+the bar at each one, so a failure says which leg differs from native and where.
+
+`speed.py`'s is `run_speed`, over `store`, `rows.dense_bf16`,
+`rows.native_layout`, and `attention`: validity's single `rows` stage split by
+the product each leg renders, because timing "the rows stage" would mean adding
+together two different operators. `speed.MATRIX` is the table as data — each
+stage names the legs it times with a note and the legs it cannot with the reason,
+so a column that is absent is reported as absent rather than silently missing.
+`pruning` is not timed: it is a correctness stage with no operator of its own.
+Each stage takes its ratios against a named bar, and `speed.CONTRASTS` names the
+comparisons the suite exists to answer; the ones that are asserted rather than
+merely reported say so, and say why.
 
 ## Entrypoint contract
 
 Every `run_*()` a test registers must:
 
 1. Pin the flags for the whole call, overriding whatever the ambient
-   environment holds. `validity` pins the **all-flags-off** base —
-   `native` is defined as stock SGLang — and each leg turns its own flags back
-   on inside a `validity._leg_env(leg)` block, which also runs
-   `config.validate_packed_static_config()` so the pinned set is proven legal
-   rather than assumed. `speed` pins the packed base
-   (`TOPMAG=1, KEEP=0.5, PACKED=1, FUSED=0`) directly.
+   environment holds. Both suites pin the **all-flags-off** base — `native` is
+   defined as stock SGLang — and each leg turns its own flags back on inside a
+   `harness.leg_env(leg)` block. That block also runs
+   `config.validate_packed_static_config()`, so the pinned set is proven legal
+   rather than assumed, and `harness.OFF_ENV` is the base every other pin is
+   written against: a leg states exactly what it turns on, and nothing is
+   inherited.
 2. Raise `RuntimeError` matching `"requires CUDA"` when
    `torch.cuda.is_available()` is false, **before** any allocation.
 3. Restore `os.environ` byte-exactly on success and on failure. (`patch.dict`
    gives you this; do not hand-roll it.)
 4. Be registered in `test_numerics.py` under the narrowest correct skip guard
    (`HAS_CUDA` / `HAS_TRITON` / `HAS_SGLANG`). Legs whose CUDA extension is not
-   built are discovered and skipped by `run_validity` itself, so no guard is
-   needed for `_fused` / `_sparse`.
+   built are left out by `harness.select_legs` when no `--legs` is given (and
+   rejected with a message when one is asked for by name), so no guard is needed
+   for `_fused` / `_sparse`.
 
 `test_backend_selection.py` enforces 1–3 mechanically over its entrypoint list,
 and checks each leg's pin is a legal configuration.
@@ -72,10 +92,13 @@ and checks each leg's pin is a legal configuration.
    and the keep-mask are perturbed). `TOPK` is fixed at 512 — no smaller select
    is a legal packed configuration.
 2. Add the check to `validity.py` (assert it) or `speed.py` (time it), as a stage
-   that names its bar.
+   that names its bar. A new **leg** is one entry in `harness.LEGS` plus its pin
+   in `harness.LEG_ENV`, and nothing else: both suites, the CSV columns, and the
+   contrast names derive from that list.
 3. If you added a pattern, assert in `test_harness.py` that it actually perturbs
    what it claims to. A pattern that silently reverts to `identity` adds no
-   coverage and nothing else will say so.
+   coverage and nothing else will say so. A stage or leg added to `speed.MATRIX`
+   is held to the same rule by `test_speed.py`.
 4. Register the entrypoint in `test_numerics.py` and add it to
    `test_backend_selection.py`'s list.
 
@@ -146,7 +169,8 @@ Direct, prints per-case JSON (and writes `speed.{json,csv}` when
 python3 -m mustafar.tests.validity   # every stage, every available leg
 python3 -m mustafar.tests.validity --legs sparse       # the sparse leg only
 python3 -m mustafar.tests.validity --write-baseline    # pin the regression gate
-python3 -m mustafar.tests.speed      # native | packed/triton | packed/fused
+python3 -m mustafar.tests.speed      # every stage, every available leg
+python3 -m mustafar.tests.speed --legs fused,sparse    # a subset of the candidates
 ```
 
 Package CLI equivalents: `python3 -m mustafar selftest` and

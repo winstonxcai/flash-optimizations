@@ -69,7 +69,6 @@ Direct run prints per-case JSON::
 
 from __future__ import annotations
 
-import contextlib
 import json
 import os
 from pathlib import Path
@@ -88,59 +87,10 @@ BASELINE = Path(__file__).resolve().parent / "fixtures" / "validity-baseline.jso
 
 STAGES = ("store", "rows", "attention", "pruning")
 
-# Candidate legs, in report order. ``native`` is deliberately absent: it is the bar
-# every one of these is compared against, never a candidate.
-LEGS = ("packed.bf16", "packed.native", "fused", "sparse")
-
-# The flags each leg needs. The entrypoint's own pin turns all four off, so a leg
-# states exactly what it turns back on and nothing is inherited by accident.
-_PACKED_ENV = {
-    "SGLANG_OPT_TOPMAG": "1",
-    "KEEP": "0.5",
-    "SGLANG_OPT_TOPMAG_PACKED": "1",
-    "SGLANG_OPT_TOPMAG_FUSED": "0",
-    "SGLANG_OPT_TOPMAG_SPARSE": "0",
-}
-LEG_ENV = {
-    "packed.bf16": _PACKED_ENV,
-    "packed.native": _PACKED_ENV,
-    "fused": {**_PACKED_ENV, "SGLANG_OPT_TOPMAG_FUSED": "1"},
-    "sparse": {**_PACKED_ENV, "SGLANG_OPT_TOPMAG_SPARSE": "1"},
-}
-
-
-@contextlib.contextmanager
-def _leg_env(leg: str):
-    """Pin the flags one leg needs, and prove the pinned set is a legal one.
-
-    ``validate_packed_static_config`` is what rejects the fused and sparse gates
-    together -- they rewrite the same c4 decode call site -- so running it here
-    rather than trusting the caller makes the mutual exclusion a runtime fact
-    instead of a comment.
-    """
-    with patch.dict(os.environ, LEG_ENV[leg]):
-        config.validate_packed_static_config()
-        yield
-
-
-def _fused_available() -> bool:
-    from ..fused import fused_available
-
-    return bool(fused_available())
-
-
-def _sparse_available() -> bool:
-    from ..sparse import sparse_available
-
-    return bool(sparse_available())
-
-
-def _leg_available(leg: str) -> bool:
-    if leg == "fused":
-        return _fused_available()
-    if leg == "sparse":
-        return _sparse_available()
-    return True
+# The candidate legs, in report order. ``native`` is deliberately absent: it is the
+# bar every one of these is compared against, never a candidate. The vocabulary
+# itself lives in harness.py, so both suites name the same legs in the same way.
+LEGS = harness.LEGS
 
 
 # --- storage reporting (moved from unit.py) ----------------------------------
@@ -422,7 +372,7 @@ def _read_rows(case: harness.Case, buffers, candidates) -> dict[str, torch.Tenso
             workspace = harness.native_workspace(
                 case, with_dense=leg == "packed.native"
             )
-            with _leg_env(leg):
+            with harness.leg_env(leg):
                 harness.packed_native(case, buffers, workspace)
                 rows[leg] = harness.workspace_dense(workspace)
     return rows
@@ -445,7 +395,7 @@ def _sparse_probe(case: harness.Case, buffers) -> torch.Tensor:
         case.batch, config.HEAD_DIM, harness.TOPK,
         dtype=torch.float32, device=case.device,
     )
-    with _leg_env("sparse"):
+    with harness.leg_env("sparse"):
         for base in range(0, config.HEAD_DIM, harness.HEAD_COUNT):
             dims = torch.arange(harness.HEAD_COUNT, device=case.device) + base
             probe_q, _ = harness.probe_query(case, dims)
@@ -488,7 +438,7 @@ def _leg_attention(case: harness.Case, leg: str, packed_rows, buffers, q, indice
     if leg == "sparse":
         from .. import sparse
 
-        with _leg_env("sparse"):
+        with harness.leg_env("sparse"):
             return sparse.c4_leg(
                 q, buffers.values, buffers.bitmaps, buffers.scales,
                 case.physical, case.raw, case.freqs, harness.SM_SCALE,
@@ -565,7 +515,7 @@ def _run_case(case: harness.Case, candidates) -> dict:
 
     # Both stores are fed the *same* kept-coordinate set: ``pack_rows`` applies
     # ``case.mask`` itself and native gets the masked latent.
-    with _leg_env("packed.bf16"):
+    with harness.leg_env("packed.bf16"):
         buffers = harness.packed_buffers(case)
     native_cache, locations = harness.native_store(case, case.masked_latent)
     native_rows = harness.native_gather(
@@ -661,17 +611,11 @@ def run_validity(
         raise RuntimeError("validity requires CUDA")
     device = torch.device("cuda")
 
-    available = tuple(leg for leg in LEGS if _leg_available(leg))
-    if legs is not None:
-        unknown = [leg for leg in legs if leg not in LEGS]
-        if unknown:
-            raise ValueError(f"unknown legs: {unknown}; known: {list(LEGS)}")
-        selected = tuple(leg for leg in LEGS if leg in legs)
-    else:
-        selected = available
-    absent = [leg for leg in selected if leg not in available]
-    if absent:
-        raise RuntimeError(f"selected legs are not built: {absent}")
+    # ``available`` is what was built; ``selected`` is what this run asked for,
+    # validated against it. Both are kept: the summary reports the first, the
+    # sweep runs the second.
+    available = harness.available_legs()
+    selected = harness.select_legs(legs)
 
     workloads = harness.WORKLOADS[:1] if sanitizer_case else harness.WORKLOADS
     cases = (
