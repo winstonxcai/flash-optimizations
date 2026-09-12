@@ -56,19 +56,24 @@ Reconstruction plus FlashMLA:
   and zero replay allocations passed. Compute Sanitizer reported zero errors.
 - L4 attention and pruning were skipped because FlashMLA sparse attention requires
   SM90a or newer; this is a hardware limitation, not a passing performance result.
-- H100 focused gate: two independent runs, changing selections, 128k-equivalent
-  input, graph replay, 10 warmups, and 50 samples per point. Values below are
-  p50 complete reconstruction-plus-attention latency in microseconds.
+- H100 focused gate: three independent runs, changing selections, 128k-equivalent
+  input, graph replay, 10 warmups, and 500 samples per point. Values below are
+  the mean of each run's p50 complete reconstruction-plus-attention latency in
+  microseconds.
 
 | Batch | Native | Fused | Optimized | Optimized vs fused | Optimized vs native |
 |---:|---:|---:|---:|---:|---:|
-| 15 | 31.5 | 49.5 | 39.9 | 19.5% faster | 26.8% slower |
-| 18 | 32.7 | 53.5 | 42.6 | 20.3% faster | 30.2% slower |
-| 21 | 34.8 | 58.1 | 45.6 | 21.5% faster | 31.2% slower |
+| 15 | 31.6 | 49.2 | 39.6 | 19.5% faster | 25.4% slower |
+| 18 | 32.9 | 52.9 | 42.1 | 20.5% faster | 27.7% slower |
+| 21 | 34.4 | 57.9 | 45.3 | 21.7% faster | 31.9% slower |
 
 The optimized kernel therefore passes the focused reconstruction gate: it beats
 the current fused adapter at all three target batches. It does not yet match
-native attention, so this result is not an end-to-end TPOT or serving claim.
+native attention, so this result is not an end-to-end TPOT or serving claim. The
+B15 complete-attention gain is just below the 20% investigation threshold, but
+it was stable across all three runs (19.5% average); reconstruction alone was
+46.8% faster there. This indicates dilution by fixed FlashMLA/readback work,
+not an unstable optimized kernel.
 
 ## Profiling result
 
