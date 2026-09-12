@@ -12,7 +12,7 @@
 #      Each leg boots with serve.sh inside the $CONTAINER (sources env.sh).
 #
 #   2) Standalone single-config measurement on the current host:
-#        MODEL_PATH=/checkpoint bash bench-serving.sh <native|packed|fused> \
+#        MODEL_PATH=/checkpoint bash bench-serving.sh <native|packed|fused|optimized> \
 #                                        <in> <out> <concurrency>
 #      One configuration per call, no container / env.sh dependency: self-boots
 #      one TP4 server with the report configuration (fp8 KV, mem-frac 0.88, 1M
@@ -48,7 +48,7 @@ die () { echo "FATAL: $*" >&2; exit 1; }
 help_usage () {
   cat <<'EOF'
 usage: bench-serving.sh <fair|max> <ctx> [C_fair]
-       bench-serving.sh <native|packed|fused> <in> <out> <concurrency>
+       bench-serving.sh <native|packed|fused|optimized> <in> <out> <concurrency>
 
   fair|max  report-grade dual-leg serving protocol inside the eval container
             (each leg boots with serve.sh; warm-up wave of C then 3 measured
@@ -56,7 +56,7 @@ usage: bench-serving.sh <fair|max> <ctx> [C_fair]
             [C_fair]; max = each leg at its own allocator ceiling.
             Results: <RESULTS_HOST>/serving/<mode>-ctx<ctx>-<ts>/.
 
-  native|packed|fused
+  native|packed|fused|optimized
             standalone single-config measurement on the current host: self-boots
             one TP4 server with the report configuration (fp8 KV, mem-frac
             0.88, 1M ctx, extended decode graphs), warm-up wave of
@@ -221,7 +221,7 @@ standalone_main () {  # $1=mode [$2=input $3=output $4=concurrency]
   mode=${1:-native}; input=${2:-32768}; output=${3:-2048}; conc=${4:-8}
   (( $# <= 4 )) || usage_err "expected at most 4 arguments (mode input output concurrency)"
   case "$mode" in
-    native|packed|fused) ;;
+    native|packed|fused|optimized) ;;
     *) usage_err "unknown mode '$mode'" ;;
   esac
   for n in "$input" "$output" "$conc"; do
@@ -246,11 +246,17 @@ standalone_main () {  # $1=mode [$2=input $3=output $4=concurrency]
   for name in ${!SGLANG_OPT_TOPMAG@} ${!KEEP@} XKV_TOPMAG_KEEP SGLANG_OPT_TOPMAG_PACKED_C4; do
     unset "$name" 2>/dev/null || true
   done
-  export SGLANG_OPT_TOPMAG=0 KEEP=1.0 SGLANG_OPT_TOPMAG_PACKED=0 SGLANG_OPT_TOPMAG_FUSED=0
+  export SGLANG_OPT_TOPMAG=0 KEEP=1.0 SGLANG_OPT_TOPMAG_PACKED=0 \
+    SGLANG_OPT_TOPMAG_FUSED=0 SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED=0
   if [ "$mode" != native ]; then
     export SGLANG_OPT_TOPMAG=1 KEEP=0.5 SGLANG_OPT_TOPMAG_PACKED=1
   fi
-  [ "$mode" != fused ] || export SGLANG_OPT_TOPMAG_FUSED=1
+  case "$mode" in
+    fused) export SGLANG_OPT_TOPMAG_FUSED=1 ;;
+    optimized)
+      export SGLANG_OPT_TOPMAG_FUSED=1 SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED=1
+      ;;
+  esac
 
   if curl -fsS --max-time 2 "http://127.0.0.1:$port/health" >/dev/null 2>&1; then
     die "a server is already running on port $port; set a different PORT"
@@ -303,6 +309,6 @@ MODE=${1:-}
 case "$MODE" in
   --help|-h) help_usage; exit 0 ;;
   fair|max) fairmax_main "$@" ;;
-  native|packed|fused) standalone_main "$@" ;;
+  native|packed|fused|optimized) standalone_main "$@" ;;
   *) usage_err "unknown mode '$MODE'" ;;
 esac

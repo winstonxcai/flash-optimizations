@@ -84,6 +84,18 @@ class MatrixTests(unittest.TestCase):
         self.assertEqual({leg for leg, _ in row.present}, set(harness.COLUMNS))
         self.assertEqual(row.absent, ())
 
+    def test_focused_grid_is_128k_equivalent_at_serving_batches(self):
+        self.assertEqual(
+            [workload.batch for workload in speed.FOCUSED_128K_WORKLOADS],
+            [15, 18, 21],
+        )
+        self.assertTrue(
+            all(
+                workload.context_rows == 32768
+                for workload in speed.FOCUSED_128K_WORKLOADS
+            )
+        )
+
 
 class ContrastTests(unittest.TestCase):
     def test_every_contrast_resolves_to_legs_its_stage_times(self):
@@ -100,7 +112,7 @@ class ContrastTests(unittest.TestCase):
         for contrast in speed.CONTRASTS:
             self.assertTrue(contrast.reason.strip(), contrast.label)
 
-    def test_only_the_fused_kernel_is_gated(self):
+    def test_only_fused_reconstruction_improvements_are_gated(self):
         """``sparse_over_packed.bf16`` is reported, never asserted.
 
         V1 runs its softmax in Python between two kernel launches, so it loses to
@@ -108,7 +120,13 @@ class ContrastTests(unittest.TestCase):
         asserting the other direction would assert something false.
         """
         gated = {contrast.label for contrast in speed.CONTRASTS if contrast.gate}
-        self.assertEqual(gated, {"fused_over_packed.native"})
+        self.assertEqual(
+            gated,
+            {
+                "fused_over_packed.native",
+                "fused.optimized_over_fused",
+            },
+        )
 
 
 class LegEnvTests(unittest.TestCase):
@@ -160,8 +178,16 @@ class CellTests(unittest.TestCase):
             native_rows=rows(),
             bf16_rows=rows(),
             dense_rows=rows(),
-            workspaces={"packed.native": None, "fused": None},
-            workspace_locations={"packed.native": None, "fused": None},
+            workspaces={
+                "packed.native": None,
+                "fused": None,
+                "fused.optimized": None,
+            },
+            workspace_locations={
+                "packed.native": None,
+                "fused": None,
+                "fused.optimized": None,
+            },
             q=None,
             indices=None,
         )

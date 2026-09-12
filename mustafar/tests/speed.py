@@ -1,10 +1,10 @@
 """Speed suite: every leg timed at every stage it has an operator, on one grid.
 
-The same four **legs** and the same stage names as
+The same candidate **legs** and the same stage names as
 :mod:`mustafar.tests.validity`, so a leg name means one thing across both suites:
 validity asks "does this leg match native", this asks "what does it cost".
 Columns are :data:`mustafar.tests.harness.COLUMNS` -- ``native`` first, then the
-four candidates -- and rows are :data:`STAGES`.
+candidates -- and rows are :data:`STAGES`.
 
 The table itself is :data:`MATRIX`, written as data so the prose and the code
 implementing it cannot drift: each row names the legs it times together with a
@@ -23,7 +23,7 @@ with the reason. Two rules hold everywhere in it:
     before timing starts.
 
 Every leg of the ``attention`` stage feeds the same consumer,
-``harness.c4_bar`` -> ``flash_mla_sparse_fwd``, so the five differ only in how
+``harness.c4_bar`` -> ``flash_mla_sparse_fwd``, so the legs differ only in how
 the rows are produced. That includes ``sparse``, which reads the 328-byte records
 directly; note that its softmax still runs in Python between the two kernel
 launches (the v1 wiring), so its figure is a v1 cost and not a kernel-only one.
@@ -113,6 +113,7 @@ MATRIX: tuple[Row, ...] = (
                 "this leg reads what it wrote",
             ),
             ("fused", "no fused store variant"),
+            ("fused.optimized", "no optimized fused store variant"),
             ("sparse", "the sparse kernel consumes packed rows and has no store"),
         ),
         note=(
@@ -134,6 +135,7 @@ MATRIX: tuple[Row, ...] = (
                 "rows.native_layout row",
             ),
             ("fused", "no fused variant of this product"),
+            ("fused.optimized", "no optimized fused variant of this product"),
             ("sparse", "no dense row output by construction"),
         ),
         note="the one genuine apples-to-apples decode pair",
@@ -147,6 +149,10 @@ MATRIX: tuple[Row, ...] = (
                 "unpack_gather_native with FUSED=0: the Triton gather, then a repack",
             ),
             ("fused", "unpack_gather_native with FUSED=1: the CUDA adapter"),
+            (
+                "fused.optimized",
+                "unpack_gather_native with FUSED_OPTIMIZED=1: the optimized CUDA adapter",
+            ),
         ),
         absent=(
             (
@@ -192,6 +198,10 @@ MATRIX: tuple[Row, ...] = (
                 "unpack_gather_native (FUSED=1) + dequant + flash_mla_sparse_fwd",
             ),
             (
+                "fused.optimized",
+                "optimized fused reconstruction + dequant + flash_mla_sparse_fwd",
+            ),
+            (
                 "sparse",
                 "sparse.c4_leg: the 328-byte records read directly, no reassembly",
             ),
@@ -207,6 +217,11 @@ MATRIX: tuple[Row, ...] = (
 
 STAGES = tuple(row.stage for row in MATRIX)
 
+FOCUSED_128K_WORKLOADS: tuple[harness.Workload, ...] = tuple(
+    harness.Workload(f"128k-b{batch}", batch, 32768)
+    for batch in (15, 18, 21)
+)
+
 # The comparisons this suite exists to answer. The gated one is the fused
 # kernel's whole justification; the other is the sparse kernel's, reported with
 # the measured ratio so a reader can see where v1 stands.
@@ -217,6 +232,20 @@ CONTRASTS: tuple[Contrast, ...] = (
         denominator="packed.native",
         gate=True,
         reason="the fused kernel exists to beat the Triton reconstruct it replaces",
+    ),
+    Contrast(
+        stage="rows.native_layout",
+        numerator="fused.optimized",
+        denominator="fused",
+        gate=True,
+        reason="the optimized kernel exists to beat the original fused adapter",
+    ),
+    Contrast(
+        stage="rows.native_layout",
+        numerator="fused.optimized",
+        denominator="packed.native",
+        gate=False,
+        reason="reported to keep the optimized adapter comparable with the Triton path",
     ),
     Contrast(
         stage="attention",
@@ -317,6 +346,7 @@ def _prepare(case: harness.Case) -> _Ctx:
         # would hide an allocation difference between the two.
         "packed.native": harness.native_workspace(case, with_dense=True),
         "fused": harness.native_workspace(case, with_dense=False),
+        "fused.optimized": harness.native_workspace(case, with_dense=False),
     }
 
     def rows() -> torch.Tensor:
@@ -458,6 +488,7 @@ def _cells(
         "rows.native_layout": {
             "packed.native": reconstruct("packed.native"),
             "fused": reconstruct("fused"),
+            "fused.optimized": reconstruct("fused.optimized"),
         },
         "attention": {
             harness.NATIVE: _then(native_rows, c4(ctx.native_rows)),
@@ -469,6 +500,11 @@ def _cells(
             ),
             "fused": _then(
                 reconstruct("fused"), read_back("fused"), c4(ctx.dense_rows)
+            ),
+            "fused.optimized": _then(
+                reconstruct("fused.optimized"),
+                read_back("fused.optimized"),
+                c4(ctx.dense_rows),
             ),
             "sparse": sparse_c4,
         },
@@ -558,14 +594,21 @@ def _contrast_value(contrast: Contrast, timings: dict) -> float | None:
     )
 
 
-def _check_gates(case: harness.Case, row: Row, regime: str, timings: dict) -> None:
+def _check_gates(
+    case: harness.Case,
+    row: Row,
+    regime: str,
+    timings: dict,
+    *,
+    gate_workload: bool,
+) -> None:
     """Assert the gated contrasts, at the point serving actually runs them.
 
     The smallest workload in graph mode: that is the regime serving captures, and
     it is where the kernels these gates compare get deployed. A gate that held
     only at some larger batch would not be saying anything useful.
     """
-    if regime != "graph" or case.workload.name != harness.WORKLOADS[0].name:
+    if regime != "graph" or not gate_workload:
         return
     for contrast in CONTRASTS:
         if contrast.stage != row.stage or not contrast.gate:
@@ -657,7 +700,11 @@ def _write(records: list[dict[str, object]], summary: dict[str, object]) -> None
 
 
 @patch.dict(os.environ, **harness.OFF_ENV)
-def run_speed(*, legs: tuple[str, ...] | None = None) -> dict[str, object]:
+def run_speed(
+    *,
+    legs: tuple[str, ...] | None = None,
+    focused_128k: bool = False,
+) -> dict[str, object]:
     """Time every selected leg at every stage :data:`MATRIX` gives it an operator.
 
     The all-flags-off base is pinned for the whole call and each leg's own flags
@@ -669,6 +716,7 @@ def run_speed(*, legs: tuple[str, ...] | None = None) -> dict[str, object]:
         raise RuntimeError("speed requires CUDA")
 
     available = harness.available_legs()
+    workloads = FOCUSED_128K_WORKLOADS if focused_128k else harness.WORKLOADS
     # The bar is always timed: it is what every ratio in the table is taken
     # against, so a table without it could not be read.
     selected = (harness.NATIVE, *harness.select_legs(legs))
@@ -681,7 +729,7 @@ def run_speed(*, legs: tuple[str, ...] | None = None) -> dict[str, object]:
     warmup, repeats = 10, 50
     results: list[dict[str, object]] = []
 
-    for workload in harness.WORKLOADS:
+    for workload in workloads:
         case = harness.build_case(workload, torch.device("cuda"))
         ctx = _prepare(case)
         cells = _cells(ctx, ops, selected)
@@ -705,7 +753,15 @@ def run_speed(*, legs: tuple[str, ...] | None = None) -> dict[str, object]:
                         )
                     if reason:
                         fallbacks[leg] = reason
-                _check_gates(case, row, regime, timings)
+                _check_gates(
+                    case,
+                    row,
+                    regime,
+                    timings,
+                    gate_workload=(
+                        focused_128k or case.workload.name == workloads[0].name
+                    ),
+                )
                 record = _record(case, row, regime, timings, fallbacks, absent)
                 results.append(record)
                 print(json.dumps(record, sort_keys=True), flush=True)
@@ -715,7 +771,8 @@ def run_speed(*, legs: tuple[str, ...] | None = None) -> dict[str, object]:
     serving = [
         record
         for record in results
-        if record["workload"] == harness.WORKLOADS[0].name
+        if workloads
+        and record["workload"] == workloads[0].name
         and record["regime"] == "graph"
     ]
     summary = {
@@ -754,5 +811,13 @@ if __name__ == "__main__":
         help="comma-separated subset of "
         f"{','.join(harness.LEGS)} (default: all available)",
     )
+    parser.add_argument(
+        "--focused-128k",
+        action="store_true",
+        help="run the 128k-equivalent B15/B18/B21 comparison grid",
+    )
     args = parser.parse_args()
-    run_speed(legs=tuple(args.legs.split(",")) if args.legs else None)
+    run_speed(
+        legs=tuple(args.legs.split(",")) if args.legs else None,
+        focused_128k=args.focused_128k,
+    )

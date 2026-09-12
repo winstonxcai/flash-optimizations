@@ -71,7 +71,7 @@ NATIVE = "native"
 # multi-token-extend call site, ``packed.native`` renders the 584-byte native
 # layout for the decode/small-extend one. Two Triton operators with different
 # costs, not two names for one thing.
-LEGS = ("packed.bf16", "packed.native", "fused", "sparse")
+LEGS = ("packed.bf16", "packed.native", "fused", "fused.optimized", "sparse")
 
 # Report order: the bar first, then the candidates.
 COLUMNS = (NATIVE, *LEGS)
@@ -85,6 +85,7 @@ OFF_ENV = {
     "SGLANG_OPT_TOPMAG": "0",
     "SGLANG_OPT_TOPMAG_PACKED": "0",
     "SGLANG_OPT_TOPMAG_FUSED": "0",
+    "SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED": "0",
     "SGLANG_OPT_TOPMAG_SPARSE": "0",
 }
 _PACKED_ENV = {
@@ -101,6 +102,11 @@ LEG_ENV = {
     "packed.bf16": _PACKED_ENV,
     "packed.native": _PACKED_ENV,
     "fused": {**_PACKED_ENV, "SGLANG_OPT_TOPMAG_FUSED": "1"},
+    "fused.optimized": {
+        **_PACKED_ENV,
+        "SGLANG_OPT_TOPMAG_FUSED": "1",
+        "SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED": "1",
+    },
     "sparse": {**_PACKED_ENV, "SGLANG_OPT_TOPMAG_SPARSE": "1"},
 }
 
@@ -125,6 +131,12 @@ def _fused_available() -> bool:
     return bool(fused_available())
 
 
+def _optimized_fused_available() -> bool:
+    from ..fused import optimized_fused_available
+
+    return bool(optimized_fused_available())
+
+
 def _sparse_available() -> bool:
     from ..sparse import sparse_available
 
@@ -140,6 +152,8 @@ def leg_available(leg: str) -> bool:
     """
     if leg == "fused":
         return _fused_available()
+    if leg == "fused.optimized":
+        return _optimized_fused_available()
     if leg == "sparse":
         return _sparse_available()
     return True
@@ -581,9 +595,10 @@ def packed_dense(case: Case, buffers, output: torch.Tensor | None = None) -> tor
 def packed_native(case: Case, buffers, workspace) -> torch.Tensor:
     """Materialise the native page layout the FlashMLA consumer reads.
 
-    Dispatches to the fused CUDA adapter when ``SGLANG_OPT_TOPMAG_FUSED=1``
-    (see :func:`mustafar.packed.unpack_gather_native`), so the same call drives
-    both the Triton and fused legs.
+    Dispatches to the selected fused CUDA adapter when
+    ``SGLANG_OPT_TOPMAG_FUSED=1`` (see
+    :func:`mustafar.packed.unpack_gather_native`), so the same call drives the
+    Triton, baseline fused, and optimized fused legs.
     """
     from ..packed import unpack_gather_native
 

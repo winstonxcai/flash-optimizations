@@ -24,7 +24,13 @@ from . import harness
 # The base both entrypoints pin: every gate off. Spelled once, because the two
 # entrypoints pinning different bases is exactly the drift this file exists to
 # catch -- a leg timed under an inherited flag would be a different leg.
-ALL_OFF = {"topmag": False, "packed": False, "fused": False, "sparse": False}
+ALL_OFF = {
+    "topmag": False,
+    "packed": False,
+    "fused": False,
+    "optimized_fused": False,
+    "sparse": False,
+}
 
 # entrypoint -> the flags it must have pinned at the CUDA guard, overriding the
 # hostile ambient environment the test installs.
@@ -41,6 +47,9 @@ class BackendSelectionTests(unittest.TestCase):
                 self.assertEqual(config.topmag_enabled(), ALL_OFF["topmag"])
                 self.assertEqual(config.packed_enabled(), ALL_OFF["packed"])
                 self.assertEqual(config.fused_enabled(), ALL_OFF["fused"])
+                self.assertEqual(
+                    config.optimized_fused_enabled(), ALL_OFF["optimized_fused"]
+                )
                 self.assertEqual(config.sparse_enabled(), ALL_OFF["sparse"])
                 return False  # Stop before any GPU allocation.
 
@@ -49,6 +58,7 @@ class BackendSelectionTests(unittest.TestCase):
                 patch.dict(
                     os.environ,
                     SGLANG_OPT_TOPMAG_FUSED="1",
+                    SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED="1",
                     SGLANG_OPT_TOPMAG_PACKED="0",
                     SGLANG_OPT_TOPMAG="0",
                     SGLANG_OPT_TOPMAG_SPARSE="1",
@@ -72,6 +82,7 @@ class BackendSelectionTests(unittest.TestCase):
                 self.assertFalse(config.topmag_enabled())
                 self.assertFalse(config.packed_enabled())
                 self.assertFalse(config.fused_enabled())
+                self.assertFalse(config.optimized_fused_enabled())
                 self.assertFalse(config.sparse_enabled())
 
     def test_candidate_leg_pins_are_legal(self):
@@ -83,9 +94,24 @@ class BackendSelectionTests(unittest.TestCase):
                 self.assertTrue(config.packed_enabled())
                 self.assertEqual(config.topmag_keep(), 0.5)
 
+    def test_optimized_fused_pin_selects_only_the_optimized_fused_path(self):
+        with harness.leg_env("fused.optimized"):
+            self.assertTrue(config.fused_enabled())
+            self.assertTrue(config.optimized_fused_enabled())
+            self.assertFalse(config.sparse_enabled())
+
+    def test_optimized_fused_requires_fused(self):
+        values = {
+            **harness.OFF_ENV,
+            "SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED": "1",
+        }
+        with patch.dict(os.environ, values):
+            with self.assertRaisesRegex(RuntimeError, "requires.*FUSED=1"):
+                config.validate_packed_static_config()
+
     def test_no_leg_pins_both_c4_gates(self):
         """The fused and sparse switches rewrite the same decode call site."""
-        for leg in ("fused", "sparse"):
+        for leg in ("fused", "fused.optimized", "sparse"):
             with self.subTest(leg=leg), harness.leg_env(leg):
                 self.assertNotEqual(
                     config.fused_enabled(), config.sparse_enabled()
@@ -106,6 +132,9 @@ class BackendSelectionTests(unittest.TestCase):
                 ),
                 patch.object(validity.harness, "WORKLOADS", ()),
                 patch.object(harness, "_fused_available", return_value=False),
+                patch.object(
+                    harness, "_optimized_fused_available", return_value=False
+                ),
                 patch.object(harness, "_sparse_available", return_value=False),
                 patch("builtins.print"),
             ):
@@ -161,11 +190,13 @@ class BackendSelectionTests(unittest.TestCase):
         """
         with (
             patch.object(harness, "_fused_available", return_value=False),
+            patch.object(harness, "_optimized_fused_available", return_value=False),
             patch.object(harness, "_sparse_available", return_value=False),
         ):
             self.assertTrue(harness.leg_available("packed.bf16"))
             self.assertTrue(harness.leg_available("packed.native"))
             self.assertFalse(harness.leg_available("fused"))
+            self.assertFalse(harness.leg_available("fused.optimized"))
             self.assertFalse(harness.leg_available("sparse"))
 
     def test_leg_selection_rejects_an_unknown_leg(self):
@@ -178,9 +209,17 @@ class BackendSelectionTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "not built"):
                 harness.select_legs(("fused",))
 
+    def test_leg_selection_rejects_an_unbuilt_optimized_fused_leg(self):
+        with patch.object(
+            harness, "_optimized_fused_available", return_value=False
+        ):
+            with self.assertRaisesRegex(RuntimeError, "not built"):
+                harness.select_legs(("fused.optimized",))
+
     def test_leg_selection_defaults_to_every_available_candidate(self):
         with (
             patch.object(harness, "_fused_available", return_value=False),
+            patch.object(harness, "_optimized_fused_available", return_value=False),
             patch.object(harness, "_sparse_available", return_value=False),
         ):
             self.assertEqual(
@@ -191,6 +230,7 @@ class BackendSelectionTests(unittest.TestCase):
         """Request order is not report order, and the bar is never in the result."""
         with (
             patch.object(harness, "_fused_available", return_value=True),
+            patch.object(harness, "_optimized_fused_available", return_value=True),
             patch.object(harness, "_sparse_available", return_value=True),
         ):
             self.assertEqual(

@@ -1,6 +1,6 @@
 """Validity suite: every kernel leg held to native, stage by stage.
 
-Four **legs**, four **stages**, over a case grid built so that it can fail.
+Five candidate **legs**, four **stages**, over a case grid built so that it can fail.
 
 Legs (:data:`LEGS`) -- one column each, matching the two the report already names
 (Native, stock 584-B; Packed, ``mustafar packed-328``) plus the two CUDA
@@ -25,6 +25,9 @@ extensions under test:
                    twice), so the two are compared only through their shared bar.
   ``fused``        ``mustafar._fused``, replacing ``packed.native``. Needs
                    ``mustafar._fused``.
+  ``fused.optimized`` the retained optimized fused implementation, selected by
+                   ``SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED=1`` and compared through
+                   the same native-layout and attention bars as ``fused``.
   ``sparse``       ``mustafar._sparse``, reading 328-byte records directly with
                    no reassembly. Needs ``mustafar._sparse``. Single-token decode
                    only: the gate is ``q.shape[1] == 1 and not _is_sm120``
@@ -368,7 +371,7 @@ def _read_rows(case: harness.Case, buffers, candidates) -> dict[str, torch.Tenso
         if leg == "packed.bf16":
             rows[leg] = harness.packed_dense(case, buffers)
             continue
-        if leg in ("packed.native", "fused"):
+        if leg in ("packed.native", "fused", "fused.optimized"):
             workspace = harness.native_workspace(
                 case, with_dense=leg == "packed.native"
             )
@@ -590,6 +593,7 @@ def _run_case(case: harness.Case, candidates) -> dict:
     SGLANG_OPT_TOPMAG="0",
     SGLANG_OPT_TOPMAG_PACKED="0",
     SGLANG_OPT_TOPMAG_FUSED="0",
+    SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED="0",
     SGLANG_OPT_TOPMAG_SPARSE="0",
 )
 def run_validity(

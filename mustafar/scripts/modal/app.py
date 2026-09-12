@@ -140,7 +140,12 @@ def bench_serving(
 
 
 def _kernel_run(
-    modules: list[str], *, kind: str, timeout: int, sanitizer: bool = False
+    modules: list[str],
+    *,
+    kind: str,
+    timeout: int,
+    sanitizer: bool = False,
+    arguments: list[str] | None = None,
 ) -> str:
     """Keep model-free kernel checks separate from serving."""
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -159,7 +164,10 @@ def _kernel_run(
         MUSTAFAR_RESULTS_DIR=str(directory),
         MUSTAFAR_FUSED_RESULTS_DIR=str(directory),
     )
-    commands = [[sys.executable, "-m", module] for module in modules]
+    module_arguments = arguments or []
+    commands = [
+        [sys.executable, "-m", module, *module_arguments] for module in modules
+    ]
     if sanitizer:
         commands.append(
             [
@@ -171,6 +179,7 @@ def _kernel_run(
                 sys.executable,
                 "-m",
                 modules[-1],
+                *module_arguments,
                 "--sanitizer-case",
             ]
         )
@@ -216,14 +225,14 @@ def validate_fused() -> str:
     """L4: fused adapter correctness, graph/stream checks, and memcheck.
 
     The sanitizer pass runs the same entrypoint narrowed to the smallest workload
-    at the default pattern, with every available leg rather than the fused one
-    alone; ``legs`` in the printed summary says which were actually built.
+    at the default pattern and the two fused implementations.
     """
     return _kernel_run(
         ["mustafar.tests.validity"],
         kind="validate-packed-fused",
         timeout=1700,
         sanitizer=True,
+        arguments=["--legs", "fused,fused.optimized"],
     )
 
 
@@ -234,7 +243,7 @@ def validate_fused() -> str:
     retries=0,
     volumes={str(RESULTS_ROOT): results_volume},
 )
-def bench_kernels(suite: str = "speed") -> str:
+def bench_kernels(suite: str = "speed", focused_128k: bool = False) -> str:
     """H100: the stage x leg timings -- native, packed.bf16, packed.native,
     fused, sparse -- over one workload grid.
 
@@ -248,4 +257,14 @@ def bench_kernels(suite: str = "speed") -> str:
     }
     if suite not in modules:
         raise ValueError(f"suite must be one of {tuple(modules)}")
-    return _kernel_run([modules[suite]], kind="bench-speed", timeout=1700)
+    arguments = []
+    if suite == "fused":
+        arguments.extend(["--legs", "fused,fused.optimized"])
+    if focused_128k:
+        arguments.append("--focused-128k")
+    return _kernel_run(
+        [modules[suite]],
+        kind="bench-speed-128k" if focused_128k else "bench-speed",
+        timeout=1700,
+        arguments=arguments,
+    )
