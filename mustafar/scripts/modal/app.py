@@ -18,7 +18,23 @@ MODEL_DIR = MODEL_ROOT / "DeepSeek-V4-Flash-0731"
 RESULTS_ROOT = Path("/results")
 SGLANG_ROOT = Path("/sgl-workspace/sglang-lowrank")
 REMOTE_REPO = Path("/opt/mustafar/flash-optimizations")
-REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _repo_root() -> Path:
+    """Resolve the repository locally and from Modal's mounted /root/app.py."""
+    candidates = (
+        Path.cwd(),
+        Path(__file__).resolve().parent,
+        REMOTE_REPO,
+    )
+    for candidate in candidates:
+        for root in (candidate, *candidate.parents):
+            if (root / "mustafar").is_dir():
+                return root
+    return REMOTE_REPO
+
+
+REPO_ROOT = _repo_root()
 
 app = modal.App("mustafar")
 model_volume = modal.Volume.from_name("deepseek-v4-flash-0731", create_if_missing=True)
