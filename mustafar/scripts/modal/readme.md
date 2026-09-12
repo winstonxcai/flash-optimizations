@@ -7,7 +7,7 @@ matrix scheduler, or auto-concurrency logic. Two interfaces in the one file:
 - `bench-serving.sh <fair|max> <ctx> [C_fair]` — report-grade dual-leg protocol
   on the local H100 box: each leg boots inside the eval container via `serve.sh`
   (`env.sh`).
-- `bench-serving.sh <native|packed|fused> <in> <out> <concurrency>` — standalone
+- `bench-serving.sh <native|packed|fused|optimized> <in> <out> <concurrency>` — standalone
   single-config measurement that self-boots its own server on the current host;
   this is the interface Modal drives and the rest of this page documents.
 
@@ -21,7 +21,8 @@ bash mustafar/scripts/local/bench-serving.sh packed 32768 2048 8
 ```
 
 The four arguments are **mode, input tokens, output tokens, concurrency**.
-Modes: `native`, `packed`, `fused`. Run the command separately for each
+Modes: `native`, `packed`, `fused`, and `optimized`. `optimized` enables the
+opt-in optimized fused CUDA adapter. Run the command separately for each
 configuration. Defaults: native, 32k input, 2,048 output, concurrency 8
 (`concurrency` ≤ 136, the extended decode-graph coverage cap). `MODEL_PATH`
 is required.
@@ -68,7 +69,7 @@ MODAL_PROFILE=your-profile modal run --detach mustafar/scripts/modal/app.py::ben
 ```
 
 Modal wraps the shell command in a 60-minute timeout by default.
-Run separate calls for native and fused. No account is automatically
+Run separate calls for native, fused, and optimized. No account is automatically
 selected. Matching benchmark code does not eliminate differences in hardware,
 software, or environment settings.
 
