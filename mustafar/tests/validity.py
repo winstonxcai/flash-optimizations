@@ -39,14 +39,15 @@ Stages (:data:`STAGES`) -- each asks one question and names the bar it uses:
   ``store``      native store vs the packed store, both fed the *same* kept set.
                  NoPE FP8 codes and UE8M0 scales bit-exact, and the packed bitmap
                  must equal the input mask exactly.
-  ``rows``       each leg's row readout vs :func:`harness.native_gather`. The 448
-                 NoPE dims bit-exact, the 64 RoPE dims bounded by
-                 ``TAIL_ATOL``/``TAIL_RTOL``. The sparse leg has no dense row
-                 output, so instead of a row it reports one-hot probe scores
-                 covering all 512 coordinates.
-  ``attention``  each leg's c4 ``(o, lse)`` vs native rows through
-                 ``flash_mla_sparse_fwd``. ``o`` and ``lse`` are asserted
-                 *separately* under ``ATTN_ATOL``/``ATTN_RTOL`` -- a
+  ``rows``       packed/Triton readouts are compared with native storage. Fused
+                 CUDA readouts use packed.native as their implementation bar,
+                 separating reconstruction correctness from the intentional
+                 FP8-versus-BF16 RoPE-tail loss. NoPE bytes and scales are exact;
+                 the tail uses ``TAIL_ATOL``/``TAIL_RTOL``.
+  ``attention``  each leg's c4 ``(o, lse)`` through
+                 ``flash_mla_sparse_fwd``. Fused legs again use packed.native as
+                 their implementation bar; other legs use native rows. ``o`` and
+                 ``lse`` are asserted *separately* under ``ATTN_ATOL``/``ATTN_RTOL`` -- a
                  correct-lse/wrong-o split is the likeliest real failure and the
                  merged output of :func:`mustafar.sparse.merge_lse` would hide it.
   ``pruning``    how far each leg drifts from an *uncompressed* native answer --
@@ -312,9 +313,14 @@ def _native_codes_scales(
     page = (locations // page_size).to(torch.int64)
     within = (locations % page_size).to(torch.int64)
     device = locations.device
-    value_base = page * stride + within * config.NATIVE_RECORD_BYTES
+    native_value_bytes = config.NATIVE_RECORD_BYTES - config.PACKED_SCALE_BYTES
+    value_base = page * stride + within * native_value_bytes
     value_offs = torch.arange(config.NOPE_DIM, device=device)
-    scale_base = page * stride + page_size * config.NATIVE_RECORD_BYTES + within * 8
+    scale_base = (
+        page * stride
+        + page_size * native_value_bytes
+        + within * config.PACKED_SCALE_BYTES
+    )
     scale_offs = torch.arange(config.NOPE_DIM // config.TILE_SIZE, device=device)
     return (
         flat[value_base[:, None] + value_offs[None, :]],
@@ -358,7 +364,7 @@ def _store(case: harness.Case, buffers, native_cache, locations) -> dict:
     }
 
 
-def _read_rows(case: harness.Case, buffers, candidates) -> dict[str, torch.Tensor]:
+def _read_rows(case: harness.Case, buffers, candidates):
     """Dense BF16 ``(gather_rows, HEAD_DIM)`` rows for every leg that has them.
 
     ``packed.native`` gets the dense BF16 workspace because its Triton path
@@ -367,6 +373,7 @@ def _read_rows(case: harness.Case, buffers, candidates) -> dict[str, torch.Tenso
     regression, so this matches production dispatch exactly.
     """
     rows: dict[str, torch.Tensor] = {}
+    workspaces = {}
     for leg in candidates:
         if leg == "packed.bf16":
             rows[leg] = harness.packed_dense(case, buffers)
@@ -378,7 +385,42 @@ def _read_rows(case: harness.Case, buffers, candidates) -> dict[str, torch.Tenso
             with harness.leg_env(leg):
                 harness.packed_native(case, buffers, workspace)
                 rows[leg] = harness.workspace_dense(workspace)
-    return rows
+                workspaces[leg] = workspace
+    return rows, workspaces
+
+
+def _assert_native_layout_exact(case, actual, expected, leg: str) -> dict[str, bool]:
+    """Check the byte-level native-layout contract shared by Triton and CUDA."""
+    rows = case.workload.gather_rows
+    actual_codes, actual_scales = _native_codes_scales(
+        actual.native_bytes,
+        actual.temporary_indices.reshape(-1).to(torch.int64),
+        actual.page_size,
+    )
+    expected_codes, expected_scales = _native_codes_scales(
+        expected.native_bytes,
+        expected.temporary_indices.reshape(-1).to(torch.int64),
+        expected.page_size,
+    )
+    assert torch.equal(actual_codes[:rows], expected_codes[:rows]), (
+        f"[{_name(case)}/layout/{leg}] NoPE FP8 bytes differ from packed.native"
+    )
+    assert torch.equal(actual_scales[:rows], expected_scales[:rows]), (
+        f"[{_name(case)}/layout/{leg}] seven NoPE scales differ from packed.native"
+    )
+    return {"nope_bytes_exact": True, "nope_scales_exact": True}
+
+
+def _assert_workspaces_equivalent(case, actual, expected, stage: str) -> None:
+    """Require exact native NoPE layout and the documented BF16 tail tolerance."""
+    _assert_native_layout_exact(case, actual, expected, stage)
+    _split_error(
+        case,
+        stage,
+        "fused.optimized",
+        harness.workspace_dense(actual).float(),
+        harness.workspace_dense(expected).float(),
+    )
 
 
 def _sparse_probe(case: harness.Case, buffers) -> torch.Tensor:
@@ -476,13 +518,20 @@ def _attention(
     bar_lse,
     atol: float,
     rtol: float,
+    candidate_bars=None,
 ) -> dict:
     """Each candidate's ``(o, lse)`` against one bar, asserted separately."""
     live = _live_rows(case)
-    bar_o = bar_out.float()[live]
-    bar_l = bar_lse.float()[live]
     legs: dict[str, dict[str, float]] = {}
+    bars: dict[str, str] = {}
     for leg in candidates:
+        leg_bar_name, leg_bar_out, leg_bar_lse = (
+            candidate_bars.get(leg, (bar_name, bar_out, bar_lse))
+            if candidate_bars
+            else (bar_name, bar_out, bar_lse)
+        )
+        leg_bar_o = leg_bar_out.float()[live]
+        leg_bar_l = leg_bar_lse.float()[live]
         out, lse = _leg_attention(case, leg, leg_rows.get(leg), buffers, q, indices)
         out = out.float()[live]
         lse = lse.float()[live]
@@ -491,12 +540,15 @@ def _attention(
             f"o infinite={int((~torch.isfinite(out)).sum().item())} "
             f"lse infinite={int((~torch.isfinite(lse)).sum().item())}"
         )
-        out_abs = (out - bar_o).abs()
-        lse_abs = (lse - bar_l).abs()
-        for label, error, reference in (("o", out_abs, bar_o), ("lse", lse_abs, bar_l)):
+        out_abs = (out - leg_bar_o).abs()
+        lse_abs = (lse - leg_bar_l).abs()
+        for label, error, reference in (
+            ("o", out_abs, leg_bar_o),
+            ("lse", lse_abs, leg_bar_l),
+        ):
             limit = atol + rtol * reference.abs()
             assert bool((error <= limit).all()), (
-                f"[{_name(case)}/{bar_name}/{leg}] {label} diverged from "
+                f"[{_name(case)}/{leg_bar_name}/{leg}] {label} diverged from "
                 f"the bar; max_abs={float(error.max().item())} "
                 f"violations={int((error > limit).sum().item())} "
                 f"(atol={atol} rtol={rtol})"
@@ -505,14 +557,15 @@ def _attention(
             "o_max_abs": float(out_abs.max().item()),
             "lse_max_abs": float(lse_abs.max().item()),
         }
-    return {"bar": bar_name, "legs": legs}
+        bars[leg] = leg_bar_name
+    return {"bar": bar_name, "bars": bars, "legs": legs}
 
 
 def _name(case: harness.Case) -> str:
     return f"{case.workload.name}/{case.pattern}"
 
 
-def _run_case(case: harness.Case, candidates) -> dict:
+def _run_case(case: harness.Case, candidates, *, attention_supported: bool = True) -> dict:
     """Every stage for one case, each candidate held to its bar."""
     gathered = case.workload.gather_rows
 
@@ -529,12 +582,37 @@ def _run_case(case: harness.Case, candidates) -> dict:
     if "packed.bf16" in candidates:
         store["legs"]["packed.bf16"] = _store(case, buffers, native_cache, locations)
 
-    leg_rows = _read_rows(case, buffers, candidates)
-    rows = {"bar": "native", "legs": {}}
+    leg_rows, workspaces = _read_rows(case, buffers, candidates)
+
+    # Fused is an implementation replacement for the packed Triton native-layout
+    # reconstruction. Use that path as its exact semantic bar. Comparing either
+    # packed implementation directly with native BF16 storage instead measures
+    # the intentional FP8 RoPE-tail quantisation, not reconstruction correctness.
+    fused_legs = tuple(
+        leg for leg in candidates if leg in ("fused", "fused.optimized")
+    )
+    packed_bar_rows = None
+    packed_bar_workspace = None
+    if fused_legs:
+        packed_bar_workspace = harness.native_workspace(case, with_dense=True)
+        with harness.leg_env("packed.native"):
+            harness.packed_native(case, buffers, packed_bar_workspace)
+            packed_bar_rows = harness.workspace_dense(packed_bar_workspace)
+
+    rows = {"bar": "native", "bars": {}, "legs": {}}
     for leg, packed_rows in leg_rows.items():
+        row_bar_name = "packed.native" if leg in fused_legs else "native"
+        row_bar = packed_bar_rows if leg in fused_legs else native_rows
         rows["legs"][leg] = _split_error(
-            case, "rows", leg, packed_rows.float(), native_rows
+            case, "rows", leg, packed_rows.float(), row_bar
         )
+        rows["bars"][leg] = row_bar_name
+        if leg in fused_legs:
+            rows["legs"][leg].update(
+                _assert_native_layout_exact(
+                    case, workspaces[leg], packed_bar_workspace, leg
+                )
+            )
     if "sparse" in candidates:
         # Transposed into the same ``(..., HEAD_DIM)`` convention the dense row
         # readouts use, so NoPE and tail split on the same axis for every leg.
@@ -542,37 +620,55 @@ def _run_case(case: harness.Case, candidates) -> dict:
         bar_probe = native_rows.view(case.batch, harness.TOPK, config.HEAD_DIM)
         rows["legs"]["sparse"] = _split_error(case, "rows", "sparse", probe, bar_probe)
 
-    q = harness.c4_query(case)
-    indices = harness.flat_indices(case)
-    bar_out, _, bar_lse = harness.c4_bar(
-        q,
-        native_rows.view(gathered, 1, config.HEAD_DIM),
-        indices,
-        harness.SM_SCALE,
-    )
-    attention = _attention(
-        case, candidates, leg_rows, buffers, q, indices,
-        "native", bar_out, bar_lse, harness.ATTN_ATOL, harness.ATTN_RTOL,
-    )
+    if attention_supported:
+        q = harness.c4_query(case)
+        indices = harness.flat_indices(case)
+        bar_out, _, bar_lse = harness.c4_bar(
+            q,
+            native_rows.view(gathered, 1, config.HEAD_DIM),
+            indices,
+            harness.SM_SCALE,
+        )
+        candidate_bars = None
+        if fused_legs:
+            packed_bar_out, _, packed_bar_lse = harness.c4_bar(
+                q,
+                packed_bar_rows.view(gathered, 1, config.HEAD_DIM),
+                indices,
+                harness.SM_SCALE,
+            )
+            candidate_bars = {
+                leg: ("packed.native", packed_bar_out, packed_bar_lse)
+                for leg in fused_legs
+            }
+        attention = _attention(
+            case, candidates, leg_rows, buffers, q, indices,
+            "native", bar_out, bar_lse, harness.ATTN_ATOL, harness.ATTN_RTOL,
+            candidate_bars,
+        )
 
-    # The pruning stage's bar is native over the *untouched* latent -- the real
-    # all-flags-off answer -- so what it measures is TopMag50's cost, not a
-    # kernel's fidelity.
-    full_cache, full_locations = harness.native_store(case, case.latent)
-    full_rows = harness.native_gather(
-        case, harness.native_dense(full_cache, full_locations).float()
-    )
-    full_out, _, full_lse = harness.c4_bar(
-        q,
-        full_rows.view(gathered, 1, config.HEAD_DIM),
-        indices,
-        harness.SM_SCALE,
-    )
-    pruning = _attention(
-        case, candidates, leg_rows, buffers, q, indices,
-        "native-untouched", full_out, full_lse,
-        harness.QUALITY_ATOL, harness.QUALITY_RTOL,
-    )
+        # The pruning stage's bar is native over the *untouched* latent -- the real
+        # all-flags-off answer -- so what it measures is TopMag50's cost, not a
+        # kernel's fidelity.
+        full_cache, full_locations = harness.native_store(case, case.latent)
+        full_rows = harness.native_gather(
+            case, harness.native_dense(full_cache, full_locations).float()
+        )
+        full_out, _, full_lse = harness.c4_bar(
+            q,
+            full_rows.view(gathered, 1, config.HEAD_DIM),
+            indices,
+            harness.SM_SCALE,
+        )
+        pruning = _attention(
+            case, candidates, leg_rows, buffers, q, indices,
+            "native-untouched", full_out, full_lse,
+            harness.QUALITY_ATOL, harness.QUALITY_RTOL,
+        )
+    else:
+        reason = "FlashMLA sparse attention requires SM90a or SM100f"
+        attention = {"skipped": reason, "legs": {}}
+        pruning = {"skipped": reason, "legs": {}}
 
     return {
         "workload": case.workload.name,
@@ -584,6 +680,100 @@ def _run_case(case: harness.Case, candidates) -> dict:
         "rows": rows,
         "attention": attention,
         "pruning": pruning,
+    }
+
+
+def _fused_execution_contract(*, sanitizer_case: bool) -> dict[str, object]:
+    """Exercise optimized dispatch semantics that row comparisons cannot cover."""
+    from ..packed import unpack_gather_native_fused
+
+    workload = harness.Workload("fused-contract", 2, 1024)
+    case = harness.build_case(workload, torch.device("cuda"), pattern="ragged")
+    with harness.leg_env("packed.bf16"):
+        buffers = harness.packed_buffers(case)
+
+    physical = case.physical.clone()
+    raw = case.raw.clone()
+    lengths = case.lengths.clone()
+
+    def launch(workspace, *, optimized: bool) -> None:
+        unpack_gather_native_fused(
+            buffers,
+            physical,
+            raw,
+            lengths,
+            case.freqs,
+            workspace,
+            optimized=optimized,
+        )
+
+    baseline = harness.native_workspace(case)
+    optimized = harness.native_workspace(case)
+    baseline.native_bytes.zero_()
+    optimized.native_bytes.zero_()
+    launch(baseline, optimized=False)
+    launch(optimized, optimized=True)
+    torch.cuda.synchronize()
+    _assert_workspaces_equivalent(case, optimized, baseline, "fused-contract/eager")
+
+    # The sanitizer invocation concentrates on memory safety. Stream and graph
+    # behavior run in the ordinary validity invocation, where CUDA graph capture
+    # is supported and does not multiply compute-sanitizer runtime.
+    if sanitizer_case:
+        return {
+            "eager_exact": True,
+            "non_default_stream": "not-run-under-sanitizer",
+            "changing_graph_replay": "not-run-under-sanitizer",
+            "replay_allocation_bytes": "not-run-under-sanitizer",
+        }
+
+    stream_workspace = harness.native_workspace(case)
+    stream_workspace.native_bytes.zero_()
+    stream = torch.cuda.Stream()
+    with torch.cuda.stream(stream):
+        launch(stream_workspace, optimized=True)
+    torch.cuda.current_stream().wait_stream(stream)
+    _assert_workspaces_equivalent(
+        case, stream_workspace, baseline, "fused-contract/stream"
+    )
+
+    # Warm before capture so extension loading and the one-time dispatch marker
+    # cannot enter the graph. The input tensors are mutated in place afterward;
+    # replay must consume the new indices and lengths without rebuilding.
+    launch(optimized, optimized=True)
+    torch.cuda.synchronize()
+    graph = torch.cuda.CUDAGraph()
+    with torch.cuda.graph(graph):
+        launch(optimized, optimized=True)
+    torch.cuda.synchronize()
+    allocated_before = torch.cuda.memory_allocated(case.device)
+    for _ in range(20):
+        graph.replay()
+    torch.cuda.synchronize()
+    allocated_after = torch.cuda.memory_allocated(case.device)
+    assert allocated_after == allocated_before, (
+        "[fused-contract/graph] replay changed PyTorch allocated bytes: "
+        f"{allocated_before} -> {allocated_after}"
+    )
+
+    physical.fill_(-1)
+    raw.zero_()
+    lengths.zero_()
+    physical[0, 0] = 1
+    raw[0, 0] = 1
+    lengths[0] = 1
+    baseline.native_bytes.zero_()
+    launch(baseline, optimized=False)
+    graph.replay()
+    torch.cuda.synchronize()
+    _assert_workspaces_equivalent(
+        case, optimized, baseline, "fused-contract/changing-graph"
+    )
+    return {
+        "eager_exact": True,
+        "non_default_stream": True,
+        "changing_graph_replay": True,
+        "replay_allocation_bytes": allocated_after - allocated_before,
     }
 
 
@@ -622,6 +812,9 @@ def run_validity(
     selected = harness.select_legs(legs)
 
     workloads = harness.WORKLOADS[:1] if sanitizer_case else harness.WORKLOADS
+    attention_supported = (
+        not workloads or torch.cuda.get_device_capability(device)[0] >= 9
+    )
     cases = (
         harness.case_grid(workloads)
         if workloads
@@ -647,11 +840,18 @@ def run_validity(
     reported: dict[str, object] = {}
     for workload, pattern in cases:
         case = harness.build_case(workload, device, pattern=pattern)
-        entry = _run_case(case, selected)
+        entry = _run_case(
+            case, selected, attention_supported=attention_supported
+        )
         reported[_name(case)] = entry
         print(json.dumps({_name(case): entry}, sort_keys=True), flush=True)
         if baseline is not None and _name(case) in baseline:
             _assert_no_regression(_name(case), entry, baseline[_name(case)])
+
+    fused_contract = None
+    if "fused.optimized" in selected:
+        fused_contract = _fused_execution_contract(sanitizer_case=sanitizer_case)
+        print(json.dumps({"fused_execution_contract": fused_contract}), flush=True)
 
     if write_baseline:
         BASELINE.parent.mkdir(parents=True, exist_ok=True)
@@ -667,6 +867,7 @@ def run_validity(
         "gpu": torch.cuda.get_device_name(),
         "legs": {leg: leg in available for leg in LEGS},
         "cases": reported,
+        "fused_execution_contract": fused_contract,
     }
     print(json.dumps(summary, sort_keys=True), flush=True)
     return summary
@@ -682,7 +883,7 @@ def _assert_no_regression(name: str, entry: dict, pinned: dict) -> None:
     """
     for stage in STAGES:
         pinned_legs = pinned.get(stage, {}).get("legs", {})
-        for leg, metrics in entry[stage]["legs"].items():
+        for leg, metrics in entry[stage].get("legs", {}).items():
             for metric, value in metrics.items():
                 if metric not in pinned_legs.get(leg, {}):
                     continue

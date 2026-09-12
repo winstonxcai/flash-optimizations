@@ -223,7 +223,9 @@ __global__ void packed_to_native_kernel_optimized(
   const uint8_t* packed_scales = scales + physical * kBitmapWords;
 
   __shared__ uint64_t bitmap_shared[kWarpsPerBlock][kBitmapWords];
-  __shared__ uint64_t values_shared[kWarpsPerBlock][kKeptValues / 8];
+  // Preserve v5C's two-word guard and 272-byte per-warp shared-memory stride.
+  // The exact historical layout is required for the validated candidate.
+  __shared__ uint64_t values_shared[kWarpsPerBlock][kKeptValues / 8 + 2];
   __shared__ int prefix_shared[kWarpsPerBlock][kBitmapWords];
 
   if (lane < kBitmapWords) {
@@ -231,6 +233,9 @@ __global__ void packed_to_native_kernel_optimized(
   }
   values_shared[warp][lane] =
       reinterpret_cast<const uint64_t*>(packed_values)[lane];
+  if (lane < 2) {
+    values_shared[warp][kKeptValues / 8 + lane] = 0;
+  }
   __syncwarp();
 
   if (lane == 0) {

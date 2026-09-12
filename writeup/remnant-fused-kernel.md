@@ -48,6 +48,28 @@ Reconstruction plus FlashMLA:
 | 18 | 19.375 µs | 39.314 µs | 28.019 µs | 28.7% faster | 44.6% slower |
 | 21 | 20.450 µs | 43.151 µs | 29.858 µs | 30.8% faster | 46.0% slower |
 
+## Current port verification
+
+- L4 validity gate: 10 changing/edge-case fixtures passed for both fused legs.
+  NoPE bytes and seven scale bytes were exact; the RoPE tail stayed within the
+  existing tolerance. Non-default-stream execution, changing CUDA-graph replay,
+  and zero replay allocations passed. Compute Sanitizer reported zero errors.
+- L4 attention and pruning were skipped because FlashMLA sparse attention requires
+  SM90a or newer; this is a hardware limitation, not a passing performance result.
+- H100 focused gate: two independent runs, changing selections, 128k-equivalent
+  input, graph replay, 10 warmups, and 50 samples per point. Values below are
+  p50 complete reconstruction-plus-attention latency in microseconds.
+
+| Batch | Native | Fused | Optimized | Optimized vs fused | Optimized vs native |
+|---:|---:|---:|---:|---:|---:|
+| 15 | 31.5 | 49.5 | 39.9 | 19.5% faster | 26.8% slower |
+| 18 | 32.7 | 53.5 | 42.6 | 20.3% faster | 30.2% slower |
+| 21 | 34.8 | 58.1 | 45.6 | 21.5% faster | 31.2% slower |
+
+The optimized kernel therefore passes the focused reconstruction gate: it beats
+the current fused adapter at all three target batches. It does not yet match
+native attention, so this result is not an end-to-end TPOT or serving claim.
+
 ## Profiling result
 
 - DRAM used 7.9% of peak; global bandwidth was not the limiting resource.
@@ -59,6 +81,3 @@ Reconstruction plus FlashMLA:
 - The remaining reconstruction gap is primarily rank-expansion dependency and
   shared-memory issue pressure. Further global-memory tuning is unlikely to
   close it by itself.
-
-The refactored implementation must be revalidated on L4 and rerun on H100 before
-these historical measurements are treated as results for the current branch.
