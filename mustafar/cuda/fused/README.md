@@ -3,7 +3,8 @@
 Extension: `mustafar._fused` · gate: `SGLANG_OPT_TOPMAG_FUSED=1`
 
 The packed store keeps the KV latent in 328-byte records; FlashMLA wants the
-584-byte native layout. This backend closes that gap in one CUDA pass:
+584-byte native layout. This backend closes that gap in one CUDA pass. The
+extension contains the original adapter and the retained optimized adapter:
 
 ```text
 packed values + bitmaps + scales
@@ -26,14 +27,16 @@ void packed_to_native_cuda(values, bitmaps, scales, physical_indices,
                            native_out, page_size, bytes_per_page);
 ```
 
-Exposed to Python as `mustafar._fused.packed_to_native` (see
-[`bindings.cpp`](bindings.cpp)). One entry point — the fused leg does not split
-into passes, since the softmax and the attention itself are FlashMLA's.
+Exposed to Python as `mustafar._fused.packed_to_native` and
+`mustafar._fused.packed_to_native_optimized` (see
+[`bindings.cpp`](bindings.cpp)). The fused leg does not split into passes, since
+the softmax and the attention itself are FlashMLA's.
 
-The adapter uses four warps per block and one warp per selected row, launches on
-PyTorch's current stream, mutates a preallocated native workspace, and performs
-no tensor allocation and no host scalar read. Invalid and truncated rows are
-fully zeroed.
+Both adapters use four warps per block and one warp per selected row, launch on
+PyTorch's current stream, mutate a preallocated native workspace, and perform
+no tensor allocation or host scalar read. Invalid and truncated rows are fully
+zeroed. The optimized adapter stages each bitmap and packed-value row once,
+reuses one set of bitmap prefixes, and emits aligned 32-bit output stores.
 
 ## Enable
 
@@ -45,6 +48,9 @@ KEEP=0.5
 SGLANG_OPT_TOPMAG_PACKED=1
 SGLANG_OPT_TOPMAG_FUSED=1
 ```
+
+Add `SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED=1` to select the optimized adapter. It is
+explicitly opt-in; ordinary fused dispatch remains unchanged.
 
 The gate defaults off and fails loudly if the extension is unavailable rather
 than silently falling back. It does not change persistent storage.
@@ -58,7 +64,7 @@ c4 decode call site, so setting both is rejected at config-validation time.
   no private copy.
 - Produces the same output ABI as the `packed`/Triton path, so the two are
   drop-in alternatives behind the same patch anchor.
-- Stays in the tree as the `_FUSED` fallback for the direct-read backend. It is
-  deliberately frozen: [`../sparse/sparse_kernel.cu`](../sparse/sparse_kernel.cu)
-  duplicates `decode_e4m3fn` rather than importing it, so that a change to the
-  sparse path can never perturb this one.
+- Stays in the tree as the `_FUSED` fallback for the direct-read backend.
+  [`../sparse/sparse_kernel.cu`](../sparse/sparse_kernel.cu) duplicates
+  `decode_e4m3fn` rather than importing it, so sparse experiments cannot perturb
+  fused reconstruction.
