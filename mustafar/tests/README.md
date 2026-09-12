@@ -60,6 +60,11 @@ Each stage takes its ratios against a named bar, and `speed.CONTRASTS` names the
 comparisons the suite exists to answer; the ones that are asserted rather than
 merely reported say so, and say why.
 
+The speed suite measures CUDA-graph replay only, matching decode serving. Eager
+timing is intentionally absent; eager execution remains in the correctness and
+extension smoke tests only because it is needed for warm-up, capture, and basic
+functional checks.
+
 ## Entrypoint contract
 
 Every `run_*()` a test registers must:

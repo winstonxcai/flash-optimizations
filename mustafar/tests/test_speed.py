@@ -26,6 +26,9 @@ EXPECTED_STAGES = ("store", "rows.dense_bf16", "rows.native_layout", "attention"
 
 
 class MatrixTests(unittest.TestCase):
+    def test_speed_suite_is_graph_only(self):
+        self.assertEqual(speed.REGIMES, ("graph",))
+
     def test_the_stages_are_the_shared_vocabulary(self):
         self.assertEqual(speed.STAGES, EXPECTED_STAGES)
 

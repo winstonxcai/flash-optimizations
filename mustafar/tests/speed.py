@@ -1,4 +1,4 @@
-"""Speed suite: every leg timed at every stage it has an operator, on one grid.
+"""CUDA-graph speed suite: every leg timed at every stage it has an operator.
 
 The same candidate **legs** and the same stage names as
 :mod:`mustafar.tests.validity`, so a leg name means one thing across both suites:
@@ -53,7 +53,7 @@ from .. import config
 from ..packed import NativeWorkspace, PackedBuffers
 from . import harness
 
-REGIMES = ("eager", "graph")
+REGIMES = ("graph",)
 
 
 @dataclass(frozen=True)
@@ -530,31 +530,6 @@ def _check_cells(
     assert not extra, f"_cells builds legs MATRIX does not declare: {extra}"
 
 
-def _regime(fn, regime: str, *, warmup: int, repeats: int) -> dict[str, float]:
-    if regime == "eager":
-        return harness.timed(fn, warmup=warmup, repeats=repeats)
-    return harness.timed(harness.captured(fn), warmup=warmup, repeats=repeats)
-
-
-def _regime_or_eager(fn, regime: str, *, warmup: int, repeats: int):
-    """``_regime`` plus a reason string when a graph capture had to be abandoned.
-
-    ``flash_mla_sparse_fwd`` is a third-party op whose graph safety is not ours,
-    and a capture failure would otherwise sink the whole suite. The fallback
-    returns eager numbers, which the caller must record -- an eager figure
-    labelled "graph" would be worse than no row at all.
-    """
-    try:
-        return _regime(fn, regime, warmup=warmup, repeats=repeats), None
-    except RuntimeError as error:
-        if regime != "graph":
-            raise
-        return (
-            harness.timed(fn, warmup=warmup, repeats=repeats),
-            str(error).splitlines()[0],
-        )
-
-
 def _gbps(bytes_per_row: int, rows: int, p50_us: float | None) -> float | None:
     """Effective cache bandwidth, or None where the leg has no operator."""
     if not bytes_per_row or p50_us is None or p50_us <= 0:
@@ -630,7 +605,6 @@ def _record(
     row: Row,
     regime: str,
     timings: dict[str, dict[str, float]],
-    fallbacks: dict[str, str],
     absent: dict[str, str],
 ) -> dict[str, object]:
     """One stage, one regime: every timed leg plus what it means."""
@@ -666,7 +640,6 @@ def _record(
             for contrast in CONTRASTS
             if contrast.stage == row.stage
         },
-        "graph_fallbacks": fallbacks,
         "notes": row.note,
     }
 
@@ -743,7 +716,6 @@ def run_speed(
             absent = {leg: reason for leg, reason in row.absent if leg in selected}
             for regime in REGIMES:
                 timings: dict[str, dict[str, float]] = {}
-                fallbacks: dict[str, str] = {}
                 for leg in harness.COLUMNS:
                     fn = stage_cells.get(leg)
                     if fn is None:
@@ -751,11 +723,9 @@ def run_speed(
                     # The pin wraps the timed run, not the callable: inside the
                     # callable it would be measured alongside the kernel.
                     with harness.leg_env(leg):
-                        timings[leg], reason = _regime_or_eager(
-                            fn, regime, warmup=warmup, repeats=repeats
+                        timings[leg] = harness.timed(
+                            harness.captured(fn), warmup=warmup, repeats=repeats
                         )
-                    if reason:
-                        fallbacks[leg] = reason
                 _check_gates(
                     case,
                     row,
@@ -765,7 +735,7 @@ def run_speed(
                         focused_128k or case.workload.name == workloads[0].name
                     ),
                 )
-                record = _record(case, row, regime, timings, fallbacks, absent)
+                record = _record(case, row, regime, timings, absent)
                 results.append(record)
                 print(json.dumps(record, sort_keys=True), flush=True)
 
