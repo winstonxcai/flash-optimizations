@@ -137,5 +137,6 @@ slightly; it does not change that dominant structure.
   expansion/shared-memory cost or eliminate the temporary native workspace; more
   isolated RoPE-load tuning is unlikely to close the remaining gap.
 
-Source baseline: `b237987` on `codex/remnant-sparse-kernel`; SGLang revision
-`71de97b`; model-free H100 measurements with no model download or serving run.
+Source baseline: `b237987`; implementation commit `b33d2af` on
+`codex/remnant-sparse-kernel`; SGLang revision `71de97b`; model-free H100
+measurements with no model download or serving run.
