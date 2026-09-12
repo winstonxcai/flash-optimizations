@@ -2,87 +2,140 @@
 
 ## Goal
 
-- Keep the 328-byte packed record and reconstruct FlashMLA's 584-byte native
-  input without changing masking, scales, RoPE, or attention math.
-- Compare the reconstruction adapters with native FlashMLA under changing
-  selections and CUDA graph replay.
-- Historical source: commits `17555c9..86b5b6d`.
+- Preserve the 328-byte packed record and native 584-byte FlashMLA input layout.
+- Reduce packed reconstruction overhead while preserving masking, scales, RoPE,
+  and the existing attention consumer.
+- Measure the actual decode path, not a dense-BF16 diagnostic path.
 
-## Iterations
+Hardware for the corrected measurements: one NVIDIA H100 80 GB HBM3, SM90.
+The benchmark uses 128k context, `K=512`, and batches 15, 18, and 21.
 
-- **Iteration 1:** staged each row's bitmap once, used aligned 32-bit NoPE
-  stores, and copied the native scale field with one 64-bit store.
-- **Iteration 2:** cooperatively staged all 256 packed value bytes and computed
-  the eight bitmap prefixes once per row.
-- **Iteration 3:** assigned each active lane four groups of four coordinates,
-  calculating one rank and issuing one 32-bit output store per group.
-- **Iteration 4:** compared contiguous output ownership, warp-register
-  prefixes, and earlier RoPE operand loads. Earlier RoPE loads were best.
-- **Iteration 5:** compared byte permutation, parallel prefix calculation, and
-  the earlier RoPE schedule on the grouped expansion. The earlier RoPE schedule
-  remained best; byte permutation and parallel prefixes regressed.
+## Iteration summary
 
-Only the final 5C design is retained in the refactored tree, under the name
-`optimized`. The original fused kernel remains available as its control.
+- **Iteration 1:**
+  - Staged each packed row's bitmap once.
+  - Used aligned 32-bit NoPE stores.
+  - Copied the seven native scale bytes with one 64-bit store.
+- **Iteration 2:**
+  - Cooperatively staged all 256 packed value bytes.
+  - Computed the eight bitmap prefixes once per row.
+- **Iteration 3:**
+  - Assigned each active lane four groups of four coordinates.
+  - Used one rank calculation and one 32-bit output store per group.
+- **Iteration 4:**
+  - Compared output ownership, warp-register prefixes, and RoPE load timing.
+  - The earlier RoPE schedule was the best variant.
+- **Iteration 5:**
+  - Compared byte permutation, parallel-prefix, and earlier-RoPE variants.
+  - Only the validated v5C body was retained and renamed `optimized`.
 
-## Historical H100 results
+The ordinary `fused` kernel remains the control. The current `optimized` kernel
+is the production candidate; `early_rope` is benchmark-only.
 
-These are corrected changing-selection CUDA graph means, averaged over three
-rounds of 500 samples. The fixture uses `K=512`, a full 128k RoPE table, unique
-physical selections, and a persistent native pool.
+## Benchmark correction
 
-Reconstruction only:
+The earlier reported attention numbers were fixed-selection measurements that
+included dense BF16 readback. They do not represent production decode.
 
-| Batch | Fused | Optimized | Improvement |
-|---:|---:|---:|---:|
-| 1 | 7.005 µs | 3.757 µs | 46.4% |
-| 8 | 11.680 µs | 5.597 µs | 52.1% |
-| 16 | 18.348 µs | 8.519 µs | 53.6% |
-| 24 | 25.140 µs | 11.496 µs | 54.3% |
+The corrected harness:
 
-Reconstruction plus FlashMLA:
+- Calls `sgl_kernel.flash_mla.flash_mla_with_kvcache` directly.
+- Uses the native paged workspace expected by the consumer, with no dense
+  readback between reconstruction and attention.
+- Uses 16 real V4-Flash query heads per TP4 rank and only ABI-required padding.
+- Allocates 32 shuffled selection sets before timing and cycles them between
+  graph replays; input copies are outside device events.
+- Uses one process per mode. A same-process multi-mode run hit FlashMLA graph
+  state interference and was discarded; isolated runs are the controlled
+  comparison.
 
-| Batch | Native | Fused | Optimized | Optimized vs fused | Optimized vs native |
+Each mode used the same command shape, with one mode substituted:
+
+```text
+MODAL_PROFILE=fxcai21 modal run --timestamps mustafar/scripts/modal/app.py::bench_kernels \
+  --suite decode --decode-samples 500 --decode-rounds 3 \
+  --decode-selection-sets 32 --decode-modes <mode> \
+  --decode-batches 15,18,21
+```
+
+Runtime flags were pinned by the launcher: TopMag50 enabled, `KEEP=0.5`, packed
+storage enabled, and exactly one of native, packed, fused, or optimized dispatch
+selected. The optimized path emitted
+`MUSTAFAR_FUSED_DISPATCH=packed_to_native_optimized`; the control emitted
+`MUSTAFAR_FUSED_DISPATCH=packed_to_native`.
+
+## Corrected decode results
+
+Graph replay latency in microseconds, averaged over three rounds. Each cell is
+`mean / p50 / p95`; it includes reconstruction plus the direct FlashMLA call and
+its combine work.
+
+| Batch | Native | Packed Triton | Fused | Optimized | Early RoPE |
 |---:|---:|---:|---:|---:|---:|
-| 15 | 17.705 µs | 35.051 µs | 24.848 µs | 29.1% faster | 40.3% slower |
-| 18 | 19.375 µs | 39.314 µs | 28.019 µs | 28.7% faster | 44.6% slower |
-| 21 | 20.450 µs | 43.151 µs | 29.858 µs | 30.8% faster | 46.0% slower |
+| 15 | 21.758 / 21.739 / 22.027 | 58.057 / 57.867 / 59.125 | 39.058 / 39.029 / 39.648 | 30.163 / 30.165 / 30.624 | 29.329 / 29.280 / 29.685 |
+| 18 | 24.229 / 24.192 / 24.544 | 66.929 / 66.827 / 67.744 | 43.434 / 43.413 / 44.021 | 32.707 / 32.683 / 33.515 | 31.990 / 32.000 / 32.608 |
+| 21 | 24.916 / 24.875 / 25.301 | 75.035 / 74.885 / 75.925 | 47.110 / 47.072 / 47.733 | 34.546 / 34.528 / 35.339 | 33.850 / 33.856 / 34.539 |
 
-## Current port verification
+Relative mean results:
 
-- L4 validity gate: 10 changing/edge-case fixtures passed for both fused legs.
-  NoPE bytes and seven scale bytes were exact; the RoPE tail stayed within the
-  existing tolerance. Non-default-stream execution, changing CUDA-graph replay,
-  and zero replay allocations passed. Compute Sanitizer reported zero errors.
-- L4 attention and pruning were skipped because FlashMLA sparse attention requires
-  SM90a or newer; this is a hardware limitation, not a passing performance result.
-- H100 focused gate: three independent runs, changing selections, 128k-equivalent
-  input, graph replay, 10 warmups, and 500 samples per point. Values below are
-  the mean of each run's p50 complete reconstruction-plus-attention latency in
-  microseconds.
+- `optimized` is 22.8%, 24.7%, and 26.7% faster than `fused` at B15, B18,
+  and B21.
+- `optimized` remains 38.6%, 35.0%, and 38.7% slower than native at those
+  batches.
+- `early_rope` recovers a further 2.8%, 2.2%, and 2.0% versus `optimized`.
+  It fails the predefined 5% B21 gate and is not promoted.
+- Packed Triton is 2.67–3.01× slower than native in this complete-path test.
 
-| Batch | Native | Fused | Optimized | Optimized vs fused | Optimized vs native |
-|---:|---:|---:|---:|---:|---:|
-| 15 | 31.6 | 49.2 | 39.6 | 19.5% faster | 25.4% slower |
-| 18 | 32.9 | 52.9 | 42.1 | 20.5% faster | 27.7% slower |
-| 21 | 34.4 | 57.9 | 45.3 | 21.7% faster | 31.9% slower |
+The native-materialized diagnostic measured direct FlashMLA on a preconstructed
+workspace at B15/B18/B21: `21.130 / 23.125 / 23.617 µs` mean. It is a diagnostic,
+not a production baseline. It indicates that the optimized adapter's remaining
+gap at B21 is about 10.9 µs relative to the best downstream floor, while the
+profiled reconstruction kernel itself is about 9.5 µs per launch.
 
-The optimized kernel therefore passes the focused reconstruction gate: it beats
-the current fused adapter at all three target batches. It does not yet match
-native attention, so this result is not an end-to-end TPOT or serving claim. The
-B15 complete-attention gain is just below the 20% investigation threshold, but
-it was stable across all three runs (19.5% average); reconstruction alone was
-46.8% faster there. This indicates dilution by fixed FlashMLA/readback work,
-not an unstable optimized kernel.
+## Profiling
 
-## Profiling result
+Command:
 
-- DRAM used 7.9% of peak; global bandwidth was not the limiting resource.
-- Instruction throughput and issue-active were both 56.0%, with no register
-  spills.
-- The kernel averaged 11.8 active warps but only 4.1 eligible warps per cycle.
-- Shared-memory loads produced about 138k bank conflicts and 137k excessive
-  wavefronts.
-- The remaining reconstruction gap is primarily rank-expansion dependency and
-  shared-memory issue pressure. Further global-memory tuning is unlikely to
-  close it by itself.
+```text
+MODAL_PROFILE=fxcai21 modal run --timestamps mustafar/scripts/modal/app.py::profile_decode
+```
+
+The profile used optimized reconstruction at B21 with one changing-selection
+graph sample. Nsight Systems showed the actual sequence:
+
+- optimized reconstruction: 12 launches, 9.52 µs average, 9.31–10.30 µs;
+- FlashMLA sparse decode: 12 launches, 17.26 µs average, 15.39–24.61 µs;
+- FlashMLA combine: 12 launches, 7.58 µs average, 4.06–8.42 µs.
+
+There was no dense BF16 readback. The attention and combine kernels use separate
+streams and partially overlap, so these component times must not be added as an
+exact end-to-end total.
+
+Nsight Compute for the optimized reconstruction reported:
+
+- 128 threads/block, 2,688 blocks, 32 registers/thread, and zero spills;
+- 5.66 MB global reads and 9.98 MB global writes per launch; DRAM read pressure
+  was only 14.9% of peak and write pressure 0.03%;
+- shared-memory loads produced about 138k bank conflicts and 137k excessive
+  wavefronts;
+- 4.12 eligible warps per active cycle, with notable long-scoreboard,
+  math-pipe-throttle, and not-selected stalls.
+
+The limiting cost is therefore not DRAM capacity. It is the dependency-heavy
+bitmap/rank expansion and shared-memory scheduling, followed by the unavoidable
+FlashMLA and combine work. The earlier-RoPE experiment improves scheduling only
+slightly; it does not change that dominant structure.
+
+## Status
+
+- The corrected production-style benchmark is valid and reproducible on H100.
+- `optimized` is the retained fused implementation and materially improves over
+  the original fused adapter.
+- `early_rope` is retained only as a measured comparison because it misses the
+  5% acceptance gate.
+- Native parity has not been reached. The next meaningful optimization must reduce
+  expansion/shared-memory cost or eliminate the temporary native workspace; more
+  isolated RoPE-load tuning is unlikely to close the remaining gap.
+
+Source baseline: `b237987` on `codex/remnant-sparse-kernel`; SGLang revision
+`71de97b`; model-free H100 measurements with no model download or serving run.
