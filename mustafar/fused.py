@@ -50,8 +50,17 @@ def optimized_fused_available() -> bool:
     return callable(getattr(extension, "packed_to_native_optimized", None))
 
 
-def _emit_dispatch_marker(optimized: bool) -> None:
-    marker = "packed_to_native_optimized" if optimized else "packed_to_native"
+def early_rope_available() -> bool:
+    """Whether the benchmark-only early-RoPE candidate is built."""
+    try:
+        extension = _load()
+    except RuntimeError:
+        return False
+    return callable(getattr(extension, "packed_to_native_early_rope", None))
+
+
+def _emit_dispatch_marker(optimized: bool, candidate: str | None = None) -> None:
+    marker = candidate or ("packed_to_native_optimized" if optimized else "packed_to_native")
     if marker in _markers_emitted:
         return
     with _marker_lock:
@@ -73,6 +82,7 @@ def packed_to_native(
     bytes_per_page: int,
     *,
     optimized: bool = False,
+    candidate: str | None = None,
 ) -> None:
     """Mutate ``native_out`` on PyTorch's current stream without allocations."""
     if not torch.cuda.is_available():
@@ -87,10 +97,18 @@ def packed_to_native(
                 f"Fused requires CUDA capability >= 8.0, got {major}.{minor}"
             )
         _validated_devices.add(device_index)
-    _emit_dispatch_marker(optimized)
+    if candidate not in (None, "early_rope"):
+        raise ValueError(f"unknown fused benchmark candidate: {candidate}")
+    if candidate is not None and not optimized:
+        raise ValueError("the early_rope candidate requires optimized=True")
+    _emit_dispatch_marker(optimized, candidate)
     extension = _load()
     launcher = extension.packed_to_native
-    if optimized:
+    if candidate == "early_rope":
+        launcher = getattr(extension, "packed_to_native_early_rope", None)
+        if launcher is None:
+            raise RuntimeError("The early_rope fused candidate is unavailable")
+    elif optimized:
         launcher = getattr(extension, "packed_to_native_optimized", None)
         if launcher is None:
             raise RuntimeError("Optimized fused reconstruction is unavailable")

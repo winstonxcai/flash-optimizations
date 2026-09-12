@@ -222,6 +222,15 @@ FOCUSED_128K_WORKLOADS: tuple[harness.Workload, ...] = tuple(
     for batch in (15, 18, 21)
 )
 
+DECODE_MODES = ("native", "packed", "fused", "optimized", "early_rope")
+DECODE_ENV = {
+    "native": "native",
+    "packed": "packed.bf16",
+    "fused": "fused",
+    "optimized": "fused.optimized",
+    "early_rope": "fused.optimized",
+}
+
 # The comparisons this suite exists to answer. The gated one is the fused
 # kernel's whole justification; the other is the sparse kernel's, reported with
 # the measured ratio so a reader can see where v1 stands.
@@ -775,6 +784,265 @@ def run_speed(
     return summary
 
 
+def _decode_workspace(case: harness.Case, *, dense: bool) -> NativeWorkspace:
+    """Allocate one production-sized native workspace for one decode leg."""
+    return NativeWorkspace.allocate(
+        case.batch,
+        harness.TOPK,
+        harness.PAGE_SIZE // harness.COMPRESS_RATIO,
+        case.device,
+        with_dense=dense,
+    )
+
+
+def _decode_invoke(
+    mode: str,
+    case: harness.Case,
+    inputs: dict[str, object],
+    buffers: PackedBuffers,
+    native_cache: torch.Tensor,
+    workspace: NativeWorkspace | None,
+    current: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+) -> Callable[[], None]:
+    """Build a graph-safe call for one direct production decode leg."""
+    physical, raw, lengths = current
+    result_holder: dict[str, object] = {}
+    if mode == "native":
+        native_pool = NativeWorkspace(
+            native_cache,
+            None,
+            torch.empty(1, 1, dtype=torch.int32, device=case.device),
+            harness.PAGE_SIZE // harness.COMPRESS_RATIO,
+            harness.native_page_stride(harness.PAGE_SIZE // harness.COMPRESS_RATIO),
+        )
+
+        def invoke() -> None:
+            result_holder["result"] = harness.production_flash_call(
+                inputs, native_pool, physical.unsqueeze(1), lengths
+            )
+
+        invoke.result_holder = result_holder
+        return invoke
+
+    assert workspace is not None
+    if mode == "packed":
+        from ..packed import unpack_gather_native
+
+        def reconstruct() -> None:
+            unpack_gather_native(
+                buffers, physical, raw, lengths, case.freqs, workspace
+            )
+
+    else:
+        from ..packed import unpack_gather_native_fused
+
+        def reconstruct() -> None:
+            unpack_gather_native_fused(
+                buffers,
+                physical,
+                raw,
+                lengths,
+                case.freqs,
+                workspace,
+                optimized=mode in ("optimized", "early_rope"),
+                candidate="early_rope" if mode == "early_rope" else None,
+            )
+
+    extra_indices = workspace.temporary_indices[: case.batch, : harness.TOPK]
+
+    def invoke() -> None:
+        reconstruct()
+        result_holder["result"] = harness.production_flash_call(
+            inputs, workspace, extra_indices.unsqueeze(1), lengths
+        )
+
+    invoke.result_holder = result_holder
+    return invoke
+
+
+def _check_decode_result(invoke: Callable[[], None], mode: str, workload: str) -> None:
+    """Reject a consumer result that is absent, non-finite, or structurally empty."""
+    result = getattr(invoke, "result_holder", {}).get("result")
+    if result is None:
+        raise RuntimeError(f"{workload}/{mode}: FlashMLA returned no result")
+    tensors = result if isinstance(result, (tuple, list)) else (result,)
+    tensors = tuple(tensor for tensor in tensors if isinstance(tensor, torch.Tensor))
+    if not tensors or any(tensor.numel() == 0 for tensor in tensors):
+        raise RuntimeError(f"{workload}/{mode}: FlashMLA returned an empty result")
+    if any(not bool(torch.isfinite(tensor).all()) for tensor in tensors):
+        raise RuntimeError(f"{workload}/{mode}: FlashMLA returned non-finite values")
+
+
+def _decode_record(
+    workload: harness.Workload,
+    mode: str,
+    round_id: int,
+    timing: dict[str, float],
+    *,
+    diagnostic: bool = False,
+) -> dict[str, object]:
+    return {
+        "workload": workload.name,
+        "batch": workload.batch,
+        "context_tokens": workload.context_rows * harness.COMPRESS_RATIO,
+        "selected_k": harness.TOPK,
+        "mode": mode,
+        "round": round_id,
+        "execution": "graph",
+        "diagnostic": diagnostic,
+        **timing,
+    }
+
+
+@patch.dict(os.environ, **harness.OFF_ENV)
+def run_production_decode(
+    *,
+    samples: int = 500,
+    rounds: int = 3,
+    selection_sets: int = 32,
+    include_diagnostic: bool = True,
+    modes: tuple[str, ...] | None = None,
+    batches: tuple[int, ...] | None = None,
+) -> dict[str, object]:
+    """Measure changing-selection graph decode through ``flash_mla_with_kvcache``."""
+    if not torch.cuda.is_available():
+        raise RuntimeError("production decode speed requires CUDA")
+    if torch.cuda.get_device_capability() != (9, 0):
+        raise RuntimeError("production decode speed requires an H100/SM90 GPU")
+    if min(samples, rounds, selection_sets) < 1:
+        raise ValueError("samples, rounds, and selection_sets must be positive")
+
+    device = torch.device("cuda")
+    from ..fused import early_rope_available
+
+    if not early_rope_available():
+        raise RuntimeError("the benchmark-only early_rope fused candidate is not built")
+    selected_modes = DECODE_MODES if modes is None else tuple(modes)
+    unknown_modes = set(selected_modes) - set(DECODE_MODES)
+    if unknown_modes:
+        raise ValueError(f"unknown production decode modes: {sorted(unknown_modes)}")
+    workloads = tuple(
+        workload
+        for workload in FOCUSED_128K_WORKLOADS
+        if batches is None or workload.batch in batches
+    )
+    if not workloads:
+        raise ValueError("batches selected no production decode workloads")
+    records: list[dict[str, object]] = []
+    print(
+        "[decode] direct flash_mla_with_kvcache, changing selections, "
+        f"samples={samples} rounds={rounds} sets={selection_sets}",
+        flush=True,
+    )
+
+    for workload in workloads:
+        case = harness.build_case(workload, device, seed=20260913)
+        with harness.leg_env("packed.bf16"):
+            buffers = harness.packed_buffers(case)
+        native_cache, _ = harness.native_store(
+            case, case.latent, page_size=harness.PAGE_SIZE // harness.COMPRESS_RATIO
+        )
+        inputs = harness.production_flash_inputs(case.batch, device)
+        sequences = harness.changing_selection_sets(
+            case, count=selection_sets, seed=20260914
+        )
+
+        graphs: dict[str, tuple[object, tuple[torch.Tensor, ...]]] = {}
+        for mode in selected_modes:
+            current = tuple(torch.empty_like(tensor) for tensor in sequences[0])
+            if mode == "native":
+                workspace = None
+            elif mode == "packed":
+                workspace = _decode_workspace(case, dense=True)
+            else:
+                workspace = _decode_workspace(case, dense=False)
+            invoke = _decode_invoke(
+                mode, case, inputs, buffers, native_cache, workspace, current
+            )
+            with harness.leg_env(DECODE_ENV[mode]):
+                graph = harness.changing_graph(invoke, sequences, current)
+            _check_decode_result(invoke, mode, workload.name)
+            graphs[mode] = (graph, current)
+
+        for round_id in range(1, rounds + 1):
+            order = selected_modes[(round_id - 1) % len(selected_modes) :] + selected_modes[
+                :(round_id - 1) % len(selected_modes)
+            ]
+            for mode in order:
+                graph, current = graphs[mode]
+                with harness.leg_env(DECODE_ENV[mode]):
+                    timing = harness.timed_changing_graph(
+                        graph,
+                        sequences,
+                        current,
+                        warmup=10,
+                        repeats=samples,
+                    )
+                record = _decode_record(workload, mode, round_id, timing)
+                records.append(record)
+                print(json.dumps(record, sort_keys=True), flush=True)
+
+        if include_diagnostic and "native" in selected_modes:
+            # This is the attainable downstream floor: the workspace is built
+            # once before capture and only FlashMLA is timed. It is deliberately
+            # separate from the changing-selection production matrix.
+            diagnostic_workspace = _decode_workspace(case, dense=True)
+            physical, raw, lengths = sequences[0]
+            with harness.leg_env("packed.bf16"):
+                from ..packed import unpack_gather_native
+
+                unpack_gather_native(
+                    buffers,
+                    physical,
+                    raw,
+                    lengths,
+                    case.freqs,
+                    diagnostic_workspace,
+                )
+            diagnostic_indices = diagnostic_workspace.temporary_indices[
+                : case.batch, : harness.TOPK
+            ].unsqueeze(1)
+            diagnostic_call = lambda: harness.production_flash_call(
+                inputs, diagnostic_workspace, diagnostic_indices, lengths
+            )
+            with harness.leg_env("native"):
+                timing = harness.timed(
+                    harness.captured(diagnostic_call), warmup=10, repeats=samples
+                )
+            record = _decode_record(
+                workload,
+                "native.materialized",
+                0,
+                timing,
+                diagnostic=True,
+            )
+            records.append(record)
+            print(json.dumps(record, sort_keys=True), flush=True)
+
+    summary = {
+        "suite": "production_decode",
+        "gpu": torch.cuda.get_device_name(),
+        "head_geometry": {"real_query_heads_per_tp4_rank": 16, "flashmla_heads": 64},
+        "context_tokens": 131072,
+        "selected_k": harness.TOPK,
+        "selection_sets": selection_sets,
+        "timing": {"warmup": 10, "samples": samples, "rounds": rounds},
+        "modes": list(selected_modes),
+        "consumer": "sgl_kernel.flash_mla.flash_mla_with_kvcache",
+        "timed_region": "CUDA graph replay; input copies are outside device events",
+        "records": records,
+    }
+    results_dir = os.environ.get("MUSTAFAR_RESULTS_DIR")
+    if results_dir:
+        path = Path(results_dir)
+        path.mkdir(parents=True, exist_ok=True)
+        (path / "production-decode.json").write_text(
+            json.dumps(summary, indent=2, sort_keys=True) + "\n"
+        )
+        print(f"[decode] wrote {path / 'production-decode.json'}", flush=True)
+    return summary
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -790,8 +1058,31 @@ if __name__ == "__main__":
         action="store_true",
         help="run the 128k-equivalent B15/B18/B21 comparison grid",
     )
-    args = parser.parse_args()
-    run_speed(
-        legs=tuple(args.legs.split(",")) if args.legs else None,
-        focused_128k=args.focused_128k,
+    parser.add_argument(
+        "--production-decode",
+        action="store_true",
+        help="run the direct flash_mla_with_kvcache decode comparison",
     )
+    parser.add_argument("--decode-samples", type=int, default=500)
+    parser.add_argument("--decode-rounds", type=int, default=3)
+    parser.add_argument("--decode-selection-sets", type=int, default=32)
+    parser.add_argument("--decode-modes", default=None)
+    parser.add_argument("--decode-batches", default=None)
+    args = parser.parse_args()
+    if args.production_decode:
+        run_production_decode(
+            samples=args.decode_samples,
+            rounds=args.decode_rounds,
+            selection_sets=args.decode_selection_sets,
+            modes=tuple(args.decode_modes.split(",")) if args.decode_modes else None,
+            batches=(
+                tuple(int(batch) for batch in args.decode_batches.split(","))
+                if args.decode_batches
+                else None
+            ),
+        )
+    else:
+        run_speed(
+            legs=tuple(args.legs.split(",")) if args.legs else None,
+            focused_128k=args.focused_128k,
+        )

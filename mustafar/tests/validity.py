@@ -696,7 +696,7 @@ def _fused_execution_contract(*, sanitizer_case: bool) -> dict[str, object]:
     raw = case.raw.clone()
     lengths = case.lengths.clone()
 
-    def launch(workspace, *, optimized: bool) -> None:
+    def launch(workspace, *, optimized: bool, candidate: str | None = None) -> None:
         unpack_gather_native_fused(
             buffers,
             physical,
@@ -705,6 +705,7 @@ def _fused_execution_contract(*, sanitizer_case: bool) -> dict[str, object]:
             case.freqs,
             workspace,
             optimized=optimized,
+            candidate=candidate,
         )
 
     baseline = harness.native_workspace(case)
@@ -715,6 +716,15 @@ def _fused_execution_contract(*, sanitizer_case: bool) -> dict[str, object]:
     launch(optimized, optimized=True)
     torch.cuda.synchronize()
     _assert_workspaces_equivalent(case, optimized, baseline, "fused-contract/eager")
+
+    from ..fused import early_rope_available
+
+    early = None
+    if early_rope_available():
+        early = harness.native_workspace(case)
+        early.native_bytes.zero_()
+        launch(early, optimized=True, candidate="early_rope")
+        _assert_workspaces_equivalent(case, early, baseline, "fused-contract/early-rope")
 
     # The sanitizer invocation concentrates on memory safety. Stream and graph
     # behavior run in the ordinary validity invocation, where CUDA graph capture
@@ -771,6 +781,7 @@ def _fused_execution_contract(*, sanitizer_case: bool) -> dict[str, object]:
     )
     return {
         "eager_exact": True,
+        "early_rope_exact": early is not None,
         "non_default_stream": True,
         "changing_graph_replay": True,
         "replay_allocation_bytes": allocated_after - allocated_before,

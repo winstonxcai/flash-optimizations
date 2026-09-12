@@ -282,6 +282,7 @@ def unpack_gather_native_fused(
     *,
     layer_id: int | None = None,
     optimized: bool | None = None,
+    candidate: str | None = None,
 ) -> None:
     """Run the allocation-free Fused packed-to-native CUDA adapter."""
     if optimized is None:
@@ -310,4 +311,5 @@ def unpack_gather_native_fused(
         native_workspace.page_size,
         native_workspace.bytes_per_page,
         optimized=optimized,
+        candidate=candidate,
     )

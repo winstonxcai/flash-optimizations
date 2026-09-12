@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -243,7 +244,15 @@ def validate_fused() -> str:
     retries=0,
     volumes={str(RESULTS_ROOT): results_volume},
 )
-def bench_kernels(suite: str = "speed", focused_128k: bool = False) -> str:
+def bench_kernels(
+    suite: str = "speed",
+    focused_128k: bool = False,
+    decode_samples: int = 500,
+    decode_rounds: int = 3,
+    decode_selection_sets: int = 32,
+    decode_modes: str = "",
+    decode_batches: str = "",
+) -> str:
     """H100: the stage x leg timings -- native, packed.bf16, packed.native,
     fused, sparse -- over one workload grid.
 
@@ -254,6 +263,7 @@ def bench_kernels(suite: str = "speed", focused_128k: bool = False) -> str:
         "speed": "mustafar.tests.speed",
         "packed": "mustafar.tests.speed",
         "fused": "mustafar.tests.speed",
+        "decode": "mustafar.tests.speed",
     }
     if suite not in modules:
         raise ValueError(f"suite must be one of {tuple(modules)}")
@@ -262,9 +272,133 @@ def bench_kernels(suite: str = "speed", focused_128k: bool = False) -> str:
         arguments.extend(["--legs", "fused,fused.optimized"])
     if focused_128k:
         arguments.append("--focused-128k")
+    if suite == "decode":
+        arguments.extend(
+            [
+                "--production-decode",
+                "--decode-samples",
+                str(decode_samples),
+                "--decode-rounds",
+                str(decode_rounds),
+                "--decode-selection-sets",
+                str(decode_selection_sets),
+            ]
+        )
+        if decode_modes:
+            arguments.extend(["--decode-modes", decode_modes])
+        if decode_batches:
+            arguments.extend(["--decode-batches", decode_batches])
     return _kernel_run(
         [modules[suite]],
-        kind="bench-speed-128k" if focused_128k else "bench-speed",
+        kind=("bench-production-decode" if suite == "decode" else
+              "bench-speed-128k" if focused_128k else "bench-speed"),
         timeout=1700,
         arguments=arguments,
     )
+
+
+@app.function(
+    image=server_image,
+    gpu="H100!",
+    timeout=1800,
+    retries=0,
+    volumes={str(RESULTS_ROOT): results_volume},
+)
+def profile_decode() -> str:
+    """H100: short graph trace and targeted optimized reconstruction profile."""
+    for tool in ("nsys", "ncu"):
+        if shutil.which(tool) is None:
+            raise RuntimeError(f"{tool} is not installed in the server image")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    directory = RESULTS_ROOT / f"{stamp}-profile-decode-{uuid4().hex[:8]}"
+    directory.mkdir(parents=True)
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if not k.startswith(("SGLANG_OPT_TOPMAG", "KEEP"))
+    }
+    env.update(
+        SGLANG_OPT_TOPMAG="1",
+        KEEP="0.5",
+        SGLANG_OPT_TOPMAG_PACKED="1",
+        SGLANG_OPT_TOPMAG_FUSED="1",
+        SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED="1",
+        MUSTAFAR_RESULTS_DIR=str(directory),
+        MUSTAFAR_FUSED_RESULTS_DIR=str(directory),
+    )
+    target = [
+        sys.executable,
+        "-m",
+        "mustafar.tests.speed",
+        "--production-decode",
+        "--decode-samples",
+        "1",
+        "--decode-rounds",
+        "1",
+        "--decode-selection-sets",
+        "1",
+        "--decode-modes",
+        "optimized",
+        "--decode-batches",
+        "21",
+    ]
+    commands = {
+        "nsys": [
+            "nsys",
+            "profile",
+            "--trace=cuda,nvtx",
+            "--sample=none",
+            "--cuda-graph-trace=node",
+            "--force-overwrite=true",
+            "--output",
+            str(directory / "decode-nsys"),
+            *target,
+        ],
+        "ncu": [
+            "ncu",
+            "--set",
+            "full",
+            "--target-processes",
+            "all",
+            "--kernel-name-base",
+            "function",
+            "--kernel-name",
+            "packed_to_native_kernel_optimized",
+            "--clock-control",
+            "none",
+            "--launch-count",
+            "1",
+            "--export",
+            str(directory / "decode-ncu"),
+            "--force-overwrite",
+            *target,
+        ],
+    }
+    try:
+        for name, command in commands.items():
+            with (directory / f"{name}.log").open("w") as log:
+                subprocess.run(
+                    command,
+                    env=env,
+                    cwd=REMOTE_REPO,
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                    check=True,
+                    timeout=700,
+                )
+        # Keep the raw report for offline inspection.  Report names differ
+        # across Nsight Systems versions; invoking a guessed report here can
+        # produce a successful-looking artifact containing only error text.
+        # The trace is parsed locally after download instead.
+        ncu_report = directory / "decode-ncu.ncu-rep"
+        with (directory / "ncu-stats.csv").open("w") as stats:
+            subprocess.run(
+                ["ncu", "--import", str(ncu_report), "--page", "raw", "--csv"],
+                stdout=stats,
+                stderr=subprocess.STDOUT,
+                check=True,
+                timeout=180,
+            )
+    finally:
+        results_volume.commit()
+    return str(directory)

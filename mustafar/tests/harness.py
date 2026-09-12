@@ -22,12 +22,13 @@ from __future__ import annotations
 import contextlib
 import os
 from dataclasses import dataclass
-from statistics import median
+from statistics import mean, median
 from unittest.mock import patch
 
 import torch
 
 from .. import config, reference
+from ..packed import NativeWorkspace
 
 # --- serving-side geometry (fixed by DeepSeek-V4's CSA layout) ---------------
 PAGE_SIZE = 64  # native tokens per page; packed rows index PAGE_SIZE // 4
@@ -720,9 +721,104 @@ def c4_bar(q, kv, indices, sm_scale):
     return flash_mla_sparse_fwd(q, kv, indices, sm_scale, d_v=config.HEAD_DIM)
 
 
+def native_cache_view(raw: torch.Tensor, page_size: int) -> torch.Tensor:
+    """View a paged native buffer exactly as the FlashMLA call site does."""
+    return raw[:, : page_size * config.NATIVE_RECORD_BYTES].view(
+        -1, page_size, 1, config.NATIVE_RECORD_BYTES
+    )
+
+
+def production_flash_inputs(batch: int, device: torch.device) -> dict[str, object]:
+    """Allocate the direct ``flash_mla_with_kvcache`` decode inputs.
+
+    V4-Flash has 16 real query heads per TP4 rank. FlashMLA's public ABI is
+    padded to 64 heads, so only the first 16 contain values here. This mirrors
+    the serving patch, including its unchanged 128-token SWA leg and one sink.
+    """
+    from sgl_kernel.flash_mla import get_mla_metadata, flash_mla_with_kvcache
+
+    q = torch.randn(
+        batch, 1, 64, config.HEAD_DIM, dtype=torch.bfloat16, device=device
+    )
+    q[:, :, 16:] = 0
+    swa_page_size = 256
+    swa_length = 128
+    swa = NativeWorkspace.allocate(
+        batch, swa_page_size, swa_page_size, device, with_dense=False
+    ).native_bytes
+    swa_indices = (
+        torch.arange(batch, dtype=torch.int32, device=device)[:, None, None]
+        * swa_page_size
+        + torch.arange(swa_length, dtype=torch.int32, device=device)[None, None, :]
+    )
+    return {
+        "flash": flash_mla_with_kvcache,
+        "metadata": get_mla_metadata()[0],
+        "q": q,
+        "sink": torch.zeros(64, dtype=torch.float32, device=device),
+        "swa": swa,
+        "swa_indices": swa_indices,
+        "swa_lengths": torch.full(
+            (batch,), swa_length, dtype=torch.int32, device=device
+        ),
+        "swa_page_size": swa_page_size,
+    }
+
+
+def production_flash_call(
+    inputs: dict[str, object],
+    workspace: NativeWorkspace,
+    extra_indices: torch.Tensor,
+    lengths: torch.Tensor,
+):
+    """Invoke the pinned serving consumer without dense reconstruction/readback."""
+    return inputs["flash"](
+        q=inputs["q"],
+        k_cache=native_cache_view(inputs["swa"], inputs["swa_page_size"]),
+        head_dim_v=config.HEAD_DIM,
+        block_table=None,
+        cache_seqlens=None,
+        tile_scheduler_metadata=inputs["metadata"],
+        softmax_scale=SM_SCALE,
+        is_fp8_kvcache=True,
+        indices=inputs["swa_indices"],
+        topk_length=inputs["swa_lengths"],
+        attn_sink=inputs["sink"],
+        extra_k_cache=native_cache_view(workspace.native_bytes, workspace.page_size),
+        extra_indices_in_kvcache=extra_indices,
+        extra_topk_length=lengths,
+    )
+
+
+def changing_selection_sets(
+    case: Case, count: int = 32, seed: int = 20260913
+) -> tuple[tuple[torch.Tensor, torch.Tensor, torch.Tensor], ...]:
+    """Build stable, shuffled selection tensors for graph replay.
+
+    Each request receives an independent permutation of its 128k logical
+    context's compressed rows. The returned tensors are allocated before timing;
+    callers copy one set into graph-owned input tensors between replays.
+    """
+    generator = torch.Generator(device=case.device).manual_seed(seed + case.batch)
+    sets = []
+    for _ in range(count):
+        physical = torch.stack(
+            [
+                torch.randperm(case.rows, generator=generator, device=case.device)[:TOPK]
+                for _ in range(case.batch)
+            ]
+        ).to(torch.int32).contiguous()
+        raw = physical.clone()
+        lengths = torch.full(
+            (case.batch,), TOPK, dtype=torch.int32, device=case.device
+        )
+        sets.append((physical, raw, lengths))
+    return tuple(sets)
+
+
 # --- timing ------------------------------------------------------------------
 def timed(fn, *, warmup: int = 20, repeats: int = 100) -> dict[str, float]:
-    """Median and p95 device time in microseconds for one callable."""
+    """Mean, median, and p95 device time in microseconds for one callable."""
     for _ in range(warmup):
         fn()
     torch.cuda.synchronize()
@@ -737,6 +833,7 @@ def timed(fn, *, warmup: int = 20, repeats: int = 100) -> dict[str, float]:
         samples.append(start.elapsed_time(end) * 1000.0)
     samples.sort()
     return {
+        "mean_us": mean(samples),
         "p50_us": median(samples),
         "p95_us": samples[min(len(samples) - 1, int(0.95 * len(samples)))],
     }
@@ -750,3 +847,54 @@ def captured(fn):
     with torch.cuda.graph(graph):
         fn()
     return graph.replay
+
+
+def changing_graph(
+    fn,
+    input_sets: tuple[tuple[torch.Tensor, torch.Tensor, torch.Tensor], ...],
+    current: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+):
+    """Capture a graph whose input pointers remain stable while contents change."""
+    for source, target in zip(input_sets[0], current):
+        target.copy_(source)
+    fn()
+    torch.cuda.synchronize()
+    graph = torch.cuda.CUDAGraph()
+    with torch.cuda.graph(graph):
+        fn()
+    return graph
+
+
+def timed_changing_graph(
+    graph,
+    input_sets: tuple[tuple[torch.Tensor, torch.Tensor, torch.Tensor], ...],
+    current: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+    *,
+    warmup: int = 20,
+    repeats: int = 100,
+) -> dict[str, float]:
+    """Time graph replay while excluding input copies from CUDA events."""
+    for index in range(warmup):
+        source = input_sets[index % len(input_sets)]
+        for source_tensor, target in zip(source, current):
+            target.copy_(source_tensor)
+        graph.replay()
+    torch.cuda.synchronize()
+    samples = []
+    for index in range(repeats):
+        source = input_sets[index % len(input_sets)]
+        for source_tensor, target in zip(source, current):
+            target.copy_(source_tensor)
+        start = torch.cuda.Event(enable_timing=True)
+        end = torch.cuda.Event(enable_timing=True)
+        start.record()
+        graph.replay()
+        end.record()
+        end.synchronize()
+        samples.append(start.elapsed_time(end) * 1000.0)
+    samples.sort()
+    return {
+        "mean_us": mean(samples),
+        "p50_us": median(samples),
+        "p95_us": samples[min(len(samples) - 1, int(0.95 * len(samples)))],
+    }

@@ -166,7 +166,7 @@ __global__ void packed_to_native_kernel(
   tail[2 * lane + 1] = __float2bfloat16_rn(x0 * sine + x1 * cosine);
 }
 
-template <typename index_t>
+template <typename index_t, bool kEarlyRopeLoads>
 __global__ void packed_to_native_kernel_optimized(
     const uint8_t* __restrict__ values,
     const uint64_t* __restrict__ bitmaps,
@@ -221,6 +221,17 @@ __global__ void packed_to_native_kernel_optimized(
   const uint64_t* bitmap = bitmaps + physical * kBitmapWords;
   const uint8_t* packed_values = values + physical * kKeptValues;
   const uint8_t* packed_scales = scales + physical * kBitmapWords;
+
+  float cosine = 0.0f;
+  float sine = 0.0f;
+  float scale = 0.0f;
+  if constexpr (kEarlyRopeLoads) {
+    const int64_t frequency = (raw * int64_t{4} * 32 + lane) * 2;
+    cosine = freq_pairs[frequency];
+    sine = freq_pairs[frequency + 1];
+    scale = ldexpf(
+        1.0f, static_cast<int>(packed_scales[kBitmapWords - 1]) - 127);
+  }
 
   __shared__ uint64_t bitmap_shared[kWarpsPerBlock][kBitmapWords];
   // Preserve v5C's two-word guard and 272-byte per-warp shared-memory stride.
@@ -286,11 +297,13 @@ __global__ void packed_to_native_kernel_optimized(
         & 0x00FFFFFFFFFFFFFFull;
   }
 
-  const int64_t frequency = (raw * int64_t{4} * 32 + lane) * 2;
-  const float cosine = freq_pairs[frequency];
-  const float sine = freq_pairs[frequency + 1];
-  const float scale = ldexpf(
-      1.0f, static_cast<int>(packed_scales[kBitmapWords - 1]) - 127);
+  if constexpr (!kEarlyRopeLoads) {
+    const int64_t frequency = (raw * int64_t{4} * 32 + lane) * 2;
+    cosine = freq_pairs[frequency];
+    sine = freq_pairs[frequency + 1];
+    scale = ldexpf(
+        1.0f, static_cast<int>(packed_scales[kBitmapWords - 1]) - 127);
+  }
 
   const int coordinate0 = kNopeDim + 2 * lane;
   const int coordinate1 = coordinate0 + 1;
@@ -329,7 +342,8 @@ void packed_to_native_cuda_impl(
     const torch::Tensor& native_out,
     int64_t page_size,
     int64_t bytes_per_page,
-    bool optimized) {
+    bool optimized,
+    bool early_rope) {
   check_cuda_contiguous(values, "values");
   check_cuda_contiguous(bitmaps, "bitmaps");
   check_cuda_contiguous(scales, "scales");
@@ -390,13 +404,23 @@ void packed_to_native_cuda_impl(
   cudaStream_t stream = at::cuda::getCurrentCUDAStream(values.get_device());
   if (physical_indices.scalar_type() == at::kInt) {
     if (optimized) {
-      packed_to_native_kernel_optimized<int32_t><<<grid, block, 0, stream>>>(
+      if (early_rope) {
+        packed_to_native_kernel_optimized<int32_t, true><<<grid, block, 0, stream>>>(
+            values.data_ptr<uint8_t>(), bitmaps.data_ptr<uint64_t>(),
+            scales.data_ptr<uint8_t>(), physical_indices.data_ptr<int32_t>(),
+            raw_indices.data_ptr<int32_t>(), topk_lengths.data_ptr<int32_t>(),
+            freq_pairs.data_ptr<float>(), native_out.data_ptr<uint8_t>(), rows,
+            physical_indices.size(1), pool_rows, freq_pairs.size(0),
+            static_cast<int>(page_size), bytes_per_page);
+      } else {
+        packed_to_native_kernel_optimized<int32_t, false><<<grid, block, 0, stream>>>(
           values.data_ptr<uint8_t>(), bitmaps.data_ptr<uint64_t>(),
           scales.data_ptr<uint8_t>(), physical_indices.data_ptr<int32_t>(),
           raw_indices.data_ptr<int32_t>(), topk_lengths.data_ptr<int32_t>(),
           freq_pairs.data_ptr<float>(), native_out.data_ptr<uint8_t>(), rows,
           physical_indices.size(1), pool_rows, freq_pairs.size(0),
           static_cast<int>(page_size), bytes_per_page);
+      }
     } else {
       packed_to_native_kernel<int32_t><<<grid, block, 0, stream>>>(
           values.data_ptr<uint8_t>(), bitmaps.data_ptr<uint64_t>(),
@@ -407,13 +431,23 @@ void packed_to_native_cuda_impl(
           static_cast<int>(page_size), bytes_per_page);
     }
   } else if (optimized) {
-    packed_to_native_kernel_optimized<int64_t><<<grid, block, 0, stream>>>(
-        values.data_ptr<uint8_t>(), bitmaps.data_ptr<uint64_t>(),
-        scales.data_ptr<uint8_t>(), physical_indices.data_ptr<int64_t>(),
-        raw_indices.data_ptr<int64_t>(), topk_lengths.data_ptr<int64_t>(),
-        freq_pairs.data_ptr<float>(), native_out.data_ptr<uint8_t>(), rows,
-        physical_indices.size(1), pool_rows, freq_pairs.size(0),
-        static_cast<int>(page_size), bytes_per_page);
+    if (early_rope) {
+      packed_to_native_kernel_optimized<int64_t, true><<<grid, block, 0, stream>>>(
+          values.data_ptr<uint8_t>(), bitmaps.data_ptr<uint64_t>(),
+          scales.data_ptr<uint8_t>(), physical_indices.data_ptr<int64_t>(),
+          raw_indices.data_ptr<int64_t>(), topk_lengths.data_ptr<int64_t>(),
+          freq_pairs.data_ptr<float>(), native_out.data_ptr<uint8_t>(), rows,
+          physical_indices.size(1), pool_rows, freq_pairs.size(0),
+          static_cast<int>(page_size), bytes_per_page);
+    } else {
+      packed_to_native_kernel_optimized<int64_t, false><<<grid, block, 0, stream>>>(
+          values.data_ptr<uint8_t>(), bitmaps.data_ptr<uint64_t>(),
+          scales.data_ptr<uint8_t>(), physical_indices.data_ptr<int64_t>(),
+          raw_indices.data_ptr<int64_t>(), topk_lengths.data_ptr<int64_t>(),
+          freq_pairs.data_ptr<float>(), native_out.data_ptr<uint8_t>(), rows,
+          physical_indices.size(1), pool_rows, freq_pairs.size(0),
+          static_cast<int>(page_size), bytes_per_page);
+    }
   } else {
     packed_to_native_kernel<int64_t><<<grid, block, 0, stream>>>(
         values.data_ptr<uint8_t>(), bitmaps.data_ptr<uint64_t>(),
@@ -439,7 +473,7 @@ void packed_to_native_cuda(
     int64_t bytes_per_page) {
   packed_to_native_cuda_impl(
       values, bitmaps, scales, physical_indices, raw_indices, topk_lengths,
-      freq_pairs, native_out, page_size, bytes_per_page, false);
+      freq_pairs, native_out, page_size, bytes_per_page, false, false);
 }
 
 void packed_to_native_cuda_optimized(
@@ -455,5 +489,24 @@ void packed_to_native_cuda_optimized(
     int64_t bytes_per_page) {
   packed_to_native_cuda_impl(
       values, bitmaps, scales, physical_indices, raw_indices, topk_lengths,
-      freq_pairs, native_out, page_size, bytes_per_page, true);
+      freq_pairs, native_out, page_size, bytes_per_page, true, false);
+}
+
+void packed_to_native_cuda_early_rope(
+    const torch::Tensor& values,
+    const torch::Tensor& bitmaps,
+    const torch::Tensor& scales,
+    const torch::Tensor& physical_indices,
+    const torch::Tensor& raw_indices,
+    const torch::Tensor& topk_lengths,
+    const torch::Tensor& freq_pairs,
+    const torch::Tensor& native_out,
+    int64_t page_size,
+    int64_t bytes_per_page) {
+  // This is a benchmark-only variant of the optimized body. It moves the
+  // frequency-pair and RoPE scale loads before shared-value staging; all
+  // storage, arithmetic, masking, and output behavior remains identical.
+  packed_to_native_cuda_impl(
+      values, bitmaps, scales, physical_indices, raw_indices, topk_lengths,
+      freq_pairs, native_out, page_size, bytes_per_page, true, true);
 }

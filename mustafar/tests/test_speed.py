@@ -100,6 +100,26 @@ class MatrixTests(unittest.TestCase):
         )
 
 
+class ProductionDecodeTests(unittest.TestCase):
+    """CPU checks for the production-shaped decode benchmark configuration."""
+
+    def test_decode_modes_cover_controls_and_candidate(self):
+        self.assertEqual(
+            speed.DECODE_MODES,
+            ("native", "packed", "fused", "optimized", "early_rope"),
+        )
+        self.assertEqual(speed.DECODE_ENV["native"], "native")
+        self.assertEqual(speed.DECODE_ENV["packed"], "packed.bf16")
+        self.assertEqual(speed.DECODE_ENV["fused"], "fused")
+        self.assertEqual(speed.DECODE_ENV["optimized"], "fused.optimized")
+        self.assertEqual(speed.DECODE_ENV["early_rope"], "fused.optimized")
+
+    def test_decode_grid_is_the_realistic_128k_batch_slice(self):
+        self.assertEqual(
+            [(workload.batch, workload.context_rows) for workload in speed.FOCUSED_128K_WORKLOADS],
+            [(15, 32768), (18, 32768), (21, 32768)],
+        )
+
 class ContrastTests(unittest.TestCase):
     def test_every_contrast_resolves_to_legs_its_stage_times(self):
         for contrast in speed.CONTRASTS:
