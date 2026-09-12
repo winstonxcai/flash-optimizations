@@ -726,7 +726,10 @@ def run_speed(
         f"stages={list(STAGES)}",
         flush=True,
     )
-    warmup, repeats = 10, 50
+    # The focused gate is deliberately more stable than the broad exploratory
+    # grid: three independent invocations use 500 samples per shape. Keep the
+    # ordinary suite short so it remains useful during local iteration.
+    warmup, repeats = (10, 500) if focused_128k else (10, 50)
     results: list[dict[str, object]] = []
 
     for workload in workloads:
@@ -778,6 +781,7 @@ def run_speed(
     summary = {
         "gpu": torch.cuda.get_device_name(),
         "csa_layers": harness.CSA_LAYERS,
+        "timing": {"warmup": warmup, "samples": repeats},
         "legs": {leg: leg in available for leg in harness.LEGS},
         "selected": list(selected),
         "headline": {
