@@ -77,6 +77,11 @@ def fused_enabled() -> bool:
     return os.environ.get("SGLANG_OPT_TOPMAG_FUSED") == "1"
 
 
+def optimized_fused_enabled() -> bool:
+    """Optimized fused reconstruction gate (off by default)."""
+    return os.environ.get("SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED") == "1"
+
+
 def sparse_enabled() -> bool:
     """Direct 328-byte sparse MLA gate (off by default).
 
@@ -93,6 +98,11 @@ def validate_packed_static_config() -> None:
     if fused_enabled() and not packed_enabled():
         raise RuntimeError(
             "SGLANG_OPT_TOPMAG_FUSED=1 requires SGLANG_OPT_TOPMAG_PACKED=1"
+        )
+    if optimized_fused_enabled() and not fused_enabled():
+        raise RuntimeError(
+            "SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED=1 requires "
+            "SGLANG_OPT_TOPMAG_FUSED=1"
         )
     if sparse_enabled() and not packed_enabled():
         raise RuntimeError(

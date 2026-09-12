@@ -66,6 +66,19 @@ __device__ __forceinline__ bool coordinate_is_kept(
   return (bitmap[word] & (uint64_t{1} << (63 - lane))) != 0;
 }
 
+__device__ __forceinline__ uint8_t load_packed_byte(
+    uint64_t bitmap_word, int prefix, const uint8_t* packed_values,
+    int coordinate) {
+  const int lane = coordinate & 63;
+  if ((bitmap_word & (uint64_t{1} << (63 - lane))) == 0) {
+    return 0;
+  }
+  const int rank = prefix + (lane == 0
+      ? 0
+      : __popcll(bitmap_word >> (64 - lane)));
+  return packed_values[rank];
+}
+
 template <typename index_t>
 __global__ void packed_to_native_kernel(
     const uint8_t* __restrict__ values,
@@ -153,6 +166,146 @@ __global__ void packed_to_native_kernel(
   tail[2 * lane + 1] = __float2bfloat16_rn(x0 * sine + x1 * cosine);
 }
 
+template <typename index_t>
+__global__ void packed_to_native_kernel_optimized(
+    const uint8_t* __restrict__ values,
+    const uint64_t* __restrict__ bitmaps,
+    const uint8_t* __restrict__ scales,
+    const index_t* __restrict__ physical_indices,
+    const index_t* __restrict__ raw_indices,
+    const index_t* __restrict__ topk_lengths,
+    const float* __restrict__ freq_pairs,
+    uint8_t* __restrict__ native_out,
+    int64_t rows,
+    int64_t selected_k,
+    int64_t pool_rows,
+    int64_t freq_rows,
+    int page_size,
+    int64_t bytes_per_page) {
+  const int warp = threadIdx.x / kWarpSize;
+  const int lane = threadIdx.x & (kWarpSize - 1);
+  const int64_t row = static_cast<int64_t>(blockIdx.x) * kWarpsPerBlock + warp;
+  if (row >= rows) {
+    return;
+  }
+
+  const int64_t query = row / selected_k;
+  const int64_t rank_in_query = row - query * selected_k;
+  const int64_t physical = load_index(physical_indices, row);
+  const int64_t raw = load_index(raw_indices, row);
+  int64_t topk = load_index(topk_lengths, query);
+  topk = topk < 0 ? 0 : (topk > selected_k ? selected_k : topk);
+
+  const int64_t output_page = row / page_size;
+  const int64_t output_offset = row - output_page * page_size;
+  uint8_t* value_out = native_out + output_page * bytes_per_page
+      + output_offset * kNativeValueBytes;
+  uint8_t* scale_out = native_out + output_page * bytes_per_page
+      + static_cast<int64_t>(page_size) * kNativeValueBytes
+      + output_offset * kNativeScaleBytes;
+
+  const bool valid = rank_in_query < topk && physical >= 0
+      && physical < pool_rows && raw >= 0 && raw < (freq_rows + 3) / 4
+      && raw * int64_t{4} < freq_rows;
+  auto* value_words = reinterpret_cast<uint32_t*>(value_out);
+  if (!valid) {
+    for (int word = lane; word < kNativeValueBytes / 4; word += kWarpSize) {
+      value_words[word] = 0;
+    }
+    if (lane == 0) {
+      *reinterpret_cast<uint64_t*>(scale_out) = 0;
+    }
+    return;
+  }
+
+  const uint64_t* bitmap = bitmaps + physical * kBitmapWords;
+  const uint8_t* packed_values = values + physical * kKeptValues;
+  const uint8_t* packed_scales = scales + physical * kBitmapWords;
+
+  __shared__ uint64_t bitmap_shared[kWarpsPerBlock][kBitmapWords];
+  __shared__ uint64_t values_shared[kWarpsPerBlock][kKeptValues / 8];
+  __shared__ int prefix_shared[kWarpsPerBlock][kBitmapWords];
+
+  if (lane < kBitmapWords) {
+    bitmap_shared[warp][lane] = bitmap[lane];
+  }
+  values_shared[warp][lane] =
+      reinterpret_cast<const uint64_t*>(packed_values)[lane];
+  __syncwarp();
+
+  if (lane == 0) {
+    int prefix = 0;
+    #pragma unroll
+    for (int word = 0; word < kBitmapWords; ++word) {
+      prefix_shared[warp][word] = prefix;
+      prefix += __popcll(bitmap_shared[warp][word]);
+    }
+  }
+  __syncwarp();
+
+  const uint8_t* staged_values =
+      reinterpret_cast<const uint8_t*>(values_shared[warp]);
+  if (lane < kNopeDim / 16) {
+    #pragma unroll
+    for (int group = 0; group < 4; ++group) {
+      const int word_index = lane * 4 + group;
+      const int coordinate = word_index * 4;
+      const int bitmap_word = coordinate >> 6;
+      const int bit_in_word = coordinate & 63;
+      const uint64_t bitmap_word_bits = bitmap_shared[warp][bitmap_word];
+      const int rank = prefix_shared[warp][bitmap_word]
+          + (bit_in_word == 0
+              ? 0
+              : __popcll(bitmap_word_bits >> (64 - bit_in_word)));
+      uint32_t packed = 0;
+      int retained = 0;
+      #pragma unroll
+      for (int byte = 0; byte < 4; ++byte) {
+        const int bit = bit_in_word + byte;
+        const bool kept = (bitmap_word_bits
+            & (uint64_t{1} << (63 - bit))) != 0;
+        uint8_t value = 0;
+        if (kept) {
+          value = staged_values[rank + retained];
+          ++retained;
+        }
+        packed |= static_cast<uint32_t>(value) << (byte * 8);
+      }
+      value_words[word_index] = packed;
+    }
+  }
+
+  if (lane == 0) {
+    *reinterpret_cast<uint64_t*>(scale_out) =
+        *reinterpret_cast<const uint64_t*>(packed_scales)
+        & 0x00FFFFFFFFFFFFFFull;
+  }
+
+  const int64_t frequency = (raw * int64_t{4} * 32 + lane) * 2;
+  const float cosine = freq_pairs[frequency];
+  const float sine = freq_pairs[frequency + 1];
+  const float scale = ldexpf(
+      1.0f, static_cast<int>(packed_scales[kBitmapWords - 1]) - 127);
+
+  const int coordinate0 = kNopeDim + 2 * lane;
+  const int coordinate1 = coordinate0 + 1;
+  const int rope_word = kBitmapWords - 1;
+  const uint64_t rope_bitmap = bitmap_shared[warp][rope_word];
+  const int rope_prefix = prefix_shared[warp][rope_word];
+  float x0 = decode_e4m3fn(load_packed_byte(
+      rope_bitmap, rope_prefix, staged_values, coordinate0));
+  float x1 = decode_e4m3fn(load_packed_byte(
+      rope_bitmap, rope_prefix, staged_values, coordinate1));
+  x0 *= scale;
+  x1 *= scale;
+
+  const __nv_bfloat16 y0 = __float2bfloat16_rn(x0 * cosine - x1 * sine);
+  const __nv_bfloat16 y1 = __float2bfloat16_rn(x0 * sine + x1 * cosine);
+  value_words[kNopeDim / 4 + lane] =
+      static_cast<uint32_t>(__bfloat16_as_ushort(y0))
+      | (static_cast<uint32_t>(__bfloat16_as_ushort(y1)) << 16);
+}
+
 void check_cuda_contiguous(const torch::Tensor& tensor, const char* name) {
   TORCH_CHECK(tensor.is_cuda(), name, " must be a CUDA tensor");
   TORCH_CHECK(tensor.is_contiguous(), name, " must be contiguous");
@@ -160,7 +313,7 @@ void check_cuda_contiguous(const torch::Tensor& tensor, const char* name) {
 
 }  // namespace
 
-void packed_to_native_cuda(
+void packed_to_native_cuda_impl(
     const torch::Tensor& values,
     const torch::Tensor& bitmaps,
     const torch::Tensor& scales,
@@ -170,7 +323,8 @@ void packed_to_native_cuda(
     const torch::Tensor& freq_pairs,
     const torch::Tensor& native_out,
     int64_t page_size,
-    int64_t bytes_per_page) {
+    int64_t bytes_per_page,
+    bool optimized) {
   check_cuda_contiguous(values, "values");
   check_cuda_contiguous(bitmaps, "bitmaps");
   check_cuda_contiguous(scales, "scales");
@@ -230,10 +384,28 @@ void packed_to_native_cuda(
   const dim3 grid((rows + kWarpsPerBlock - 1) / kWarpsPerBlock);
   cudaStream_t stream = at::cuda::getCurrentCUDAStream(values.get_device());
   if (physical_indices.scalar_type() == at::kInt) {
-    packed_to_native_kernel<int32_t><<<grid, block, 0, stream>>>(
+    if (optimized) {
+      packed_to_native_kernel_optimized<int32_t><<<grid, block, 0, stream>>>(
+          values.data_ptr<uint8_t>(), bitmaps.data_ptr<uint64_t>(),
+          scales.data_ptr<uint8_t>(), physical_indices.data_ptr<int32_t>(),
+          raw_indices.data_ptr<int32_t>(), topk_lengths.data_ptr<int32_t>(),
+          freq_pairs.data_ptr<float>(), native_out.data_ptr<uint8_t>(), rows,
+          physical_indices.size(1), pool_rows, freq_pairs.size(0),
+          static_cast<int>(page_size), bytes_per_page);
+    } else {
+      packed_to_native_kernel<int32_t><<<grid, block, 0, stream>>>(
+          values.data_ptr<uint8_t>(), bitmaps.data_ptr<uint64_t>(),
+          scales.data_ptr<uint8_t>(), physical_indices.data_ptr<int32_t>(),
+          raw_indices.data_ptr<int32_t>(), topk_lengths.data_ptr<int32_t>(),
+          freq_pairs.data_ptr<float>(), native_out.data_ptr<uint8_t>(), rows,
+          physical_indices.size(1), pool_rows, freq_pairs.size(0),
+          static_cast<int>(page_size), bytes_per_page);
+    }
+  } else if (optimized) {
+    packed_to_native_kernel_optimized<int64_t><<<grid, block, 0, stream>>>(
         values.data_ptr<uint8_t>(), bitmaps.data_ptr<uint64_t>(),
-        scales.data_ptr<uint8_t>(), physical_indices.data_ptr<int32_t>(),
-        raw_indices.data_ptr<int32_t>(), topk_lengths.data_ptr<int32_t>(),
+        scales.data_ptr<uint8_t>(), physical_indices.data_ptr<int64_t>(),
+        raw_indices.data_ptr<int64_t>(), topk_lengths.data_ptr<int64_t>(),
         freq_pairs.data_ptr<float>(), native_out.data_ptr<uint8_t>(), rows,
         physical_indices.size(1), pool_rows, freq_pairs.size(0),
         static_cast<int>(page_size), bytes_per_page);
@@ -247,4 +419,36 @@ void packed_to_native_cuda(
         static_cast<int>(page_size), bytes_per_page);
   }
   C10_CUDA_KERNEL_LAUNCH_CHECK();
+}
+
+void packed_to_native_cuda(
+    const torch::Tensor& values,
+    const torch::Tensor& bitmaps,
+    const torch::Tensor& scales,
+    const torch::Tensor& physical_indices,
+    const torch::Tensor& raw_indices,
+    const torch::Tensor& topk_lengths,
+    const torch::Tensor& freq_pairs,
+    const torch::Tensor& native_out,
+    int64_t page_size,
+    int64_t bytes_per_page) {
+  packed_to_native_cuda_impl(
+      values, bitmaps, scales, physical_indices, raw_indices, topk_lengths,
+      freq_pairs, native_out, page_size, bytes_per_page, false);
+}
+
+void packed_to_native_cuda_optimized(
+    const torch::Tensor& values,
+    const torch::Tensor& bitmaps,
+    const torch::Tensor& scales,
+    const torch::Tensor& physical_indices,
+    const torch::Tensor& raw_indices,
+    const torch::Tensor& topk_lengths,
+    const torch::Tensor& freq_pairs,
+    const torch::Tensor& native_out,
+    int64_t page_size,
+    int64_t bytes_per_page) {
+  packed_to_native_cuda_impl(
+      values, bitmaps, scales, physical_indices, raw_indices, topk_lengths,
+      freq_pairs, native_out, page_size, bytes_per_page, true);
 }

@@ -10,7 +10,7 @@ import torch
 _extension = None
 _load_error: Exception | None = None
 _marker_lock = threading.Lock()
-_marker_emitted = False
+_markers_emitted: set[str] = set()
 _validated_devices: set[int] = set()
 
 
@@ -41,14 +41,23 @@ def fused_available() -> bool:
     return True
 
 
-def _emit_dispatch_marker() -> None:
-    global _marker_emitted
-    if _marker_emitted:
+def optimized_fused_available() -> bool:
+    """Whether the extension exports the optimized reconstruction entry point."""
+    try:
+        extension = _load()
+    except RuntimeError:
+        return False
+    return callable(getattr(extension, "packed_to_native_optimized", None))
+
+
+def _emit_dispatch_marker(optimized: bool) -> None:
+    marker = "packed_to_native_optimized" if optimized else "packed_to_native"
+    if marker in _markers_emitted:
         return
     with _marker_lock:
-        if not _marker_emitted:
-            print("MUSTAFAR_FUSED_DISPATCH=packed_to_native", flush=True)
-            _marker_emitted = True
+        if marker not in _markers_emitted:
+            print(f"MUSTAFAR_FUSED_DISPATCH={marker}", flush=True)
+            _markers_emitted.add(marker)
 
 
 def packed_to_native(
@@ -62,6 +71,8 @@ def packed_to_native(
     native_out: torch.Tensor,
     page_size: int,
     bytes_per_page: int,
+    *,
+    optimized: bool = False,
 ) -> None:
     """Mutate ``native_out`` on PyTorch's current stream without allocations."""
     if not torch.cuda.is_available():
@@ -76,8 +87,14 @@ def packed_to_native(
                 f"Fused requires CUDA capability >= 8.0, got {major}.{minor}"
             )
         _validated_devices.add(device_index)
-    _emit_dispatch_marker()
-    _load().packed_to_native(
+    _emit_dispatch_marker(optimized)
+    extension = _load()
+    launcher = extension.packed_to_native
+    if optimized:
+        launcher = getattr(extension, "packed_to_native_optimized", None)
+        if launcher is None:
+            raise RuntimeError("Optimized fused reconstruction is unavailable")
+    launcher(
         values,
         bitmaps,
         scales,

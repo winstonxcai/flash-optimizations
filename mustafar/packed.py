@@ -281,8 +281,11 @@ def unpack_gather_native_fused(
     native_workspace: NativeWorkspace,
     *,
     layer_id: int | None = None,
+    optimized: bool | None = None,
 ) -> None:
     """Run the allocation-free Fused packed-to-native CUDA adapter."""
+    if optimized is None:
+        optimized = config.optimized_fused_enabled()
     buffers = _as_buffers(packed_buffers, layer_id)
     if physical_indices.shape != raw_indices.shape:
         raise ValueError("physical_indices and raw_indices must have equal shape")
@@ -306,4 +309,5 @@ def unpack_gather_native_fused(
         native_workspace.native_bytes,
         native_workspace.page_size,
         native_workspace.bytes_per_page,
+        optimized=optimized,
     )
