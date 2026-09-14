@@ -16,6 +16,7 @@ from __future__ import annotations
 import math
 import unittest
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 try:
     import torch
@@ -68,6 +69,53 @@ class FusedCpuTests(unittest.TestCase):
         self.assertTrue(
             candidates, f"Fused CUDA extension was not built in-place ({_EXTENSION_GLOB})"
         )
+
+    @unittest.skipIf(torch is None, "requires PyTorch")
+    def test_optimized_dispatch_promotes_geometry_for_active_shape(self):
+        from .. import fused
+
+        extension = type(
+            "Extension",
+            (),
+            {
+                "packed_to_native": staticmethod(Mock()),
+                "packed_to_native_optimized": staticmethod(Mock()),
+                "packed_to_native_geometry": staticmethod(Mock()),
+            },
+        )()
+        values = torch.zeros(256, dtype=torch.uint8)
+        bitmaps = torch.zeros(8, dtype=torch.uint64)
+        scales = torch.zeros(8, dtype=torch.uint8)
+        indices = torch.zeros((1, 512), dtype=torch.int64)
+        lengths = torch.zeros(1, dtype=torch.int64)
+        frequencies = torch.zeros((1, 32, 2), dtype=torch.float32)
+        native = torch.zeros(32 * 16 * 584, dtype=torch.uint8)
+
+        fused._validated_devices.clear()
+        fused._markers_emitted.clear()
+        with (
+            patch.object(fused.torch.cuda, "is_available", return_value=True),
+            patch.object(fused.torch.cuda, "current_device", return_value=0),
+            patch.object(fused.torch.cuda, "get_device_capability", return_value=(9, 0)),
+            patch.object(fused, "_load", return_value=extension),
+            patch("builtins.print"),
+        ):
+            fused.packed_to_native(
+                values,
+                bitmaps,
+                scales,
+                indices,
+                indices.clone(),
+                lengths,
+                frequencies,
+                native,
+                16,
+                16 * 584,
+                optimized=True,
+            )
+
+        extension.packed_to_native_geometry.assert_called_once()
+        extension.packed_to_native_optimized.assert_not_called()
 
 
 if __name__ == "__main__":

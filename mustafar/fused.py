@@ -42,12 +42,33 @@ def fused_available() -> bool:
 
 
 def optimized_fused_available() -> bool:
-    """Whether the extension exports the optimized reconstruction entry point."""
+    """Whether the promoted optimized reconstruction path is built."""
     try:
         extension = _load()
     except RuntimeError:
         return False
-    return callable(getattr(extension, "packed_to_native_optimized", None))
+    return (
+        callable(getattr(extension, "packed_to_native_optimized", None))
+        and callable(getattr(extension, "packed_to_native_geometry", None))
+    )
+
+
+def geometry_fused_available() -> bool:
+    """Whether the fixed-K/page-size geometry candidate is built."""
+    try:
+        extension = _load()
+    except RuntimeError:
+        return False
+    return callable(getattr(extension, "packed_to_native_geometry", None))
+
+
+def combined_fused_available() -> bool:
+    """Whether the geometry plus early-RoPE candidate is built."""
+    try:
+        extension = _load()
+    except RuntimeError:
+        return False
+    return callable(getattr(extension, "packed_to_native_combined", None))
 
 
 def early_rope_available() -> bool:
@@ -97,10 +118,29 @@ def packed_to_native(
                 f"Fused requires CUDA capability >= 8.0, got {major}.{minor}"
             )
         _validated_devices.add(device_index)
-    if candidate not in (None, "early_rope"):
+    if candidate not in (None, "early_rope", "geometry", "generic", "combined"):
         raise ValueError(f"unknown fused benchmark candidate: {candidate}")
     if candidate is not None and not optimized:
-        raise ValueError("the early_rope candidate requires optimized=True")
+        raise ValueError(f"the {candidate} candidate requires optimized=True")
+    geometry_unsupported = (
+        physical_indices.dim() != 2
+        or physical_indices.shape[1] != 512
+        or page_size != 16
+    )
+    if candidate in ("geometry", "combined") and geometry_unsupported:
+        raise ValueError(
+            "the geometry candidate requires selected_k=512 and page_size=16"
+        )
+    # Geometry specialization is now the promoted optimized implementation for
+    # the active serving shape. Keep the explicit candidate for benchmark
+    # comparisons, while retaining the generic optimized entry point for
+    # unsupported shapes and older callers.
+    if optimized and candidate is None and not geometry_unsupported:
+        candidate = "geometry"
+    if candidate == "geometry" and not geometry_fused_available():
+        raise RuntimeError("The promoted geometry fused reconstruction is unavailable")
+    if candidate == "combined" and not combined_fused_available():
+        raise RuntimeError("The combined fused reconstruction is unavailable")
     _emit_dispatch_marker(optimized, candidate)
     extension = _load()
     launcher = extension.packed_to_native
@@ -108,6 +148,18 @@ def packed_to_native(
         launcher = getattr(extension, "packed_to_native_early_rope", None)
         if launcher is None:
             raise RuntimeError("The early_rope fused candidate is unavailable")
+    elif candidate == "geometry":
+        launcher = getattr(extension, "packed_to_native_geometry", None)
+        if launcher is None:
+            raise RuntimeError("The geometry fused candidate is unavailable")
+    elif candidate == "combined":
+        launcher = getattr(extension, "packed_to_native_combined", None)
+        if launcher is None:
+            raise RuntimeError("The combined fused candidate is unavailable")
+    elif candidate == "generic":
+        launcher = getattr(extension, "packed_to_native_optimized", None)
+        if launcher is None:
+            raise RuntimeError("The generic optimized reconstruction is unavailable")
     elif optimized:
         launcher = getattr(extension, "packed_to_native_optimized", None)
         if launcher is None:

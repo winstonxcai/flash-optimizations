@@ -166,7 +166,8 @@ __global__ void packed_to_native_kernel(
   tail[2 * lane + 1] = __float2bfloat16_rn(x0 * sine + x1 * cosine);
 }
 
-template <typename index_t, bool kEarlyRopeLoads>
+template <typename index_t, bool kEarlyRopeLoads, int kFixedSelectedK = 0,
+          int kFixedPageSize = 0>
 __global__ void packed_to_native_kernel_optimized(
     const uint8_t* __restrict__ values,
     const uint64_t* __restrict__ bitmaps,
@@ -189,15 +190,29 @@ __global__ void packed_to_native_kernel_optimized(
     return;
   }
 
-  const int64_t query = row / selected_k;
-  const int64_t rank_in_query = row - query * selected_k;
+  int64_t query;
+  int64_t rank_in_query;
+  if constexpr (kFixedSelectedK == 512) {
+    query = row >> 9;
+    rank_in_query = row & 511;
+  } else {
+    query = row / selected_k;
+    rank_in_query = row - query * selected_k;
+  }
   const int64_t physical = load_index(physical_indices, row);
   const int64_t raw = load_index(raw_indices, row);
   int64_t topk = load_index(topk_lengths, query);
   topk = topk < 0 ? 0 : (topk > selected_k ? selected_k : topk);
 
-  const int64_t output_page = row / page_size;
-  const int64_t output_offset = row - output_page * page_size;
+  int64_t output_page;
+  int64_t output_offset;
+  if constexpr (kFixedPageSize == 16) {
+    output_page = row >> 4;
+    output_offset = row & 15;
+  } else {
+    output_page = row / page_size;
+    output_offset = row - output_page * page_size;
+  }
   uint8_t* value_out = native_out + output_page * bytes_per_page
       + output_offset * kNativeValueBytes;
   uint8_t* scale_out = native_out + output_page * bytes_per_page
@@ -343,7 +358,8 @@ void packed_to_native_cuda_impl(
     int64_t page_size,
     int64_t bytes_per_page,
     bool optimized,
-    bool early_rope) {
+    bool early_rope,
+    bool geometry) {
   check_cuda_contiguous(values, "values");
   check_cuda_contiguous(bitmaps, "bitmaps");
   check_cuda_contiguous(scales, "scales");
@@ -404,7 +420,18 @@ void packed_to_native_cuda_impl(
   cudaStream_t stream = at::cuda::getCurrentCUDAStream(values.get_device());
   if (physical_indices.scalar_type() == at::kInt) {
     if (optimized) {
-      if (early_rope) {
+      if (geometry) {
+        TORCH_CHECK(physical_indices.size(1) == 512 && page_size == 16,
+                    "geometry candidate requires selected_k=512 and page_size=16");
+        packed_to_native_kernel_optimized<int32_t, false, 512, 16>
+            <<<grid, block, 0, stream>>>(
+                values.data_ptr<uint8_t>(), bitmaps.data_ptr<uint64_t>(),
+                scales.data_ptr<uint8_t>(), physical_indices.data_ptr<int32_t>(),
+                raw_indices.data_ptr<int32_t>(), topk_lengths.data_ptr<int32_t>(),
+                freq_pairs.data_ptr<float>(), native_out.data_ptr<uint8_t>(), rows,
+                physical_indices.size(1), pool_rows, freq_pairs.size(0),
+                static_cast<int>(page_size), bytes_per_page);
+      } else if (early_rope) {
         packed_to_native_kernel_optimized<int32_t, true><<<grid, block, 0, stream>>>(
             values.data_ptr<uint8_t>(), bitmaps.data_ptr<uint64_t>(),
             scales.data_ptr<uint8_t>(), physical_indices.data_ptr<int32_t>(),
@@ -431,7 +458,18 @@ void packed_to_native_cuda_impl(
           static_cast<int>(page_size), bytes_per_page);
     }
   } else if (optimized) {
-    if (early_rope) {
+    if (geometry) {
+      TORCH_CHECK(physical_indices.size(1) == 512 && page_size == 16,
+                  "geometry candidate requires selected_k=512 and page_size=16");
+      packed_to_native_kernel_optimized<int64_t, false, 512, 16>
+          <<<grid, block, 0, stream>>>(
+              values.data_ptr<uint8_t>(), bitmaps.data_ptr<uint64_t>(),
+              scales.data_ptr<uint8_t>(), physical_indices.data_ptr<int64_t>(),
+              raw_indices.data_ptr<int64_t>(), topk_lengths.data_ptr<int64_t>(),
+              freq_pairs.data_ptr<float>(), native_out.data_ptr<uint8_t>(), rows,
+              physical_indices.size(1), pool_rows, freq_pairs.size(0),
+              static_cast<int>(page_size), bytes_per_page);
+    } else if (early_rope) {
       packed_to_native_kernel_optimized<int64_t, true><<<grid, block, 0, stream>>>(
           values.data_ptr<uint8_t>(), bitmaps.data_ptr<uint64_t>(),
           scales.data_ptr<uint8_t>(), physical_indices.data_ptr<int64_t>(),
@@ -473,7 +511,7 @@ void packed_to_native_cuda(
     int64_t bytes_per_page) {
   packed_to_native_cuda_impl(
       values, bitmaps, scales, physical_indices, raw_indices, topk_lengths,
-      freq_pairs, native_out, page_size, bytes_per_page, false, false);
+      freq_pairs, native_out, page_size, bytes_per_page, false, false, false);
 }
 
 void packed_to_native_cuda_optimized(
@@ -489,7 +527,7 @@ void packed_to_native_cuda_optimized(
     int64_t bytes_per_page) {
   packed_to_native_cuda_impl(
       values, bitmaps, scales, physical_indices, raw_indices, topk_lengths,
-      freq_pairs, native_out, page_size, bytes_per_page, true, false);
+      freq_pairs, native_out, page_size, bytes_per_page, true, false, false);
 }
 
 void packed_to_native_cuda_early_rope(
@@ -508,5 +546,39 @@ void packed_to_native_cuda_early_rope(
   // storage, arithmetic, masking, and output behavior remains identical.
   packed_to_native_cuda_impl(
       values, bitmaps, scales, physical_indices, raw_indices, topk_lengths,
-      freq_pairs, native_out, page_size, bytes_per_page, true, true);
+      freq_pairs, native_out, page_size, bytes_per_page, true, true, false);
+}
+
+void packed_to_native_cuda_geometry(
+    const torch::Tensor& values,
+    const torch::Tensor& bitmaps,
+    const torch::Tensor& scales,
+    const torch::Tensor& physical_indices,
+    const torch::Tensor& raw_indices,
+    const torch::Tensor& topk_lengths,
+    const torch::Tensor& freq_pairs,
+    const torch::Tensor& native_out,
+    int64_t page_size,
+    int64_t bytes_per_page) {
+  packed_to_native_cuda_impl(
+      values, bitmaps, scales, physical_indices, raw_indices, topk_lengths,
+      freq_pairs, native_out, page_size, bytes_per_page, true, false, true);
+}
+
+void packed_to_native_cuda_combined(
+    const torch::Tensor& values,
+    const torch::Tensor& bitmaps,
+    const torch::Tensor& scales,
+    const torch::Tensor& physical_indices,
+    const torch::Tensor& raw_indices,
+    const torch::Tensor& topk_lengths,
+    const torch::Tensor& freq_pairs,
+    const torch::Tensor& native_out,
+    int64_t page_size,
+    int64_t bytes_per_page) {
+  // Combine the two validated micro-optimizations: fixed serving geometry and
+  // early RoPE operand loads. Storage, arithmetic, and masking are unchanged.
+  packed_to_native_cuda_impl(
+      values, bitmaps, scales, physical_indices, raw_indices, topk_lengths,
+      freq_pairs, native_out, page_size, bytes_per_page, true, true, true);
 }

@@ -114,6 +114,7 @@ MATRIX: tuple[Row, ...] = (
             ),
             ("fused", "no fused store variant"),
             ("fused.optimized", "no optimized fused store variant"),
+            ("fused.geometry", "no geometry-specific fused store variant"),
             ("sparse", "the sparse kernel consumes packed rows and has no store"),
         ),
         note=(
@@ -136,6 +137,7 @@ MATRIX: tuple[Row, ...] = (
             ),
             ("fused", "no fused variant of this product"),
             ("fused.optimized", "no optimized fused variant of this product"),
+            ("fused.geometry", "no geometry-specific fused variant of this product"),
             ("sparse", "no dense row output by construction"),
         ),
         note="the one genuine apples-to-apples decode pair",
@@ -152,6 +154,10 @@ MATRIX: tuple[Row, ...] = (
             (
                 "fused.optimized",
                 "unpack_gather_native with FUSED_OPTIMIZED=1: the optimized CUDA adapter",
+            ),
+            (
+                "fused.geometry",
+                "unpack_gather_native with candidate=geometry: fixed geometry CUDA adapter",
             ),
         ),
         absent=(
@@ -202,6 +208,10 @@ MATRIX: tuple[Row, ...] = (
                 "optimized fused reconstruction + dequant + flash_mla_sparse_fwd",
             ),
             (
+                "fused.geometry",
+                "fixed K=512/page_size=16 fused reconstruction + dequant + flash_mla_sparse_fwd",
+            ),
+            (
                 "sparse",
                 "sparse.c4_leg: the 328-byte records read directly, no reassembly",
             ),
@@ -222,13 +232,12 @@ FOCUSED_128K_WORKLOADS: tuple[harness.Workload, ...] = tuple(
     for batch in (15, 18, 21)
 )
 
-DECODE_MODES = ("native", "packed", "fused", "optimized", "early_rope")
+DECODE_MODES = ("native", "generic", "optimized", "combined")
 DECODE_ENV = {
     "native": "native",
-    "packed": "packed.bf16",
-    "fused": "fused",
+    "generic": "fused.optimized",
     "optimized": "fused.optimized",
-    "early_rope": "fused.optimized",
+    "combined": "fused.optimized",
 }
 
 # The comparisons this suite exists to answer. The gated one is the fused
@@ -356,6 +365,7 @@ def _prepare(case: harness.Case) -> _Ctx:
         "packed.native": harness.native_workspace(case, with_dense=True),
         "fused": harness.native_workspace(case, with_dense=False),
         "fused.optimized": harness.native_workspace(case, with_dense=False),
+        "fused.geometry": harness.native_workspace(case, with_dense=False),
     }
 
     def rows() -> torch.Tensor:
@@ -413,7 +423,8 @@ def _cells(
         # of the timed region.
         workspace = ctx.workspaces[leg]
         return lambda: ops.unpack_native(
-            ctx.buffers, case.physical, case.raw, case.lengths, case.freqs, workspace
+            ctx.buffers, case.physical, case.raw, case.lengths, case.freqs, workspace,
+            candidate="geometry" if leg == "fused.geometry" else None,
         )
 
     def read_back(leg: str) -> Callable[[], None]:
@@ -498,6 +509,7 @@ def _cells(
             "packed.native": reconstruct("packed.native"),
             "fused": reconstruct("fused"),
             "fused.optimized": reconstruct("fused.optimized"),
+            "fused.geometry": reconstruct("fused.geometry"),
         },
         "attention": {
             harness.NATIVE: _then(native_rows, c4(ctx.native_rows)),
@@ -513,6 +525,11 @@ def _cells(
             "fused.optimized": _then(
                 reconstruct("fused.optimized"),
                 read_back("fused.optimized"),
+                c4(ctx.dense_rows),
+            ),
+            "fused.geometry": _then(
+                reconstruct("fused.geometry"),
+                read_back("fused.geometry"),
                 c4(ctx.dense_rows),
             ),
             "sparse": sparse_c4,
@@ -844,8 +861,12 @@ def _decode_invoke(
                 lengths,
                 case.freqs,
                 workspace,
-                optimized=mode in ("optimized", "early_rope"),
-                candidate="early_rope" if mode == "early_rope" else None,
+                optimized=mode != "fused",
+                candidate=(
+                    "generic" if mode == "generic"
+                    else "combined" if mode == "combined"
+                    else None
+                ),
             )
 
     extra_indices = workspace.temporary_indices[: case.batch, : harness.TOPK]
@@ -913,10 +934,12 @@ def run_production_decode(
         raise ValueError("samples, rounds, and selection_sets must be positive")
 
     device = torch.device("cuda")
-    from ..fused import early_rope_available
+    from ..fused import combined_fused_available, optimized_fused_available
 
-    if not early_rope_available():
-        raise RuntimeError("the benchmark-only early_rope fused candidate is not built")
+    if not optimized_fused_available():
+        raise RuntimeError("the optimized fused candidate is not built")
+    if "combined" in (DECODE_MODES if modes is None else modes) and not combined_fused_available():
+        raise RuntimeError("the combined fused candidate is not built")
     selected_modes = DECODE_MODES if modes is None else tuple(modes)
     unknown_modes = set(selected_modes) - set(DECODE_MODES)
     if unknown_modes:
@@ -937,17 +960,19 @@ def run_production_decode(
 
     for workload in workloads:
         case = harness.build_case(workload, device, seed=20260913)
-        with harness.leg_env("packed.bf16"):
-            buffers = harness.packed_buffers(case)
-        native_cache, _ = harness.native_store(
-            case, case.latent, page_size=harness.PAGE_SIZE // harness.COMPRESS_RATIO
+        fixture = harness.reconstruction_fixture(
+            workload.batch, device, context_rows=workload.context_rows,
+            count=selection_sets,
         )
+        case.freqs = fixture.freqs
+        buffers = fixture.buffers
+        native_cache = fixture.native_cache
         inputs = harness.production_flash_inputs(case.batch, device)
-        sequences = harness.changing_selection_sets(
-            case, count=selection_sets, seed=20260914
-        )
+        sequences = fixture.selections
 
-        graphs: dict[str, tuple[object, tuple[torch.Tensor, ...]]] = {}
+        # CUDA graphs record pointers; they do not own every tensor allocated
+        # before capture. Keep the closures/workspaces alive across all modes.
+        graphs: dict[str, tuple] = {}
         for mode in selected_modes:
             current = tuple(torch.empty_like(tensor) for tensor in sequences[0])
             if mode == "native":
@@ -962,14 +987,14 @@ def run_production_decode(
             with harness.leg_env(DECODE_ENV[mode]):
                 graph = harness.changing_graph(invoke, sequences, current)
             _check_decode_result(invoke, mode, workload.name)
-            graphs[mode] = (graph, current)
+            graphs[mode] = (graph, current, invoke, workspace)
 
         for round_id in range(1, rounds + 1):
             order = selected_modes[(round_id - 1) % len(selected_modes) :] + selected_modes[
                 :(round_id - 1) % len(selected_modes)
             ]
             for mode in order:
-                graph, current = graphs[mode]
+                graph, current, _, _ = graphs[mode]
                 with harness.leg_env(DECODE_ENV[mode]):
                     timing = harness.timed_changing_graph(
                         graph,
@@ -996,7 +1021,7 @@ def run_production_decode(
                     physical,
                     raw,
                     lengths,
-                    case.freqs,
+                    fixture.freqs,
                     diagnostic_workspace,
                 )
             diagnostic_indices = diagnostic_workspace.temporary_indices[
@@ -1068,8 +1093,15 @@ if __name__ == "__main__":
     parser.add_argument("--decode-selection-sets", type=int, default=32)
     parser.add_argument("--decode-modes", default=None)
     parser.add_argument("--decode-batches", default=None)
+    parser.add_argument("--reconstruction", choices=("timing", "validate", "sanitizer", "profile"))
     args = parser.parse_args()
-    if args.production_decode:
+    if args.reconstruction:
+        from .reconstruction import MODES, run
+        run(action=args.reconstruction,
+            modes=tuple(args.decode_modes.split(",")) if args.decode_modes else MODES,
+            batches=tuple(map(int, args.decode_batches.split(","))) if args.decode_batches else (15, 18, 21),
+            samples=args.decode_samples, rounds=args.decode_rounds)
+    elif args.production_decode:
         run_production_decode(
             samples=args.decode_samples,
             rounds=args.decode_rounds,

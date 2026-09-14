@@ -6,6 +6,8 @@ import os
 import shutil
 import subprocess
 import sys
+import json
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -401,4 +403,95 @@ def profile_decode() -> str:
             )
     finally:
         results_volume.commit()
+    return str(directory)
+
+
+@app.function(
+    image=server_image, gpu="H100!", cpu=4, memory=16384,
+    timeout=900, retries=0, scaledown_window=2,
+    volumes={str(RESULTS_ROOT): results_volume},
+)
+def profile_reconstruction(
+    phase: str = "initial", modes: str = "fused,generic,optimized,combined",
+    profile_mode: str = "optimized",
+) -> str:
+    """Bounded model-free reconstruction pass; at most 900s per invocation.
+
+    Reserve each invocation against the experiment's aggregate allocation budget
+    before launching. Never auto-retry a failed GPU allocation.
+    """
+    if phase not in ("initial", "confirm", "timing", "profile", "sanitizer"):
+        raise ValueError("unknown reconstruction phase")
+    if profile_mode not in ("fused", "generic", "optimized", "combined"):
+        raise ValueError("unknown reconstruction profile mode")
+    started = time.monotonic()
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    directory = RESULTS_ROOT / f"{stamp}-reconstruction-{phase}-{uuid4().hex[:8]}"
+    directory.mkdir(parents=True)
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("SGLANG_OPT_TOPMAG", "KEEP"))}
+    env.update(SGLANG_OPT_TOPMAG="1", KEEP="0.5", SGLANG_OPT_TOPMAG_PACKED="1")
+    steps = []
+
+    def execute(name, command, limit=240):
+        remaining = 840 - (time.monotonic() - started)
+        if remaining < 30:
+            raise TimeoutError("reconstruction allocation budget exhausted; reserving export time")
+        target_dir = directory / name
+        target_dir.mkdir(exist_ok=True)
+        child_env = {**env, "MUSTAFAR_RESULTS_DIR": str(target_dir)}
+        print(f"[reconstruction] {name}: {remaining:.0f}s allocation work budget left", flush=True)
+        begin = time.monotonic()
+        with (directory / f"{name}.log").open("w") as log:
+            process = subprocess.run(command, cwd=REMOTE_REPO, env=child_env,
+                                     stdout=log, stderr=subprocess.STDOUT,
+                                     timeout=min(limit, remaining), check=False)
+        steps.append({"name": name, "command": command, "seconds": time.monotonic() - begin,
+                      "exit_code": process.returncode})
+        print(f"[reconstruction] {name}: exit={process.returncode}", flush=True)
+        if process.returncode:
+            print((directory / f"{name}.log").read_text()[-5000:], flush=True)
+            raise RuntimeError(f"{name} failed")
+
+    base = [sys.executable, "-m", "mustafar.tests.speed"]
+    try:
+        if phase in ("initial", "confirm", "timing"):
+            execute("timing", base + ["--reconstruction", "timing", "--decode-modes", modes], 300)
+        if phase in ("initial", "sanitizer"):
+            for tool in ("memcheck", "racecheck", "synccheck"):
+                execute(tool, ["compute-sanitizer", "--tool", tool, "--error-exitcode", "99",
+                               *base, "--reconstruction", "sanitizer", "--decode-modes", modes], 120)
+        if phase in ("initial", "confirm", "profile"):
+            execute("sections", ["ncu", "--list-sections"])
+            section_text = (directory / "sections.log").read_text()
+            sections = ["LaunchStats", "Occupancy", "SchedulerStats", "WarpStateStats",
+                        "MemoryWorkloadAnalysis", "SourceCounters"]
+            if any(section not in section_text for section in sections):
+                raise RuntimeError("installed NCU lacks required sections; inspect sections.log")
+            target = base + ["--reconstruction", "profile", "--decode-batches", "21",
+                             "--decode-modes", profile_mode, "--decode-samples", "8"]
+            execute("nsys", ["nsys", "profile", "--trace=cuda,nvtx", "--sample=none",
+                             "--cuda-graph-trace=node", "--force-overwrite=true", "-o",
+                             str(directory / "reconstruction"), *target], 120)
+            section_args = [arg for section in sections for arg in ("--section", section)]
+            execute("ncu", ["ncu", *section_args, "--nvtx", "--nvtx-include", "reconstruction-profile/",
+                            "--clock-control", "none", "--cache-control", "none",
+                            "--launch-count", "3", "--import-source", "yes", "-o",
+                            str(directory / "reconstruction"), "--force-overwrite", *target], 240)
+            report = str(directory / "reconstruction.ncu-rep")
+            execute("ncu-raw", ["ncu", "--import", report, "--page", "raw", "--csv"], 60)
+            execute("ncu-source", ["ncu", "--import", report, "--page", "source", "--print-source", "cuda,sass"], 60)
+            execute("nsys-export", ["nsys", "export", "--type", "sqlite", "--force-overwrite=true",
+                                    "-o", str(directory / "reconstruction.sqlite"),
+                                    str(directory / "reconstruction.nsys-rep")], 60)
+            libraries = list((REMOTE_REPO / "mustafar").glob("_fused*.so"))
+            if len(libraries) != 1:
+                raise RuntimeError("expected one compiled fused extension")
+            execute("sass", ["cuobjdump", "--dump-sass", "--dump-resource-usage", str(libraries[0])], 60)
+    finally:
+        ledger = {"account": os.environ.get("MODAL_WORKSPACE", "fxcai21"), "phase": phase,
+                  "function_elapsed_seconds": time.monotonic() - started,
+                  "allocation_reservation_seconds": 900, "steps": steps}
+        (directory / "ledger.json").write_text(json.dumps(ledger, indent=2) + "\n")
+        results_volume.commit()
+        print(f"[reconstruction] artifacts: {directory}", flush=True)
     return str(directory)

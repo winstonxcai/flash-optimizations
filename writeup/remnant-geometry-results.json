@@ -1,0 +1,98 @@
+{
+  "experiment": "specialize reconstruction indexing",
+  "branch": "codex/remnant-sparse-kernel",
+  "source_commit": "af40cc5f451ea647cb11ad3860b849bc1398ca31",
+  "account": "fxcai21",
+  "model_free": true,
+  "hardware": "NVIDIA H100 80GB HBM3",
+  "workload": {
+    "context_tokens": 131072,
+    "selected_k": 512,
+    "batches": [15, 18, 21],
+    "selection_sets": 32,
+    "samples_per_round": 500,
+    "rounds": 3,
+    "timed_region": "CUDA graph replay; input copies outside device events",
+    "consumer": "sgl_kernel.flash_mla.flash_mla_with_kvcache"
+  },
+  "candidate": {
+    "name": "geometry",
+    "changes": [
+      "row >> 9 and row & 511 for query and selection slot",
+      "row >> 4 and row & 15 for output page and page offset"
+    ],
+    "dispatch": "MUSTAFAR_FUSED_DISPATCH=geometry",
+    "default_unchanged": true
+  },
+  "reconstruction_only_us": {
+    "fused": {"15": 23.274, "18": 25.155, "21": 28.147},
+    "optimized": {"15": 12.070, "18": 13.187, "21": 14.482},
+    "geometry": {"15": 11.683, "18": 12.564, "21": 13.858}
+  },
+  "complete_decode_us_mean_p50_p95": {
+    "15": {
+      "native": [21.706, 21.653, 22.091],
+      "packed": [59.018, 58.981, 59.733],
+      "fused": [40.497, 40.331, 41.397],
+      "optimized": [29.505, 29.435, 29.973],
+      "geometry": [29.175, 29.099, 29.749]
+    },
+    "18": {
+      "native": [24.919, 24.843, 25.451],
+      "packed": [68.026, 67.925, 68.971],
+      "fused": [43.849, 43.808, 44.619],
+      "optimized": [32.044, 32.000, 32.811],
+      "geometry": [31.146, 31.104, 31.936]
+    },
+    "21": {
+      "native": [25.366, 25.184, 26.421],
+      "packed": [75.662, 75.509, 76.832],
+      "fused": [47.840, 47.627, 49.205],
+      "optimized": [34.844, 33.931, 35.915],
+      "geometry": [33.634, 33.419, 34.869]
+    }
+  },
+  "geometry_vs_optimized_mean_improvement_percent": {
+    "15": 1.12,
+    "18": 2.80,
+    "21": 3.47
+  },
+  "profile": {
+    "optimized": {
+      "kernel_us_ncu": 11.04,
+      "dynamic_instructions": 6676992,
+      "static_instructions_32bit_path": 760,
+      "mufu_rcp": 3,
+      "registers_per_thread": 32,
+      "shared_bytes": 2496
+    },
+    "geometry": {
+      "kernel_us_ncu": 10.52,
+      "dynamic_instructions": 6085632,
+      "static_instructions_32bit_path": 600,
+      "mufu_rcp": 0,
+      "registers_per_thread": 32,
+      "shared_bytes": 2496
+    }
+  },
+  "correctness": {
+    "validity_fixtures": 6,
+    "geometry_validity": "passed",
+    "int32_and_int64": "passed",
+    "empty_batch": "passed",
+    "unsupported_geometry_rejection": "passed",
+    "memcheck": "passed",
+    "racecheck": "passed",
+    "synccheck": "passed"
+  },
+  "remote_artifact": "/results/20260913T085734Z-bench-production-decode-028ef566",
+  "acceptance": {
+    "original_required_b21_improvement_percent": 5.0,
+    "revised_required_b21_improvement_percent": 2.0,
+    "observed_b21_improvement_percent": 3.47,
+    "qualified_under_revised_gate": true,
+    "independent_confirmation": "not run",
+    "promoted": true,
+    "retained_control": "geometry-specialized optimized dispatch"
+  }
+}

@@ -22,8 +22,10 @@ bash mustafar/scripts/local/bench-serving.sh packed 32768 2048 8
 
 The four arguments are **mode, input tokens, output tokens, concurrency**.
 Modes: `native`, `packed`, `fused`, and `optimized`. `optimized` enables the
-opt-in optimized fused CUDA adapter. Run the command separately for each
-configuration. Defaults: native, 32k input, 2,048 output, concurrency 8
+opt-in optimized fused CUDA adapter; for the active K=512/page-size-16 serving
+shape it uses the promoted geometry-specialized dispatch. Run the command
+separately for each configuration. Defaults: native, 32k input, 2,048 output,
+concurrency 8
 (`concurrency` ≤ 136, the extended decode-graph coverage cap). `MODEL_PATH`
 is required.
 

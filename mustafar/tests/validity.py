@@ -28,6 +28,8 @@ extensions under test:
   ``fused.optimized`` the retained optimized fused implementation, selected by
                    ``SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED=1`` and compared through
                    the same native-layout and attention bars as ``fused``.
+  ``fused.geometry`` the fixed-K/page-size indexing candidate, selected by the
+                   explicit ``candidate="geometry"`` benchmark interface.
   ``sparse``       ``mustafar._sparse``, reading 328-byte records directly with
                    no reassembly. Needs ``mustafar._sparse``. Single-token decode
                    only: the gate is ``q.shape[1] == 1 and not _is_sm120``
@@ -378,12 +380,15 @@ def _read_rows(case: harness.Case, buffers, candidates):
         if leg == "packed.bf16":
             rows[leg] = harness.packed_dense(case, buffers)
             continue
-        if leg in ("packed.native", "fused", "fused.optimized"):
+        if leg in ("packed.native", "fused", "fused.optimized", "fused.geometry"):
             workspace = harness.native_workspace(
                 case, with_dense=leg == "packed.native"
             )
             with harness.leg_env(leg):
-                harness.packed_native(case, buffers, workspace)
+                harness.packed_native(
+                    case, buffers, workspace,
+                    candidate="geometry" if leg == "fused.geometry" else None,
+                )
                 rows[leg] = harness.workspace_dense(workspace)
                 workspaces[leg] = workspace
     return rows, workspaces
@@ -589,7 +594,8 @@ def _run_case(case: harness.Case, candidates, *, attention_supported: bool = Tru
     # packed implementation directly with native BF16 storage instead measures
     # the intentional FP8 RoPE-tail quantisation, not reconstruction correctness.
     fused_legs = tuple(
-        leg for leg in candidates if leg in ("fused", "fused.optimized")
+        leg for leg in candidates
+        if leg in ("fused", "fused.optimized", "fused.geometry")
     )
     packed_bar_rows = None
     packed_bar_workspace = None
@@ -717,14 +723,14 @@ def _fused_execution_contract(*, sanitizer_case: bool) -> dict[str, object]:
     torch.cuda.synchronize()
     _assert_workspaces_equivalent(case, optimized, baseline, "fused-contract/eager")
 
-    from ..fused import early_rope_available
+    from ..fused import geometry_fused_available
 
-    early = None
-    if early_rope_available():
-        early = harness.native_workspace(case)
-        early.native_bytes.zero_()
-        launch(early, optimized=True, candidate="early_rope")
-        _assert_workspaces_equivalent(case, early, baseline, "fused-contract/early-rope")
+    geometry = None
+    if geometry_fused_available():
+        geometry = harness.native_workspace(case)
+        geometry.native_bytes.zero_()
+        launch(geometry, optimized=True, candidate="geometry")
+        _assert_workspaces_equivalent(case, geometry, baseline, "fused-contract/geometry")
 
     # The sanitizer invocation concentrates on memory safety. Stream and graph
     # behavior run in the ordinary validity invocation, where CUDA graph capture
@@ -781,7 +787,7 @@ def _fused_execution_contract(*, sanitizer_case: bool) -> dict[str, object]:
     )
     return {
         "eager_exact": True,
-        "early_rope_exact": early is not None,
+        "geometry_exact": geometry is not None,
         "non_default_stream": True,
         "changing_graph_replay": True,
         "replay_allocation_bytes": allocated_after - allocated_before,
@@ -860,7 +866,7 @@ def run_validity(
             _assert_no_regression(_name(case), entry, baseline[_name(case)])
 
     fused_contract = None
-    if "fused.optimized" in selected:
+    if "fused.optimized" in selected or "fused.geometry" in selected:
         fused_contract = _fused_execution_contract(sanitizer_case=sanitizer_case)
         print(json.dumps({"fused_execution_contract": fused_contract}), flush=True)
 

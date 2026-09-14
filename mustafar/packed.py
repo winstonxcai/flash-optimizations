@@ -204,6 +204,7 @@ def unpack_gather_native(
     native_workspace: NativeWorkspace,
     *,
     layer_id: int | None = None,
+    candidate: str | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Materialize native hybrid pages and return cache plus remapped indices."""
     buffers = _as_buffers(packed_buffers, layer_id)
@@ -221,6 +222,8 @@ def unpack_gather_native(
         )
     rows = n_queries * selected_k
     temp = native_workspace.temporary_indices[:n_queries, :selected_k]
+    if candidate is not None and not config.fused_enabled():
+        raise ValueError("a fused reconstruction candidate requires FUSED=1")
     if config.fused_enabled():
         config.validate_packed_static_config()
         unpack_gather_native_fused(
@@ -230,6 +233,7 @@ def unpack_gather_native(
             topk_lengths,
             freqs_cis,
             native_workspace,
+            candidate=candidate,
         )
         return native_workspace.native_bytes, temp
     if native_workspace.dense_bf16 is None:

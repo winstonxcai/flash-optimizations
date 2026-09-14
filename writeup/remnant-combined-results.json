@@ -1,0 +1,105 @@
+{
+  "experiment": "combined-geometry-early-rope",
+  "branch": "codex/remnant-sparse-kernel",
+  "source_head_at_run": "af40cc5f451ea647cb11ad3860b849bc1398ca31",
+  "account": "fxcai21",
+  "hardware": "NVIDIA H100 80GB HBM3",
+  "software": {
+    "torch": "2.13.0+cu130",
+    "cuda": "13.0",
+    "sglang_revision": "71de97b264b04dcd514cf904003028aefe9775c8"
+  },
+  "shape": {
+    "context_tokens": 131072,
+    "context_rows_per_request": 32768,
+    "selected_k": 512,
+    "page_size": 16,
+    "threads_per_block": 128,
+    "rows_per_warp": 1,
+    "real_query_heads_per_tp4_rank": 16,
+    "selection_sets": 32
+  },
+  "kernel": {
+    "combined": "kEarlyRopeLoads=true, kFixedSelectedK=512, kFixedPageSize=16",
+    "format_unchanged": true,
+    "promoted": false
+  },
+  "reconstruction_graph_us": {
+    "samples_per_round": 500,
+    "rounds": 3,
+    "warmup": 20,
+    "columns": ["mean", "p50", "p95"],
+    "15": {
+      "generic": [12.776, 12.000, 13.291],
+      "optimized_geometry": [11.846, 11.499, 12.683],
+      "combined": [11.647, 11.349, 12.683]
+    },
+    "18": {
+      "generic": [13.722, 13.419, 14.613],
+      "optimized_geometry": [13.183, 12.779, 14.229],
+      "combined": [13.081, 12.661, 14.411]
+    },
+    "21": {
+      "generic": [14.573, 14.256, 15.840],
+      "optimized_geometry": [13.805, 13.579, 14.571],
+      "combined": [13.937, 13.573, 15.424]
+    }
+  },
+  "consumer_graph_us": {
+    "consumer": "sgl_kernel.flash_mla.flash_mla_with_kvcache",
+    "timed_region": "CUDA graph replay; input copies outside device events",
+    "samples_per_round": 500,
+    "rounds": 3,
+    "warmup": 10,
+    "columns": ["mean", "p50", "p95"],
+    "15": {
+      "native": [22.113, 21.408, 23.157],
+      "generic": [29.529, 29.152, 30.880],
+      "optimized_geometry": [28.953, 28.629, 30.176],
+      "combined": [28.834, 28.571, 29.941]
+    },
+    "18": {
+      "native": [24.643, 24.373, 25.909],
+      "generic": [31.570, 31.440, 32.565],
+      "optimized_geometry": [31.285, 31.152, 32.576],
+      "combined": [31.066, 30.949, 32.363]
+    },
+    "21": {
+      "native": [25.192, 24.800, 26.976],
+      "generic": [34.170, 33.797, 36.331],
+      "optimized_geometry": [33.809, 33.675, 35.605],
+      "combined": [33.357, 33.216, 34.795]
+    }
+  },
+  "relative_mean_percent": {
+    "combined_vs_optimized": {"15": -0.41, "18": -0.70, "21": -1.34},
+    "combined_vs_native": {"15": 30.40, "18": 26.07, "21": 32.41},
+    "combined_vs_generic": {"15": -2.35, "18": -1.60, "21": -2.38}
+  },
+  "correctness": {
+    "validity": "passed",
+    "memcheck": "passed",
+    "racecheck": "passed",
+    "synccheck": "passed",
+    "cases": [
+      "empty and partial lengths",
+      "invalid, negative, stale, duplicate, and permuted locations",
+      "page boundaries",
+      "int32 and int64 indices",
+      "changing graph inputs",
+      "non-default stream",
+      "allocation-free replay"
+    ]
+  },
+  "artifacts": {
+    "consumer": "mustafar/results/reconstruction-20260914-combined/20260913T200353Z-bench-production-decode-b11f2c7e",
+    "sanitizer": "mustafar/results/reconstruction-20260914-combined/20260913T201120Z-reconstruction-sanitizer-2374e91d"
+  },
+  "source_sha256": {
+    "mustafar/cuda/fused/fused.cu": "2d55b3651c4216f9d22d1317baa44be7c19147ecadebf240ccef14b69af1c63a",
+    "mustafar/cuda/fused/bindings.cpp": "97f64fb9b80268230657b2be20dc4db35cbfebb755cb0babfb073a9f64800740",
+    "mustafar/fused.py": "8abf64fbb4072ca384fa3aabf1862141f7a6ad320da89f385adac1cf2cbde566",
+    "mustafar/tests/reconstruction.py": "3f906c055a13dda92517606835c2bcbfe22cb2abff81dc2a730fcadebafde7b5",
+    "mustafar/tests/speed.py": "8302b943ef12fc7200a8e4b99b084905c847f98636b11e40d0341435f2979952"
+  }
+}

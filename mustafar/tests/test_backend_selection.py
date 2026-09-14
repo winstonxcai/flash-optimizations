@@ -191,12 +191,14 @@ class BackendSelectionTests(unittest.TestCase):
         with (
             patch.object(harness, "_fused_available", return_value=False),
             patch.object(harness, "_optimized_fused_available", return_value=False),
+            patch.object(harness, "_geometry_fused_available", return_value=False),
             patch.object(harness, "_sparse_available", return_value=False),
         ):
             self.assertTrue(harness.leg_available("packed.bf16"))
             self.assertTrue(harness.leg_available("packed.native"))
             self.assertFalse(harness.leg_available("fused"))
             self.assertFalse(harness.leg_available("fused.optimized"))
+            self.assertFalse(harness.leg_available("fused.geometry"))
             self.assertFalse(harness.leg_available("sparse"))
 
     def test_leg_selection_rejects_an_unknown_leg(self):
@@ -220,6 +222,7 @@ class BackendSelectionTests(unittest.TestCase):
         with (
             patch.object(harness, "_fused_available", return_value=False),
             patch.object(harness, "_optimized_fused_available", return_value=False),
+            patch.object(harness, "_geometry_fused_available", return_value=False),
             patch.object(harness, "_sparse_available", return_value=False),
         ):
             self.assertEqual(
@@ -231,6 +234,7 @@ class BackendSelectionTests(unittest.TestCase):
         with (
             patch.object(harness, "_fused_available", return_value=True),
             patch.object(harness, "_optimized_fused_available", return_value=True),
+            patch.object(harness, "_geometry_fused_available", return_value=True),
             patch.object(harness, "_sparse_available", return_value=True),
         ):
             self.assertEqual(

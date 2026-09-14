@@ -106,19 +106,30 @@ class ProductionDecodeTests(unittest.TestCase):
     def test_decode_modes_cover_controls_and_candidate(self):
         self.assertEqual(
             speed.DECODE_MODES,
-            ("native", "packed", "fused", "optimized", "early_rope"),
+            ("native", "generic", "optimized", "combined"),
         )
         self.assertEqual(speed.DECODE_ENV["native"], "native")
-        self.assertEqual(speed.DECODE_ENV["packed"], "packed.bf16")
-        self.assertEqual(speed.DECODE_ENV["fused"], "fused")
+        self.assertEqual(speed.DECODE_ENV["generic"], "fused.optimized")
         self.assertEqual(speed.DECODE_ENV["optimized"], "fused.optimized")
-        self.assertEqual(speed.DECODE_ENV["early_rope"], "fused.optimized")
+        self.assertEqual(speed.DECODE_ENV["combined"], "fused.optimized")
 
     def test_decode_grid_is_the_realistic_128k_batch_slice(self):
         self.assertEqual(
             [(workload.batch, workload.context_rows) for workload in speed.FOCUSED_128K_WORKLOADS],
             [(15, 32768), (18, 32768), (21, 32768)],
         )
+
+    def test_reconstruction_mapping_separates_contexts_and_preserves_positions(self):
+        mapping, sets = harness.reconstruction_selections(3, 1024, count=2)
+        inverse = torch.argsort(mapping.flatten())
+        for physical, raw, lengths in sets:
+            self.assertTrue(torch.all(lengths == 512))
+            logical = inverse[physical.long() // 16] * 16 + physical % 16
+            self.assertTrue(torch.equal(logical % 1024, raw))
+            self.assertTrue(torch.equal(logical // 1024, torch.arange(3)[:, None].expand_as(logical)))
+            self.assertTrue(torch.equal(physical % 16, raw % 16))
+            self.assertFalse(torch.equal(physical, raw))
+        self.assertFalse(torch.equal(sets[0][1], sets[1][1]))
 
 class ContrastTests(unittest.TestCase):
     def test_every_contrast_resolves_to_legs_its_stage_times(self):
@@ -205,11 +216,13 @@ class CellTests(unittest.TestCase):
                 "packed.native": None,
                 "fused": None,
                 "fused.optimized": None,
+                "fused.geometry": None,
             },
             workspace_locations={
                 "packed.native": None,
                 "fused": None,
                 "fused.optimized": None,
+                "fused.geometry": None,
             },
             q=None,
             indices=None,

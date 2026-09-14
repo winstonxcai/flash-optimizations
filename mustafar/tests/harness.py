@@ -72,7 +72,10 @@ NATIVE = "native"
 # multi-token-extend call site, ``packed.native`` renders the 584-byte native
 # layout for the decode/small-extend one. Two Triton operators with different
 # costs, not two names for one thing.
-LEGS = ("packed.bf16", "packed.native", "fused", "fused.optimized", "sparse")
+LEGS = (
+    "packed.bf16", "packed.native", "fused", "fused.optimized",
+    "fused.geometry", "sparse",
+)
 
 # Report order: the bar first, then the candidates.
 COLUMNS = (NATIVE, *LEGS)
@@ -108,6 +111,11 @@ LEG_ENV = {
         "SGLANG_OPT_TOPMAG_FUSED": "1",
         "SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED": "1",
     },
+    "fused.geometry": {
+        **_PACKED_ENV,
+        "SGLANG_OPT_TOPMAG_FUSED": "1",
+        "SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED": "1",
+    },
     "sparse": {**_PACKED_ENV, "SGLANG_OPT_TOPMAG_SPARSE": "1"},
 }
 
@@ -138,6 +146,12 @@ def _optimized_fused_available() -> bool:
     return bool(optimized_fused_available())
 
 
+def _geometry_fused_available() -> bool:
+    from ..fused import geometry_fused_available
+
+    return bool(geometry_fused_available())
+
+
 def _sparse_available() -> bool:
     from ..sparse import sparse_available
 
@@ -155,6 +169,8 @@ def leg_available(leg: str) -> bool:
         return _fused_available()
     if leg == "fused.optimized":
         return _optimized_fused_available()
+    if leg == "fused.geometry":
+        return _geometry_fused_available()
     if leg == "sparse":
         return _sparse_available()
     return True
@@ -593,7 +609,9 @@ def packed_dense(case: Case, buffers, output: torch.Tensor | None = None) -> tor
     return output
 
 
-def packed_native(case: Case, buffers, workspace) -> torch.Tensor:
+def packed_native(
+    case: Case, buffers, workspace, *, candidate: str | None = None
+) -> torch.Tensor:
     """Materialise the native page layout the FlashMLA consumer reads.
 
     Dispatches to the selected fused CUDA adapter when
@@ -604,7 +622,8 @@ def packed_native(case: Case, buffers, workspace) -> torch.Tensor:
     from ..packed import unpack_gather_native
 
     unpack_gather_native(
-        buffers, case.physical, case.raw, case.lengths, case.freqs, workspace
+        buffers, case.physical, case.raw, case.lengths, case.freqs, workspace,
+        candidate=candidate,
     )
     return workspace.native_bytes
 
@@ -817,6 +836,92 @@ def changing_selection_sets(
 
 
 # --- timing ------------------------------------------------------------------
+@dataclass
+class ReconstructionFixture:
+    """Independent logical contexts stored under one shuffled physical page map."""
+
+    buffers: object
+    native_cache: torch.Tensor
+    freqs: torch.Tensor
+    page_map: torch.Tensor
+    selections: tuple
+    batch: int
+    context_rows: int
+    page_size: int = 16
+
+
+def reconstruction_selections(batch, context_rows=32768, count=32, page_size=16):
+    """CPU generation makes mapping verifiable without a CUDA device."""
+    if context_rows % page_size or context_rows < TOPK or min(batch, count) < 1:
+        raise ValueError("invalid independent-context geometry")
+    pages = context_rows // page_size
+    mapping = torch.randperm(
+        batch * pages, generator=torch.Generator().manual_seed(20260914)
+    ).reshape(batch, pages)
+    inverse = torch.argsort(mapping.flatten())
+    generator = torch.Generator().manual_seed(20260915)
+    selections = []
+    for _ in range(count):
+        raw = torch.stack([
+            torch.randperm(context_rows, generator=generator)[:TOPK]
+            for _ in range(batch)
+        ])
+        physical = mapping.gather(1, raw // page_size) * page_size + raw % page_size
+        logical = inverse[physical // page_size] * page_size + physical % page_size
+        expected = torch.arange(batch)[:, None] * context_rows + raw
+        torch.testing.assert_close(logical, expected, rtol=0, atol=0)
+        selections.append((physical.int(), raw.int(), torch.full((batch,), TOPK, dtype=torch.int32)))
+    return mapping, tuple(selections)
+
+
+def reconstruction_fixture(batch, device, *, context_rows=32768, count=32):
+    from ..packed import PackedBuffers, pack_rows
+    from sglang.kernels.ops.attention.dsv4.compress import compress_norm_rope_store
+
+    page_map, cpu_sets = reconstruction_selections(batch, context_rows, count)
+    total_rows = batch * context_rows
+    buffers = PackedBuffers(
+        torch.empty(total_rows, 256, dtype=torch.uint8, device=device),
+        torch.empty(total_rows, 8, dtype=torch.uint64, device=device),
+        torch.empty(total_rows, 8, dtype=torch.uint8, device=device),
+    )
+    mapping = page_map.to(device)
+    native_page_size = 16
+    native_cache = torch.zeros(
+        (total_rows + native_page_size - 1) // native_page_size,
+        native_page_stride(native_page_size),
+        dtype=torch.uint8,
+        device=device,
+    )
+    freqs = None
+    # Bound temporary dense/mask memory to one context during fixture setup.
+    for request in range(batch):
+        case = build_case(Workload("reconstruction-source", 1, context_rows), device,
+                          seed=20260913 + request)
+        if freqs is None:
+            freqs = case.freqs[:context_rows * COMPRESS_RATIO].contiguous()
+        case.freqs = freqs
+        logical = torch.arange(context_rows, device=device)
+        locations = mapping[request, logical // 16] * 16 + logical % 16
+        with leg_env("packed.bf16"):
+            pack_rows(case.latent, case.mask, case.weight, 1.e-6, case.plan,
+                      locations, buffers)
+        compress_norm_rope_store(
+            case.latent.contiguous(),
+            case.plan,
+            norm_weight=case.weight,
+            norm_eps=1.e-6,
+            freq_cis=freqs,
+            out_loc=locations,
+            kvcache=native_cache,
+            page_size=native_page_size,
+        )
+    selections = tuple(tuple(t.to(device) for t in s) for s in cpu_sets)
+    return ReconstructionFixture(
+        buffers, native_cache, freqs, mapping, selections, batch, context_rows
+    )
+
+
 def timed(fn, *, warmup: int = 20, repeats: int = 100) -> dict[str, float]:
     """Mean, median, and p95 device time in microseconds for one callable."""
     for _ in range(warmup):
@@ -880,13 +985,14 @@ def timed_changing_graph(
             target.copy_(source_tensor)
         graph.replay()
     torch.cuda.synchronize()
+    events = [(torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True))
+              for _ in range(repeats)]
     samples = []
     for index in range(repeats):
         source = input_sets[index % len(input_sets)]
         for source_tensor, target in zip(source, current):
             target.copy_(source_tensor)
-        start = torch.cuda.Event(enable_timing=True)
-        end = torch.cuda.Event(enable_timing=True)
+        start, end = events[index]
         start.record()
         graph.replay()
         end.record()
