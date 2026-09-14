@@ -84,11 +84,11 @@ Latency distributions — whole completed set per leg (Native n=2,248, Packed n=
 
 #### SLO-limited concurrency
 
-Under the **TTFT-p90 < 10 s** budget Native's last passing concurrency is **24** (p90 **9.36 s**); Packed's is **at least 28** (**9.90 s**), and the optimized fused reconstruction tops out at **28** (**9.61 s**, first crossing c29 = 10.29 s). That is **+4 concurrent users over Native (+17%)** — not the +1 (+4%) the original first-crossing sweep recorded, and the largest capacity payoff measured on this stack. The two walls have very different shape: Native c25 blows past at **12.10 s** (+2.1 s over budget, completions fall 2,212 → 2,029 — the 584-byte C4 pool thrashing), while Packed's only crossing, **c26 = 10.35 s** (+0.35 s, throughput and device hit unchanged), **did not reproduce** — c27 and c28 both pass, so that window was noise (see Readings).
+Under the **TTFT-p90 < 10 s** budget Native's last passing concurrency is **24** (p90 **9.36 s**); Packed's is **28** (**9.90 s**) and the optimized fused reconstruction's is also **28** (**9.61 s**), both first crossing at **c29** (10.63 s and 10.29 s). That is **+4 concurrent users over Native (+17%)** — not the +1 (+4%) the original first-crossing sweep recorded, and the largest capacity payoff measured on this stack. The two walls have very different shape: Native c25 blows past at **12.10 s** (+2.1 s over budget, completions fall 2,212 → 2,029 — the 584-byte C4 pool thrashing), while Packed's only crossing, **c26 = 10.35 s** (+0.35 s, throughput and device hit unchanged), **did not reproduce** — c27 and c28 both pass, so that window was noise (see Readings).
 
 Each mode at its own ceiling, plus Packed's non-reproducing crossing (c26), shown as the original run and a fresh-boot re-run:
 
-| Metric | Native @ 24 ★ | Packed @ 25 | Packed @ 26 ✗ (orig) | Packed @ 26 (redo) | Packed @ 28 † | Δ P28 vs N24 |
+| Metric | Native @ 24 ★ | Packed @ 25 | Packed @ 26 ✗ (orig) | Packed @ 26 (redo) | Packed @ 28 ★ | Δ P28 vs N24 |
 |---|---:|---:|---:|---:|---:|---:|
 | Completed in window | 2,212 | 2,222 | 2,183 | 2,180 | 2,259 | +2.1% |
 | Requests/s | 1.810 | 1.828 | 1.780 | 1.817 | 1.883 | +4.0% |
@@ -112,7 +112,7 @@ Latency distributions — whole completed set per leg (Native n=2,212; Packed n=
 | e2e latency | Packed @ 25 | 1.53 s | 9.44 s | **20.92 s** | 27.37 s | 142.33 s | 13.44 s | 197.87 s |
 | e2e latency | Packed @ 26 ✗ | 1.71 s | 10.54 s | **20.48 s** | 26.93 s | 151.13 s | 14.33 s | 207.33 s |
 
-Ladder (TTFT p90 / mean TPOT per fresh-boot 1200-s window; ★ = SLO ceiling, ✗ = crossing observed in that window, † = deepest measured point with no crossing found — a floor on the ceiling, not a ceiling):
+Ladder (TTFT p90 / mean TPOT per fresh-boot 1200-s window; ★ = SLO ceiling, ✗ = crossing observed in that window, ⚠ = run under host contention, an upper bound rather than a comparable rung):
 
 | C | Native TTFT p90 | Native TPOT | Packed TTFT p90 | Packed TPOT | Optimized TTFT p90 | Optimized TPOT |
 |---|---:|---:|---:|---:|---:|---:|
@@ -129,13 +129,14 @@ Ladder (TTFT p90 / mean TPOT per fresh-boot 1200-s window; ★ = SLO ceiling, �
 | 25 | 12.10 s ✗ | 59.6 ms | 9.40 s | 56.6 ms | 9.68 s | 56.3 ms |
 | 26 | — | — | 9.97 s (10.35 s ✗) | 57.2 ms | 9.78 s | 57.6 ms |
 | 27 | — | — | 9.44 s | 61.1 ms | 9.59 s | 62.5 ms |
-| 28 | — | — | 9.90 s † | 65.9 ms | 9.61 s ★ | 67.0 ms |
-| 29 | — | — | — | — | 10.29 s ✗ | 67.2 ms |
+| 28 | — | — | 9.90 s ★ | 65.9 ms | 9.61 s ★ | 67.0 ms |
+| 29 | — | — | 10.63 s ✗ | 68.6 ms | 10.29 s ✗ | 67.2 ms |
+| 30 | — | — | — | — | 11.85 s ⚠ | 72.1 ms |
 
 Readings:
 
-- **Four concurrent users (24 → 28, +17%) — up from the +1 (+4%) the original first-crossing sweep recorded.** The Packed ceiling of 25 was a stop-rule artifact: the c26 crossing (10.35 s) did not reproduce, and c27 (9.44 s) and c28 (9.90 s) both pass. A fresh-boot re-run of c26 itself returned **9.97 s (PASS)** — 0.38 s below the recorded crossing, and passing even while sharing the host with a second TP4 server, which can only inflate latency. The c26 crossing is confirmed noise. The +21% pool holds four more users under the SLO, not one. On v0.5.18 both modes already hold ~97% of the shared prefix (device-hit rows above), so this is decode headroom, not cache retention — the old retention-gap story is gone, but the headroom is larger than credited.
-- **Single-window TTFT p90 reproduces to ~0.4 s, not better.** The same C26 config on a fresh boot gave 9.97 s where the original gave 10.35 s — a 0.38 s spread at identical settings, enough by itself to move a leg across the 10 s line. Adjacent-rung comparisons on the ladder, and any ✗ within ~1 s of the budget, should be read as ties rather than orderings. (A contended c30 point for the optimized mode, run concurrently with a second TP4 server on this host, returned 11.85 s; a contended run can only inflate latency, so that crossing is not interpretable and is excluded.)
+- **Four concurrent users (24 → 28, +17%) — up from the +1 (+4%) the original first-crossing sweep recorded.** The Packed ceiling of 25 was a stop-rule artifact: the c26 crossing (10.35 s) did not reproduce, and c27 (9.44 s) and c28 (9.90 s) both pass. A fresh-boot re-run of c26 itself returned **9.97 s (PASS)** — 0.38 s below the recorded crossing, and passing even while sharing the host with a second TP4 server, which can only inflate latency. The c26 crossing is confirmed noise; Packed's first genuine crossing is **c29 = 10.63 s**, the same rung where the optimized mode crosses (10.29 s). The +21% pool holds four more users under the SLO, not one. On v0.5.18 both modes already hold ~97% of the shared prefix (device-hit rows above), so this is decode headroom, not cache retention — the old retention-gap story is gone, but the headroom is larger than credited.
+- **Single-window TTFT p90 reproduces to ~0.4 s, not better.** The same C26 config on a fresh boot gave 9.97 s where the original gave 10.35 s — a 0.38 s spread at identical settings, enough by itself to move a leg across the 10 s line. Adjacent-rung comparisons on the ladder, and any ✗ within ~1 s of the budget, should be read as ties rather than orderings. (The optimized c30 row carries a ⚠ for exactly this reason: it ran concurrently with a second TP4 server on this host, and since contention can only inflate latency its 11.85 s is an upper bound, not a ceiling measurement — it does not move optimized's ceiling off 28.)
 - **The ~97% hit rate is structural, not a pool effect.** The corpus nests (see above): reuse distance is one turn, so the resident working set is one transcript per active sequence, which the 3.73 M-token native pool already holds at the SLO-saturating concurrency. At matched concurrency the pool's measured effect on hit is **+0.04 pp** (97.36 → 97.40). The extra 21% therefore buys seats, not retention.
 - The p90 at the wall is set by the ~95% of requests served almost entirely from radix (~143k-token prompts, ≥95% device hit): their TTFT p90 is **8.97 s (Native @ 24) vs 8.92 s (Packed @ 25)**. The ~5% cold-start / low-hit requests sit far above the SLO in both modes (p90 ~45–68 s) and drive the p99/max tails without reaching p90 mass.
 - **TPOT penalty at the ceiling widens with occupancy**: Packed mean 56.6 ms vs Native 51.6 ms at C25 vs C24 (+10%); at its true ceiling C28 it is 65.9 ms vs Native's 51.6 ms (**+28%**). At matched C24 the p50 gap is 24.0 vs 22.3 ms (+8%). The packed c4 store/load cost is modest at low occupancy and grows with the batch.
