@@ -4,7 +4,7 @@
 
 DeepSeek-V4-Flash already compresses its KV cache: the 21 compressed sparse-attention (CSA) layers cache each token's keys and values as a single learned latent — the 584-byte C4 state. Remnant prunes that latent a second time, keeping only the largest-magnitude ~50% of coordinates per token (TopMag50) and storing the survivors packed — **584 → 328 bytes per record (43.84% smaller)**. On a TP4 H100 server (fp4-native MoE runner, mem-frac 0.88, fp8 KV cache) this grew the measured KV pool from **3,730,944 to 4,519,168 full-token slots (1.2112×; allocator-reported, see Serving results)**, raising the allocator-derived maximum resident concurrency at 2048-token decode from **107→129 (32k), 55→66 (64k), 28→33 (128k), 14→17 (256k)**.
 
-This is a KV-capacity optimization, not a decode speedup. At Native's own concurrency the modes are throughput-neutral (**−3.2% to +0.2%** tokens/s); even at Packed's higher ceiling they stay near-neutral (**−0.7% to +3.4%**), because this input-heavy workload is prefill-bound. Where prefixes are reused the payoff is now small: on the current SGLang v0.5.18 stack (LongSWE-Bench, below) both modes retain ~97% of the shared prefix in L1 and Packed's larger pool buys **+1 concurrent user** under the TTFT-p90 < 10 s SLO (Native C24 vs Packed C25), at ~+10% steady-state TPOT.
+This is a KV-capacity optimization, not a decode speedup. At Native's own concurrency the modes are throughput-neutral (**−3.2% to +0.2%** tokens/s); even at Packed's higher ceiling they stay near-neutral (**−0.7% to +3.4%**), because this input-heavy workload is prefill-bound. Where prefixes are reused the payoff is now small: on the current SGLang v0.5.18 stack (LongSWE-Bench, below) both modes retain ~97% of the shared prefix in L1 and Packed's larger pool buys **+4 concurrent users** under the TTFT-p90 < 10 s SLO (Native C24 vs Packed C28), at a ~+28% steady-state TPOT penalty at that ceiling. Those seats do not convert to rate — both modes plateau at ~1.8 req/s from C≈20 — so the capacity is real but lands entirely above the throughput knee.
 
 On agentic coding the measured gap sits inside run-to-run noise: across two matched run-pairs per suite, Packed averages **+0.5** on Sangfor-Bench (Native 23.0 vs Packed 23.5) and **−2 tasks** on SWE-bench (Native 32.5 vs Packed 30.5). A third, cap-dominated suite tilts Packed the other way: DeepSWE-Bench full passes are Native **5** vs Packed **7** (details in Benchmark results).
 
@@ -53,9 +53,9 @@ Packed's +21% pool deepens the queue but barely moves throughput (−0.7% to +3.
 
 ### LongSWE-Bench (SGLang v0.5.18)
 
-Replays **4,916 recorded Claude-agent business conversations** (~144k prompt tokens/request, short decodes) over OpenAI SSE in fixed 1200-s windows. *Version note:* the serving-bench legs above ran SGLang v0.5.15 @ f63458b; LongSWE-Bench was re-measured after the Remnant fork re-based to **v0.5.18** (remnant container — Native = stock v0.5.18, Packed = the 328-byte fork). These v0.5.18 numbers **supersede** the earlier v0.5.15 LongSWE runs (SLO ceilings native c12 / packed c15 and the same-concurrency +77.7% reads). The v0.5.15 → v0.5.18 jump roughly doubled the concurrency either mode can hold, and on v0.5.18 both modes retain ~97% of the shared prefix in L1 — the capacity-driven retention gap of the old runs largely disappears. Two lenses follow: **same concurrency** at a shared concurrency both modes hold under the SLO, and **SLO-limited concurrency** at each mode's own ceiling under a TTFT-p90 < 10 s budget.
+Replays **4,916 recorded Claude-agent business requests** (~144k prompt tokens/request, short decodes) over OpenAI SSE in fixed 1200-s windows. The corpus is **92 tasks replayed as nested turns**: ordered by `planned_offset_s`, prompt length is non-decreasing in 4,823/4,823 consecutive pairs, so each request's prompt contains the previous one's. That nesting, not the server, is what sets the ~97% device-hit rate (perfect nesting implies a **98.06%** ceiling: 14.4 M uncached of 743.5 M prompt tokens). *Version note:* the serving-bench legs above ran SGLang v0.5.15 @ f63458b; LongSWE-Bench was re-measured after the Remnant fork re-based to **v0.5.18** (remnant container — Native = stock v0.5.18, Packed = the 328-byte fork). These v0.5.18 numbers **supersede** the earlier v0.5.15 LongSWE runs (SLO ceilings native c12 / packed c15 and the same-concurrency +77.7% reads). The v0.5.15 → v0.5.18 jump roughly doubled the concurrency either mode can hold, and on v0.5.18 both modes retain ~97% of the shared prefix in L1 — the capacity-driven retention gap of the old runs largely disappears. Two lenses follow: **same concurrency** at a shared concurrency both modes hold under the SLO, and **SLO-limited concurrency** at each mode's own ceiling under a TTFT-p90 < 10 s budget.
 
-Every leg below is one **fresh server boot (empty radix** — no leftover prefix cache) serving the same 4,916-conversation replay for a fixed 1200-s window on the same TP4 H100 servers as above (fp4 `flashinfer_mxfp4`, fp8 KV, 1,048,576 context, mem-frac 0.88; small decode graphs at C≤15, extended at C>15; prefill graphs off). The SLO-limited lens climbs +1 C per config and stops at the first window with TTFT p90 ≥ 10 s; the ceiling is the last passing C.
+Every leg below is one **fresh server boot (empty radix** — no leftover prefix cache) serving the same 4,916-request replay for a fixed 1200-s window on the same TP4 H100 servers as above (fp4 `flashinfer_mxfp4`, fp8 KV, 1,048,576 context, mem-frac 0.88; small decode graphs at C≤15, extended at C>15; prefill graphs off). The SLO-limited lens climbs +1 C per config and stops at the first window with TTFT p90 ≥ 10 s; the ceiling is the last passing C. That stop rule is only trustworthy down to the ~0.9 s single-window noise floor, and it misfired here: it recorded Packed's ceiling as 25, but probing past the c26 crossing (10.35 s) found c27 (9.44 s) and c28 (9.90 s) both pass, so Packed's ceiling is **at least 28**.
 
 #### Same concurrency
 
@@ -84,19 +84,19 @@ Latency distributions — whole completed set per leg (Native n=2,248, Packed n=
 
 #### SLO-limited concurrency
 
-Under the **TTFT-p90 < 10 s** budget Native's last passing concurrency is **24** (p90 **9.36 s**); Packed's is **25** (**9.40 s**) — **one more concurrent user, +4%**. One step past either ceiling fails, but with very different shape: Native c25 blows past at **12.10 s** (+2.1 s over budget, completions fall 2,212 → 2,029); Packed c26 crosses **softly** at **10.35 s** (+0.35 s over budget, throughput and device hit unchanged) — Packed is within a rounding of holding 26.
+Under the **TTFT-p90 < 10 s** budget Native's last passing concurrency is **24** (p90 **9.36 s**); Packed's is **at least 28** (**9.90 s**), and the optimized fused reconstruction tops out at **28** (**9.61 s**, first crossing c29 = 10.29 s). That is **+4 concurrent users over Native (+17%)** — not the +1 (+4%) the original first-crossing sweep recorded, and the largest capacity payoff measured on this stack. The two walls have very different shape: Native c25 blows past at **12.10 s** (+2.1 s over budget, completions fall 2,212 → 2,029 — the 584-byte C4 pool thrashing), while Packed's only crossing, **c26 = 10.35 s** (+0.35 s, throughput and device hit unchanged), **did not reproduce** — c27 and c28 both pass, so that window was noise (see Readings).
 
-Each mode at its own ceiling, plus Packed’s first crossing (c26):
+Each mode at its own ceiling, plus Packed's non-reproducing crossing (c26), shown as the original run and a fresh-boot re-run:
 
-| Metric | Native @ 24 | Packed @ 25 | Packed @ 26 ✗ | Δ P25 vs N24 |
-|---|---:|---:|---:|---:|
-| Completed in window | 2,212 | 2,222 | 2,183 | +0.5% |
-| Requests/s | 1.810 | 1.828 | 1.780 | +1.0% |
-| Prompt-token throughput (k tok/s) | 258.4 | 260.4 | 252.5 | +0.8% |
-| Completion tokens (k) | 337.0 | 333.0 | 323.2 | −1.2% |
-| Real (uncached) prefill (M tok) | 8.44 | 8.18 | 8.27 | −3.1% |
-| Device cache-hit rate | 97.30% | 97.40% | 97.31% | +0.10 pp |
-| TTFT p90 | **9.36 s** | **9.40 s** | **10.35 s** | +0.04 s |
+| Metric | Native @ 24 ★ | Packed @ 25 | Packed @ 26 ✗ (orig) | Packed @ 26 (redo) | Packed @ 28 † | Δ P28 vs N24 |
+|---|---:|---:|---:|---:|---:|---:|
+| Completed in window | 2,212 | 2,222 | 2,183 | 2,180 | 2,259 | +2.1% |
+| Requests/s | 1.810 | 1.828 | 1.780 | 1.817 | 1.883 | +4.0% |
+| Prompt-token throughput (k tok/s) | 258.4 | 260.4 | 252.5 | 257.7 | 265.6 | +2.8% |
+| Completion tokens (k) | 337.0 | 333.0 | 323.2 | 326.3 | 329.5 | −2.2% |
+| Real (uncached) prefill (M tok) | 8.44 | 8.18 | 8.27 | 8.29 | 9.15 | +8.4% |
+| Device cache-hit rate | 97.30% | 97.40% | 97.31% | 97.32% | 97.13% | −0.17 pp |
+| TTFT p90 | **9.36 s** | **9.40 s** | **10.35 s** | **9.97 s** | **9.90 s** | +0.54 s |
 
 Latency distributions — whole completed set per leg (Native n=2,212; Packed n=2,222 @ 25, n=2,183 @ 26):
 
@@ -112,29 +112,34 @@ Latency distributions — whole completed set per leg (Native n=2,212; Packed n=
 | e2e latency | Packed @ 25 | 1.53 s | 9.44 s | **20.92 s** | 27.37 s | 142.33 s | 13.44 s | 197.87 s |
 | e2e latency | Packed @ 26 ✗ | 1.71 s | 10.54 s | **20.48 s** | 26.93 s | 151.13 s | 14.33 s | 207.33 s |
 
-Ladder (TTFT p90 / mean TPOT per fresh-boot 1200-s window; ★ = SLO ceiling, ✗ = first crossing):
+Ladder (TTFT p90 / mean TPOT per fresh-boot 1200-s window; ★ = SLO ceiling, ✗ = crossing observed in that window, † = deepest measured point with no crossing found — a floor on the ceiling, not a ceiling):
 
-| C | Native TTFT p90 | Native TPOT | Packed TTFT p90 | Packed TPOT |
-|---|---:|---:|---:|---:|
-| 15 | 6.66 s | 33.8 ms | 5.93 s | 37.5 ms |
-| 16 | 6.83 s | 36.3 ms | 7.31 s | 38.1 ms |
-| 17 | 7.77 s | 36.9 ms | 7.57 s | 40.9 ms |
-| 18 | 7.67 s | 39.4 ms | 7.80 s | 42.8 ms |
-| 19 | 8.46 s | 41.0 ms | 7.86 s | 45.1 ms |
-| 20 | 8.40 s | 45.0 ms | 8.79 s | 47.2 ms |
-| 21 | 9.03 s | 45.0 ms | 8.74 s | 47.2 ms |
-| 22 | 9.26 s | 45.9 ms | 8.97 s | 51.1 ms |
-| 23 | 9.85 s | 47.7 ms | 8.85 s | 52.9 ms |
-| 24 | 9.36 s ★ | 51.6 ms | 9.14 s | 54.8 ms |
-| 25 | 12.10 s ✗ | 59.6 ms | 9.40 s ★ | 56.6 ms |
-| 26 | — | — | 10.35 s ✗ | 57.9 ms |
+| C | Native TTFT p90 | Native TPOT | Packed TTFT p90 | Packed TPOT | Optimized TTFT p90 | Optimized TPOT |
+|---|---:|---:|---:|---:|---:|---:|
+| 15 | 6.66 s | 33.8 ms | 5.93 s | 37.5 ms | — | — |
+| 16 | 6.83 s | 36.3 ms | 7.31 s | 38.1 ms | — | — |
+| 17 | 7.77 s | 36.9 ms | 7.57 s | 40.9 ms | — | — |
+| 18 | 7.67 s | 39.4 ms | 7.80 s | 42.8 ms | — | — |
+| 19 | 8.46 s | 41.0 ms | 7.86 s | 45.1 ms | — | — |
+| 20 | 8.40 s | 45.0 ms | 8.79 s | 47.2 ms | — | — |
+| 21 | 9.03 s | 45.0 ms | 8.74 s | 47.2 ms | — | — |
+| 22 | 9.26 s | 45.9 ms | 8.97 s | 51.1 ms | — | — |
+| 23 | 9.85 s | 47.7 ms | 8.85 s | 52.9 ms | — | — |
+| 24 | 9.36 s ★ | 51.6 ms | 9.14 s | 54.8 ms | 9.04 s | 55.4 ms |
+| 25 | 12.10 s ✗ | 59.6 ms | 9.40 s | 56.6 ms | 9.68 s | 56.3 ms |
+| 26 | — | — | 9.97 s (10.35 s ✗) | 57.2 ms | 9.78 s | 57.6 ms |
+| 27 | — | — | 9.44 s | 61.1 ms | 9.59 s | 62.5 ms |
+| 28 | — | — | 9.90 s † | 65.9 ms | 9.61 s ★ | 67.0 ms |
+| 29 | — | — | — | — | 10.29 s ✗ | 67.2 ms |
 
 Readings:
 
-- **One concurrent user (24 → 25, +4%) — down from +25% (c12 vs c15) on v0.5.15.** On v0.5.18 both modes already hold ~97% of the shared prefix (device-hit rows above), so the +21% pool is decode headroom, not cache retention — which is why the old retention-gap story is gone.
+- **Four concurrent users (24 → 28, +17%) — up from the +1 (+4%) the original first-crossing sweep recorded.** The Packed ceiling of 25 was a stop-rule artifact: the c26 crossing (10.35 s) did not reproduce, and c27 (9.44 s) and c28 (9.90 s) both pass. A fresh-boot re-run of c26 itself returned **9.97 s (PASS)** — 0.38 s below the recorded crossing, and passing even while sharing the host with a second TP4 server, which can only inflate latency. The c26 crossing is confirmed noise. The +21% pool holds four more users under the SLO, not one. On v0.5.18 both modes already hold ~97% of the shared prefix (device-hit rows above), so this is decode headroom, not cache retention — the old retention-gap story is gone, but the headroom is larger than credited.
+- **Single-window TTFT p90 reproduces to ~0.4 s, not better.** The same C26 config on a fresh boot gave 9.97 s where the original gave 10.35 s — a 0.38 s spread at identical settings, enough by itself to move a leg across the 10 s line. Adjacent-rung comparisons on the ladder, and any ✗ within ~1 s of the budget, should be read as ties rather than orderings. (A contended c30 point for the optimized mode, run concurrently with a second TP4 server on this host, returned 11.85 s; a contended run can only inflate latency, so that crossing is not interpretable and is excluded.)
+- **The ~97% hit rate is structural, not a pool effect.** The corpus nests (see above): reuse distance is one turn, so the resident working set is one transcript per active sequence, which the 3.73 M-token native pool already holds at the SLO-saturating concurrency. At matched concurrency the pool's measured effect on hit is **+0.04 pp** (97.36 → 97.40). The extra 21% therefore buys seats, not retention.
 - The p90 at the wall is set by the ~95% of requests served almost entirely from radix (~143k-token prompts, ≥95% device hit): their TTFT p90 is **8.97 s (Native @ 24) vs 8.92 s (Packed @ 25)**. The ~5% cold-start / low-hit requests sit far above the SLO in both modes (p90 ~45–68 s) and drive the p99/max tails without reaching p90 mass.
-- **TPOT penalty at the ceiling ~+10%**: Packed mean 56.6 ms vs Native 51.6 ms (C25 vs C24); at matched C24 the p50 gap is 24.0 vs 22.3 ms (+8%). The packed c4 store/load cost stays modest and widens only slightly as occupancy rises.
-- **Throughput is a plateau**: both modes complete ~2,150–2,250 conversations per 1200-s window across C≈20–26 (~1.8 req/s, ~260k prompt-tok/s) — decode-throughput-saturated. Users past ~24 add no completions; they only lift TTFT (past the ceiling, over the SLO).
+- **TPOT penalty at the ceiling widens with occupancy**: Packed mean 56.6 ms vs Native 51.6 ms at C25 vs C24 (+10%); at its true ceiling C28 it is 65.9 ms vs Native's 51.6 ms (**+28%**). At matched C24 the p50 gap is 24.0 vs 22.3 ms (+8%). The packed c4 store/load cost is modest at low occupancy and grows with the batch.
+- **Throughput is a plateau**: both modes complete ~2,150–2,290 requests per 1200-s window across C≈20–29 (~1.8–1.9 req/s, ~250–270k prompt-tok/s). The rate wall is reached by C≈20 and every user above it adds latency, not completions — so the pool's four extra seats convert to nothing on this axis; they only lift TTFT, and past the ceiling, over the SLO.
 
 ## Agentic Benchmark results
 

@@ -5,14 +5,20 @@
 #
 #   serve.sh native             untouched 0731, stock 584-byte C4 (TopMag OFF)
 #   serve.sh packed             328-byte packed C4 (TopMag50, packed)
-#   serve.sh <native|packed> stop     kill the server on $PORT
+#   serve.sh optimized          packed C4 + the optimized fused reconstruction
+#   serve.sh <mode> stop        kill the server on $PORT
 #
-# Both modes use the fp4-native MoE runner (flashinfer_mxfp4), mem-frac 0.88,
+# All modes use the fp4-native MoE runner (flashinfer_mxfp4), mem-frac 0.88,
 # 1M ctx cap, fp8 KV, and DeepSeek reasoning/tool parsers (needed by the
 # agentic evals; harmless for benches). The legs differ by WHICH source tree
-# serves and the four TopMag envs: native serves the pristine tree
-# (SGLANG_PY_STOCK, byte-identical sglang); packed serves the mustafar fork
-# (SGLANG_PY_FORK) with packing on. See env.sh for the two-tree paths.
+# serves and the TopMag envs: native serves the pristine tree
+# (SGLANG_PY_STOCK, byte-identical sglang); packed and optimized serve the
+# mustafar fork (SGLANG_PY_FORK) with packing on, and optimized additionally
+# turns on the fused reconstruction -- the pairing `bench-serving.sh ...
+# optimized` uses standalone. The geometry candidate is NOT selected in
+# serving: the dispatch marker reads MUSTAFAR_FUSED_DISPATCH=
+# packed_to_native_optimized on every measured leg. See env.sh for the
+# two-tree paths.
 #
 # HICACHE=1 (optional) additionally enables SGLang's hierarchical cache
 # (GPU L1 <-> CPU DRAM L2) with the locked mustafar settings:
@@ -24,14 +30,17 @@
 #
 # Env overrides (all optional): PORT, GPUS, MASTER_PORT, TP, DECODE_CFG,
 # MEM_FRAC, CTX_LEN, MAX_RUN, CHUNK, HICACHE. Boot log:
-#   <LOG_HOST>/serve_<native|packed>[,_hicache].log
+#   <LOG_HOST>/serve_<native|packed|optimized>[,_hicache].log
 # Server is left RUNNING; use "serve.sh <mode> stop" to tear it down.
 # =====================================================================
 set -u
 . "$(dirname "$0")/env.sh"
 
 MODE=${1:-}; ACTION=${2:-boot}
-[ "$MODE" = native ] || [ "$MODE" = packed ] || { echo "usage: $0 <native|packed> [stop]"; exit 1; }
+case "$MODE" in
+  native|packed|optimized) ;;
+  *) echo "usage: $0 <native|packed|optimized> [stop]"; exit 1 ;;
+esac
 HICACHE=${HICACHE:-0}
 [ "$HICACHE" = 1 ] || [ "$HICACHE" = 0 ] || { echo "HICACHE must be 0 or 1"; exit 1; }
 
@@ -51,18 +60,32 @@ kill_port
 # pre-refactor names XKV_TOPMAG_KEEP / SGLANG_OPT_TOPMAG_PACKED_C4 are dead and
 # are cleared inside the container before launch. Packed REQUIRES exactly
 # KEEP=0.5 (256/512 dims); native sets everything off explicitly and serves the
-# pristine tree so no mustafar hook is even on the path.
+# pristine tree so no mustafar hook is even on the path. Every mode names the
+# whole gate set, FUSED_OPTIMIZED included: it is checked before
+# packed_enabled(), so a value left over from another mode would be rejected at
+# launch rather than ignored.
 MODE_ENVS=()          # each entry exported inside the container before launch
 TREE="$SGLANG_PY_STOCK"
-if [ "$MODE" = packed ]; then
-  MODE_ENVS=(SGLANG_OPT_TOPMAG=1 KEEP=0.5 SGLANG_OPT_TOPMAG_PACKED=1 SGLANG_OPT_TOPMAG_FUSED=0)
-  TREE="$SGLANG_PY_FORK"
-  CT_PYTHONPATH="$TREE:$REPO_CT"
-else
-  MODE_ENVS=(SGLANG_OPT_TOPMAG=0 KEEP=1.0 SGLANG_OPT_TOPMAG_PACKED=0 SGLANG_OPT_TOPMAG_FUSED=0)
-  TREE="$SGLANG_PY_STOCK"
-  CT_PYTHONPATH="$TREE"
-fi
+case "$MODE" in
+  native)
+    MODE_ENVS=(SGLANG_OPT_TOPMAG=0 KEEP=1.0 SGLANG_OPT_TOPMAG_PACKED=0 \
+      SGLANG_OPT_TOPMAG_FUSED=0 SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED=0)
+    TREE="$SGLANG_PY_STOCK"
+    CT_PYTHONPATH="$TREE"
+    ;;
+  packed)
+    MODE_ENVS=(SGLANG_OPT_TOPMAG=1 KEEP=0.5 SGLANG_OPT_TOPMAG_PACKED=1 \
+      SGLANG_OPT_TOPMAG_FUSED=0 SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED=0)
+    TREE="$SGLANG_PY_FORK"
+    CT_PYTHONPATH="$TREE:$REPO_CT"
+    ;;
+  optimized)
+    MODE_ENVS=(SGLANG_OPT_TOPMAG=1 KEEP=0.5 SGLANG_OPT_TOPMAG_PACKED=1 \
+      SGLANG_OPT_TOPMAG_FUSED=1 SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED=1)
+    TREE="$SGLANG_PY_FORK"
+    CT_PYTHONPATH="$TREE:$REPO_CT"
+    ;;
+esac
 
 # --- hierarchical-cache (HiCache L2) env + flags ---------------------
 HICACHE_ARGS=()
