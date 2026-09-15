@@ -84,33 +84,30 @@ Latency distributions — whole completed set per leg (Native n=2,248, Packed n=
 
 #### SLO-limited concurrency
 
-Under the **TTFT-p90 < 10 s** budget Native's last passing concurrency is **24** (p90 **9.36 s**) and Packed's is **28** (**9.90 s**), crossing at **c29** (**10.63 s**). That is **+4 concurrent users over Native (+17%)** — not the +1 (+4%) the original first-crossing sweep recorded, and the largest capacity payoff measured on this stack. The two walls have very different shape: Native c25 blows past at **12.10 s** (+2.1 s over budget, completions fall 2,212 → 2,029 — the 584-byte C4 pool thrashing), while Packed holds every rung through c28 and crosses at c29 only 0.63 s over budget, with throughput and device hit unchanged.
+Under the **TTFT-p90 < 10 s** budget Native's last passing concurrency is **24** (p90 **9.36 s**) and Packed's is **28** (**9.90 s**), crossing at **c29** (**10.63 s**). That is **+4 concurrent users over Native (+17%)** — not the +1 (+4%) the original first-crossing sweep recorded, and the largest capacity payoff measured on this stack. The two walls have very different shape: Native c25 blows past at **12.10 s** (+2.1 s over budget, completions fall 2,194 → 2,007 — the 584-byte C4 pool thrashing), while Packed holds every rung through c28 and crosses at c29 only 0.63 s over budget, with throughput and device hit unchanged.
 
-Each mode at its own ceiling, plus Packed's remeasured c26:
+Each mode at its own SLO ceiling:
 
-| Metric | Native @ 24 ★ | Packed @ 25 | Packed @ 26 | Packed @ 28 ★ | Δ P28 vs N24 |
-|---|---:|---:|---:|---:|---:|
-| Completed in window | 2,212 | 2,222 | 2,180 | 2,259 | +2.1% |
-| Requests/s | 1.810 | 1.828 | 1.817 | 1.883 | +4.0% |
-| Prompt-token throughput (k tok/s) | 258.4 | 260.4 | 257.7 | 265.6 | +2.8% |
-| Completion tokens (k) | 337.0 | 333.0 | 326.3 | 329.5 | −2.2% |
-| Real (uncached) prefill (M tok) | 8.44 | 8.18 | 8.29 | 9.15 | +8.4% |
-| Device cache-hit rate | 97.30% | 97.40% | 97.32% | 97.13% | −0.17 pp |
-| TTFT p90 | **9.36 s** | **9.40 s** | **9.97 s** | **9.90 s** | +0.54 s |
+| Metric | Native @ 24 ★ | Packed @ 28 ★ | Δ P28 vs N24 |
+|---|---:|---:|---:|
+| Completed in window | 2,194 | 2,259 | +3.0% |
+| Requests/s | 1.810 | 1.871 | +3.4% |
+| Prompt-token throughput (k tok/s) | 258.4 | 264.0 | +2.1% |
+| Completion tokens (k) | 337.0 | 329.5 | −2.2% |
+| Real (uncached) prefill (M tok) | 8.44 | 9.15 | +8.4% |
+| Device cache-hit rate | 97.30% | 97.13% | −0.17 pp |
+| TTFT p90 | **9.36 s** | **9.90 s** | +0.54 s |
 
-Latency distributions — whole completed set per leg (Native n=2,212; Packed n=2,222 @ 25, n=2,180 @ 26):
+Latency distributions — whole completed set per leg (Native n=2,194; Packed n=2,259):
 
 | Metric | Leg | min | p50 | p90 | p95 | p99 | mean | max |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
 | TTFT | Native @ 24 | 0.53 s | 6.45 s | **9.36 s** | 11.55 s | 26.29 s | 7.27 s | 133.46 s |
-| TTFT | Packed @ 25 | 0.62 s | 6.50 s | **9.40 s** | 11.84 s | 21.05 s | 7.17 s | 141.32 s |
-| TTFT | Packed @ 26 | 0.81 s | 7.39 s | **9.97 s** | 11.72 s | 32.73 s | 7.95 s | 149.16 s |
+| TTFT | Packed @ 28 | 0.73 s | 6.71 s | **9.90 s** | 11.93 s | 25.18 s | 7.62 s | 166.49 s |
 | TPOT | Native @ 24 | 0 ms | 22 ms | **60 ms** | 116 ms | 717 ms | 52 ms | 3.42 s |
-| TPOT | Packed @ 25 | 0 ms | 26 ms | **70 ms** | 123 ms | 769 ms | 57 ms | 3.63 s |
-| TPOT | Packed @ 26 | 0 ms | 26 ms | **66 ms** | 117 ms | 697 ms | 57 ms | 3.84 s |
+| TPOT | Packed @ 28 | 0 ms | 31 ms | **81 ms** | 140 ms | 785 ms | 66 ms | 4.29 s |
 | e2e latency | Native @ 24 | 2.20 s | 9.19 s | **20.09 s** | 29.38 s | 134.36 s | 12.97 s | 174.57 s |
-| e2e latency | Packed @ 25 | 1.53 s | 9.44 s | **20.92 s** | 27.37 s | 142.33 s | 13.44 s | 197.87 s |
-| e2e latency | Packed @ 26 | 2.03 s | 10.16 s | **20.76 s** | 30.78 s | 150.18 s | 14.16 s | 205.82 s |
+| e2e latency | Packed @ 28 | 1.95 s | 10.14 s | **22.39 s** | 30.81 s | 167.56 s | 14.70 s | 226.65 s |
 
 Ladder (TTFT p90 / mean TPOT per fresh-boot 1200-s window; ★ = SLO ceiling, ✗ = crossing observed in that window):
 
@@ -137,9 +134,9 @@ Readings:
 - **The Packed ceiling of 25 was a stop-rule artifact.** Re-measuring c26 gave **9.97 s (PASS)** — passing even while sharing the host with a second TP4 server, which can only inflate latency — and c27 (9.44 s) and c28 (9.90 s) pass too, so Packed's first genuine crossing is **c29 = 10.63 s**, not c26. On v0.5.18 both modes already hold ~97% of the shared prefix (device-hit rows above), so the extra seats above are decode headroom, not cache retention — the old retention-gap story is gone, but the headroom is larger than credited.
 - **Single-window TTFT p90 repeats to ~0.4 s, not better.** Re-running the same config at the same concurrency on a fresh boot moves TTFT p90 by ~0.4 s — enough by itself to move a leg across the 10 s line. Adjacent-rung comparisons on the ladder, and any ✗ within ~1 s of the budget, should be read as ties rather than orderings.
 - **The ~97% hit rate is structural, not a pool effect.** The corpus nests (see above): reuse distance is one turn, so the resident working set is one transcript per active sequence, which the 3.73 M-token native pool already holds at the SLO-saturating concurrency. At matched concurrency the pool's measured effect on hit is **+0.03 pp** (97.36 → 97.39). The extra 21% therefore buys seats, not retention.
-- The p90 at the wall is set by the ~95% of requests served almost entirely from radix (~143k-token prompts, ≥95% device hit): their TTFT p90 is **8.97 s (Native @ 24) vs 8.92 s (Packed @ 25)**. The ~5% cold-start / low-hit requests sit far above the SLO in both modes (p90 ~45–68 s) and drive the p99/max tails without reaching p90 mass.
+- The p90 at the wall is set by the ~95% of requests served almost entirely from radix (~143k-token prompts, ≥95% device hit): their TTFT p90 is **8.97 s (Native @ 24) vs 9.51 s (Packed @ 28)**. The ~5% cold-start / low-hit requests sit far above the SLO in both modes (p90 52 s and 76 s) and drive the p99/max tails without reaching p90 mass.
 - **TPOT penalty at the ceiling widens with occupancy**: Packed mean 56.6 ms vs Native 51.6 ms at C25 vs C24 (+10%); at its true ceiling C28 it is 65.9 ms vs Native's 51.6 ms (**+28%**). At matched C24 the p50 gap is 24.0 vs 22.3 ms (+8%). The packed c4 store/load cost is modest at low occupancy and grows with the batch.
-- **Throughput is a plateau**: both modes complete ~2,150–2,290 requests per 1200-s window across C≈20–29 (~1.8–1.9 req/s, ~250–270k prompt-tok/s). The rate wall is reached by C≈20 and every user above it adds latency, not completions — so the pool's four extra seats convert to nothing on this axis; they only lift TTFT, and past the ceiling, over the SLO.
+- **Throughput is a plateau**: both modes complete ~2,150–2,270 requests per 1200-s window across C≈20–28 (~1.8 req/s, ~250–270k prompt-tok/s). The rate wall is reached by C≈20 and every user above it adds latency, not completions — so the pool's four extra seats convert to nothing on this axis; they only lift TTFT, and past the ceiling, over the SLO.
 
 ## Agentic Benchmark results
 
@@ -202,5 +199,5 @@ A task **passes** only on a full verifier pass (reward 1); fail groups under-cap
 
 ## Conclusion
 
-Remnant buys capacity, not decode speed: fair-load serving is throughput-neutral, the prefill-bound workload turns the extra pool into little at max concurrency, and the agentic evals show no consistent quality signal — the two matched-pair suites read as parity within noise, and the single-run, cap-dominated DeepSWE-Bench suite's Packed tilt rests on single-digit solves. The remaining cost is decode: a kernel that handles the TopMag50 gather directly would close the TPOT gap between Packed and Native and could let Packed beat Native even at fair serving — the fused reconstruction work toward that is characterized at the kernel level in [writeup/remnant-fused-kernel.md](../writeup/remnant-fused-kernel.md).
+Remnant buys capacity, not decode speed: fair-load serving is throughput-neutral, the prefill-bound workload turns the extra pool into little at max concurrency, and the agentic evals show no consistent quality signal — the two matched-pair suites read as parity within noise, and the single-run, cap-dominated DeepSWE-Bench suite's Packed tilt rests on single-digit solves. The one axis where the modes differ materially is decode cost — the TPOT penalty at Packed's ceiling — which the capacity gain does not offset.
 
