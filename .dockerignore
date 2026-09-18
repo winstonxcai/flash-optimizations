@@ -1,5 +1,5 @@
 # Keep the docker build context small: local.Dockerfile/modal.Dockerfile only
-# COPY mustafar/, so exclude the repo's runtime artifacts and regenerable data.
+# COPY remnant/, so exclude the repo's runtime artifacts and regenerable data.
 # Mirrors .gitignore (git is orthogonal to the build context).
 .git/
 log/
@@ -8,9 +8,9 @@ xkv/
 **/__pycache__/
 *.pyc
 
-# mustafar runtime artifacts + regenerable datasets (see .gitignore)
-mustafar/ctrl/
-mustafar/logs/
-mustafar/data/
-mustafar/results/
-mustafar/scripts/**/config.json
+# remnant runtime artifacts + regenerable datasets (see .gitignore)
+remnant/ctrl/
+remnant/logs/
+remnant/data/
+remnant/results/
+remnant/scripts/**/config.json

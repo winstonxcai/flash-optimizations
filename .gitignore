@@ -1,11 +1,11 @@
-# mustafar runtime artifacts (prune ctrl log, serve logs, bytecode)
-mustafar/ctrl/
-mustafar/logs/
-mustafar/__pycache__/
+# remnant runtime artifacts (prune ctrl log, serve logs, bytecode)
+remnant/ctrl/
+remnant/logs/
+remnant/__pycache__/
 **/__pycache__/
 
 # Raw per-leg measurement outputs (470M jsonl/csv/log, regenerable)
-mustafar/results/
+remnant/results/
 
 # setuptools build_ext scratch (in-place builds; regenerable, and its generated
 # ninja files embed whatever extension names were current when it ran)
@@ -16,10 +16,10 @@ mustafar/results/
 *.so
 
 # LongBench v2 dataset copy (903M, regenerable from transferibility/data/longbench)
-mustafar/data/
+remnant/data/
 
 # LIVE auth token / env config — never commit
-mustafar/scripts/**/config.json
-mustafar/scripts/config.json
-mustafar/scripts/local/config/config_deepswe.json
-mustafar/scripts/local/config/config_swe_sangfor.json
+remnant/scripts/**/config.json
+remnant/scripts/config.json
+remnant/scripts/local/config/config_deepswe.json
+remnant/scripts/local/config/config_swe_sangfor.json
