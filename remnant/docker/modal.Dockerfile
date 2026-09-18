@@ -20,7 +20,7 @@ FROM lmsysorg/sglang:v0.5.18-cu130
 # 1. Use the productized fork directly. The submodule pins the same branch in
 #    the outer repository; the image clones the pushed branch for Modal builds.
 ARG REMNANT_SGLANG_REF=remnant/v0.5.18
-ARG REMNANT_SGLANG_COMMIT=5639aac891ee210780a5ba41d65c887228b8bb12
+ARG REMNANT_SGLANG_COMMIT=76819050a37a0300fb61233ca22437989ed76246
 RUN git clone --depth 1 --branch ${REMNANT_SGLANG_REF} \
     https://github.com/winstonxcai/sglang.git /sgl-workspace/sglang-remnant \
     && cd /sgl-workspace/sglang-remnant \
