@@ -48,18 +48,18 @@ results_volume = modal.Volume.from_name(
 download_image = modal.Image.debian_slim(python_version="3.11").pip_install(
     "huggingface-hub[hf-xet]==0.34.4",
 )
+fork_image = modal.Image.from_dockerfile(
+    str(REPO_ROOT / "remnant" / "docker" / "modal.Dockerfile"),
+    context_dir=str(REPO_ROOT),
+    ignore=(
+        "remnant/scripts/**",
+        "remnant/tests/bench_*.py",
+        "remnant/tests/test_bench_serving.py",
+        "remnant/tests/fixtures/**",
+    ),
+)
 server_image = (
-    modal.Image.from_dockerfile(
-        str(REPO_ROOT / "remnant" / "docker" / "modal.Dockerfile"),
-        context_dir=str(REPO_ROOT),
-        # Keep test_fused.py in the build context: the Dockerfile runs it.
-        ignore=(
-            "remnant/scripts/**",
-            "remnant/tests/bench_*.py",
-            "remnant/tests/test_bench_serving.py",
-            "remnant/tests/fixtures/**",
-        ),
-    )
+    fork_image
     .apt_install("curl", "jq", "util-linux", "coreutils")
     .add_local_dir(
         REPO_ROOT / "remnant" / "scripts",
@@ -218,7 +218,7 @@ def validate_packed() -> str:
 
 
 @app.function(
-    image=server_image,
+    image=fork_image,
     gpu="H100!",
     cpu=8,
     timeout=3600,
