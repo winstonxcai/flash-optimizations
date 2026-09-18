@@ -24,9 +24,7 @@ with the reason. Two rules hold everywhere in it:
 
 Every leg of the ``attention`` stage feeds the same consumer,
 ``harness.c4_bar`` -> ``flash_mla_sparse_fwd``, so the legs differ only in how
-the rows are produced. That includes ``sparse``, which reads the 328-byte records
-directly; note that its softmax still runs in Python between the two kernel
-launches (the v1 wiring), so its figure is a v1 cost and not a kernel-only one.
+the rows are produced.
 
 The grid is :data:`remnant.tests.harness.WORKLOADS` at the ``identity`` pattern.
 This suite answers "what does this cost", not "does it handle this shape", and a
@@ -115,7 +113,6 @@ MATRIX: tuple[Row, ...] = (
             ("fused", "no fused store variant"),
             ("fused.optimized", "no optimized fused store variant"),
             ("fused.geometry", "no geometry-specific fused store variant"),
-            ("sparse", "the sparse kernel consumes packed rows and has no store"),
         ),
         note=(
             "both legs are fed the same latent and neither is charged for TopMag "
@@ -138,7 +135,6 @@ MATRIX: tuple[Row, ...] = (
             ("fused", "no fused variant of this product"),
             ("fused.optimized", "no optimized fused variant of this product"),
             ("fused.geometry", "no geometry-specific fused variant of this product"),
-            ("sparse", "no dense row output by construction"),
         ),
         note="the one genuine apples-to-apples decode pair",
     ),
@@ -171,7 +167,6 @@ MATRIX: tuple[Row, ...] = (
                 "renders dense BF16, not the 584-byte layout -- see the "
                 "rows.dense_bf16 row",
             ),
-            ("sparse", "no reassembly by construction"),
         ),
         note=(
             "the packed figures are reconstruct overhead measured against a "
@@ -211,10 +206,6 @@ MATRIX: tuple[Row, ...] = (
                 "fused.geometry",
                 "fixed K=512/page_size=16 fused reconstruction + dequant + flash_mla_sparse_fwd",
             ),
-            (
-                "sparse",
-                "sparse.c4_leg: the 328-byte records read directly, no reassembly",
-            ),
         ),
         absent=(),
         note=(
@@ -240,9 +231,8 @@ DECODE_ENV = {
     "combined": "fused.optimized",
 }
 
-# The comparisons this suite exists to answer. The gated one is the fused
-# kernel's whole justification; the other is the sparse kernel's, reported with
-# the measured ratio so a reader can see where v1 stands.
+# The comparisons this suite exists to answer. The gated comparisons are the
+# fused kernel's whole justification.
 CONTRASTS: tuple[Contrast, ...] = (
     Contrast(
         stage="rows.native_layout",
@@ -265,17 +255,6 @@ CONTRASTS: tuple[Contrast, ...] = (
         gate=False,
         reason="reported to keep the optimized adapter comparable with the Triton path",
     ),
-    Contrast(
-        stage="attention",
-        numerator="sparse",
-        denominator="packed.bf16",
-        gate=False,
-        reason=(
-            "reported, not asserted: v1 runs its softmax in Python between two "
-            "kernel launches, so it is expected to lose to the reassembling path "
-            "until the online-softmax pass lands. The number is the finding."
-        ),
-    ),
 )
 
 
@@ -294,7 +273,6 @@ class _Ops:
     pack_rows: Callable[..., object]
     gather_bf16: Callable[..., object]
     unpack_native: Callable[..., object]
-    c4_leg: Callable[..., object] | None
 
 
 @dataclass(frozen=True)
@@ -332,18 +310,12 @@ def _resolve_ops() -> _Ops:
 
     from ..packed import pack_rows, unpack_gather_bf16, unpack_gather_native
 
-    c4_leg = None
-    if harness.leg_available("sparse"):
-        from ..sparse import c4_leg as sparse_c4_leg
-
-        c4_leg = sparse_c4_leg
     return _Ops(
         store=compress_norm_rope_store,
         dequant=dequantize_k_cache_paged,
         pack_rows=pack_rows,
         gather_bf16=unpack_gather_bf16,
         unpack_native=unpack_gather_native,
-        c4_leg=c4_leg,
     )
 
 
@@ -489,19 +461,6 @@ def _cells(
             ctx.native_cache, ctx.native_locations, harness.PAGE_SIZE, ctx.native_rows
         )
 
-    def sparse_c4() -> None:
-        ops.c4_leg(
-            ctx.q,
-            ctx.buffers.values,
-            ctx.buffers.bitmaps,
-            ctx.buffers.scales,
-            case.physical,
-            case.raw,
-            case.freqs,
-            harness.SM_SCALE,
-            topk_lengths=case.lengths,
-        )
-
     declared: dict[str, dict[str, Callable[[], None]]] = {
         "store": {harness.NATIVE: native_store, "packed.bf16": packed_store},
         "rows.dense_bf16": {harness.NATIVE: native_rows, "packed.bf16": gather_bf16},
@@ -532,7 +491,6 @@ def _cells(
                 read_back("fused.geometry"),
                 c4(ctx.dense_rows),
             ),
-            "sparse": sparse_c4,
         },
     }
     return {

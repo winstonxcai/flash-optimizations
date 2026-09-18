@@ -55,16 +55,12 @@ explicitly opt-in; ordinary fused dispatch remains unchanged.
 The gate defaults off and fails loudly if the extension is unavailable rather
 than silently falling back. It does not change persistent storage.
 
-Mutually exclusive with [`../sparse/`](../sparse/README.md) — both claim the same
-c4 decode call site, so setting both is rejected at config-validation time.
+Production direct decode is implemented in the FlashMLA fork; this extension
+remains available for comparison only.
 
 ## Relations
 
-- Uses the shared ABI constants from [`../packed_abi.cuh`](../packed_abi.cuh);
-  no private copy.
+- Uses the same packed ABI as the production FlashMLA path.
 - Produces the same output ABI as the `packed`/Triton path, so the two are
   drop-in alternatives behind the same patch anchor.
-- Stays in the tree as the `_FUSED` fallback for the direct-read backend.
-  [`../sparse/sparse_kernel.cu`](../sparse/sparse_kernel.cu) duplicates
-  `decode_e4m3fn` rather than importing it, so sparse experiments cannot perturb
-  fused reconstruction.
+- Stays in the tree as the `_FUSED` comparison implementation.

@@ -30,12 +30,6 @@ extensions under test:
                    the same native-layout and attention bars as ``fused``.
   ``fused.geometry`` the fixed-K/page-size indexing candidate, selected by the
                    explicit ``candidate="geometry"`` benchmark interface.
-  ``sparse``       ``remnant._sparse``, reading 328-byte records directly with
-                   no reassembly. Needs ``remnant._sparse``. Single-token decode
-                   only: the gate is ``q.shape[1] == 1 and not _is_sm120``
-                   (``patches/attention.py:190``) and there is no multi-token
-                   variant to test.
-
 Stages (:data:`STAGES`) -- each asks one question and names the bar it uses:
 
   ``store``      native store vs the packed store, both fed the *same* kept set.
@@ -49,9 +43,7 @@ Stages (:data:`STAGES`) -- each asks one question and names the bar it uses:
   ``attention``  each leg's c4 ``(o, lse)`` through
                  ``flash_mla_sparse_fwd``. Fused legs again use packed.native as
                  their implementation bar; other legs use native rows. ``o`` and
-                 ``lse`` are asserted *separately* under ``ATTN_ATOL``/``ATTN_RTOL`` -- a
-                 correct-lse/wrong-o split is the likeliest real failure and the
-                 merged output of :func:`remnant.sparse.merge_lse` would hide it.
+                 ``lse`` are asserted *separately* under ``ATTN_ATOL``/``ATTN_RTOL``.
   ``pruning``    how far each leg drifts from an *uncompressed* native answer --
                  the cost of TopMag50 itself, not of any kernel. Bounded by
                  ``QUALITY_ATOL``/``QUALITY_RTOL``, which are deliberately loose
@@ -428,36 +420,6 @@ def _assert_workspaces_equivalent(case, actual, expected, stage: str) -> None:
     )
 
 
-def _sparse_probe(case: harness.Case, buffers) -> torch.Tensor:
-    """``(batch, HEAD_DIM, TOPK)`` one-hot probe scores for the sparse leg.
-
-    The sparse kernel has no dense row output, so there is no row to compare. A
-    one-hot query makes ``scores[b, h, j]`` the single KV coordinate head ``h``
-    reads, which degrades it to a row readout. The heads of one launch span a
-    contiguous 64-dim chunk and eight launches tile all 512 coordinates exactly
-    once, with the last chunk (448..511) being precisely the RoPE tail -- so NoPE
-    and tail split on a chunk boundary instead of being interleaved the way a
-    fixed ``stride`` sample leaves them.
-    """
-    from .. import sparse
-
-    out = torch.empty(
-        case.batch, config.HEAD_DIM, harness.TOPK,
-        dtype=torch.float32, device=case.device,
-    )
-    with harness.leg_env("sparse"):
-        for base in range(0, config.HEAD_DIM, harness.HEAD_COUNT):
-            dims = torch.arange(harness.HEAD_COUNT, device=case.device) + base
-            probe_q, _ = harness.probe_query(case, dims)
-            chunk = sparse.scores(
-                probe_q, buffers.values, buffers.bitmaps, buffers.scales,
-                case.physical, case.raw, case.freqs, 1.0,
-                topk_lengths=case.lengths,
-            )
-            out[:, dims, :] = chunk.float()
-    return out
-
-
 def _split_error(
     case: harness.Case, stage: str, leg: str, got: torch.Tensor, bar: torch.Tensor
 ) -> dict[str, float]:
@@ -485,15 +447,6 @@ def _split_error(
 
 def _leg_attention(case: harness.Case, leg: str, packed_rows, buffers, q, indices):
     """One leg's c4 ``(o, lse)``, read the way production reads it."""
-    if leg == "sparse":
-        from .. import sparse
-
-        with harness.leg_env("sparse"):
-            return sparse.c4_leg(
-                q, buffers.values, buffers.bitmaps, buffers.scales,
-                case.physical, case.raw, case.freqs, harness.SM_SCALE,
-                topk_lengths=case.lengths,
-            )
     kv = packed_rows.view(case.workload.gather_rows, 1, config.HEAD_DIM)
     out, _, lse = harness.c4_bar(q, kv, indices, harness.SM_SCALE)
     return out, lse
@@ -619,13 +572,6 @@ def _run_case(case: harness.Case, candidates, *, attention_supported: bool = Tru
                     case, workspaces[leg], packed_bar_workspace, leg
                 )
             )
-    if "sparse" in candidates:
-        # Transposed into the same ``(..., HEAD_DIM)`` convention the dense row
-        # readouts use, so NoPE and tail split on the same axis for every leg.
-        probe = _sparse_probe(case, buffers).permute(0, 2, 1)
-        bar_probe = native_rows.view(case.batch, harness.TOPK, config.HEAD_DIM)
-        rows["legs"]["sparse"] = _split_error(case, "rows", "sparse", probe, bar_probe)
-
     if attention_supported:
         q = harness.c4_query(case)
         indices = harness.flat_indices(case)
@@ -801,7 +747,6 @@ def _fused_execution_contract(*, sanitizer_case: bool) -> dict[str, object]:
     SGLANG_OPT_TOPMAG_PACKED="0",
     SGLANG_OPT_TOPMAG_FUSED="0",
     SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED="0",
-    SGLANG_OPT_TOPMAG_SPARSE="0",
 )
 def run_validity(
     *,

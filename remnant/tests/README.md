@@ -85,7 +85,7 @@ Every `run_*()` a test registers must:
    (`HAS_CUDA` / `HAS_TRITON` / `HAS_SGLANG`). Legs whose CUDA extension is not
    built are left out by `harness.select_legs` when no `--legs` is given (and
    rejected with a message when one is asked for by name), so no guard is needed
-   for `_fused` / `_sparse`.
+   for `_fused`.
 
 `test_backend_selection.py` enforces 1–3 mechanically over its entrypoint list,
 and checks each leg's pin is a legal configuration.

@@ -266,12 +266,6 @@ class CellTests(unittest.TestCase):
         cells = speed._cells(self._ctx(), self._ops(), harness.COLUMNS)
         self.assertNotIn(harness.NATIVE, cells["rows.native_layout"])
 
-    def test_the_cross_check_fires_on_a_cell_the_matrix_does_not_declare(self):
-        cells = speed._cells(self._ctx(), self._ops(), harness.COLUMNS)
-        cells["store"]["sparse"] = lambda: None  # declared absent there
-        with self.assertRaises(AssertionError):
-            speed._check_cells(cells, harness.COLUMNS)
-
     def test_the_cross_check_fires_on_a_declared_cell_that_is_missing(self):
         cells = speed._cells(self._ctx(), self._ops(), harness.COLUMNS)
         del cells["attention"]["fused"]

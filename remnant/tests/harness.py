@@ -74,7 +74,7 @@ NATIVE = "native"
 # costs, not two names for one thing.
 LEGS = (
     "packed.bf16", "packed.native", "fused", "fused.optimized",
-    "fused.geometry", "sparse",
+    "fused.geometry",
 )
 
 # Report order: the bar first, then the candidates.
@@ -90,7 +90,6 @@ OFF_ENV = {
     "SGLANG_OPT_TOPMAG_PACKED": "0",
     "SGLANG_OPT_TOPMAG_FUSED": "0",
     "SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED": "0",
-    "SGLANG_OPT_TOPMAG_SPARSE": "0",
 }
 _PACKED_ENV = {
     **OFF_ENV,
@@ -116,7 +115,6 @@ LEG_ENV = {
         "SGLANG_OPT_TOPMAG_FUSED": "1",
         "SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED": "1",
     },
-    "sparse": {**_PACKED_ENV, "SGLANG_OPT_TOPMAG_SPARSE": "1"},
 }
 
 
@@ -124,10 +122,9 @@ LEG_ENV = {
 def leg_env(leg: str):
     """Pin the flags one leg needs, and prove the pinned set is a legal one.
 
-    ``validate_packed_static_config`` is what rejects the fused and sparse gates
-    together -- they rewrite the same c4 decode call site -- so running it here
-    rather than trusting the caller makes the mutual exclusion a runtime fact
-    instead of a comment.
+    ``validate_packed_static_config`` rejects incompatible packed/fused settings,
+    so running it here rather than trusting the caller makes the configuration a
+    runtime fact instead of a comment.
     """
     with patch.dict(os.environ, LEG_ENV[leg]):
         config.validate_packed_static_config()
@@ -152,12 +149,6 @@ def _geometry_fused_available() -> bool:
     return bool(geometry_fused_available())
 
 
-def _sparse_available() -> bool:
-    from ..sparse import sparse_available
-
-    return bool(sparse_available())
-
-
 def leg_available(leg: str) -> bool:
     """Whether a candidate leg's CUDA extension is built.
 
@@ -171,8 +162,6 @@ def leg_available(leg: str) -> bool:
         return _optimized_fused_available()
     if leg == "fused.geometry":
         return _geometry_fused_available()
-    if leg == "sparse":
-        return _sparse_available()
     return True
 
 

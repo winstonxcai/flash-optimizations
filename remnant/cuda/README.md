@@ -1,22 +1,16 @@
 # remnant CUDA backends
 
-Two compiled backends for the TopMag packed store, each in its own subfolder
-with its own README. They share one ABI and one build, and are mutually
-exclusive at runtime because both claim the same c4 decode call site.
+The retained fused backend is a comparison implementation for the TopMag
+packed store. Production direct decode lives in the FlashMLA fork under
+`third_party/flashmla/`.
 
-| | [`fused/`](fused/README.md) | [`sparse/`](sparse/README.md) |
-|---|---|---|
-| extension | `remnant._fused` | `remnant._sparse` |
-| gate | `SGLANG_OPT_TOPMAG_FUSED=1` | `SGLANG_OPT_TOPMAG_SPARSE=1` |
-| strategy | reassemble → 584-byte native rows → stock `flash_mla_*` | read the 328-byte record directly, both products from one tile |
-| attention | dense over all 512 coords | QK^T and PV in-kernel, no reassembly |
-| softmax | FlashMLA's own | host-side, between two passes (fusing is a follow-on) |
-| scope | all decode shapes | single-token decode; multi-token extend and sm120 stay packed |
+| extension | `remnant._fused` |
+| gate | `SGLANG_OPT_TOPMAG_FUSED=1` |
+| strategy | reassemble → 584-byte native rows → stock `flash_mla_*` |
+| scope | comparison only; production direct decode uses the FlashMLA fork |
 
-Pick `fused` to keep the native kernel's numerics exactly with a cheaper
-reconstruction. Pick `sparse` to stop paying full-width dense attention on a
-buffer that was just rebuilt — that is the one that turns the compression into
-saved *compute* rather than saved memory.
+Use `fused` only to compare reconstruction behavior and cost against the
+production FlashMLA integration.
 
 ## The shared ABI
 
@@ -46,14 +40,7 @@ cd remnant/cuda
 TORCH_CUDA_ARCH_LIST=9.0 python3 setup.py build_ext --build-lib <repo> --build-temp /tmp/remnant-build
 ```
 
-`include_dirs` is `cuda/` plus `cuda/sparse/`, so `fused.cu`'s
-`#include "packed_abi.cuh"` and `sparse_kernel.cu`'s `"../packed_abi.cuh"` both
-resolve unchanged. The two `bindings.cpp` files share a basename in different
-directories, which is fine — `BuildExtension` derives object paths from the full
-source path.
-
-The two extensions build independently on purpose: a failure in one never takes
-down the other, and `_fused` remains the `_FUSED` fallback.
+The extension is retained only as the `_FUSED` comparison path.
 
 ## Validation funnel
 

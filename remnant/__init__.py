@@ -12,7 +12,6 @@ from .config import (
     PACKED_RECORD_BYTES,
     fused_enabled,
     packed_enabled,
-    sparse_enabled,
     topmag_enabled,
     topmag_keep,
     validate_packed_static_config,
@@ -30,9 +29,6 @@ _LAZY_EXPORTS = {
     "NativeWorkspace": "packed",
     "unpack_gather_native_fused": "packed",
     "fused_available": "fused",
-    "sparse_forward": "sparse",
-    "sparse_available": "sparse",
-    "merge_lse": "sparse",
 }
 
 
@@ -47,7 +43,6 @@ __all__ = [
     "PACKED_RECORD_BYTES",
     "fused_enabled",
     "packed_enabled",
-    "sparse_enabled",
     "topmag_enabled",
     "topmag_keep",
     "validate_packed_static_config",

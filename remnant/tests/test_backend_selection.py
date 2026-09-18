@@ -29,7 +29,6 @@ ALL_OFF = {
     "packed": False,
     "fused": False,
     "optimized_fused": False,
-    "sparse": False,
 }
 
 # entrypoint -> the flags it must have pinned at the CUDA guard, overriding the
@@ -50,7 +49,6 @@ class BackendSelectionTests(unittest.TestCase):
                 self.assertEqual(
                     config.optimized_fused_enabled(), ALL_OFF["optimized_fused"]
                 )
-                self.assertEqual(config.sparse_enabled(), ALL_OFF["sparse"])
                 return False  # Stop before any GPU allocation.
 
             with (
@@ -61,7 +59,6 @@ class BackendSelectionTests(unittest.TestCase):
                     SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED="1",
                     SGLANG_OPT_TOPMAG_PACKED="0",
                     SGLANG_OPT_TOPMAG="0",
-                    SGLANG_OPT_TOPMAG_SPARSE="1",
                     KEEP="1.0",
                 ),
             ):
@@ -83,7 +80,6 @@ class BackendSelectionTests(unittest.TestCase):
                 self.assertFalse(config.packed_enabled())
                 self.assertFalse(config.fused_enabled())
                 self.assertFalse(config.optimized_fused_enabled())
-                self.assertFalse(config.sparse_enabled())
 
     def test_candidate_leg_pins_are_legal(self):
         for leg in harness.LEGS:
@@ -98,7 +94,6 @@ class BackendSelectionTests(unittest.TestCase):
         with harness.leg_env("fused.optimized"):
             self.assertTrue(config.fused_enabled())
             self.assertTrue(config.optimized_fused_enabled())
-            self.assertFalse(config.sparse_enabled())
 
     def test_optimized_fused_requires_fused(self):
         values = {
@@ -108,14 +103,6 @@ class BackendSelectionTests(unittest.TestCase):
         with patch.dict(os.environ, values):
             with self.assertRaisesRegex(RuntimeError, "requires.*FUSED=1"):
                 config.validate_packed_static_config()
-
-    def test_no_leg_pins_both_c4_gates(self):
-        """The fused and sparse switches rewrite the same decode call site."""
-        for leg in ("fused", "fused.optimized", "sparse"):
-            with self.subTest(leg=leg), harness.leg_env(leg):
-                self.assertNotEqual(
-                    config.fused_enabled(), config.sparse_enabled()
-                )
 
     def test_validity_restores_flags_after_success(self):
         from remnant.tests import validity
@@ -135,7 +122,6 @@ class BackendSelectionTests(unittest.TestCase):
                 patch.object(
                     harness, "_optimized_fused_available", return_value=False
                 ),
-                patch.object(harness, "_sparse_available", return_value=False),
                 patch("builtins.print"),
             ):
                 validity.run_validity()
@@ -162,25 +148,6 @@ class BackendSelectionTests(unittest.TestCase):
                 speed.run_speed()
             self.assertEqual(dict(os.environ), before)
 
-    def test_validity_sparse_leg_restores_flags_after_success(self):
-        from remnant.tests import validity
-
-        # Selecting the sparse leg replaces the old separate entrypoint. The
-        # outer SPARSE=0 is what the leg's own pin has to overwrite and restore.
-        with patch.dict(os.environ, SGLANG_OPT_TOPMAG_SPARSE="0"):
-            before = dict(os.environ)
-            with (
-                patch.object(validity.torch.cuda, "is_available", return_value=True),
-                patch.object(
-                    validity.torch.cuda, "get_device_name", return_value="mock"
-                ),
-                patch("remnant.sparse.sparse_available", return_value=True),
-                patch.object(validity.harness, "WORKLOADS", ()),
-                patch("builtins.print"),
-            ):
-                validity.run_validity(legs=("sparse",))
-            self.assertEqual(dict(os.environ), before)
-
     def test_packed_legs_do_not_depend_on_the_extensions(self):
         """The extension-free fallback has to stay reachable with both absent.
 
@@ -192,14 +159,12 @@ class BackendSelectionTests(unittest.TestCase):
             patch.object(harness, "_fused_available", return_value=False),
             patch.object(harness, "_optimized_fused_available", return_value=False),
             patch.object(harness, "_geometry_fused_available", return_value=False),
-            patch.object(harness, "_sparse_available", return_value=False),
         ):
             self.assertTrue(harness.leg_available("packed.bf16"))
             self.assertTrue(harness.leg_available("packed.native"))
             self.assertFalse(harness.leg_available("fused"))
             self.assertFalse(harness.leg_available("fused.optimized"))
             self.assertFalse(harness.leg_available("fused.geometry"))
-            self.assertFalse(harness.leg_available("sparse"))
 
     def test_leg_selection_rejects_an_unknown_leg(self):
         with patch.object(harness, "_fused_available", return_value=False):
@@ -223,7 +188,6 @@ class BackendSelectionTests(unittest.TestCase):
             patch.object(harness, "_fused_available", return_value=False),
             patch.object(harness, "_optimized_fused_available", return_value=False),
             patch.object(harness, "_geometry_fused_available", return_value=False),
-            patch.object(harness, "_sparse_available", return_value=False),
         ):
             self.assertEqual(
                 harness.select_legs(None), ("packed.bf16", "packed.native")
@@ -235,11 +199,10 @@ class BackendSelectionTests(unittest.TestCase):
             patch.object(harness, "_fused_available", return_value=True),
             patch.object(harness, "_optimized_fused_available", return_value=True),
             patch.object(harness, "_geometry_fused_available", return_value=True),
-            patch.object(harness, "_sparse_available", return_value=True),
         ):
             self.assertEqual(
-                harness.select_legs(("sparse", "packed.bf16")),
-                ("packed.bf16", "sparse"),
+                harness.select_legs(("fused", "packed.bf16")),
+                ("packed.bf16", "fused"),
             )
             self.assertEqual(harness.select_legs(harness.LEGS), harness.LEGS)
 
