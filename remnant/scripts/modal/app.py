@@ -219,6 +219,53 @@ def validate_packed() -> str:
 
 @app.function(
     image=server_image,
+    gpu="H100!",
+    cpu=8,
+    timeout=3600,
+    retries=0,
+)
+def validate_remnant_non_model(
+    benchmark_rows: int = 1024,
+    benchmark_repeats: int = 100,
+) -> str:
+    """Run fork tests and synthetic packed timing without loading weights."""
+    if benchmark_rows <= 0 or benchmark_repeats <= 0:
+        raise ValueError("benchmark_rows and benchmark_repeats must be positive")
+
+    env = {
+        **os.environ,
+        "PYTHONPATH": f"{SGLANG_ROOT / 'python'}:{os.environ.get('PYTHONPATH', '')}",
+        "PYTHONUNBUFFERED": "1",
+    }
+    test_paths = [
+        "test/registered/unit/test_dsv4_c4_cache_format.py",
+        "test/registered/attention/unittests/dsv4/test_remnant_pool.py",
+        "test/registered/attention/unittests/dsv4/test_remnant_pack.py",
+        "test/registered/attention/unittests/dsv4/test_remnant_backend.py",
+        "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py",
+        "test/registered/attention/unittests/dsv4/test_remnant_hicache.py",
+        "python/sglang/test/kernels/deepseek_v4/test_remnant_pack_kernel.py",
+        "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py",
+    ]
+    commands = [
+        [sys.executable, "-m", "pytest", "-q", *test_paths],
+        [
+            sys.executable,
+            "benchmark/remnant/bench_packed.py",
+            "--rows",
+            str(benchmark_rows),
+            "--repeats",
+            str(benchmark_repeats),
+        ],
+    ]
+    for command in commands:
+        print(f"[remnant-non-model] {' '.join(command)}", flush=True)
+        subprocess.run(command, env=env, cwd=SGLANG_ROOT, check=True)
+    return "remnant non-model tests and benchmark passed"
+
+
+@app.function(
+    image=server_image,
     gpu="L4",
     timeout=1800,
     retries=0,
