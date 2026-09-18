@@ -7,7 +7,7 @@ matrix scheduler, or auto-concurrency logic. Two interfaces in the one file:
 - `bench-serving.sh <fair|max> <ctx> [C_fair]` — report-grade dual-leg protocol
   on the local H100 box: each leg boots inside the eval container via `serve.sh`
   (`env.sh`).
-- `bench-serving.sh <native|packed|fused|optimized> <in> <out> <concurrency>` — standalone
+- `bench-serving.sh <native|packed> <in> <out> <concurrency>` — standalone
   single-config measurement that self-boots its own server on the current host;
   this is the interface Modal drives and the rest of this page documents.
 
@@ -15,15 +15,14 @@ matrix scheduler, or auto-concurrency logic. Two interfaces in the one file:
 
 ```bash
 MODEL_PATH=/path/to/DeepSeek-V4-Flash-0731 \
-SGLANG_ROOT=/path/to/sglang-lowrank \
+SGLANG_ROOT=/path/to/third_party/sglang \
 CUDA_VISIBLE_DEVICES=0,1,2,3 \
 bash remnant/scripts/local/bench-serving.sh packed 32768 2048 8
 ```
 
 The four arguments are **mode, input tokens, output tokens, concurrency**.
-Modes: `native`, `packed`, `fused`, and `optimized`. `optimized` enables the
-opt-in optimized fused CUDA adapter; for the active K=512/page-size-16 serving
-shape it uses the promoted geometry-specialized dispatch. Run the command
+Modes: `native` and `packed`. Packed passes
+`--dsv4-c4-cache-format remnant`; native uses the default. Run the command
 separately for each configuration. Defaults: native, 32k input, 2,048 output,
 concurrency 8
 (`concurrency` ≤ 136, the extended decode-graph coverage cap). `MODEL_PATH`
@@ -31,14 +30,8 @@ is required.
 
 Requires Linux, Bash, curl, jq, setsid, and the prepared SGLang/CUDA
 environment from `remnant/docker/modal.Dockerfile`. Use `PYTHON=/venv/bin/python` if needed.
-Packed modes require the Remnant patch; fused also requires the CUDA
-extension. The script does not install dependencies or download weights.
-
-`python -m remnant patch` validates all targets before writing and is safe to
-repeat. `verify` checks the complete expected patch against `.remnant.orig`
-backups, not just markers. `unpatch` restores verified backups only; missing
-backups or unexpected edits in patched files fail without overwriting them.
-Older/incompatible patches must be reconciled explicitly; no Git reset is used.
+The fork contains the Remnant runtime directly. The script does not install
+dependencies or download weights.
 
 Use the official `deepseek-ai/DeepSeek-V4-Flash-0731` checkpoint at revision
 `7872f01b1d1fe23eabc4c98b48bffcef5a386062`, SGLang v0.5.17, TP4 / four H100s,

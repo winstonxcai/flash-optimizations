@@ -18,17 +18,15 @@ CONTAINER=${CONTAINER:-remnant}                          # sglang container name
 HOST_REPO=${HOST_REPO:-/home/jovyan/winstonxcai/flash-optimizations}
 REPO_CT=/mnt/host_root/home/jovyan/winstonxcai/flash-optimizations   # repo, as seen in $CONTAINER
 MODEL_CT=${MODEL_CT:-/mnt/host_root/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731}
-# Two serving source trees live side-by-side in the container. STOCK is the
-# pristine, byte-identical sglang (the image's own /sgl-workspace/sglang);
-# FORK is the remnant-patched clone at /sgl-workspace/sglang-lowrank created
-# at runtime by container.sh. `native` serves STOCK; `packed` serves FORK.
+# The fork is mounted from this repository's pinned submodule. Both native and
+# packed modes use it; the cache-format argument selects the runtime layout.
 # SGLANG_PY is the resolved active python (used for bench clients; either tree
 # imports sglang.bench_serving). remnant (the active study container) ships
 # both at v0.5.18; ruler-eval is the frozen v0.5.15 legacy box (also on 30212,
 # GPUs 4-7 / MASTER 29628). Defaults below target remnant on 30212; don't run
 # both containers at once -- give one a distinct PORT.
 SGLANG_PY_STOCK=${SGLANG_PY_STOCK:-/sgl-workspace/sglang/python}
-SGLANG_PY_FORK=${SGLANG_PY_FORK:-/sgl-workspace/sglang-lowrank/python}
+SGLANG_PY_FORK=${SGLANG_PY_FORK:-$REPO_CT/third_party/sglang/python}
 SGLANG_PY=${SGLANG_PY:-$SGLANG_PY_FORK}
 
 RESULTS_HOST=${RESULTS_HOST:-$HOST_REPO/remnant/results}

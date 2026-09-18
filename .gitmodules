@@ -1,0 +1,4 @@
+[submodule "third_party/sglang"]
+	path = third_party/sglang
+	url = https://github.com/winstonxcai/sglang.git
+	branch = remnant/v0.5.18

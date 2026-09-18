@@ -1,27 +1,14 @@
 #!/usr/bin/env bash
 # =====================================================================
-# container.sh -- bring up the remnant container and prep its two trees.
+# container.sh -- bring up the remnant container and verify its forked tree.
 #
 #   container.sh              ensure image + container exist, then prep
 #   container.sh prep         prep only (container must already exist)
-#   container.sh patch        prep, then apply the remnant patch to the
-#                             lowrank tree (anchors are v0.5.18)
 #   container.sh recreate     docker rm -f the container, recreate, prep
 #
-# Remnant is the two-tree v0.5.18 container: pristine /sgl-workspace/sglang
-# (ships in the base image, byte-identical stock) plus a runtime clone
-# /sgl-workspace/sglang-lowrank that carries the remnant patch. This script
-# is idempotent and only *needs* to run once per container creation (or again
-# after `container.sh recreate` / docker rm remnant).
-#
-# prep clones the lowrank tree and writes the read-only anchor drift report
-# that scopes any future re-base:
-#   <RESULTS_HOST>/remnant/drift-v0.5.18.md
-#   (0 drifted = anchors intact against this tree)
-#
-# patch is the runtime step that makes `packed` servable after a fresh
-# recreate: it runs `remnant patch && remnant verify` against the lowrank
-# clone. Patching is never baked into the Dockerfile.
+# Remnant is the v0.5.18 fork mounted from this repository's submodule at
+# third_party/sglang. Both native and packed serving use that tree; native is
+# selected by the default cache-format argument.
 #
 # env.sh defaults to remnant's runtime trio (GPUS 0-3 / PORT 30212 /
 # MASTER 29638). ruler-eval (the frozen v0.5.15 box, GPUS 4-7 / 30212 / 29628)
@@ -36,9 +23,6 @@ DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 ACTION=${1:-up}
 IMAGE=${IMAGE:-remnant:v0.5.18}
 DOCKERFILE="$HOST_REPO/remnant/docker/local.Dockerfile"
-DRIFT_DIR="$RESULTS_HOST/remnant"
-DRIFT="$DRIFT_DIR/drift-v0.5.18.md"
-LOWRANK=/sgl-workspace/sglang-lowrank
 
 die () { echo "FATAL: $*" >&2; exit 1; }
 
@@ -68,63 +52,20 @@ create_container () {
   wait_exec_ready || die "container not exec-ready after launch"
 }
 
-# ------------------------- prep (two trees) --------------------------
-clone_lowrank () {
-  if ! ct "test -d $LOWRANK/.git"; then
-    echo "== clone pristine -> $LOWRANK at v0.5.18"
-    ct "git clone /sgl-workspace/sglang $LOWRANK \
-        && git -C $LOWRANK checkout v0.5.18" \
-      || die "git clone of pristine tree failed"
-  else
-    echo "== $LOWRANK already present"
-  fi
-  ct "git -C $LOWRANK describe --tags" | sed 's/^/   lowrank at /'
-}
-
-check_pristine () {
-  echo "== confirm pristine /sgl-workspace/sglang is unpatched"
-  local markers
-  markers=$(ct "grep -rl '## REMNANT' /sgl-workspace/sglang/python/sglang 2>/dev/null | wc -l")
-  local origs
-  origs=$(ct "find /sgl-workspace/sglang -name '*.remnant.orig' 2>/dev/null | wc -l")
-  echo "   pristine markers=$markers .orig files=$origs"
-  [ "$markers" = 0 ] && [ "$origs" = 0 ] || die "pristine tree is NOT clean"
-}
-
-write_drift () {
-  echo "== read-only anchor drift vs v0.5.18 -> $DRIFT"
-  mkdir -p "$DRIFT_DIR"
-  # Run from the live mounted repo (REPO_CT) so anchor edits in the host copy
-  # are used, not a stale baked image copy. SG_LOWRANK_SRC pins the lowrank
-  # tree inside the container.
-  ct "cd $REPO_CT \
-      && SG_LOWRANK_SRC=$LOWRANK/python python3 -m remnant drift" \
-    > "$DRIFT" 2>&1
-  local rc=$?
-  echo "   drift rc=$rc (nonzero => anchors will need re-basing; expected this milestone)"
-  sed 's/^/   /' "$DRIFT" | head -40
-  return 0   # drift finding is the deliverable, not a failure here
-}
-
-apply_patch () {
-  echo "== apply remnant patch to $LOWRANK (v0.5.18 anchors)"
-  ct "cd $REPO_CT \
-      && SG_LOWRANK_SRC=$LOWRANK/python python3 -m remnant patch \
-      && SG_LOWRANK_SRC=$LOWRANK/python python3 -m remnant verify" \
-    || die "remnant patch/verify failed"
-}
-
 prep () {
   has_container || die "container $CONTAINER does not exist; run: $0 (no args)"
-  clone_lowrank
-  check_pristine
-  write_drift
+  echo "== verify pinned SGLang fork at $SGLANG_PY_FORK"
+  ct "test -f $SGLANG_PY_FORK/sglang/srt/server_args.py" \
+    || die "third_party/sglang submodule is not mounted"
+  ct "grep -q dsv4-c4-cache-format $SGLANG_PY_FORK/sglang/srt/server_args.py" \
+    || die "SGLang fork is missing --dsv4-c4-cache-format"
+  ct "test \$(find $SGLANG_PY_FORK -name '*.remnant.orig' | wc -l) -eq 0" \
+    || die "fork contains runtime patch backup files"
 }
 
 # ------------------------------ dispatch ------------------------------
 case "$ACTION" in
   prep) prep ;;
-  patch) prep; apply_patch ;;
   recreate)
     docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
     has_image || build_image
@@ -141,7 +82,6 @@ case "$ACTION" in
     fi
     prep
     ;;
-  *) echo "usage: $0 [prep|patch|recreate]" >&2; exit 2 ;;
+  *) echo "usage: $0 [prep|recreate|up]" >&2; exit 2 ;;
 esac
 echo "== remnant ready. serve with:  bash scripts/local/serve.sh <native|packed>"
-echo "   (packed needs the patch applied:  bash scripts/local/container.sh patch)"

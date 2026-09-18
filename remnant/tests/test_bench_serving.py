@@ -54,7 +54,7 @@ class ShellTests(unittest.TestCase):
             ["bash", str(SCRIPT), "--help"], capture_output=True, text=True, check=False
         )
         self.assertEqual(result.returncode, 0)
-        self.assertIn("native|packed|fused", result.stdout)
+        self.assertIn("native|packed", result.stdout)
         self.assertFalse(SCRIPT.with_suffix(".py").exists())
 
     def test_bad_arguments_fail_before_startup(self):

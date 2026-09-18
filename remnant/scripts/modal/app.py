@@ -19,7 +19,7 @@ MODEL_REVISION = "7872f01b1d1fe23eabc4c98b48bffcef5a386062"
 MODEL_ROOT = Path("/models")
 MODEL_DIR = MODEL_ROOT / "DeepSeek-V4-Flash-0731"
 RESULTS_ROOT = Path("/results")
-SGLANG_ROOT = Path("/sgl-workspace/sglang-lowrank")
+SGLANG_ROOT = Path("/sgl-workspace/sglang-remnant")
 REMOTE_REPO = Path("/opt/remnant/flash-optimizations")
 
 

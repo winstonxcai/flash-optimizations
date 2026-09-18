@@ -3,22 +3,15 @@
 # serve.sh -- boot (or stop) a DeepSeek-V4-Flash-0731 TP server for the
 # remnant study on this machine, inside the sglang container.
 #
-#   serve.sh native             untouched 0731, stock 584-byte C4 (TopMag OFF)
-#   serve.sh packed             328-byte packed C4 (TopMag50, packed)
-#   serve.sh optimized          packed C4 + the optimized fused reconstruction
+#   serve.sh native             untouched 0731, stock 584-byte C4 (default)
+#   serve.sh packed             328-byte packed C4 (Remnant)
 #   serve.sh <mode> stop        kill the server on $PORT
 #
 # All modes use the fp4-native MoE runner (flashinfer_mxfp4), mem-frac 0.88,
 # 1M ctx cap, fp8 KV, and DeepSeek reasoning/tool parsers (needed by the
 # agentic evals; harmless for benches). The legs differ by WHICH source tree
-# serves and the TopMag envs: native serves the pristine tree
-# (SGLANG_PY_STOCK, byte-identical sglang); packed and optimized serve the
-# remnant fork (SGLANG_PY_FORK) with packing on, and optimized additionally
-# turns on the fused reconstruction -- the pairing `bench-serving.sh ...
-# optimized` uses standalone. The geometry candidate is NOT selected in
-# serving: the dispatch marker reads REMNANT_FUSED_DISPATCH=
-# packed_to_native_optimized on every measured leg. See env.sh for the
-# two-tree paths.
+# serves the Remnant fork (SGLANG_PY_FORK). Native uses the fork's default
+# cache format; packed passes --dsv4-c4-cache-format remnant.
 #
 # HICACHE=1 (optional) additionally enables SGLang's hierarchical cache
 # (GPU L1 <-> CPU DRAM L2) with the locked remnant settings:
@@ -30,7 +23,7 @@
 #
 # Env overrides (all optional): PORT, GPUS, MASTER_PORT, TP, DECODE_CFG,
 # MEM_FRAC, CTX_LEN, MAX_RUN, CHUNK, HICACHE. Boot log:
-#   <LOG_HOST>/serve_<native|packed|optimized>[,_hicache].log
+#   <LOG_HOST>/serve_<native|packed>[,_hicache].log
 # Server is left RUNNING; use "serve.sh <mode> stop" to tear it down.
 # =====================================================================
 set -u
@@ -38,8 +31,8 @@ set -u
 
 MODE=${1:-}; ACTION=${2:-boot}
 case "$MODE" in
-  native|packed|optimized) ;;
-  *) echo "usage: $0 <native|packed|optimized> [stop]"; exit 1 ;;
+  native|packed) ;;
+  *) echo "usage: $0 <native|packed> [stop]"; exit 1 ;;
 esac
 HICACHE=${HICACHE:-0}
 [ "$HICACHE" = 1 ] || [ "$HICACHE" = 0 ] || { echo "HICACHE must be 0 or 1"; exit 1; }
@@ -55,35 +48,16 @@ fi
 
 kill_port
 
-# --- per-mode env + tree -----------------------------------------------
-# TopMag envs use the CURRENT runtime names (remnant/config.py). Legacy
-# pre-refactor names XKV_TOPMAG_KEEP / SGLANG_OPT_TOPMAG_PACKED_C4 are dead and
-# are cleared inside the container before launch. Packed REQUIRES exactly
-# KEEP=0.5 (256/512 dims); native sets everything off explicitly and serves the
-# pristine tree so no remnant hook is even on the path. Every mode names the
-# whole gate set, FUSED_OPTIMIZED included: it is checked before
-# packed_enabled(), so a value left over from another mode would be rejected at
-# launch rather than ignored.
-MODE_ENVS=()          # each entry exported inside the container before launch
-TREE="$SGLANG_PY_STOCK"
+# --- per-mode flag + tree -----------------------------------------------
+TREE="$SGLANG_PY_FORK"
 case "$MODE" in
   native)
-    MODE_ENVS=(SGLANG_OPT_TOPMAG=0 KEEP=1.0 SGLANG_OPT_TOPMAG_PACKED=0 \
-      SGLANG_OPT_TOPMAG_FUSED=0 SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED=0)
-    TREE="$SGLANG_PY_STOCK"
+    CACHE_FORMAT=native
     CT_PYTHONPATH="$TREE"
     ;;
   packed)
-    MODE_ENVS=(SGLANG_OPT_TOPMAG=1 KEEP=0.5 SGLANG_OPT_TOPMAG_PACKED=1 \
-      SGLANG_OPT_TOPMAG_FUSED=0 SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED=0)
-    TREE="$SGLANG_PY_FORK"
-    CT_PYTHONPATH="$TREE:$REPO_CT"
-    ;;
-  optimized)
-    MODE_ENVS=(SGLANG_OPT_TOPMAG=1 KEEP=0.5 SGLANG_OPT_TOPMAG_PACKED=1 \
-      SGLANG_OPT_TOPMAG_FUSED=1 SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED=1)
-    TREE="$SGLANG_PY_FORK"
-    CT_PYTHONPATH="$TREE:$REPO_CT"
+    CACHE_FORMAT=remnant
+    CT_PYTHONPATH="$TREE"
     ;;
 esac
 
@@ -101,9 +75,7 @@ echo "== serve $MODE on gpus=$GPUS port=$PORT master=$MASTER_PORT (log: $SERVE_L
 ct "
   cd $TREE
   export CUDA_VISIBLE_DEVICES=$GPUS MASTER_PORT=$MASTER_PORT
-  export ${MODE_ENVS[*]}
   [ \"$HICACHE\" = 1 ] && export SGLANG_ENABLE_UNIFIED_RADIX_TREE=1
-  unset XKV_TOPMAG_KEEP SGLANG_OPT_TOPMAG_PACKED_C4 2>/dev/null || true
   export PYTHONPATH=$CT_PYTHONPATH
   export NCCL_IB_DISABLE=1 NCCL_SOCKET_IFNAME=lo NCCL_P2P_LEVEL=NVL NCCL_PROTO=Simple NCCL_ALGO=Ring
   export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
@@ -112,6 +84,7 @@ ct "
     --tp $TP --trust-remote-code --mem-fraction-static $MEM_FRAC \
     --context-length $CTX_LEN --max-running-requests $MAX_RUN \
     --chunked-prefill-size $CHUNK \
+    --dsv4-c4-cache-format $CACHE_FORMAT \
     --kv-cache-dtype fp8_e4m3 --moe-runner-backend flashinfer_mxfp4 \
     --reasoning-parser deepseek-v4 --tool-call-parser deepseekv4 \
     --host 0.0.0.0 --port $PORT \

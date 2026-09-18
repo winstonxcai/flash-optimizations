@@ -9,22 +9,21 @@ container, GPUs 0-3, port 30212 -- override per env.sh to target the frozen
 
 ## Layout
 
-- `container.sh [prep|patch|recreate]` — bring up the `remnant` container and
-  prep its two SGLang trees (pristine stock + remnant fork). `patch` applies
-  the remnant patch to the fork clone -- the runtime step that makes `packed`
-  servable after a recreate. See its header.
+- `container.sh [prep|recreate|up]` — bring up the `remnant` container and
+  verify the pinned `third_party/sglang` fork. The source already contains the
+  Remnant runtime; no patch command is needed.
 - `env.sh` — shared config + tiny helpers. **Porting to a new node = edit the
   MACHINE CONFIG block at the top** (container name, repo paths, model path,
   remote eval box, default GPUs/port). `serve.sh` is unchanged.
-- `serve.sh <native|packed|optimized> [stop]` — boot the server (native
-  untouched / packed 328-B / optimized = packed plus the optimized fused
-  reconstruction), wait `/health`, print pool + packed guard. Leave running or
+- `serve.sh <native|packed> [stop]` — boot the server (native uses the default
+  stock layout; packed passes `--dsv4-c4-cache-format remnant`), wait `/health`,
+  print pool + cache guard. Leave running or
   `stop` it.
 - `bench-serving.sh <fair|max> <ctx> [C_fair]` — dual-leg serving comparison:
   `fair` measures Native vs Packed at the same concurrency (Native's allocator
   ceiling unless `C_fair` given); `max` measures each leg at its **own**
   allocator ceiling. Each leg boots its own report-config server.
-- `bench-serving.sh <native|packed|fused|optimized> <in> <out> <concurrency>` —
+- `bench-serving.sh <native|packed> <in> <out> <concurrency>` —
   standalone single-config measurement, self-boots one report-config server with
   no container — the Modal / `tests/test_bench_serving.py` entrypoint.
 - `bench-lswb.sh <tag> [port] [C] [dur]` — LongSWE-Bench replay client against a

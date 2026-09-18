@@ -13,32 +13,19 @@
 # Launch benchmarks explicitly with remnant/scripts/local/bench-serving.sh.
 #
 # The weights are intentionally NOT baked in; they are mounted.
-# v0.5.18 is the pinned SGLang tree (matches the remnant container); the HEAD
-# remnant anchors are v0.5.18-only (see container.sh drift report).
+# The image uses the pinned v0.5.18 fork branch; the outer repository records
+# the reviewed commit as a submodule.
 FROM lmsysorg/sglang:v0.5.18-cu130
 
-# 1. Reproduce the active source tree (sglang-lowrank) as a local clone of the
-#    base image's own /sgl-workspace/sglang at the same tag the server uses.
-RUN git clone /sgl-workspace/sglang /sgl-workspace/sglang-lowrank \
-    && cd /sgl-workspace/sglang-lowrank && git checkout v0.5.18
+# 1. Use the productized fork directly. The submodule pins the same branch in
+#    the outer repository; the image clones the pushed branch for Modal builds.
+ARG REMNANT_SGLANG_REF=remnant/v0.5.18
+RUN git clone --depth 1 --branch ${REMNANT_SGLANG_REF} \
+    https://github.com/winstonxcai/sglang.git /sgl-workspace/sglang-remnant
 
-# 2. Ship the remnant package. PACKAGE_ROOT resolves to the parent dir of the
-#    remnant/ folder, so the sglang hook's `import remnant` finds it without
-#    an XKV_PACKAGE_DIR override.
-COPY remnant/ /opt/remnant/flash-optimizations/remnant/
-
-# Build the Fused adapter for L4/H100 and validate its CPU ABI before GPU use.
-ENV TORCH_CUDA_ARCH_LIST="8.9;9.0"
-RUN cd /opt/remnant/flash-optimizations \
-    && MAX_JOBS=4 python3 remnant/cuda/setup.py build_ext --inplace \
-    && python3 -m unittest remnant.tests.test_fused
-
-# 3. Bake in the TopMag hook into the ACTIVE tree (PYTHONPATH-pinned at run),
-#    then verify the complete patch against its original backups.
-ENV SG_LOWRANK_SRC=/sgl-workspace/sglang-lowrank/python
-RUN cd /opt/remnant/flash-optimizations \
-    && python3 -m remnant patch \
-    && python3 -m remnant verify
+# 2. Modal adds the benchmark scripts below. The SGLang fork contains the
+#    Remnant runtime and no outer-package import or runtime patch is needed.
+ENV SG_LOWRANK_SRC=/sgl-workspace/sglang-remnant/python
 
 # Modal injects its runtime dependencies after this Dockerfile and currently
 # supplies typing_extensions 4.12.2, while the base pydantic_core imports
@@ -47,17 +34,14 @@ RUN cd /opt/remnant/flash-optimizations \
 RUN python3 -m pip install --no-cache-dir --target /opt/sglang-runtime-fixes \
     "typing_extensions==4.16.0"
 
-# 4. Store-time TopMag on by default; config via env at run time. NCCL
-#    settings reproduce the tested single-host 4-GPU run (override at run
+# 3. NCCL settings reproduce the tested single-host 4-GPU run (override at run
 #    time with -e if the target host uses InfiniBand / different fabrics).
-ENV SGLANG_OPT_TOPMAG=1 \
-    KEEP=0.5 \
-    NCCL_IB_DISABLE=1 \
+ENV NCCL_IB_DISABLE=1 \
     NCCL_SOCKET_IFNAME=lo \
     NCCL_P2P_LEVEL=NVL \
     NCCL_PROTO=Simple \
     NCCL_ALGO=Ring \
-    PYTHONPATH=/opt/sglang-runtime-fixes:/sgl-workspace/sglang-lowrank/python:/opt/remnant/flash-optimizations
+    PYTHONPATH=/opt/sglang-runtime-fixes:/sgl-workspace/sglang-remnant/python:/opt/remnant/flash-optimizations
 
 # No automatic server startup; override the base image's default command.
 CMD ["bash"]
