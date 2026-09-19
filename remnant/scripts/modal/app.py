@@ -203,8 +203,8 @@ def _kernel_run(
     return str(directory)
 
 
-def _build_sglang_kernel() -> None:
-    """Build and overlay only the pinned FlashMLA extension on H100."""
+def _build_sglang_kernel(*, enable_sm100: bool = True) -> None:
+    """Build and overlay the pinned FlashMLA extension on H100."""
     aot_root = SGLANG_ROOT / "python" / "sglang" / "kernels" / "aot"
     build_root = Path("/tmp/remnant-flashmla-build")
     install_root = Path("/tmp/remnant-flashmla-install")
@@ -228,7 +228,7 @@ def _build_sglang_kernel() -> None:
         "-DENABLE_BELOW_SM90=OFF",
         "-DSGL_KERNEL_ENABLE_FA3=OFF",
         "-DSGL_KERNEL_COMPILE_THREADS=1",
-        "-DSGL_KERNEL_ENABLE_FLASHMLA_SM100=ON",
+        f"-DSGL_KERNEL_ENABLE_FLASHMLA_SM100={'ON' if enable_sm100 else 'OFF'}",
         f"-DCMAKE_PREFIX_PATH={torch_prefix}",
         "-DCUDA_VERSION=13.0",
     ]
@@ -376,7 +376,7 @@ def validate_flashmla_direct_decode(
 )
 def profile_flashmla_direct() -> str:
     """Capture direct FlashMLA decode timing and H100 resource counters."""
-    _build_sglang_kernel()
+    _build_sglang_kernel(enable_sm100=False)
     for tool in ("nsys", "ncu", "cuobjdump"):
         if shutil.which(tool) is None:
             raise RuntimeError(f"{tool} is not installed in the server image")
