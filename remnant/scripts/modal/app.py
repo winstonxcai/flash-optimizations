@@ -330,7 +330,7 @@ def validate_remnant_non_model(
     volumes={str(RESULTS_ROOT): results_volume},
 )
 def validate_flashmla_direct_decode(
-    batches: str = "1,2,8",
+    batches: str = "8,16",
     repeats: int = 50,
     warmup: int = 10,
 ) -> str:
@@ -392,7 +392,7 @@ def profile_flashmla_direct() -> str:
         sys.executable,
         "benchmark/remnant/bench_flashmla_decode.py",
         "--batches",
-        "1",
+        "8",
         "--repeats",
         "1",
         "--warmup",
