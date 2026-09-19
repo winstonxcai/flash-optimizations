@@ -203,6 +203,63 @@ def _kernel_run(
     return str(directory)
 
 
+def _build_sglang_kernel() -> None:
+    """Build and overlay only the pinned FlashMLA extension on H100."""
+    aot_root = SGLANG_ROOT / "python" / "sglang" / "kernels" / "aot"
+    build_root = Path("/tmp/remnant-flashmla-build")
+    install_root = Path("/tmp/remnant-flashmla-install")
+    shutil.rmtree(build_root, ignore_errors=True)
+    shutil.rmtree(install_root, ignore_errors=True)
+    torch_prefix = subprocess.check_output(
+        [
+            sys.executable,
+            "-c",
+            "import torch; print(torch.utils.cmake_prefix_path)",
+        ],
+        text=True,
+    ).strip()
+    configure = [
+        "cmake",
+        "-S",
+        str(aot_root),
+        "-B",
+        str(build_root),
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DENABLE_BELOW_SM90=OFF",
+        "-DSGL_KERNEL_ENABLE_FA3=OFF",
+        "-DSGL_KERNEL_COMPILE_THREADS=1",
+        "-DSGL_KERNEL_ENABLE_FLASHMLA_SM100=ON",
+        f"-DCMAKE_PREFIX_PATH={torch_prefix}",
+        "-DCUDA_VERSION=13.0",
+    ]
+    print(f"[flashmla-build] {' '.join(configure)}", flush=True)
+    subprocess.run(
+        configure,
+        cwd=aot_root,
+        check=True,
+        timeout=600,
+    )
+    build = ["cmake", "--build", str(build_root), "--target", "flashmla_ops", "--parallel", "2"]
+    print(f"[flashmla-build] {' '.join(build)}", flush=True)
+    subprocess.run(build, cwd=aot_root, check=True, timeout=1800)
+    package_dir = Path(
+        subprocess.check_output(
+            [sys.executable, "-c", "import pathlib, sgl_kernel; print(pathlib.Path(sgl_kernel.__file__).parent)"],
+            text=True,
+        ).strip()
+    )
+    installed = list(build_root.glob("flashmla_ops*.so"))
+    if not installed:
+        raise RuntimeError(f"FlashMLA build produced no extension under {install_root}")
+    for source in installed:
+        shutil.copy2(source, package_dir / source.name)
+    shutil.copy2(
+        aot_root / "python" / "sgl_kernel" / "flash_mla.py",
+        package_dir / "flash_mla.py",
+    )
+    print(f"[flashmla-build] installed {installed[0].name} into {package_dir}", flush=True)
+
+
 @app.function(
     image=server_image,
     gpu="H100!",
@@ -262,6 +319,160 @@ def validate_remnant_non_model(
         print(f"[remnant-non-model] {' '.join(command)}", flush=True)
         subprocess.run(command, env=env, cwd=SGLANG_ROOT, check=True)
     return "remnant non-model tests and benchmark passed"
+
+
+@app.function(
+    image=server_image,
+    gpu="H100!",
+    memory=262144,
+    timeout=2400,
+    retries=0,
+    volumes={str(RESULTS_ROOT): results_volume},
+)
+def validate_flashmla_direct_decode(
+    batches: str = "1,2,8",
+    repeats: int = 50,
+    warmup: int = 10,
+) -> str:
+    """Build and validate direct FlashMLA decode without loading model weights."""
+    if repeats <= 0 or warmup < 0:
+        raise ValueError("repeats must be positive and warmup must be nonnegative")
+    _build_sglang_kernel()
+    env = {
+        **os.environ,
+        "PYTHONPATH": f"{SGLANG_ROOT / 'python'}:{os.environ.get('PYTHONPATH', '')}",
+        "PYTHONUNBUFFERED": "1",
+    }
+    test = [
+        sys.executable,
+        "-m",
+        "pytest",
+        "-q",
+        "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py",
+    ]
+    benchmark = [
+        sys.executable,
+        "benchmark/remnant/bench_flashmla_decode.py",
+        "--batches",
+        batches,
+        "--repeats",
+        str(repeats),
+        "--warmup",
+        str(warmup),
+    ]
+    for command in (test, benchmark):
+        print(f"[flashmla-direct] {' '.join(command)}", flush=True)
+        subprocess.run(command, env=env, cwd=SGLANG_ROOT, check=True)
+    return "direct FlashMLA parity and benchmark passed"
+
+
+@app.function(
+    image=server_image,
+    gpu="H100!",
+    memory=262144,
+    timeout=2400,
+    retries=0,
+    volumes={str(RESULTS_ROOT): results_volume},
+)
+def profile_flashmla_direct() -> str:
+    """Capture direct FlashMLA decode timing and H100 resource counters."""
+    _build_sglang_kernel()
+    for tool in ("nsys", "ncu", "cuobjdump"):
+        if shutil.which(tool) is None:
+            raise RuntimeError(f"{tool} is not installed in the server image")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    directory = RESULTS_ROOT / f"{stamp}-profile-flashmla-direct-{uuid4().hex[:8]}"
+    directory.mkdir(parents=True)
+    env = {
+        **os.environ,
+        "PYTHONPATH": f"{SGLANG_ROOT / 'python'}:{os.environ.get('PYTHONPATH', '')}",
+        "PYTHONUNBUFFERED": "1",
+    }
+    target = [
+        sys.executable,
+        "benchmark/remnant/bench_flashmla_decode.py",
+        "--batches",
+        "1",
+        "--repeats",
+        "1",
+        "--warmup",
+        "0",
+        "--path",
+        "direct",
+    ]
+    try:
+        subprocess.run(
+            [
+                "nsys",
+                "profile",
+                "--trace=cuda,nvtx",
+                "--sample=none",
+                "--force-overwrite=true",
+                "--output",
+                str(directory / "decode-nsys"),
+                *target,
+            ],
+            cwd=SGLANG_ROOT,
+            env=env,
+            check=True,
+            timeout=900,
+        )
+        subprocess.run(
+            [
+                "ncu",
+                "--set",
+                "full",
+                "--target-processes",
+                "all",
+                "--kernel-name-base",
+                "function",
+                "--kernel-name",
+                "regex:flash_fwd_splitkv_mla_fp8_sparse_kernel",
+                "--launch-count",
+                "1",
+                "--clock-control",
+                "none",
+                "--export",
+                str(directory / "decode-ncu"),
+                "--force-overwrite",
+                *target,
+            ],
+            cwd=SGLANG_ROOT,
+            env=env,
+            check=True,
+            timeout=1200,
+        )
+        with (directory / "ncu-raw.csv").open("w") as output:
+            subprocess.run(
+                ["ncu", "--import", str(directory / "decode-ncu.ncu-rep"), "--page", "raw", "--csv"],
+                stdout=output,
+                stderr=subprocess.STDOUT,
+                check=True,
+                timeout=180,
+            )
+        package_dir = Path(
+            subprocess.check_output(
+                [
+                    sys.executable,
+                    "-c",
+                    "import pathlib, sgl_kernel; print(pathlib.Path(sgl_kernel.__file__).parent)",
+                ],
+                env=env,
+                text=True,
+            ).strip()
+        )
+        libraries = list(package_dir.glob("flashmla_ops*.so"))
+        if libraries:
+            with (directory / "sass.txt").open("w") as output:
+                subprocess.run(
+                    ["cuobjdump", "--dump-sass", "--dump-resource-usage", str(libraries[0])],
+                    stdout=output,
+                    stderr=subprocess.STDOUT,
+                    check=True,
+                )
+    finally:
+        results_volume.commit()
+    return str(directory)
 
 
 @app.function(
