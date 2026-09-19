@@ -8,6 +8,7 @@ import subprocess
 import sys
 import json
 import time
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -21,6 +22,7 @@ MODEL_DIR = MODEL_ROOT / "DeepSeek-V4-Flash-0731"
 RESULTS_ROOT = Path("/results")
 SGLANG_ROOT = Path("/sgl-workspace/sglang-remnant")
 REMOTE_REPO = Path("/opt/remnant/flash-optimizations")
+FLASHMLA_COMMIT = "bc5259eae0452fb21bad8b3d13de65b71ee0ef3e"
 
 
 def _repo_root() -> Path:
@@ -331,12 +333,13 @@ def validate_remnant_non_model(
 )
 def validate_flashmla_direct_decode(
     batches: str = "8,16",
-    repeats: int = 50,
+    repeats: int = 100,
     warmup: int = 10,
+    rounds: int = 9,
 ) -> str:
     """Build and validate direct FlashMLA decode without loading model weights."""
-    if repeats <= 0 or warmup < 0:
-        raise ValueError("repeats must be positive and warmup must be nonnegative")
+    if repeats <= 0 or rounds <= 0 or warmup < 0:
+        raise ValueError("repeats/rounds must be positive and warmup nonnegative")
     _build_sglang_kernel()
     env = {
         **os.environ,
@@ -359,11 +362,118 @@ def validate_flashmla_direct_decode(
         str(repeats),
         "--warmup",
         str(warmup),
+        "--rounds",
+        str(rounds),
     ]
     for command in (test, benchmark):
         print(f"[flashmla-direct] {' '.join(command)}", flush=True)
         subprocess.run(command, env=env, cwd=SGLANG_ROOT, check=True)
     return "direct FlashMLA parity and benchmark passed"
+
+
+@app.function(
+    image=server_image,
+    gpu="H100!",
+    memory=262144,
+    timeout=2400,
+    retries=0,
+)
+def sanitize_flashmla_direct_decode() -> str:
+    """Run model-free memory, race, and synchronization checks on direct decode."""
+    _build_sglang_kernel(enable_sm100=False)
+    if shutil.which("compute-sanitizer") is None:
+        raise RuntimeError("compute-sanitizer is not installed in the server image")
+    env = {
+        **os.environ,
+        "PYTHONPATH": f"{SGLANG_ROOT / 'python'}:{os.environ.get('PYTHONPATH', '')}",
+        "PYTHONUNBUFFERED": "1",
+    }
+    test = [
+        sys.executable,
+        "-m",
+        "pytest",
+        "-q",
+        "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py",
+        "-k",
+        "direct_matches_native_adapter",
+    ]
+    for tool in ("memcheck", "racecheck", "synccheck"):
+        command = [
+            "compute-sanitizer",
+            "--tool",
+            tool,
+            "--error-exitcode",
+            "99",
+            *test,
+        ]
+        print(f"[flashmla-sanitizer:{tool}] {' '.join(command)}", flush=True)
+        subprocess.run(command, cwd=SGLANG_ROOT, env=env, check=True, timeout=750)
+    return "direct FlashMLA sanitizer checks passed"
+
+
+@app.function(
+    image=server_image,
+    gpu="H100!",
+    memory=262144,
+    timeout=2400,
+    retries=0,
+)
+def validate_flashmla_fork() -> str:
+    """Build and test the pinned FlashMLA fork independently of SGLang."""
+    env = {
+        **os.environ,
+        "FLASH_MLA_DISABLE_SM100": "1",
+        "MAX_JOBS": "2",
+        "NVCC_THREADS": "2",
+        "PYTHONUNBUFFERED": "1",
+    }
+    with tempfile.TemporaryDirectory(prefix="remnant-flashmla-") as temporary:
+        source = Path(temporary) / "FlashMLA"
+        subprocess.run(
+            ["git", "clone", "--filter=blob:none", "https://github.com/winstonxcai/FlashMLA.git", str(source)],
+            check=True,
+            timeout=300,
+        )
+        subprocess.run(["git", "checkout", FLASHMLA_COMMIT], cwd=source, check=True)
+        subprocess.run(
+            ["git", "submodule", "update", "--init", "--recursive"],
+            cwd=source,
+            check=True,
+            timeout=600,
+        )
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", "--no-build-isolation", "-e", "."],
+            cwd=source,
+            env=env,
+            check=True,
+            timeout=1500,
+        )
+        subprocess.run(
+            [sys.executable, "-m", "pytest", "-q", "tests/test_flash_mla_remnant_decoding.py"],
+            cwd=source,
+            env=env,
+            check=True,
+            timeout=600,
+        )
+        subprocess.run(
+            [
+                sys.executable,
+                "benchmark/bench_remnant_decode.py",
+                "--heads",
+                "64,128",
+                "--batches",
+                "8,16",
+                "--repeats",
+                "100",
+                "--rounds",
+                "9",
+            ],
+            cwd=source,
+            env=env,
+            check=True,
+            timeout=600,
+        )
+    return "standalone FlashMLA tests and benchmark passed"
 
 
 @app.function(
@@ -388,68 +498,86 @@ def profile_flashmla_direct() -> str:
         "PYTHONPATH": f"{SGLANG_ROOT / 'python'}:{os.environ.get('PYTHONPATH', '')}",
         "PYTHONUNBUFFERED": "1",
     }
-    target = [
-        sys.executable,
-        "benchmark/remnant/bench_flashmla_decode.py",
-        "--batches",
-        "8",
-        "--repeats",
-        "1",
-        "--warmup",
-        "0",
-        "--path",
-        "direct",
-    ]
+    def target(path: str, heads: int | str, batches: str) -> list[str]:
+        return [
+            sys.executable,
+            "benchmark/remnant/bench_flashmla_decode.py",
+            "--heads",
+            str(heads),
+            "--batches",
+            batches,
+            "--repeats",
+            "1",
+            "--rounds",
+            "1",
+            "--warmup",
+            "3",
+            "--path",
+            path,
+        ]
     try:
-        subprocess.run(
-            [
-                "nsys",
-                "profile",
-                "--trace=cuda,nvtx",
-                "--sample=none",
-                "--force-overwrite=true",
-                "--output",
-                str(directory / "decode-nsys"),
-                *target,
-            ],
-            cwd=SGLANG_ROOT,
-            env=env,
-            check=True,
-            timeout=900,
-        )
-        subprocess.run(
-            [
-                "ncu",
-                "--set",
-                "full",
-                "--target-processes",
-                "all",
-                "--kernel-name-base",
-                "function",
-                "--kernel-name",
-                "regex:flash_fwd_splitkv_mla_fp8_sparse_kernel",
-                "--launch-count",
-                "1",
-                "--clock-control",
-                "none",
-                "--export",
-                str(directory / "decode-ncu"),
-                "--force-overwrite",
-                *target,
-            ],
-            cwd=SGLANG_ROOT,
-            env=env,
-            check=True,
-            timeout=1200,
-        )
-        with (directory / "ncu-raw.csv").open("w") as output:
+        for path in ("native", "direct"):
             subprocess.run(
-                ["ncu", "--import", str(directory / "decode-ncu.ncu-rep"), "--page", "raw", "--csv"],
-                stdout=output,
-                stderr=subprocess.STDOUT,
+                [
+                    "nsys",
+                    "profile",
+                    "--trace=cuda,nvtx",
+                    "--sample=none",
+                    "--force-overwrite=true",
+                    "--output",
+                    str(directory / f"{path}-decode-nsys"),
+                    *target(path, "64,128", "8,16"),
+                ],
+                cwd=SGLANG_ROOT,
+                env=env,
                 check=True,
-                timeout=180,
+                timeout=900,
             )
+        for path in ("native", "direct"):
+            for heads in (64, 128):
+                for batch in (8, 16):
+                    stem = f"{path}-h{heads}-b{batch}-ncu"
+                    report = directory / stem
+                    subprocess.run(
+                        [
+                            "ncu",
+                            "--set",
+                            "full",
+                            "--target-processes",
+                            "all",
+                            "--kernel-name-base",
+                            "function",
+                            "--kernel-name",
+                            "regex:flash_fwd_splitkv_mla_fp8_sparse_kernel",
+                            "--launch-count",
+                            "1",
+                            "--clock-control",
+                            "none",
+                            "--export",
+                            str(report),
+                            "--force-overwrite",
+                            *target(path, heads, str(batch)),
+                        ],
+                        cwd=SGLANG_ROOT,
+                        env=env,
+                        check=True,
+                        timeout=1200,
+                    )
+                    with (directory / f"{stem}.csv").open("w") as output:
+                        subprocess.run(
+                            [
+                                "ncu",
+                                "--import",
+                                str(report.with_suffix(".ncu-rep")),
+                                "--page",
+                                "raw",
+                                "--csv",
+                            ],
+                            stdout=output,
+                            stderr=subprocess.STDOUT,
+                            check=True,
+                            timeout=180,
+                        )
         package_dir = Path(
             subprocess.check_output(
                 [
