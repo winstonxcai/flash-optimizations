@@ -449,15 +449,7 @@ def validate_flashmla_fork() -> str:
             timeout=1500,
         )
         subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "pytest",
-                "-q",
-                "tests/test_flash_mla_remnant_decoding.py",
-                "-k",
-                "test_direct_decode_matches_native_adapter and 512-8-64",
-            ],
+            [sys.executable, "-m", "pytest", "-q", "tests/test_flash_mla_remnant_decoding.py"],
             cwd=source,
             env=env,
             check=True,
