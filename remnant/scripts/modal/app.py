@@ -22,7 +22,7 @@ MODEL_DIR = MODEL_ROOT / "DeepSeek-V4-Flash-0731"
 RESULTS_ROOT = Path("/results")
 SGLANG_ROOT = Path("/sgl-workspace/sglang-remnant")
 REMOTE_REPO = Path("/opt/remnant/flash-optimizations")
-FLASHMLA_COMMIT = "9872b376d17f6ced18052833442e84e7f659e2a0"
+FLASHMLA_COMMIT = "aca99d4a06da24dcc3fb7cc77501e9fe6ef4c350"
 
 
 def _repo_root() -> Path:
