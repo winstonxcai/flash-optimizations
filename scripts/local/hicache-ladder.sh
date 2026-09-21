@@ -8,7 +8,7 @@
 # MASTER 29638). Override via env (e.g. GPUS/PORT/MASTER_PORT) to aim at the
 # frozen ruler-eval box instead.
 set -u
-cd /home/jovyan/winstonxcai/flash-optimizations/remnant/scripts/local || exit 1
+cd /home/jovyan/winstonxcai/flash-optimizations/scripts/local || exit 1
 . "$(dirname "$0")/env.sh"
 [ $# -ge 5 ] && export MASTER_PORT=$5
 MODE=${1:-}; TAG=${2:-}; C=${3:-}; DUR=${4:-1200}

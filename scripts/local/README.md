@@ -74,8 +74,8 @@ MODEL_PATH=/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731 ./bench-serving.s
 Evals that attach assume the server on `$PORT` (from `env.sh`). `sangfor`/`swe`
 clients run on the remote YJYBench box and reach this server through the
 `docker_env_config` base URL (see `env.sh`: `EVAL_*`, `BASE_URL` override).
-Eval results land under `remnant/results/` (local) or the eval box's
-`results/<run-id>/` (agentic); server logs under `remnant/logs/serve_<mode>.log`.
+Eval results land under `results/` (local) or the eval box's
+`results/<run-id>/` (agentic); server logs under `logs/serve_<mode>.log`.
 
 ## Notes
 

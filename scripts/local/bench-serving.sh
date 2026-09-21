@@ -28,7 +28,7 @@
 # fair/max results:   <RESULTS_HOST>/serving/<mode>-ctx<ctx>-<ts>/
 # standalone results: <RESULTS_DIR>/<ts>-<mode>-<rand>/  (server.log,
 #                      warmup.log/jsonl, measured.log/jsonl;
-#                      default <repo>/remnant/logs/bench-serving/)
+#                      default <repo>/logs/bench-serving/)
 # =====================================================================
 set -u
 
@@ -234,7 +234,7 @@ standalone_main () {  # $1=mode [$2=input $3=output $4=concurrency]
   done
 
   python=${PYTHON:-python3}; port=${PORT:-30211}; seed=${SEED:-42}
-  results_dir=${RESULTS_DIR:-$REPO/remnant/logs/bench-serving}
+  results_dir=${RESULTS_DIR:-$REPO/logs/bench-serving}
   export PYTHONPATH="$REPO${PYTHONPATH:+:$PYTHONPATH}" PYTHONUNBUFFERED=1
   if [ -n "${SGLANG_ROOT:-}" ]; then
     export SG_LOWRANK_SRC="$SGLANG_ROOT/python"

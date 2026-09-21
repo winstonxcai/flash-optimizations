@@ -19,9 +19,9 @@ Usage (host python3, host-networked server):
   python3 lb2_serve_eval.py \
     --server http://127.0.0.1:30212 --model deepseek-v4-flash \
     --tag packed-0731 \
-    --data /home/jovyan/winstonxcai/flash-optimizations/remnant/data/lb2_data.json \
-    --tokens /home/jovyan/winstonxcai/flash-optimizations/remnant/data/lb2_tokens.json \
-    --out /home/jovyan/winstonxcai/flash-optimizations/remnant/results/lb2-full/<leg>/<ts>/results.json \
+    --data /home/jovyan/winstonxcai/flash-optimizations/data/lb2_data.json \
+    --tokens /home/jovyan/winstonxcai/flash-optimizations/data/lb2_tokens.json \
+    --out /home/jovyan/winstonxcai/flash-optimizations/results/lb2-full/<leg>/<ts>/results.json \
     [--max-concurrency 6] [--max-tokens 512] [--ctx-cap 1048576]
 Resume: --out json is read at start; already-done ids are skipped.
 """

@@ -19,7 +19,7 @@ MODEL_ROOT = Path("/models")
 MODEL_DIR = MODEL_ROOT / "DeepSeek-V4-Flash-0731"
 RESULTS_ROOT = Path("/results")
 SGLANG_ROOT = Path("/sgl-workspace/sglang-remnant")
-REMOTE_REPO = Path("/opt/remnant/flash-optimizations")
+REMOTE_REPO = Path("/opt/flash-optimizations")
 FLASHMLA_COMMIT = "bad633c"
 
 
@@ -32,7 +32,7 @@ def _repo_root() -> Path:
     )
     for candidate in candidates:
         for root in (candidate, *candidate.parents):
-            if (root / "remnant").is_dir():
+            if (root / "third_party" / "sglang").is_dir():
                 return root
     return REMOTE_REPO
 
@@ -49,18 +49,18 @@ download_image = modal.Image.debian_slim(python_version="3.11").pip_install(
     "huggingface-hub[hf-xet]==0.34.4",
 )
 fork_image = modal.Image.from_dockerfile(
-    str(REPO_ROOT / "remnant" / "docker" / "modal.Dockerfile"),
+    str(REPO_ROOT / "docker" / "modal.Dockerfile"),
     context_dir=str(REPO_ROOT),
     ignore=(
-        "remnant/scripts/**",
+        "scripts/**",
     ),
 )
 server_image = (
     fork_image
     .apt_install("curl", "jq", "util-linux", "coreutils")
     .add_local_dir(
-        REPO_ROOT / "remnant" / "scripts",
-        REMOTE_REPO / "remnant" / "scripts",
+        REPO_ROOT / "scripts",
+        REMOTE_REPO / "scripts",
     )
 )
 
@@ -120,7 +120,7 @@ def bench_serving(
                 "--kill-after=30s",
                 f"{timeout_minutes}m",
                 "bash",
-                str(REMOTE_REPO / "remnant/scripts/local/bench-serving.sh"),
+                str(REMOTE_REPO / "scripts/local/bench-serving.sh"),
                 mode,
                 str(input_tokens),
                 str(output_tokens),

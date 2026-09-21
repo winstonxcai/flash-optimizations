@@ -29,8 +29,8 @@ SGLANG_PY_STOCK=${SGLANG_PY_STOCK:-/sgl-workspace/sglang/python}
 SGLANG_PY_FORK=${SGLANG_PY_FORK:-$REPO_CT/third_party/sglang/python}
 SGLANG_PY=${SGLANG_PY:-$SGLANG_PY_FORK}
 
-RESULTS_HOST=${RESULTS_HOST:-$HOST_REPO/remnant/results}
-LOG_HOST=${LOG_HOST:-$HOST_REPO/remnant/logs}
+RESULTS_HOST=${RESULTS_HOST:-$HOST_REPO/results}
+LOG_HOST=${LOG_HOST:-$HOST_REPO/logs}
 
 # LongSWE-Bench replay client (business_replay) -- lives on THIS host.
 REPLAY_DIR=${REPLAY_DIR:-/home/jovyan/wenyuhong/benchmarks}
@@ -40,8 +40,8 @@ REPLAY_DATASET=$REPLAY_DIR/datasets/h20-dsv4pro/longcodebench_openai
 REPLAY_MANIFEST=$REPLAY_DIR/cache/official-longswebench/longswebench-openai-v1.json
 
 # LongBench v2 dataset (host paths; the full 503-question set + per-id token counts).
-LB2_DATA=${LB2_DATA:-$HOST_REPO/remnant/data/lb2_data.json}
-LB2_TOKENS=${LB2_TOKENS:-$HOST_REPO/remnant/data/lb2_tokens.json}
+LB2_DATA=${LB2_DATA:-$HOST_REPO/data/lb2_data.json}
+LB2_TOKENS=${LB2_TOKENS:-$HOST_REPO/data/lb2_tokens.json}
 
 # Remote agentic-eval box that runs the Sangfor / SWE-bench clients (they reach
 # our local sglang server over http). A docker_env_config JSON on that box holds

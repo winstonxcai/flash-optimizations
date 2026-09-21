@@ -1,6 +1,6 @@
 # Remnant serving benchmark
 
-One Bash script: `remnant/scripts/local/bench-serving.sh`. It starts SGLang and
+One Bash script: `scripts/local/bench-serving.sh`. It starts SGLang and
 calls `python -m sglang.bench_serving`. There is no custom Python serving runner,
 matrix scheduler, or auto-concurrency logic. Two interfaces in the one file:
 
@@ -17,7 +17,7 @@ matrix scheduler, or auto-concurrency logic. Two interfaces in the one file:
 MODEL_PATH=/path/to/DeepSeek-V4-Flash-0731 \
 SGLANG_ROOT=/path/to/third_party/sglang \
 CUDA_VISIBLE_DEVICES=0,1,2,3 \
-bash remnant/scripts/local/bench-serving.sh packed 32768 2048 8
+bash scripts/local/bench-serving.sh packed 32768 2048 8
 ```
 
 The four arguments are **mode, input tokens, output tokens, concurrency**.
@@ -29,7 +29,7 @@ concurrency 8
 is required.
 
 Requires Linux, Bash, curl, jq, setsid, and the prepared SGLang/CUDA
-environment from `remnant/docker/modal.Dockerfile`. Use `PYTHON=/venv/bin/python` if needed.
+environment from `docker/modal.Dockerfile`. Use `PYTHON=/venv/bin/python` if needed.
 The fork contains the Remnant runtime directly. The script does not install
 dependencies or download weights.
 
@@ -45,7 +45,7 @@ warm-up wave of `concurrency` prompts, then three measured waves (`3 ×
 concurrency`).
 
 Configurable through environment variables: `PYTHON`, `RESULTS_DIR` (default
-`remnant/logs/bench-serving/`), `PORT` (default 30211), `SEED` (default 42),
+`logs/bench-serving/`), `PORT` (default 30211), `SEED` (default 42),
 `SGLANG_ROOT` (sets `SG_LOWRANK_SRC`), and the server knobs `MEM_FRAC` (0.88),
 `CTX_LEN` (1M), `MAX_RUN` (256), `CHUNK` (8192), `DECODE_CFG` (extended),
 `MODEL_NAME`. Edit the fixed server settings in the shell file to change both
@@ -58,7 +58,7 @@ desired.
 `app.py` mounts and executes the same shell file, supplying paths and resources:
 
 ```bash
-MODAL_PROFILE=your-profile modal run --detach remnant/scripts/modal/app.py::bench_serving \
+MODAL_PROFILE=your-profile modal run --detach scripts/modal/app.py::bench_serving \
   --mode packed --input-tokens 32768 --output-tokens 2048 --concurrency 8 \
   --timeout-minutes 60
 ```
@@ -76,7 +76,7 @@ The model volume is `deepseek-v4-flash-0731`; results keep the existing `remnant
 
 Each call creates a unique result directory containing `server.log`,
 `warmup.log/jsonl`, and `measured.log/jsonl`. Local default:
-`remnant/logs/bench-serving/`; override with `RESULTS_DIR`. Modal uses `/results`
+`logs/bench-serving/`; override with `RESULTS_DIR`. Modal uses `/results`
 and commits the volume when the script exits, including on failure.
 
 The script flushes radix cache before each benchmark phase and rejects failed
@@ -90,24 +90,16 @@ Use an unused port (`PORT=30211` by default).
 
 ## Code layout and checks
 
-`packed.py` owns buffers, storage, workspace allocation, and reconstruction
-dispatch; `fused.py` binds the CUDA adapter. `reference.py` contains the shared
-production pruning helpers and Torch numerical references. SGLang source edits
-live in `patches/`; `patching.py` applies, restores, and verifies them.
-The public commands remain `python -m remnant patch|unpatch|verify`.
+The legacy outer Remnant package, patcher, and adapter harness have been
+retired. Runtime code lives in the pinned SGLang fork under `third_party/sglang`.
+The scripts here are retained for serving and historical experiment replay.
 
-From the repository root, with PyTorch and Modal installed:
-
-```bash
-The legacy outer-repository test harness has been retired. Run model-free
-validity and timing checks from the pinned FlashMLA fork instead.
-ruff check remnant
-ruff format --check remnant
-```
+From the repository root, run model-free validity and timing checks from the
+pinned SGLang and FlashMLA forks.
 
 Discovery includes the numerical suites and skips GPU checks unless their CUDA,
 Triton, SGLang, or extension dependencies are available. The existing individual
-unit/GPU module entrypoints remain supported. `remnant/ruff.toml` defines Python
+unit/GPU module entrypoints remain supported. The repository root defines the Python
 formatting and lint conventions. Upstream names and external resource identifiers
 are not renamed with local Python symbols.
 
@@ -120,23 +112,23 @@ have been removed. Use the parameterized interface above for new runs.
 
 ### Modal Packed workflow
 
-Run from the repository root. Modal builds `remnant/docker/modal.Dockerfile` on CPU; the model stays in the persistent `deepseek-v4-flash-fp8` Volume and is not baked into the image.
+Run from the repository root. Modal builds `docker/modal.Dockerfile` on CPU; the model stays in the persistent `deepseek-v4-flash-fp8` Volume and is not baked into the image.
 
 ```bash
 modal profile activate <profile>
 
 # One time, CPU only: download the pinned model revision.
-modal run remnant/scripts/modal/app.py::download_model
+modal run scripts/modal/app.py::download_model
 
 # One H100: compile and validate the Triton kernels.
-modal run remnant/scripts/modal/app.py::kernel_validation
+modal run scripts/modal/app.py::kernel_validation
 
 # Four H100s: run packed then native TP4 on the same allocation.
 # Detach so a local-client disconnect cannot cancel the paid job.
-modal run --detach remnant/scripts/modal/app.py::tp4_capacity_ceiling
+modal run --detach scripts/modal/app.py::tp4_capacity_ceiling
 
 # Four H100s: short graph-enabled decode A/B at 64k, concurrency 1 and 2.
-modal run --detach remnant/scripts/modal/app.py::tp4_graph_decode_ab
+modal run --detach scripts/modal/app.py::tp4_graph_decode_ab
 ```
 
 The TP4 function uses the official [`sglang.bench_serving`](https://lmsysorg.mintlify.app/docs/developer_guide/bench_serving) entry point at exact 32k, 64k, and 128k input lengths with 16 output tokens, CUDA graphs off, `mem-fraction-static=0.93`, and `max-running-requests=64`. Keep `--random-range-ratio 1.0`; `0` samples lengths from 1 to the target.
@@ -191,7 +183,7 @@ This is a graph/no-error performance smoke, not a quality evaluation.
 #### Packed report serving benchmark (2048-token decode)
 
 This is the reproducibility record for the fair-load and maximum-concurrency
-tables in `remnant/report.md`. Three parallel TP4 legs were run: untouched
+tables in `report.md`. Three parallel TP4 legs were run: untouched
 V4-Flash, TopMag50 with the 584-byte native layout, and Packed TopMag50
 with the 328-byte packed layout. The runs used separate Modal profiles with
 the model already present in each profile's persistent volume; `winstoncai233`
@@ -237,16 +229,16 @@ was included.
 The paired benchmark was launched on Modal with:
 
 ```bash
-modal run --detach remnant/scripts/modal/app.py::tp4_packed_report_tables --mode all
+modal run --detach scripts/modal/app.py::tp4_packed_report_tables --mode all
 
 # Separate untouched V4-Flash behavior in the same image and configuration.
-modal run --detach remnant/scripts/modal/app.py::tp4_packed_report_tables \
+modal run --detach scripts/modal/app.py::tp4_packed_report_tables \
   --mode untouched
 
 # The three production runs were launched concurrently with explicit profiles:
-MODAL_PROFILE=winstoncai modal run --detach remnant/scripts/modal/app.py::tp4_packed_report_tables --mode untouched
-MODAL_PROFILE=caiw modal run --detach remnant/scripts/modal/app.py::tp4_packed_report_tables --mode native
-MODAL_PROFILE=poohthewinniechurchill modal run --detach remnant/scripts/modal/app.py::tp4_packed_report_tables --mode packed
+MODAL_PROFILE=winstoncai modal run --detach scripts/modal/app.py::tp4_packed_report_tables --mode untouched
+MODAL_PROFILE=caiw modal run --detach scripts/modal/app.py::tp4_packed_report_tables --mode native
+MODAL_PROFILE=poohthewinniechurchill modal run --detach scripts/modal/app.py::tp4_packed_report_tables --mode packed
 ```
 
 This entrypoint came from the temporary report benchmark harness layered on
