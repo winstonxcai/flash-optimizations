@@ -1,7 +1,7 @@
 # remnant driver scripts (local)
 
 Small, reusable entry points for serving DeepSeek-V4-Flash-0731 on this GPU node
-and running the remnant (Stage-1 packed 328-B C4) evals. Servers boot inside a
+and running the Remnant packed 328-B C4 evals. Servers boot inside a
 dockerized SGLang container on this node; the only machine-specific knowledge
 lives in one file, [`env.sh`](env.sh) (defaults: the `remnant` v0.5.18
 container, GPUs 0-3, port 30212 -- override per env.sh to target the frozen
@@ -25,7 +25,7 @@ container, GPUs 0-3, port 30212 -- override per env.sh to target the frozen
   allocator ceiling. Each leg boots its own report-config server.
 - `bench-serving.sh <native|packed> <in> <out> <concurrency>` —
   standalone single-config measurement, self-boots one report-config server with
-  no container — the Modal / `tests/test_bench_serving.py` entrypoint.
+  no container — the Modal serving entrypoint.
 - `bench-lswb.sh <tag> [port] [C] [dur]` — LongSWE-Bench replay client against a
   running server (prefix-reuse workload).
 - `lswb-row.sh <run_dir|tag>` — print the 7 recorded SLO-run fields from a
@@ -38,13 +38,8 @@ container, GPUs 0-3, port 30212 -- override per env.sh to target the frozen
 - `agentic-eval.sh <sangfor|swe> <instance-list> [run-id]` — agentic eval against
   a running server (list of task ids, one per line) run on the remote YJYBench
   box: `sangfor` = Sangfor-Bench, `swe` = SWE-bench_Verified.
-- `kernel-run.sh [--validity-only|--speed-only]` — run the remnant **GPU suites**
-  (validity + speed) in a throwaway container pinned to a GPUQ-granted device.
-  The one script here that needs no server: it resolves its device from
-  `CUDA_VISIBLE_DEVICES` under `gpuq run`, or from `REMNANT_DEVICES` +
-  `REMNANT_LEASE` outside it, then writes `validity.log` and `speed.{json,csv}`
-  under `remnant/results/sparse-<stamp>/`. Never uses `--gpus all`. See its
-  header for the lease recipe and why the second path exists.
+- Model-free FlashMLA validity and timing live in the pinned fork under
+  `third_party/flashmla/tests/` and `third_party/flashmla/benchmark/`.
 - `lb2_serve_eval.py` — the LongBench v2 HTTP client (threaded, resumable).
 - `config/` — eval inputs and env config: `sangfor-bench-hard50.txt` and
   `swe_instances_50_sweb_verified_mini.txt` (tracked instance lists — Sangfor &
@@ -54,9 +49,8 @@ container, GPUs 0-3, port 30212 -- override per env.sh to target the frozen
 ## Usage pattern
 
 ```sh
-# 0) first time (or after a container recreate): prep + patch the fork tree
+# 0) first time (or after a container recreate): prepare the fork tree
 ./container.sh up
-./container.sh patch
 
 # 1) boot a server (native or packed), leave it running
 ./serve.sh packed
@@ -73,7 +67,7 @@ container, GPUs 0-3, port 30212 -- override per env.sh to target the frozen
 ./bench-serving.sh fair 32768
 ./bench-serving.sh max  65536
 
-# standalone single-config, no container (Modal/tests interface; MODEL_PATH set)
+# standalone single-config, no container (Modal interface; MODEL_PATH set)
 MODEL_PATH=/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731 ./bench-serving.sh packed 32768 2048 8
 ```
 

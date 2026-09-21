@@ -1,6 +1,6 @@
 """CLI for the remnant package: python -m remnant <cmd>.
 
-Commands: patch | unpatch | verify | selftest | packed_selftest
+Commands: patch | unpatch | verify | drift
 Run from flash-optimizations (or with it on PYTHONPATH).
 """
 
@@ -25,14 +25,6 @@ def main():
         from . import patching
 
         raise SystemExit(patching.drift())
-    elif cmd == "selftest":
-        from .tests import validity
-
-        validity.run_reference()
-    elif cmd in {"packed_selftest", "packedselftest"}:
-        from .tests import validity
-
-        validity.run_packed_reference()
     else:
         raise SystemExit(f"unknown command: {cmd}")
 

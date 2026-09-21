@@ -68,8 +68,8 @@ Run separate calls for native, fused, and optimized. No account is automatically
 selected. Matching benchmark code does not eliminate differences in hardware,
 software, or environment settings.
 
-Other entrypoints remain: `download_model` (CPU), `validate_packed` (H100),
-`validate_fused` (L4), and `bench_kernels --suite packed|fused` (H100).
+Other entrypoints include the model-free FlashMLA validation, benchmark,
+sanitizer, and profiling functions in `app.py`.
 The model volume is `deepseek-v4-flash-0731`; results keep the existing `remnant-stage2a-results` volume name.
 
 ## Results
@@ -99,7 +99,8 @@ The public commands remain `python -m remnant patch|unpatch|verify`.
 From the repository root, with PyTorch and Modal installed:
 
 ```bash
-REMNANT_TEST_FETCH_SGLANG=1 python -m unittest discover -s remnant/tests -t .
+The legacy outer-repository test harness has been retired. Run model-free
+validity and timing checks from the pinned FlashMLA fork instead.
 ruff check remnant
 ruff format --check remnant
 ```

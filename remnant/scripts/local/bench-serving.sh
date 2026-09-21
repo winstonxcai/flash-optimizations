@@ -17,7 +17,7 @@
 #      One configuration per call, no container / env.sh dependency: self-boots
 #      one TP4 server with the report configuration (fp8 KV, mem-frac 0.88, 1M
 #      ctx, extended decode graphs). This is the interface Modal
-#      (app.py::bench_serving) and tests/test_bench_serving.py drive.
+#      (app.py::bench_serving) drives.
 #
 # Per point both paths share the report protocol: fresh server, extended decode
 # CUDA graphs (decode on-graph up to max_bs 136), one warm-up wave of C, then 3

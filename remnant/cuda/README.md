@@ -44,13 +44,13 @@ The extension is retained only as the `_FUSED` comparison path.
 
 ## Validation funnel
 
-The Modal funnel is intentionally ordered by cost:
+The production validation funnel is intentionally ordered by cost:
 
 ```bash
 MODAL_PROFILE=your-profile modal run \
-  remnant/scripts/modal/app.py::validate_fused
+  remnant/scripts/modal/app.py::validate_flashmla_fork
 MODAL_PROFILE=your-profile modal run \
-  remnant/scripts/modal/app.py::bench_kernels --suite fused
+  remnant/scripts/modal/app.py::validate_flashmla_direct_decode
 # Run only after both gates pass, on an account holding the pinned 0731 volume.
 MODAL_PROFILE=your-profile modal run \
   remnant/scripts/modal/app.py::download_model
@@ -60,6 +60,3 @@ MODAL_PROFILE=your-profile modal run --detach \
 
 Every run writes to a unique directory below `/results` in the existing
 `remnant-stage2a-results` volume, so prior artifacts are not overwritten.
-
-On this node, the same GPU suites run under a GPUQ lease via
-[`../scripts/local/kernel-run.sh`](../scripts/local/kernel-run.sh).
