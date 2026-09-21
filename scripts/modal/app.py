@@ -49,7 +49,7 @@ download_image = modal.Image.debian_slim(python_version="3.11").pip_install(
     "huggingface-hub[hf-xet]==0.34.4",
 )
 fork_image = modal.Image.from_dockerfile(
-    str(REPO_ROOT / "docker" / "modal.Dockerfile"),
+    str(REPO_ROOT / "Dockerfile"),
     context_dir=str(REPO_ROOT),
     ignore=(
         "scripts/**",

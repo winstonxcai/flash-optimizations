@@ -22,7 +22,7 @@ DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 
 ACTION=${1:-up}
 IMAGE=${IMAGE:-remnant:v0.5.18}
-DOCKERFILE="$HOST_REPO/docker/local.Dockerfile"
+DOCKERFILE="$HOST_REPO/Dockerfile"
 
 die () { echo "FATAL: $*" >&2; exit 1; }
 

@@ -1,7 +1,11 @@
-# Modal server image — DeepSeek-V4-Flash-0731
+# Reproducible DeepSeek-V4-Flash-0731 server image.
 #
 # Build from the repository root:
-#   docker build -t topmag-server:v0.5.18-0731 -f docker/modal.Dockerfile .
+#   docker build -t remnant:v0.5.18 -f Dockerfile .
+#
+# This is the single server image for local and Modal runs. The model weights
+# remain mounted at runtime; the SGLang fork and its exact reviewed commit are
+# pinned below. FlashMLA is pinned by the fork's CMake FetchContent revision.
 FROM lmsysorg/sglang:v0.5.18-cu130
 
 ARG REMNANT_SGLANG_REF=remnant/v0.5.18

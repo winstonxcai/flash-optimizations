@@ -29,7 +29,7 @@ concurrency 8
 is required.
 
 Requires Linux, Bash, curl, jq, setsid, and the prepared SGLang/CUDA
-environment from `docker/modal.Dockerfile`. Use `PYTHON=/venv/bin/python` if needed.
+environment from the root `Dockerfile`. Use `PYTHON=/venv/bin/python` if needed.
 The fork contains the Remnant runtime directly. The script does not install
 dependencies or download weights.
 
@@ -112,7 +112,7 @@ have been removed. Use the parameterized interface above for new runs.
 
 ### Modal Packed workflow
 
-Run from the repository root. Modal builds `docker/modal.Dockerfile` on CPU; the model stays in the persistent `deepseek-v4-flash-fp8` Volume and is not baked into the image.
+Run from the repository root. Modal builds the root `Dockerfile` on CPU; the model stays in the persistent `deepseek-v4-flash-fp8` Volume and is not baked into the image.
 
 ```bash
 modal profile activate <profile>
