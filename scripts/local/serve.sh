@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 # =====================================================================
-# serve.sh -- boot (or stop) a DeepSeek-V4-Flash-0731 TP server for the
-# remnant study on this machine, inside the sglang container.
+# serve.sh -- boot (or stop) a production-fork DeepSeek-V4-Flash-0731 TP server
+# on the local GPU node, inside the reproducible SGLang container.
 #
 #   serve.sh native             untouched 0731, stock 584-byte C4 (default)
 #   serve.sh packed             328-byte packed C4 (Remnant)
 #   serve.sh <mode> stop        kill the server on $PORT
 #
-# All modes use the fp4-native MoE runner (flashinfer_mxfp4), mem-frac 0.88,
+# Both modes use the same production fork and differ only in cache format.
+# They use the fp4-native MoE runner (flashinfer_mxfp4), mem-frac 0.88,
 # 1M ctx cap, fp8 KV, and DeepSeek reasoning/tool parsers (needed by the
-# agentic evals; harmless for benches). The legs differ by WHICH source tree
-# serves the Remnant fork (SGLANG_PY_FORK). Native uses the fork's default
-# cache format; packed passes --dsv4-c4-cache-format remnant.
+# agentic evals; harmless for benches). Native uses the fork's default cache
+# format; packed passes --dsv4-c4-cache-format remnant.
 #
 # HICACHE=1 (optional) additionally enables SGLang's hierarchical cache
 # (GPU L1 <-> CPU DRAM L2) with the locked remnant settings:
@@ -34,11 +34,16 @@ case "$MODE" in
   native|packed) ;;
   *) echo "usage: $0 <native|packed> [stop]"; exit 1 ;;
 esac
+case "$ACTION" in
+  boot|stop) ;;
+  *) echo "usage: $0 <native|packed> [stop]"; exit 1 ;;
+esac
 HICACHE=${HICACHE:-0}
 [ "$HICACHE" = 1 ] || [ "$HICACHE" = 0 ] || { echo "HICACHE must be 0 or 1"; exit 1; }
 
 SERVE_LOG="$LOG_HOST/serve_${MODE}$([ "$HICACHE" = 1 ] && echo _hicache).log"  # host-side log path
 SERVE_LOG_CT=$(to_ct "$SERVE_LOG")             # same file inside container
+mkdir -p "$LOG_HOST"
 
 if [ "$ACTION" = stop ]; then
   kill_port
@@ -48,26 +53,9 @@ fi
 
 kill_port
 
-# --- per-mode flag + tree -----------------------------------------------
-TREE="$SGLANG_PY_FORK"
-case "$MODE" in
-  native)
-    CACHE_FORMAT=native
-    CT_PYTHONPATH="$TREE"
-    ;;
-  packed)
-    CACHE_FORMAT=remnant
-    CT_PYTHONPATH="$TREE"
-    ;;
-esac
-
-# --- hierarchical-cache (HiCache L2) env + flags ---------------------
-HICACHE_ARGS=()
-if [ "$HICACHE" = 1 ]; then
-  HICACHE_ARGS=(--enable-hierarchical-cache --hicache-ratio 2.75 \
-    --hicache-write-policy write_through --hicache-io-backend direct \
-    --hicache-mem-layout page_first_direct)
-fi
+# --- shared production launcher ---------------------------------------
+TREE="$SGLANG_ROOT_CT"
+DECODE_CFG_QUOTED=$(printf '%q' "$DECODE_CFG")
 
 echo "== serve $MODE on gpus=$GPUS port=$PORT master=$MASTER_PORT (log: $SERVE_LOG) =="
 : > "$SERVE_LOG"   # truncate for a clean boot log (host side)
@@ -75,22 +63,13 @@ echo "== serve $MODE on gpus=$GPUS port=$PORT master=$MASTER_PORT (log: $SERVE_L
 ct "
   cd $TREE
   export CUDA_VISIBLE_DEVICES=$GPUS MASTER_PORT=$MASTER_PORT
-  [ \"$HICACHE\" = 1 ] && export SGLANG_ENABLE_UNIFIED_RADIX_TREE=1
-  export PYTHONPATH=$CT_PYTHONPATH
+  export MODEL_NAME=$MODEL_NAME TP=$TP MEM_FRAC=$MEM_FRAC CTX_LEN=$CTX_LEN
+  export MAX_RUN=$MAX_RUN CHUNK=$CHUNK HICACHE=$HICACHE
+  export DECODE_CFG=$DECODE_CFG_QUOTED
+  export PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT
   export NCCL_IB_DISABLE=1 NCCL_SOCKET_IFNAME=lo NCCL_P2P_LEVEL=NVL NCCL_PROTO=Simple NCCL_ALGO=Ring
   export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-  nohup sglang serve \
-    --model-path $MODEL_CT --served-model-name $MODEL_NAME \
-    --tp $TP --trust-remote-code --mem-fraction-static $MEM_FRAC \
-    --context-length $CTX_LEN --max-running-requests $MAX_RUN \
-    --chunked-prefill-size $CHUNK \
-    --dsv4-c4-cache-format $CACHE_FORMAT \
-    --kv-cache-dtype fp8_e4m3 --moe-runner-backend flashinfer_mxfp4 \
-    --reasoning-parser deepseek-v4 --tool-call-parser deepseekv4 \
-    --host 0.0.0.0 --port $PORT \
-    --cuda-graph-config '$DECODE_CFG' \
-    ${HICACHE_ARGS[*]} \
-    --skip-server-warmup --watchdog-timeout 1800 \
+  nohup bash $REPO_CT/scripts/local/run-server.sh $MODE $MODEL_CT 0.0.0.0 $PORT \
     > $SERVE_LOG_CT 2>&1 &
   echo \"launched pid \$!\"
 "

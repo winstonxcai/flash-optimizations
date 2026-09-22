@@ -31,7 +31,7 @@ else
   echo "cannot resolve $ARG"; exit 1
 fi
 
-/usr/bin/python3 -c "
+"${PYTHON:-python3}" -c "
 import json, sys
 s = json.load(open('$S'))
 c = s.get('cache', {})

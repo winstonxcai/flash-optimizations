@@ -17,9 +17,13 @@
 # =====================================================================
 set -u
 . "$(dirname "$0")/env.sh"
+. "$(dirname "$0")/eval-env.sh"
 
 TAG=${1:-} PORT=${2:-$PORT} C=${3:-15} DUR=${4:-1200}
 [ -n "$TAG" ] || { echo "usage: $0 <tag> [port] [concurrency] [duration_s]"; exit 1; }
+require_replay_config
+[[ "$C" =~ ^[1-9][0-9]*$ ]] || { echo "concurrency must be a positive integer" >&2; exit 2; }
+[[ "$DUR" =~ ^[1-9][0-9]*$ ]] || { echo "duration must be a positive integer" >&2; exit 2; }
 
 health () { curl -fsS -m 3 "http://127.0.0.1:$PORT/health" >/dev/null 2>&1; }
 health || { echo "FATAL: no server on 127.0.0.1:$PORT (run serve.sh first)"; exit 1; }
@@ -35,7 +39,7 @@ echo "== lswb replay tag=$TAG port=$PORT c$C @ ${DUR}s -> $RUN_ROOT =="
   done ) &
 SAMPLER=$!
 
-( cd "$REPLAY_DIR" && /usr/bin/python3 -B "$REPLAY_RUNNER" \
+( cd "$REPLAY_DIR" && "${PYTHON:-python3}" -B "$REPLAY_RUNNER" \
     --result-root "$RUN_ROOT/client" \
     --dataset-root "$REPLAY_DATASET" \
     --dataset-manifest-input "$REPLAY_MANIFEST" \
@@ -50,6 +54,7 @@ SAMPLER=$!
     > "$RUN_ROOT/client.log" 2>&1 )
 RC=$?
 kill "$SAMPLER" 2>/dev/null
+wait "$SAMPLER" 2>/dev/null || true
 
 echo "[lswb] client rc=$RC"; echo "==== client.log ===="; cat "$RUN_ROOT/client.log"
 echo "[lswb] artifacts at $RUN_ROOT"

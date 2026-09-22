@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 # =====================================================================
-# container.sh -- bring up the remnant container and verify its forked tree.
+# container.sh -- bring up the production-fork container and verify its tree.
 #
 #   container.sh              ensure image + container exist, then prep
 #   container.sh prep         prep only (container must already exist)
+#   container.sh rebuild      rebuild the image and recreate the container
 #   container.sh recreate     docker rm -f the container, recreate, prep
 #
-# Remnant is the v0.5.18 fork mounted from this repository's submodule at
-# third_party/sglang. Both native and packed serving use that tree; native is
-# selected by the default cache-format argument.
+# The Dockerfile clones the reviewed production fork into
+# /sgl-workspace/sglang-remnant. Both native and packed serving use that tree;
+# native is selected by the default cache-format argument.
 #
-# env.sh defaults to remnant's runtime trio (GPUS 0-3 / PORT 30212 /
-# MASTER 29638). ruler-eval (the frozen v0.5.15 box, GPUS 4-7 / 30212 / 29628)
-# shares the same port, so don't boot both at once; when ruler-eval is up,
-# keep remnant on a non-conflicting PORT/MASTER/GPU set.
+# env.sh defaults to the production runtime trio (GPUS 0-3 / PORT 30212 /
+# MASTER 29638). Choose a distinct port, master port, and GPU set when another
+# server is already running on the node.
 # =====================================================================
 set -u
 export CONTAINER=${CONTAINER:-remnant}
@@ -54,13 +54,11 @@ create_container () {
 
 prep () {
   has_container || die "container $CONTAINER does not exist; run: $0 (no args)"
-  echo "== verify pinned SGLang fork at $SGLANG_PY_FORK"
-  ct "test -f $SGLANG_PY_FORK/sglang/srt/server_args.py" \
-    || die "third_party/sglang submodule is not mounted"
-  ct "grep -q dsv4-c4-cache-format $SGLANG_PY_FORK/sglang/srt/server_args.py" \
+  echo "== verify production SGLang fork at $SGLANG_ROOT_CT"
+  ct "test -f $SGLANG_ROOT_CT/python/sglang/srt/server_args.py" \
+    || die "production SGLang fork is not present in the image"
+  ct "grep -q dsv4-c4-cache-format $SGLANG_ROOT_CT/python/sglang/srt/server_args.py" \
     || die "SGLang fork is missing --dsv4-c4-cache-format"
-  ct "test \$(find $SGLANG_PY_FORK -name '*.remnant.orig' | wc -l) -eq 0" \
-    || die "fork contains runtime patch backup files"
 }
 
 # ------------------------------ dispatch ------------------------------
@@ -69,6 +67,12 @@ case "$ACTION" in
   recreate)
     docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
     has_image || build_image
+    create_container
+    prep
+    ;;
+  rebuild)
+    docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+    build_image
     create_container
     prep
     ;;
@@ -82,6 +86,6 @@ case "$ACTION" in
     fi
     prep
     ;;
-  *) echo "usage: $0 [prep|recreate|up]" >&2; exit 2 ;;
+  *) echo "usage: $0 [prep|recreate|up|rebuild]" >&2; exit 2 ;;
 esac
-echo "== remnant ready. serve with:  bash scripts/local/serve.sh <native|packed>"
+echo "== production image ready. serve with:  bash scripts/local/serve.sh <native|packed>"

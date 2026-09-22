@@ -33,9 +33,13 @@ parent repository so it is visible without opening either fork.
 
 ### Remnant validation and measurement
 
-- `tests/remnant_fixture.py` — packed-record fixtures and references.
-- `tests/test_flash_mla_remnant_decoding.py` — direct-vs-adapter validity tests.
-- `benchmark/bench_remnant_decode.py` — Native/Adapter/Direct decode benchmark.
+- `tests/lib.py` — shared upstream test generators plus the 328-byte Packed fixtures.
+- `tests/test_flash_mla_remnant_decoding.py` — direct-vs-Native and independent-reference validity tests.
+- `benchmark/remnant/bench_flashmla_decode.py` (SGLang fork) — production-facing Native/Adapter/Direct decode benchmark.
+
+The former `tests/remnant_fixture.py` was removed after its consumers migrated
+to `tests/lib.py`; the separate FlashMLA `benchmark/bench_remnant_decode.py`
+was retired in favor of the SGLang benchmark above.
 
 `benchmark/bench_flash_mla.py` is intentionally not listed: it is an upstream
 FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
@@ -77,7 +81,6 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 - `test/registered/attention/unittests/dsv4/test_remnant_backend.py` — backend reconstruction/dispatch.
 - `test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py` — graph replay.
 - `test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py` — direct FlashMLA parity.
-- `test/registered/attention/unittests/dsv4/test_remnant_hicache.py` — HiCache round trips.
 - `python/sglang/test/kernels/deepseek_v4/test_remnant_pack_kernel.py` — pack kernel checks.
 - `python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py` — unpack kernel checks.
 - `benchmark/remnant/README.md` — benchmark documentation.

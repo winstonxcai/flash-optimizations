@@ -1,46 +1,48 @@
-# remnant driver scripts (local)
+# Production-fork driver scripts (local)
 
-Small, reusable entry points for serving DeepSeek-V4-Flash-0731 on this GPU node
-and running the Remnant packed 328-B C4 evals. Servers boot inside a
-dockerized SGLang container on this node; the only machine-specific knowledge
-lives in one file, [`env.sh`](env.sh) (defaults: the `remnant` v0.5.18
-container, GPUs 0-3, port 30212 -- override per env.sh to target the frozen
-`ruler-eval` v0.5.15 box).
+These scripts run the same reviewed SGLang fork used by the Modal production
+image. The local path uses Docker for isolation; the image clones the fork at
+`/sgl-workspace/sglang-remnant`. Native and packed are cache-format variants
+of that one runtime. The old repository-mounted `third_party/sglang` tree is
+not used for serving.
 
 ## Layout
 
-- `container.sh [prep|recreate|up]` — bring up the `remnant` container and
-  verify the pinned `third_party/sglang` fork. The source already contains the
-  Remnant runtime; no patch command is needed.
-- `env.sh` — shared config + tiny helpers. **Porting to a new node = edit the
-  MACHINE CONFIG block at the top** (container name, repo paths, model path,
-  remote eval box, default GPUs/port). `serve.sh` is unchanged.
-- `serve.sh <native|packed> [stop]` — boot the server (native uses the default
-  stock layout; packed passes `--dsv4-c4-cache-format remnant`), wait `/health`,
-  print pool + cache guard. Leave running or
-  `stop` it.
-- `bench-serving.sh <fair|max> <ctx> [C_fair]` — dual-leg serving comparison:
-  `fair` measures Native vs Packed at the same concurrency (Native's allocator
-  ceiling unless `C_fair` given); `max` measures each leg at its **own**
-  allocator ceiling. Each leg boots its own report-config server.
-- `bench-serving.sh <native|packed> <in> <out> <concurrency>` —
-  standalone single-config measurement, self-boots one report-config server with
-  no container — the Modal serving entrypoint.
+- `container.sh [prep|recreate|up|rebuild]` — build/start the reproducible image and
+  verify that its production fork supports the cache-format flag.
+- `env.sh` — shared configuration and helpers. The repository root is derived
+  from the script location; override `HOST_REPO`, `MODEL_PATH`, `GPUS`,
+  `PORT`, or `CONTAINER` when moving to another node.
+- `eval-env.sh` — optional replay/remote-evaluation settings. It has no
+  embedded host, password, or credential defaults; evaluation scripts require
+  the relevant variables explicitly.
+- `run-server.sh` — shared foreground launcher used by both local-container
+  and Modal serving. It is normally called by the other scripts.
+- `serve.sh <native|packed> [stop]` — boot or stop a server using the same
+  production fork. Native uses the default layout; packed passes
+  `--dsv4-c4-cache-format remnant`.
+- `bench-serving.sh` — compatibility dispatcher preserving both public command
+  forms below.
+- `bench-serving-capacity.sh <fair|max> <ctx> [C_fair]` — local Docker dual-leg
+  comparison. `fair` measures Native vs Packed at the same concurrency; `max`
+  measures each layout at its own allocator ceiling.
+- `bench-serving-image.sh <native|packed> <in> <out> <concurrency>` — standalone
+  measurement used by Modal. It self-boots a server directly in the production
+  image and is separate from the local Docker capacity driver.
 - `bench-lswb.sh <tag> [port] [C] [dur]` — LongSWE-Bench replay client against a
   running server (prefix-reuse workload).
 - `lswb-row.sh <run_dir|tag>` — print the 7 recorded SLO-run fields from a
   finished `bench-lswb.sh` run's `summary.json`.
-- `hicache-ladder.sh <native|packed> <tag> <C> [dur_s] [master_port]` — one
-  fresh-boot SLO-concurrency leg under the LOCKED HiCache config (small decode
-  graphs if C<=15 else extended).
-- `eval-lb2.sh <tag> [port] [out.json]` — LongBench v2 **full** eval against a
-  running server (473 feasible of 503; 30 samples exceed the 1M ctx cap).
-- `agentic-eval.sh <sangfor|swe> <instance-list> [run-id]` — agentic eval against
+- `bench-lb2.sh <tag> [port] [out_dir]` — official lm-eval LongBench v2
+  multiple-choice benchmark against a running server via `/v1/completions`.
+- `bench-agentic.sh <sangfor|swe> <instance-list> [run-id]` — agentic benchmark against
   a running server (list of task ids, one per line) run on the remote YJYBench
   box: `sangfor` = Sangfor-Bench, `swe` = SWE-bench_Verified.
 - Model-free FlashMLA validity and timing live in the pinned fork under
   `third_party/flashmla/tests/` and `third_party/flashmla/benchmark/`.
-- `lb2_serve_eval.py` — the LongBench v2 HTTP client (threaded, resumable).
+- `bench-lb2.sh` requires the official `lm-eval[longbench]` CLI in the host
+  environment and stores its results, logged samples, and SQLite request cache
+  under the selected output directory.
 - `config/` — eval inputs and env config: `sangfor-bench-hard50.txt` and
   `swe_instances_50_sweb_verified_mini.txt` (tracked instance lists — Sangfor &
   SWE-bench_Verified), plus `config_deepswe.json` and `config_swe_sangfor.json`
@@ -49,39 +51,45 @@ container, GPUs 0-3, port 30212 -- override per env.sh to target the frozen
 ## Usage pattern
 
 ```sh
-# 0) first time (or after a container recreate): prepare the fork tree
+# 0) first time (or after a container recreate): build and verify the image
 ./container.sh up
+# use this after changing Dockerfile or the production fork revision
+./container.sh rebuild
 
 # 1) boot a server (native or packed), leave it running
 ./serve.sh packed
 ./serve.sh packed stop          # later
 
 # 2) attach any eval / bench to the running server
-./eval-lb2.sh packed-0731                # LongBench v2 full
+./bench-lb2.sh packed-0731               # official LongBench v2
 ./bench-lswb.sh packed                   # LSWB replay c15 @ 1200s
-./agentic-eval.sh sangfor config/sangfor-bench-hard50.txt  # Sangfor on the hard-50 set
-./agentic-eval.sh swe    config/swe_instances_50_sweb_verified_mini.txt  # SWE-bench_Verified on 50 instances
+./bench-agentic.sh sangfor config/sangfor-bench-hard50.txt  # Sangfor hard-50
+./bench-agentic.sh swe    config/swe_instances_50_sweb_verified_mini.txt  # SWE-bench 50
 
 # serving capacity measurements boot their own legs per point (extended decode
 # graphs, warm-up + 3 measured waves, official sglang.bench_serving)
 ./bench-serving.sh fair 32768
 ./bench-serving.sh max  65536
 
-# standalone single-config, no container (Modal interface; MODEL_PATH set)
-MODEL_PATH=/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731 ./bench-serving.sh packed 32768 2048 8
+# standalone single-config (Modal-style image environment)
+MODEL_PATH=/models/DeepSeek-V4-Flash-0731 ./bench-serving.sh packed 32768 2048 8
 ```
 
-Evals that attach assume the server on `$PORT` (from `env.sh`). `sangfor`/`swe`
-clients run on the remote YJYBench box and reach this server through the
-`docker_env_config` base URL (see `env.sh`: `EVAL_*`, `BASE_URL` override).
-Eval results land under `results/` (local) or the eval box's
-`results/<run-id>/` (agentic); server logs under `logs/serve_<mode>.log`.
+Benchmarks that attach assume the server on `$PORT` (from `env.sh`). `sangfor`/`swe`
+clients run on the remote YJYBench box and require `EVAL_SSH`, `EVAL_SCP`,
+`EVAL_YJY`, `EVAL_VENV`, and `EVAL_CFG` to be exported before launch. A
+`BASE_URL` override may be supplied for a per-run config copy.
+
+LongSWE-Bench requires `REPLAY_DIR` and its derived client paths in
+`eval-env.sh`; no cluster-specific replay path is assumed.
+Eval results land under `results/` and server logs under
+`logs/serve_<mode>.log`.
 
 ## Notes
 
-- Servers run on `$GPUS` (default 0,1,2,3) inside the `remnant` container
-  (`docker exec`), fp4-native MoE runner, mem-frac 0.88, 1M ctx, fp8 KV, DeepSeek
-  reasoning/tool parsers.
-- Decode CUDA-graph config default = small (agentic-eval concurrency). The
+- Servers run on `$GPUS` (default 0,1,2,3) inside the `remnant` container,
+  using the Dockerfile-installed fork, fp4-native MoE runner, mem-frac 0.88,
+  1M ctx, fp8 KV, and DeepSeek reasoning/tool parsers.
+- Decode CUDA-graph config default = small (agentic benchmark concurrency). The
   serving drivers and C>15 legs override with the extended config so decode
   stays on-graph up to the packed allocator ceiling.

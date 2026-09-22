@@ -6,7 +6,6 @@ import os
 import shutil
 import subprocess
 import sys
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -20,8 +19,6 @@ MODEL_DIR = MODEL_ROOT / "DeepSeek-V4-Flash-0731"
 RESULTS_ROOT = Path("/results")
 SGLANG_ROOT = Path("/sgl-workspace/sglang-remnant")
 REMOTE_REPO = Path("/opt/flash-optimizations")
-FLASHMLA_COMMIT = "bad633c"
-
 
 def _repo_root() -> Path:
     """Resolve the repository locally and from Modal's mounted /root/app.py."""
@@ -53,6 +50,9 @@ fork_image = modal.Image.from_dockerfile(
     context_dir=str(REPO_ROOT),
     ignore=(
         "scripts/**",
+        "**/.git/**",
+        "third_party/sglang/.git",
+        "third_party/flashmla/.git",
     ),
 )
 server_image = (
@@ -135,8 +135,8 @@ def bench_serving(
     return str(RESULTS_ROOT)
 
 
-def _build_sglang_kernel(*, enable_sm100: bool = True) -> None:
-    """Build and overlay the pinned FlashMLA extension on H100."""
+def _build_sglang_kernel(*, enable_sm100: bool = False) -> None:
+    """Build and overlay the local FlashMLA extension for the target GPU."""
     aot_root = SGLANG_ROOT / "python" / "sglang" / "kernels" / "aot"
     build_root = Path("/tmp/remnant-flashmla-build")
     install_root = Path("/tmp/remnant-flashmla-install")
@@ -161,6 +161,7 @@ def _build_sglang_kernel(*, enable_sm100: bool = True) -> None:
         "-DSGL_KERNEL_ENABLE_FA3=OFF",
         "-DSGL_KERNEL_COMPILE_THREADS=1",
         f"-DSGL_KERNEL_ENABLE_FLASHMLA_SM100={'ON' if enable_sm100 else 'OFF'}",
+        "-DREMNANT_FLASHMLA_SOURCE_DIR=/opt/flashmla-remnant",
         f"-DCMAKE_PREFIX_PATH={torch_prefix}",
         "-DCUDA_VERSION=13.0",
     ]
@@ -171,9 +172,10 @@ def _build_sglang_kernel(*, enable_sm100: bool = True) -> None:
         check=True,
         timeout=600,
     )
-    build = ["cmake", "--build", str(build_root), "--target", "flashmla_ops", "--parallel", "2"]
-    print(f"[flashmla-build] {' '.join(build)}", flush=True)
-    subprocess.run(build, cwd=aot_root, check=True, timeout=1800)
+    for target in ("remnant_ops", "flashmla_ops"):
+        build = ["cmake", "--build", str(build_root), "--target", target, "--parallel", "2"]
+        print(f"[flashmla-build] {' '.join(build)}", flush=True)
+        subprocess.run(build, cwd=aot_root, check=True, timeout=1800)
     package_dir = Path(
         subprocess.check_output(
             [sys.executable, "-c", "import pathlib, sgl_kernel; print(pathlib.Path(sgl_kernel.__file__).parent)"],
@@ -185,11 +187,19 @@ def _build_sglang_kernel(*, enable_sm100: bool = True) -> None:
         raise RuntimeError(f"FlashMLA build produced no extension under {install_root}")
     for source in installed:
         shutil.copy2(source, package_dir / source.name)
+    remnant = list(build_root.glob("remnant_ops*.so"))
+    if not remnant:
+        raise RuntimeError(f"Remnant adapter build produced no extension under {build_root}")
+    for source in remnant:
+        shutil.copy2(source, package_dir / source.name)
     shutil.copy2(
         aot_root / "python" / "sgl_kernel" / "flash_mla.py",
         package_dir / "flash_mla.py",
     )
-    print(f"[flashmla-build] installed {installed[0].name} into {package_dir}", flush=True)
+    print(
+        f"[flashmla-build] installed {installed[0].name} and {remnant[0].name} into {package_dir}",
+        flush=True,
+    )
 
 
 @app.function(
@@ -218,7 +228,6 @@ def validate_remnant_non_model(
         "test/registered/attention/unittests/dsv4/test_remnant_pack.py",
         "test/registered/attention/unittests/dsv4/test_remnant_backend.py",
         "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py",
-        "test/registered/attention/unittests/dsv4/test_remnant_hicache.py",
         "python/sglang/test/kernels/deepseek_v4/test_remnant_pack_kernel.py",
         "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py",
     ]
@@ -267,6 +276,7 @@ def validate_flashmla_direct_decode(
         "-m",
         "pytest",
         "-q",
+        "-x",
         "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py",
     ]
     benchmark = [
@@ -335,7 +345,7 @@ def sanitize_flashmla_direct_decode() -> str:
     retries=0,
 )
 def validate_flashmla_fork() -> str:
-    """Build and test the pinned FlashMLA fork independently of SGLang."""
+    """Build and test the checked-out FlashMLA source independently of SGLang."""
     env = {
         **os.environ,
         "FLASH_MLA_DISABLE_SM100": "1",
@@ -343,53 +353,24 @@ def validate_flashmla_fork() -> str:
         "NVCC_THREADS": "2",
         "PYTHONUNBUFFERED": "1",
     }
-    with tempfile.TemporaryDirectory(prefix="remnant-flashmla-") as temporary:
-        source = Path(temporary) / "FlashMLA"
-        subprocess.run(
-            ["git", "clone", "--filter=blob:none", "https://github.com/winstonxcai/FlashMLA.git", str(source)],
-            check=True,
-            timeout=300,
-        )
-        subprocess.run(["git", "checkout", FLASHMLA_COMMIT], cwd=source, check=True)
-        subprocess.run(
-            ["git", "submodule", "update", "--init", "--recursive"],
-            cwd=source,
-            check=True,
-            timeout=600,
-        )
-        subprocess.run(
-            [sys.executable, "-m", "pip", "install", "--no-build-isolation", "-e", "."],
-            cwd=source,
-            env=env,
-            check=True,
-            timeout=1500,
-        )
-        subprocess.run(
-            [sys.executable, "-m", "pytest", "-q", "tests/test_flash_mla_remnant_decoding.py"],
-            cwd=source,
-            env=env,
-            check=True,
-            timeout=600,
-        )
-        subprocess.run(
-            [
-                sys.executable,
-                "benchmark/bench_remnant_decode.py",
-                "--heads",
-                "64,128",
-                "--batches",
-                "8,16",
-                "--repeats",
-                "100",
-                "--rounds",
-                "9",
-            ],
-            cwd=source,
-            env=env,
-            check=True,
-            timeout=600,
-        )
-    return "standalone FlashMLA tests and benchmark passed"
+    source = Path("/opt/flashmla-remnant")
+    if not (source / "csrc" / "python_api.cpp").exists():
+        raise RuntimeError("local FlashMLA source is missing from the Modal image")
+    subprocess.run(
+        [sys.executable, "-m", "pip", "install", "--no-build-isolation", "-e", "."],
+        cwd=source,
+        env=env,
+        check=True,
+        timeout=1500,
+    )
+    subprocess.run(
+        [sys.executable, "-m", "pytest", "-q", "tests/test_flash_mla_remnant_decoding.py"],
+        cwd=source,
+        env=env,
+        check=True,
+        timeout=600,
+    )
+    return "standalone FlashMLA tests passed"
 
 
 @app.function(

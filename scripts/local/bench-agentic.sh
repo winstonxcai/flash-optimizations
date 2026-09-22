@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =====================================================================
-# agentic-eval.sh <sangfor|swe> <instance-list> [run-id]
-#   Entry point for the agentic evals: launches an agentic eval (Claude Code
+# bench-agentic.sh <sangfor|swe> <instance-list> [run-id]
+#   Entry point for the agentic benchmarks: launches an agentic benchmark (Claude Code
 #   agents driving a live local sglang server) on the remote YJYBench box. The
 #   server must already be up (serve.sh native|packed); the agents reach it via
 #   the docker_env_config's ANTHROPIC_BASE_URL.
@@ -19,14 +19,16 @@
 #
 # The run is launched DETACHED on the eval box (nohup) because agents run for
 # hours; this script prints the run-id, the remote launch log, and how to poll.
-# Config (env.sh): EVAL_SSH, EVAL_YJY, EVAL_VENV, EVAL_CFG.
+# Config (eval-env.sh): EVAL_SSH, EVAL_SCP, EVAL_YJY, EVAL_VENV, EVAL_CFG.
 # =====================================================================
 set -u
 . "$(dirname "$0")/env.sh"
+. "$(dirname "$0")/eval-env.sh"
 
 BENCH=${1:-} INSTANCE=${2:-} RID=${3:-}
 [ -n "$BENCH" ] || { echo "usage: $0 <sangfor|swe> <instance-list> [run-id]"; exit 1; }
 [ -n "$INSTANCE" ] || { echo "usage: $0 <sangfor|swe> <instance-list>"; exit 1; }
+require_remote_eval_config
 
 case "$BENCH" in
   sangfor) BENCH_ARGS="--benchmark Sangfor-Bench" ;;
@@ -34,12 +36,14 @@ case "$BENCH" in
   *) echo "unknown bench '$BENCH' (sangfor|swe)"; exit 1 ;;
 esac
 
+[ -z "$RID" ] && RID="remnant-$BENCH-$(basename "$INSTANCE" .txt)-$(date +%Y%m%d_%H%M%S)"
+
 # --- resolve instance list to a path already on the eval box -----------------
 INST_REMOTE="$INSTANCE"
 if [ -f "$INSTANCE" ]; then   # local file -> upload
+  : "${EVAL_SCP:?Set EVAL_SCP to upload local instance lists}"
   BASE=$(basename "$INSTANCE")
-  /usr/bin/sshpass -p a scp -o StrictHostKeyChecking=no "$INSTANCE" \
-    root@10.57.3.76:$EVAL_YJY/instance_file/ 2>/dev/null \
+  $EVAL_SCP "$INSTANCE" "$EVAL_YJY/instance_file/" 2>/dev/null \
     || { echo "FATAL: could not upload $INSTANCE"; exit 1; }
   INST_REMOTE="$EVAL_YJY/instance_file/$BASE"
 fi
@@ -52,7 +56,7 @@ if [ -n "${BASE_URL:-}" ]; then
   echo ">> patching base-url of $EVAL_CFG -> $CFG_REMOTE (BASE_URL=$BASE_URL)"
   # Read the reference config remotely, patch ONLY the *_BASE_URL key, write the
   # copy. The auth token is copied verbatim -- never read or echoed here.
-  $EVAL_SSH "$EVAL_VENV -" <<PY
+  if ! $EVAL_SSH "$EVAL_VENV -" <<PY
 import json
 src = '$EVAL_CFG'
 dst = '$CFG_REMOTE'
@@ -65,15 +69,17 @@ for k in list(env.keys()):
 json.dump(j, open(dst, 'w'), indent=2)
 print('patched', dst)
 PY
+  then
+    echo "FATAL: could not create remote evaluation config" >&2
+    exit 1
+  fi
 fi
 
-[ -z "$RID" ] && RID="remnant-$BENCH-$(basename "$INSTANCE" .txt)-$(date +%Y%m%d_%H%M%S)"
-
-echo "== $BENCH eval: run_id=$RID instance=$INST_REMOTE cfg=$CFG_REMOTE =="
+echo "== $BENCH benchmark: run_id=$RID instance=$INST_REMOTE cfg=$CFG_REMOTE =="
 echo "   launching DETACHED on the eval box ..."
 # runs inside the heredoc: yjybench creates results/<run_id>/ and agents drive
 # the server for hours; nohup keeps it alive after the ssh session ends.
-$EVAL_SSH bash -s <<EOF
+if ! $EVAL_SSH bash -s <<EOF
 cd $EVAL_YJY || exit 1
 nohup $EVAL_VENV -m yjybench.cli \\
   $BENCH_ARGS --agent_type cc --agent_mode vibe --mode e2e \\
@@ -83,5 +89,9 @@ nohup $EVAL_VENV -m yjybench.cli \\
   > results/${RID}_launch.log 2>&1 &
 echo "started pid \$! (launch log: $EVAL_YJY/results/${RID}_launch.log)"
 EOF
+then
+  echo "FATAL: remote benchmark launch failed" >&2
+  exit 1
+fi
 
 echo "== poll progress:  $EVAL_SSH 'tail -5 $EVAL_YJY/results/$RID/*/run.log' =="

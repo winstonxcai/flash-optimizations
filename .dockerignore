@@ -2,6 +2,9 @@
 # COPY remnant/, so exclude the repo's runtime artifacts and regenerable data.
 # Mirrors .gitignore (git is orthogonal to the build context).
 .git/
+**/.git/
+third_party/sglang/.git
+third_party/flashmla/.git
 log/
 writeup/
 xkv/
