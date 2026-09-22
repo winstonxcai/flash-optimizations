@@ -18,10 +18,6 @@ case "$MODE" in
 esac
 [ -n "$MODEL" ] || { echo "missing model path" >&2; exit 2; }
 [ -n "$PORT_VALUE" ] || { echo "missing port" >&2; exit 2; }
-case "${HICACHE:-0}" in
-  0|1) ;;
-  *) echo "HICACHE must be 0 or 1" >&2; exit 2 ;;
-esac
 
 args=(
   serve
@@ -44,16 +40,5 @@ args=(
   --skip-server-warmup
   --watchdog-timeout 1800
 )
-
-if [ "${HICACHE:-0}" = 1 ]; then
-  export SGLANG_ENABLE_UNIFIED_RADIX_TREE=1
-  args+=(
-    --enable-hierarchical-cache
-    --hicache-ratio 2.75
-    --hicache-write-policy write_through
-    --hicache-io-backend direct
-    --hicache-mem-layout page_first_direct
-  )
-fi
 
 exec sglang "${args[@]}"

@@ -13,17 +13,9 @@
 # agentic evals; harmless for benches). Native uses the fork's default cache
 # format; packed passes --dsv4-c4-cache-format remnant.
 #
-# HICACHE=1 (optional) additionally enables SGLang's hierarchical cache
-# (GPU L1 <-> CPU DRAM L2) with the locked remnant settings:
-#   env SGLANG_ENABLE_UNIFIED_RADIX_TREE=1 and flags
-#   --enable-hierarchical-cache --hicache-ratio 2.75
-#   --hicache-write-policy write_through --hicache-io-backend direct
-#   --hicache-mem-layout page_first_direct
-# (no L3/storage). Boot log gains a _hicache suffix.
-#
 # Env overrides (all optional): PORT, GPUS, MASTER_PORT, TP, DECODE_CFG,
-# MEM_FRAC, CTX_LEN, MAX_RUN, CHUNK, HICACHE. Boot log:
-#   <LOG_HOST>/serve_<native|packed>[,_hicache].log
+# MEM_FRAC, CTX_LEN, MAX_RUN, CHUNK. Boot log:
+#   <LOG_HOST>/serve_<native|packed>.log
 # Server is left RUNNING; use "serve.sh <mode> stop" to tear it down.
 # =====================================================================
 set -u
@@ -38,10 +30,7 @@ case "$ACTION" in
   boot|stop) ;;
   *) echo "usage: $0 <native|packed> [stop]"; exit 1 ;;
 esac
-HICACHE=${HICACHE:-0}
-[ "$HICACHE" = 1 ] || [ "$HICACHE" = 0 ] || { echo "HICACHE must be 0 or 1"; exit 1; }
-
-SERVE_LOG="$LOG_HOST/serve_${MODE}$([ "$HICACHE" = 1 ] && echo _hicache).log"  # host-side log path
+SERVE_LOG="$LOG_HOST/serve_${MODE}.log"  # host-side log path
 SERVE_LOG_CT=$(to_ct "$SERVE_LOG")             # same file inside container
 mkdir -p "$LOG_HOST"
 
@@ -64,7 +53,7 @@ ct "
   cd $TREE
   export CUDA_VISIBLE_DEVICES=$GPUS MASTER_PORT=$MASTER_PORT
   export MODEL_NAME=$MODEL_NAME TP=$TP MEM_FRAC=$MEM_FRAC CTX_LEN=$CTX_LEN
-  export MAX_RUN=$MAX_RUN CHUNK=$CHUNK HICACHE=$HICACHE
+  export MAX_RUN=$MAX_RUN CHUNK=$CHUNK
   export DECODE_CFG=$DECODE_CFG_QUOTED
   export PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT
   export NCCL_IB_DISABLE=1 NCCL_SOCKET_IFNAME=lo NCCL_P2P_LEVEL=NVL NCCL_PROTO=Simple NCCL_ALGO=Ring

@@ -57,7 +57,6 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 
 - `python/sglang/srt/server_args.py` — `--dsv4-c4-cache-format` flag.
 - `python/sglang/srt/mem_cache/deepseek_v4_memory_pool.py` — packed pool.
-- `python/sglang/srt/mem_cache/hybrid_cache/hybrid_pool_assembler.py` — packed HiCache mirror.
 - `python/sglang/srt/layers/attention/deepseek_v4_backend.py` — decode dispatch.
 - `python/sglang/srt/layers/attention/dsv4/compressor_v2.py` — packed writes.
 - `python/sglang/srt/layers/attention/dsv4/indexer.py` — raw-index plumbing.
