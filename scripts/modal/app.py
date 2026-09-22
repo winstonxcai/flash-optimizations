@@ -36,6 +36,24 @@ def _repo_root() -> Path:
 
 REPO_ROOT = _repo_root()
 
+
+def _git_revision(path: Path) -> str:
+    try:
+        return subprocess.check_output(
+            ["git", "-C", str(path), "rev-parse", "HEAD"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return "unknown"
+
+
+SOURCE_REVISIONS = {
+    "parent": _git_revision(REPO_ROOT),
+    "sglang": _git_revision(REPO_ROOT / "third_party" / "sglang"),
+    "flashmla": _git_revision(REPO_ROOT / "third_party" / "flashmla"),
+}
+
 app = modal.App("remnant")
 model_volume = modal.Volume.from_name("deepseek-v4-flash-0731", create_if_missing=True)
 # Keep the existing volume name: renaming the public modes must not orphan results.
@@ -209,18 +227,16 @@ def _build_sglang_kernel(*, enable_sm100: bool = False) -> None:
     timeout=3600,
     retries=0,
 )
-def validate_remnant_non_model(
-    benchmark_rows: int = 1024,
-    benchmark_repeats: int = 100,
-) -> str:
-    """Run fork tests and synthetic packed timing without loading weights."""
-    if benchmark_rows <= 0 or benchmark_repeats <= 0:
-        raise ValueError("benchmark_rows and benchmark_repeats must be positive")
-
+def validate_remnant_non_model() -> str:
+    """Run fork tests without loading weights."""
     env = {
         **os.environ,
         "PYTHONPATH": f"{SGLANG_ROOT / 'python'}:{os.environ.get('PYTHONPATH', '')}",
         "PYTHONUNBUFFERED": "1",
+        "REMNANT_PARENT_SHA": SOURCE_REVISIONS["parent"],
+        "REMNANT_SGLANG_SHA": SOURCE_REVISIONS["sglang"],
+        "REMNANT_FLASHMLA_SHA": SOURCE_REVISIONS["flashmla"],
+        "REMNANT_RESULTS_DIR": str(RESULTS_ROOT),
     }
     test_paths = [
         "test/registered/unit/test_dsv4_c4_cache_format.py",
@@ -231,21 +247,10 @@ def validate_remnant_non_model(
         "python/sglang/test/kernels/deepseek_v4/test_remnant_pack_kernel.py",
         "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py",
     ]
-    commands = [
-        [sys.executable, "-m", "pytest", "-q", *test_paths],
-        [
-            sys.executable,
-            "benchmark/remnant/bench_packed.py",
-            "--rows",
-            str(benchmark_rows),
-            "--repeats",
-            str(benchmark_repeats),
-        ],
-    ]
-    for command in commands:
-        print(f"[remnant-non-model] {' '.join(command)}", flush=True)
-        subprocess.run(command, env=env, cwd=SGLANG_ROOT, check=True)
-    return "remnant non-model tests and benchmark passed"
+    command = [sys.executable, "-m", "pytest", "-q", *test_paths]
+    print(f"[remnant-non-model] {' '.join(command)}", flush=True)
+    subprocess.run(command, env=env, cwd=SGLANG_ROOT, check=True)
+    return "remnant non-model tests passed"
 
 
 @app.function(
@@ -260,16 +265,20 @@ def validate_flashmla_direct_decode(
     batches: str = "8,16",
     repeats: int = 100,
     warmup: int = 10,
-    rounds: int = 9,
+    rounds: int = 30,
 ) -> str:
     """Build and validate direct FlashMLA decode without loading model weights."""
-    if repeats <= 0 or rounds <= 0 or warmup < 0:
-        raise ValueError("repeats/rounds must be positive and warmup nonnegative")
+    if repeats <= 0 or rounds < 2 or warmup < 0:
+        raise ValueError("repeats must be positive, rounds must be at least 2, and warmup nonnegative")
     _build_sglang_kernel()
     env = {
         **os.environ,
         "PYTHONPATH": f"{SGLANG_ROOT / 'python'}:{os.environ.get('PYTHONPATH', '')}",
         "PYTHONUNBUFFERED": "1",
+        "REMNANT_PARENT_SHA": SOURCE_REVISIONS["parent"],
+        "REMNANT_SGLANG_SHA": SOURCE_REVISIONS["sglang"],
+        "REMNANT_FLASHMLA_SHA": SOURCE_REVISIONS["flashmla"],
+        "REMNANT_RESULTS_DIR": str(RESULTS_ROOT),
     }
     test = [
         sys.executable,
@@ -281,7 +290,7 @@ def validate_flashmla_direct_decode(
     ]
     benchmark = [
         sys.executable,
-        "benchmark/remnant/bench_flashmla_decode.py",
+        "benchmark/remnant/microbench.py",
         "--batches",
         batches,
         "--repeats",
@@ -290,6 +299,8 @@ def validate_flashmla_direct_decode(
         str(warmup),
         "--rounds",
         str(rounds),
+        "--topk-lengths",
+        "512,317",
     ]
     for command in (test, benchmark):
         print(f"[flashmla-direct] {' '.join(command)}", flush=True)
@@ -398,7 +409,7 @@ def profile_flashmla_direct() -> str:
     def target(path: str, heads: int | str, batches: str) -> list[str]:
         return [
             sys.executable,
-            "benchmark/remnant/bench_flashmla_decode.py",
+            "benchmark/remnant/microbench.py",
             "--heads",
             str(heads),
             "--batches",
@@ -406,9 +417,13 @@ def profile_flashmla_direct() -> str:
             "--repeats",
             "1",
             "--rounds",
-            "1",
+            "2",
             "--warmup",
             "3",
+            "--topk-lengths",
+            "512",
+            "--output",
+            str(directory / f"{path}-microbench"),
             "--path",
             path,
         ]

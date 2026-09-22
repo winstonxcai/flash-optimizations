@@ -35,7 +35,7 @@ parent repository so it is visible without opening either fork.
 
 - `tests/lib.py` — shared upstream test generators plus the 328-byte Packed fixtures.
 - `tests/test_flash_mla_remnant_decoding.py` — direct-vs-Native and independent-reference validity tests.
-- `benchmark/remnant/bench_flashmla_decode.py` (SGLang fork) — production-facing Native/Adapter/Direct decode benchmark.
+- `benchmark/remnant/microbench.py` (SGLang fork) — production-facing Native/Adapter/Direct decode microbenchmark.
 
 The former `tests/remnant_fixture.py` was removed after its consumers migrated
 to `tests/lib.py`; the separate FlashMLA `benchmark/bench_remnant_decode.py`
@@ -83,8 +83,7 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 - `python/sglang/test/kernels/deepseek_v4/test_remnant_pack_kernel.py` — pack kernel checks.
 - `python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py` — unpack kernel checks.
 - `benchmark/remnant/README.md` — benchmark documentation.
-- `benchmark/remnant/bench_packed.py` — Native/Packed storage benchmark.
-- `benchmark/remnant/bench_flashmla_decode.py` — SGLang direct decode benchmark.
+- `benchmark/remnant/microbench.py` — explicit Native/Adapter/Direct decode matrix with JSON/CSV output.
 
 ## Regenerating the file list
 
