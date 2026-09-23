@@ -1,0 +1,34 @@
+{
+  "id": "E003-async-survivor-copy",
+  "status": "blocked-modal-billing-cycle-limit",
+  "hypothesis": "Asynchronous global-to-shared staging of packed survivor bytes can overlap their transfer with the existing bitmap and scale work, reducing the producer critical path.",
+  "change": "third_party/flashmla/csrc/sm90/decode/sparse_fp8/splitkv_mla.cuh: prepare_remnant_row",
+  "source": {
+    "parent_head": "407fcd5b9004bc2409de13eec7399757abbcd1c1",
+    "parent_worktree_diff_sha256": "9b89d58b9433a32d24667b509a39a2c90dc19e80839e778277b37cb973beb911",
+    "sglang_head": "0b2006980628f915f8a0b54f28669be9160ed7de",
+    "flashmla_base_commit": "7576073b6ce5b209e4fa8306f08aba02683f0f62",
+    "flashmla_worktree_diff_sha256": "3d7a01de19b0a1d327183c3ad5532023b06bdd27977ddd263cb41ba48a2f6a47",
+    "flashmla_candidate_commit": "5dfb3366519366c615bb99d85c9a11fb048ba502",
+    "flashmla_branch": "remnant/flashmla-v0518",
+    "base_experiment": "E001-rank-arithmetic"
+  },
+  "validation": {
+    "first_draft_validity": "8 direct-versus-adapter cases passed under memcheck; synccheck reported divergent async synchronization (3772 reports)",
+    "corrected_source_validity": "not run; Modal image retry hit billing-cycle spend limit before compilation",
+    "timing": "not run",
+    "profile": "not run",
+    "acceptance": "validity and sanitizers pass, no new spills, at least 5% Direct geomean improvement, and no shape regresses over 2% in either timing pass"
+  },
+  "artifacts": {
+    "results_volume": "remnant-stage2a-results",
+    "modal_account": "winstoncai233",
+    "modal_runs": [
+      "https://modal.com/apps/winstoncai233/main/ap-9dqCTKWA0UfP73MNSOE3jE3",
+      "https://modal.com/apps/winstoncai233/main/ap-axZwTbRTzTie2zdtanQlAs"
+    ],
+    "first_draft_source_diff_sha256_prefix": "4913bcbf014f",
+    "corrected_source_image_build": "stopped at billing-cycle spend limit before compilation"
+  },
+  "decision": "undetermined; candidate source committed for review, performance gate not evaluated"
+}

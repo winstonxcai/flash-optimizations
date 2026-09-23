@@ -1,0 +1,61 @@
+{
+  "id": "E002-parallel-metadata",
+  "status": "rejected-performance",
+  "hypothesis": "Distributing each token's eight bitmap and scale loads across the four cooperating lanes, then computing prefix counts with a two-step warp scan, will shorten metadata staging on the producer path.",
+  "change": "third_party/flashmla/csrc/sm90/decode/sparse_fp8/splitkv_mla.cuh: prepare_remnant_row",
+  "source": {
+    "parent_head": "407fcd5b9004bc2409de13eec7399757abbcd1c1",
+    "parent_worktree_diff_sha256": "ab06801a890538608814b8eb30ec3a60b6afa0eda0ea497e11419bc45390611f",
+    "sglang_head": "0b2006980628f915f8a0b54f28669be9160ed7de",
+    "flashmla_head": "529c862003ee535db5b1f4b0799cec88cc9c16b7",
+    "flashmla_branch": "remnant/flashmla-v0518",
+    "base_experiment": "E001-rank-arithmetic",
+    "dirty_flashmla_file": "csrc/sm90/decode/sparse_fp8/splitkv_mla.cuh",
+    "flashmla_worktree_diff_sha256": "eebc4c15e8c080b2893e98620e5df319cd0f8663f51b2afca1c1d07150817fbb"
+  },
+  "baseline": {
+    "experiment": "E001-rank-arithmetic",
+    "profile_path": "remnant-stage2a-results:/20260922T163804Z-profile-flashmla-direct-e6cd43cd/",
+    "microbench_path": "remnant-stage2a-results:/microbench-20260922T162932Z.csv",
+    "description": "Reuse E001 as the direct-kernel baseline; do not recollect baseline profiles or timings."
+  },
+  "validation": {
+    "decode_cases": "H64/H128 x B8/B16 x K512/K317, including existing partial-top-k, poisoned-padding, and CUDA-graph cases",
+    "sanitizer": "Compute Sanitizer memcheck",
+    "profile_cases": ["H64/B8", "H64/B16", "H128/B8", "H128/B16"],
+    "timing": "Two passes; reuse the existing microbench with 10 warmups, 100 replays, and 30 rounds.",
+    "decision_gate": "All validity cases pass, memcheck is clean, no new spills, at least 5% geometric-mean Direct improvement, and no shape regresses over 2%.",
+    "pass1_validity": "12/12 passed",
+    "pass2_validity": "12/12 passed",
+    "memcheck": "8 passed, 0 errors; 4 cases deselected by the focused selector",
+    "pass1_target": "2% Direct-vs-Native p95 target missed on all eight cases",
+    "pass2_target": "2% Direct-vs-Native p95 target missed on all eight cases; p95 regressions 32.45-102.27%",
+    "pass1_direct_geomean_vs_e001": "+2.26% slower",
+    "pass2_direct_geomean_vs_e001": "+1.66% slower",
+    "profile_direct_kernel_geomean_vs_e001": "-2.35% faster; below the -5% acceptance threshold",
+    "profile_shape_regression": "H64/B16 +0.65%; no profiled shape exceeded +2% kernel time"
+  },
+  "candidate_artifacts": {
+    "results_volume": "remnant-stage2a-results",
+    "pass1_csv": "/microbench-20260923T171608Z.csv",
+    "pass1_json": "/microbench-20260923T171608Z.json",
+    "pass1_modal_run": "https://modal.com/apps/winstoncai233/main/ap-Mjq81iUoAioiLb8ih2MYW4",
+    "pass2_csv": "/microbench-20260923T172625Z.csv",
+    "pass2_json": "/microbench-20260923T172625Z.json",
+    "pass2_modal_run": "https://modal.com/apps/winstoncai233/main/ap-gnCQy3BsWlY2WezzOehSRF",
+    "memcheck_modal_run": "https://modal.com/apps/winstoncai233/main/ap-G34YOEFmrcZuzpFjdSKCSb",
+    "profile_directory": "/20260923T172828Z-profile-flashmla-direct-ae1da578/",
+    "profile_modal_run": "https://modal.com/apps/winstoncai233/main/ap-iIThygHWiCIh3OibMclUp1",
+    "profile_reference_directory": "/20260922T163804Z-profile-flashmla-direct-e6cd43cd/",
+    "candidate_image": "im-4Obgx8EgUdMdpNy0RBhslc",
+    "candidate_image_build_seconds": 783.96,
+    "pass1_benchmark_seconds": 42,
+    "pass2_reused_cached_extensions": true,
+    "profile_reused_cached_extensions": true
+  },
+  "decision": {
+    "validity": "pass: 12/12 twice; memcheck 8/8, zero errors",
+    "performance": "rejected: pass 1/2 Direct median geomeans are 2.26%/1.66% slower than E001; both passes regress H64 by more than 2%; all eight Direct-vs-Native p95 cases miss. Direct-only NCU kernel time improves 2.35% geomean, below the 5% threshold.",
+    "result": "reject as a performance candidate; E002 source was removed from the active tree when E003 began; retain E002 artifacts and do not update production pins"
+  }
+}

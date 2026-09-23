@@ -1,0 +1,5 @@
+# Raw Nsight captures and full disassembly are retained in the Modal results
+# volume; commit the compact CSV exports and experiment summaries instead.
+*.ncu-rep
+*.nsys-rep
+sass.txt

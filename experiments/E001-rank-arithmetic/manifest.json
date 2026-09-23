@@ -1,0 +1,41 @@
+{
+  "id": "E001-rank-arithmetic",
+  "status": "candidate",
+  "hypothesis": "Replacing the constant-memory nibble rank table with branch-free arithmetic will reduce rank-loader stalls without changing reconstruction results.",
+  "change": "third_party/flashmla/csrc/sm90/decode/sparse_fp8/splitkv_mla.cuh: remnant_byte_rank_pack",
+  "source": {
+    "parent_head": "407fcd5b9004bc2409de13eec7399757abbcd1c1",
+    "sglang_head": "0b2006980628f915f8a0b54f28669be9160ed7de",
+    "flashmla_head": "529c862003ee535db5b1f4b0799cec88cc9c16b7",
+    "flashmla_branch": "remnant/flashmla-v0518",
+    "flashmla_dirty_files": [
+      "csrc/sm90/decode/sparse_fp8/splitkv_mla.cuh"
+    ]
+  },
+  "baseline": {
+    "profile_volume": "remnant-stage2a-results",
+    "profile_path": "/20260922T081611Z-profile-flashmla-direct-19a1035c",
+    "description": "Previous loader implementation before the rank-table replacement"
+  },
+  "candidate_artifacts": {
+    "results_volume": "remnant-stage2a-results",
+    "profile_path": "/20260922T163804Z-profile-flashmla-direct-e6cd43cd",
+    "microbench_path": "/microbench-20260922T162932Z.csv",
+    "microbench_json_path": "/microbench-20260922T162932Z.json"
+  },
+  "modal": {
+    "account": "winstoncai233",
+    "validation_run": "https://modal.com/apps/winstoncai233/main/ap-qI1aiy2uYtULzu2pnNvuiy",
+    "sanitizer_run": "https://modal.com/apps/winstoncai233/main/ap-kyJF2Rhw91mmL9gqBj2OJo",
+    "profile_run": "https://modal.com/apps/winstoncai233/main/ap-qtMTknU83mgPiwoLIHl7m3",
+    "gpu": "H100",
+    "architectures": ["sm90"]
+  },
+  "decision": {
+    "validity": "pass",
+    "memcheck": "pass",
+    "racecheck": "known existing TMA/split-KV hazards; wrapper stopped before synccheck",
+    "performance": "improved direct kernel time by 9.92% geometric mean, but overall Direct remains 30–75% slower than Native at p95",
+    "result": "keep as a candidate for the next experiment; do not promote or push yet"
+  }
+}
