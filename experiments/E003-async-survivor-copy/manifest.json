@@ -1,34 +1,47 @@
 {
   "id": "E003-async-survivor-copy",
-  "status": "blocked-modal-billing-cycle-limit",
+  "status": "rejected",
   "hypothesis": "Asynchronous global-to-shared staging of packed survivor bytes can overlap their transfer with the existing bitmap and scale work, reducing the producer critical path.",
   "change": "third_party/flashmla/csrc/sm90/decode/sparse_fp8/splitkv_mla.cuh: prepare_remnant_row",
   "source": {
-    "parent_head": "407fcd5b9004bc2409de13eec7399757abbcd1c1",
-    "parent_worktree_diff_sha256": "9b89d58b9433a32d24667b509a39a2c90dc19e80839e778277b37cb973beb911",
+    "parent_head": "e291723581d499d2785f51840644478594fc7225",
+    "parent_worktree_diff_sha256_prefix": "bbb04911e102",
     "sglang_head": "0b2006980628f915f8a0b54f28669be9160ed7de",
     "flashmla_base_commit": "7576073b6ce5b209e4fa8306f08aba02683f0f62",
-    "flashmla_worktree_diff_sha256": "3d7a01de19b0a1d327183c3ad5532023b06bdd27977ddd263cb41ba48a2f6a47",
+    "flashmla_diff_sha256": "3d7a01de19b0a1d327183c3ad5532023b06bdd27977ddd263cb41ba48a2f6a47",
     "flashmla_candidate_commit": "5dfb3366519366c615bb99d85c9a11fb048ba502",
-    "flashmla_branch": "remnant/flashmla-v0518",
-    "base_experiment": "E001-rank-arithmetic"
+    "flashmla_branch": "remnant/flashmla-v0518"
+  },
+  "build": {
+    "modal_account": "caiw",
+    "image_id": "im-smondeA6jsG3YhpJ0Nuf5N",
+    "cold_build_seconds": 659.74,
+    "architectures": ["sm90"],
+    "sm100_built_or_tested": false,
+    "full_model_loaded": false
   },
   "validation": {
-    "first_draft_validity": "8 direct-versus-adapter cases passed under memcheck; synccheck reported divergent async synchronization (3772 reports)",
-    "corrected_source_validity": "not run; Modal image retry hit billing-cycle spend limit before compilation",
-    "timing": "not run",
-    "profile": "not run",
-    "acceptance": "validity and sanitizers pass, no new spills, at least 5% Direct geomean improvement, and no shape regresses over 2% in either timing pass"
+    "regular_suite": "12/12 passed on each of two runs",
+    "memcheck": "8 passed, 4 deselected, zero errors",
+    "synccheck": "failed: divergent barrier reports in Native reference path and isolated Direct CUDA-graph replay; Direct H64 SASS PC +0x1e90 is BAR.SYNC.DEFER_BLOCKING 0xa, 0x100",
+    "benchmark": "two passes; all eight shapes missed 2% p95 target; Direct median overhead +26.83% to +76.79%",
+    "profile": "E001-to-E003 NCU kernel-time geomean -2.49%, below 5% gate; shared wavefronts +11.65%, shared conflicts +23.37%; 168 registers/thread and zero local spills",
+    "acceptance": "failed: synccheck unresolved, performance threshold missed, and shared-memory profile counters increased"
   },
   "artifacts": {
     "results_volume": "remnant-stage2a-results",
-    "modal_account": "winstoncai233",
+    "modal_account_compute_spend_before": 27.38515191,
+    "modal_account_compute_spend_after": 28.59653646,
+    "modal_account_total_metered_spend_after": 60.86385322,
     "modal_runs": [
-      "https://modal.com/apps/winstoncai233/main/ap-9dqCTKWA0UfP73MNSOE3jE3",
-      "https://modal.com/apps/winstoncai233/main/ap-axZwTbRTzTie2zdtanQlAs"
+      "https://modal.com/apps/caiw/main/ap-bwlGcaPkeTNr6j1mJNPJ1n",
+      "https://modal.com/apps/caiw/main/ap-w86sSCsow00czhVfV5cJXO",
+      "https://modal.com/apps/caiw/main/ap-6aGx8LU9aK10Ap96vfb6P8",
+      "https://modal.com/apps/caiw/main/ap-qOUJD4bzbxNASeAEaXdtTw"
     ],
-    "first_draft_source_diff_sha256_prefix": "4913bcbf014f",
-    "corrected_source_image_build": "stopped at billing-cycle spend limit before compilation"
+    "profile_volume_path": "20260923T192620Z-profile-flashmla-direct-395c1794",
+    "profile_data": "profile/",
+    "benchmark_data": ["pass1-microbench.csv", "pass1-microbench.json", "pass2-microbench.csv", "pass2-microbench.json"]
   },
-  "decision": "undetermined; candidate source committed for review, performance gate not evaluated"
+  "decision": "rejected; retain the source commit and experiment artifacts as history, but do not promote this candidate or update production pins"
 }

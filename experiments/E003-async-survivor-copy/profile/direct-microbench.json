@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "started_at": "2026-09-23T19:28:04.220499Z",
+  "source": {
+    "parent": "e291723581d499d2785f51840644478594fc7225+dirty.bbb04911e102",
+    "sglang": "0b2006980628f915f8a0b54f28669be9160ed7de",
+    "flashmla": "5dfb3366519366c615bb99d85c9a11fb048ba502"
+  },
+  "environment": {
+    "hostname": "modal",
+    "python": "3.12.3 (main, Jun 19 2026, 12:46:00) [GCC 13.3.0]",
+    "pytorch": "2.13.0+cu130",
+    "cuda": "13.0",
+    "device": "NVIDIA H100 80GB HBM3",
+    "capability": [
+      9,
+      0
+    ]
+  },
+  "config": {
+    "heads": "128",
+    "batches": "16",
+    "topk_lengths": "512",
+    "repeats": 1,
+    "warmup": 3,
+    "rounds": 2,
+    "path": "direct",
+    "max_regression_percent": 2.0
+  },
+  "cases": [
+    {
+      "name": "h128_b16_k512",
+      "case": {
+        "heads": 128,
+        "batch": 16,
+        "topk_length": 512,
+        "topk": 512,
+        "swa_length": 64,
+        "query_length": 1,
+        "dtype": "bfloat16"
+      },
+      "paths": {
+        "direct": {
+          "samples": [
+            1.54390395,
+            1.590464
+          ],
+          "median": 1.5671839714050293,
+          "mean": 1.5671839714050293,
+          "stdev": 0.032922926420587854,
+          "p95": 1.5881359934806822
+        }
+      },
+      "comparison": null,
+      "status": "N/A"
+    }
+  ],
+  "finished_at": "2026-09-23T19:28:11.807506Z"
+}
