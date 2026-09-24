@@ -64,6 +64,31 @@ Native; raw samples and full JSON are in `pass1-microbench.*` and
 Both runs reproduce the same ranking and large gap; this experiment does not
 move Direct toward Native in end-to-end decode timing.
 
+## Comparison against the saved E001 Adapter baseline
+
+For the Adapter comparison, reuse the E001 measurements in
+`experiments/E001-rank-arithmetic/microbench.csv`; no Adapter rerun is needed.
+The table compares those fixed E001 Adapter medians with E003 Direct medians
+from each pass. E003's own Adapter column is not used for this baseline
+comparison.
+
+| Shape | E001 Adapter | E003 Direct P1 | P1 vs Adapter | E003 Direct P2 | P2 vs Adapter |
+|---|---:|---:|---:|---:|---:|
+| H64 / B8 / K512 | 19.328 µs | 20.733 µs | +7.27% | 20.627 µs | +6.72% |
+| H64 / B8 / K317 | 17.705 µs | 18.937 µs | +6.96% | 18.765 µs | +5.98% |
+| H64 / B16 / K512 | 24.729 µs | 28.475 µs | +15.15% | 28.303 µs | +14.45% |
+| H64 / B16 / K317 | 22.435 µs | 27.342 µs | +21.88% | 27.114 µs | +20.86% |
+| H128 / B8 / K512 | 20.754 µs | 21.173 µs | +2.02% | 20.905 µs | +0.73% |
+| H128 / B8 / K317 | 19.012 µs | 19.602 µs | +3.10% | 19.318 µs | +1.61% |
+| H128 / B16 / K512 | 28.187 µs | 30.874 µs | +9.53% | 30.497 µs | +8.20% |
+| H128 / B16 / K317 | 24.699 µs | 25.105 µs | +1.64% | 24.817 µs | +0.48% |
+| Geometric mean | — | — | **+8.25%** | — | **+7.18%** |
+
+Thus E003 Direct remains slower than the saved Adapter baseline in both passes,
+especially on H64/B16. These cross-run comparisons use the same benchmark
+configuration, but inherit ordinary run-to-run variation; they are descriptive,
+not a paired retiming of Adapter and Direct.
+
 ## Profile comparison against saved E001
 
 Direct-only Nsight Compute captures use the existing E001 H100 profile as the

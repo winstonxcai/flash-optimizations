@@ -24,7 +24,7 @@
     "regular_suite": "12/12 passed on each of two runs",
     "memcheck": "8 passed, 4 deselected, zero errors",
     "synccheck": "failed: divergent barrier reports in Native reference path and isolated Direct CUDA-graph replay; Direct H64 SASS PC +0x1e90 is BAR.SYNC.DEFER_BLOCKING 0xa, 0x100",
-    "benchmark": "two passes; all eight shapes missed 2% p95 target; Direct median overhead +26.83% to +76.79%",
+    "benchmark": "two passes; all eight shapes missed 2% p95 target; Direct median overhead vs Native +26.83% to +76.79%; vs saved E001 Adapter +8.25%/+7.18% geomean in passes 1/2",
     "profile": "E001-to-E003 NCU kernel-time geomean -2.49%, below 5% gate; shared wavefronts +11.65%, shared conflicts +23.37%; 168 registers/thread and zero local spills",
     "acceptance": "failed: synccheck unresolved, performance threshold missed, and shared-memory profile counters increased"
   },
