@@ -43,10 +43,9 @@ not used for serving.
 - `bench-lb2.sh` requires the official `lm-eval[longbench]` CLI in the host
   environment and stores its results, logged samples, and SQLite request cache
   under the selected output directory.
-- `config/` — eval inputs and env config: `sangfor-bench-hard50.txt` and
-  `swe_instances_50_sweb_verified_mini.txt` (tracked instance lists — Sangfor &
-  SWE-bench_Verified), plus `config_deepswe.json` and `config_swe_sangfor.json`
-  (env/auth configs — carry the live token, git-ignored).
+- `config/` — decode-graph settings and tracked Sangfor/SWE-bench instance lists.
+  Remote evaluation credentials/config are supplied through `EVAL_CFG` and are
+  intentionally kept outside this directory and out of the repository.
 
 ## Usage pattern
 

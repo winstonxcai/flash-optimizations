@@ -35,12 +35,22 @@ SERVE_LOG_CT=$(to_ct "$SERVE_LOG")             # same file inside container
 mkdir -p "$LOG_HOST"
 
 if [ "$ACTION" = stop ]; then
-  kill_port
+  if ! kill_port; then
+    echo "FATAL: could not verify or stop the server process record for port $PORT" >&2
+    exit 1
+  fi
+  if health; then
+    echo "FATAL: server still responds on port $PORT after stop attempt" >&2
+    exit 1
+  fi
   echo "stopped $MODE server on port $PORT"
   exit 0
 fi
 
-kill_port
+if ! kill_port; then
+  echo "FATAL: could not verify/stop the previous server record for port $PORT; refusing to launch another" >&2
+  exit 1
+fi
 
 if health; then
   echo "FATAL: an unowned server is still healthy on port $PORT; refusing to replace it" >&2
@@ -79,6 +89,7 @@ cd -- "$tree"
 export CUDA_VISIBLE_DEVICES="$gpus" MASTER_PORT="$master_port"
 export MODEL_NAME="$model_name" TP="$tp" MEM_FRAC="$mem_frac" CTX_LEN="$ctx_len"
 export MAX_RUN="$max_run" CHUNK="$chunk" DECODE_CFG="$decode_cfg"
+export SERVER_PID_FILE="$pid_file"
 export PYTHONPATH="/opt/sglang-runtime-fixes:$sglang_py:$repo_ct"
 export NCCL_IB_DISABLE=1 NCCL_SOCKET_IFNAME=lo NCCL_P2P_LEVEL=NVL NCCL_PROTO=Simple NCCL_ALGO=Ring
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
@@ -86,11 +97,19 @@ command -v setsid >/dev/null 2>&1 || { echo "setsid is required" >&2; exit 127; 
 nohup setsid bash "$repo_ct/scripts/local/run-server.sh" "$mode" "$model_ct" 0.0.0.0 "$port" \
   > "$serve_log_ct" 2>&1 &
 pid=$!
-printf '%s\n' "$pid" > "$pid_file"
 echo "launched pid $pid"
 BASH
 
-wait_health 240 || { tail -40 "$SERVE_LOG"; exit 1; }
+if ! wait_health 240; then
+  tail -40 "$SERVE_LOG"
+  if ! kill_port; then
+    echo "FATAL: could not verify or terminate the timed-out server process group" >&2
+  fi
+  if health; then
+    echo "FATAL: server still responds on port $PORT after startup cleanup" >&2
+  fi
+  exit 1
+fi
 sleep 3
 POOL=$(pool_of "$SERVE_LOG")
 echo "  pool(max_total_num_tokens)=${POOL:-UNKNOWN}"

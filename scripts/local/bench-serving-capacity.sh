@@ -34,9 +34,12 @@ outlen = int(sys.argv[3])
 if record is None:
     print("  valid: no benchmark summary found")
     sys.exit(1)
+output_lens = record.get("output_lens")
 valid = (
     record.get("completed") == expected
-    and all(n == outlen for n in (record.get("output_lens") or []))
+    and isinstance(output_lens, list)
+    and len(output_lens) == expected
+    and all(n == outlen for n in output_lens)
     and not any(record.get("errors") or [])
 )
 print(f"  valid: completed={record.get('completed')} expected={expected} all_outlen={valid}")

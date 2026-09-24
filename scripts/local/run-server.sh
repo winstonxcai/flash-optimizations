@@ -19,6 +19,25 @@ esac
 [ -n "$MODEL" ] || { echo "missing model path" >&2; exit 2; }
 [ -n "$PORT_VALUE" ] || { echo "missing port" >&2; exit 2; }
 
+# The local-container launcher sets this after starting us in a dedicated
+# session. Record identity before exec so cleanup can recognize this exact
+# process even while SGLang is still importing or initializing.
+if [ -n "${SERVER_PID_FILE:-}" ]; then
+  stat_line=$(<"/proc/$$/stat")
+  stat_tail=${stat_line##*) }
+  read -r -a stat_fields <<< "$stat_tail"
+  process_group=${stat_fields[2]:-}
+  session_id=${stat_fields[3]:-}
+  start_ticks=${stat_fields[19]:-}
+  if [ "$process_group" != "$$" ] || [ "$session_id" != "$$" ] || [ -z "$start_ticks" ]; then
+    echo "server must start in its own session to enable safe cleanup" >&2
+    exit 1
+  fi
+  pid_file_tmp="$SERVER_PID_FILE.$$"
+  printf '%s %s %s %s %s\n' "$$" "$process_group" "$session_id" "$start_ticks" "$PORT_VALUE" > "$pid_file_tmp"
+  mv -f -- "$pid_file_tmp" "$SERVER_PID_FILE"
+fi
+
 args=(
   serve
   --model-path "$MODEL"

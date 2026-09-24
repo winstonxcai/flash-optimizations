@@ -80,23 +80,73 @@ wait_health () {  # [$1=poll cap in 5s steps]
 # Stop the production-fork server recorded for $PORT. The launcher creates a
 # dedicated process group, so this does not kill unrelated processes.
 kill_port () {
-  ct_script "$SERVER_PID_FILE_CT" <<'BASH' 2>/dev/null || true
+  ct_script "$SERVER_PID_FILE_CT" "$PORT" <<'BASH' 2>/dev/null
 set -u
 pid_file=$1
+port=$2
+status=0
+remove_pid_file=1
+terminate_group() {
+  kill -TERM -- "-$pgid" 2>/dev/null || true
+  for _ in $(seq 1 20); do
+    kill -0 -- "-$pgid" 2>/dev/null || break
+    sleep 0.25
+  done
+  kill -KILL -- "-$pgid" 2>/dev/null || true
+  for _ in $(seq 1 4); do
+    kill -0 -- "-$pgid" 2>/dev/null || return 0
+    sleep 0.25
+  done
+  return 1
+}
 if [ -s "$pid_file" ]; then
-  pid=$(cat "$pid_file" 2>/dev/null || true)
-  if [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
-    kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
-    for _ in $(seq 1 20); do
-      kill -0 "$pid" 2>/dev/null || break
-      sleep 0.25
-    done
-    kill -KILL -- "-$pid" 2>/dev/null || kill -KILL "$pid" 2>/dev/null || true
+  if ! read -r pid pgid sid start_ticks recorded_port < "$pid_file"; then
+    status=1
+    remove_pid_file=0
+  elif [[ "${pid:-}" =~ ^[1-9][0-9]*$ && "${pgid:-}" =~ ^[1-9][0-9]*$ &&
+        "${sid:-}" =~ ^[1-9][0-9]*$ && "${start_ticks:-}" =~ ^[0-9]+$ &&
+        "${recorded_port:-}" == "$port" && "${pid:-}" == "${pgid:-}" &&
+        "${pgid:-}" == "${sid:-}" ]]; then
+    if [ -r "/proc/$pid/stat" ]; then
+      stat_line=$(<"/proc/$pid/stat")
+      stat_tail=${stat_line##*) }
+      read -r -a stat_fields <<< "$stat_tail"
+      current_pgid=${stat_fields[2]:-}
+      current_sid=${stat_fields[3]:-}
+      current_start_ticks=${stat_fields[19]:-}
+      if [ "$current_pgid" = "$pgid" ] && [ "$current_sid" = "$sid" ] &&
+         [ "$current_start_ticks" = "$start_ticks" ] && kill -0 -- "-$pgid" 2>/dev/null; then
+        if ! terminate_group; then
+          echo "server process group $pgid did not exit after SIGKILL" >&2
+          status=1
+          remove_pid_file=0
+        fi
+      else
+        echo "ignoring stale or mismatched server PID record for port $port" >&2
+        status=1
+        remove_pid_file=0
+      fi
+    elif kill -0 -- "-$pgid" 2>/dev/null; then
+      # The session leader may have exited while child workers remain. The
+      # still-existing process group retains its ID, so terminate that group.
+      if ! terminate_group; then
+        echo "server process group $pgid did not exit after SIGKILL" >&2
+        status=1
+        remove_pid_file=0
+      fi
+    fi
+  else
+    echo "cannot verify server PID record for port $port" >&2
+    status=1
+    remove_pid_file=0
   fi
-  rm -f -- "$pid_file"
+  [ "$remove_pid_file" = 0 ] || rm -f -- "$pid_file"
 fi
+exit "$status"
 BASH
+  local rc=$?
   sleep 4
+  return "$rc"
 }
 
 # Boot markers we care about, printed from a host launch log.
