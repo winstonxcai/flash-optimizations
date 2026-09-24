@@ -32,12 +32,17 @@ RUN_ROOT="$RESULTS_HOST/lswb-replay/$TAG/$(ts)"
 mkdir -p "$RUN_ROOT/client"
 
 echo "== lswb replay tag=$TAG port=$PORT c$C @ ${DUR}s -> $RUN_ROOT =="
-# sample GPUs during the client window
-( for _ in $(seq 1 300); do
-    nvidia-smi --query-gpu=index,memory.used,utilization.gpu --format=csv,noheader,nounits >> "$RUN_ROOT/gpu-samples.csv"
-    sleep 20
-  done ) &
-SAMPLER=$!
+SAMPLER=
+CLIENT=
+cleanup () {
+  [ -z "$SAMPLER" ] || kill "$SAMPLER" 2>/dev/null || true
+  [ -z "$CLIENT" ] || kill "$CLIENT" 2>/dev/null || true
+  [ -z "$SAMPLER" ] || wait "$SAMPLER" 2>/dev/null || true
+  [ -z "$CLIENT" ] || wait "$CLIENT" 2>/dev/null || true
+}
+trap cleanup EXIT
+trap 'cleanup; exit 130' INT
+trap 'cleanup; exit 143' TERM
 
 ( cd "$REPLAY_DIR" && "${PYTHON:-python3}" -B "$REPLAY_RUNNER" \
     --result-root "$RUN_ROOT/client" \
@@ -51,10 +56,28 @@ SAMPLER=$!
     --timeout 21600 --minimum-success-rate 0.99 \
     --expected-protocol business-user-replay-v2 \
     --audit-level candidate --return-cached-tokens-details \
-    > "$RUN_ROOT/client.log" 2>&1 )
+    > "$RUN_ROOT/client.log" 2>&1 ) &
+CLIENT=$!
+
+if command -v nvidia-smi >/dev/null 2>&1; then
+  ( while kill -0 "$CLIENT" 2>/dev/null; do
+      nvidia-smi --query-gpu=index,memory.used,utilization.gpu --format=csv,noheader,nounits \
+        >> "$RUN_ROOT/gpu-samples.csv" 2>/dev/null || true
+      kill -0 "$CLIENT" 2>/dev/null || break
+      sleep 20
+    done ) &
+  SAMPLER=$!
+else
+  echo "[lswb] warning: nvidia-smi not found; GPU sampling disabled" >&2
+fi
+
+wait "$CLIENT"
 RC=$?
-kill "$SAMPLER" 2>/dev/null
-wait "$SAMPLER" 2>/dev/null || true
+CLIENT=
+[ -z "$SAMPLER" ] || kill "$SAMPLER" 2>/dev/null || true
+[ -z "$SAMPLER" ] || wait "$SAMPLER" 2>/dev/null || true
+SAMPLER=
+trap - EXIT INT TERM
 
 echo "[lswb] client rc=$RC"; echo "==== client.log ===="; cat "$RUN_ROOT/client.log"
 echo "[lswb] artifacts at $RUN_ROOT"

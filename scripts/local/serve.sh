@@ -42,26 +42,53 @@ fi
 
 kill_port
 
+if health; then
+  echo "FATAL: an unowned server is still healthy on port $PORT; refusing to replace it" >&2
+  exit 1
+fi
+
 # --- shared production launcher ---------------------------------------
 TREE="$SGLANG_ROOT_CT"
-DECODE_CFG_QUOTED=$(printf '%q' "$DECODE_CFG")
 
 echo "== serve $MODE on gpus=$GPUS port=$PORT master=$MASTER_PORT (log: $SERVE_LOG) =="
 : > "$SERVE_LOG"   # truncate for a clean boot log (host side)
 
-ct "
-  cd $TREE
-  export CUDA_VISIBLE_DEVICES=$GPUS MASTER_PORT=$MASTER_PORT
-  export MODEL_NAME=$MODEL_NAME TP=$TP MEM_FRAC=$MEM_FRAC CTX_LEN=$CTX_LEN
-  export MAX_RUN=$MAX_RUN CHUNK=$CHUNK
-  export DECODE_CFG=$DECODE_CFG_QUOTED
-  export PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT
-  export NCCL_IB_DISABLE=1 NCCL_SOCKET_IFNAME=lo NCCL_P2P_LEVEL=NVL NCCL_PROTO=Simple NCCL_ALGO=Ring
-  export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-  nohup bash $REPO_CT/scripts/local/run-server.sh $MODE $MODEL_CT 0.0.0.0 $PORT \
-    > $SERVE_LOG_CT 2>&1 &
-  echo \"launched pid \$!\"
-"
+ct_script "$TREE" "$GPUS" "$MASTER_PORT" "$MODEL_NAME" "$TP" "$MEM_FRAC" \
+  "$CTX_LEN" "$MAX_RUN" "$CHUNK" "$DECODE_CFG" "$SGLANG_PY" "$REPO_CT" \
+  "$MODE" "$MODEL_CT" "$PORT" "$SERVE_LOG_CT" "$SERVER_PID_FILE_CT" <<'BASH'
+set -u
+tree=$1
+gpus=$2
+master_port=$3
+model_name=$4
+tp=$5
+mem_frac=$6
+ctx_len=$7
+max_run=$8
+chunk=$9
+decode_cfg=${10}
+sglang_py=${11}
+repo_ct=${12}
+mode=${13}
+model_ct=${14}
+port=${15}
+serve_log_ct=${16}
+pid_file=${17}
+
+cd -- "$tree"
+export CUDA_VISIBLE_DEVICES="$gpus" MASTER_PORT="$master_port"
+export MODEL_NAME="$model_name" TP="$tp" MEM_FRAC="$mem_frac" CTX_LEN="$ctx_len"
+export MAX_RUN="$max_run" CHUNK="$chunk" DECODE_CFG="$decode_cfg"
+export PYTHONPATH="/opt/sglang-runtime-fixes:$sglang_py:$repo_ct"
+export NCCL_IB_DISABLE=1 NCCL_SOCKET_IFNAME=lo NCCL_P2P_LEVEL=NVL NCCL_PROTO=Simple NCCL_ALGO=Ring
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+command -v setsid >/dev/null 2>&1 || { echo "setsid is required" >&2; exit 127; }
+nohup setsid bash "$repo_ct/scripts/local/run-server.sh" "$mode" "$model_ct" 0.0.0.0 "$port" \
+  > "$serve_log_ct" 2>&1 &
+pid=$!
+printf '%s\n' "$pid" > "$pid_file"
+echo "launched pid $pid"
+BASH
 
 wait_health 240 || { tail -40 "$SERVE_LOG"; exit 1; }
 sleep 3

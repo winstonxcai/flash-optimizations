@@ -31,8 +31,8 @@ BENCH=${1:-} INSTANCE=${2:-} RID=${3:-}
 require_remote_eval_config
 
 case "$BENCH" in
-  sangfor) BENCH_ARGS="--benchmark Sangfor-Bench" ;;
-  swe)     BENCH_ARGS="--benchmark SWE-bench --dataset SWE-bench_Verified" ;;
+  sangfor) BENCH_NAME=Sangfor-Bench; DATASET_NAME= ;;
+  swe)     BENCH_NAME=SWE-bench; DATASET_NAME=SWE-bench_Verified ;;
   *) echo "unknown bench '$BENCH' (sangfor|swe)"; exit 1 ;;
 esac
 
@@ -56,11 +56,10 @@ if [ -n "${BASE_URL:-}" ]; then
   echo ">> patching base-url of $EVAL_CFG -> $CFG_REMOTE (BASE_URL=$BASE_URL)"
   # Read the reference config remotely, patch ONLY the *_BASE_URL key, write the
   # copy. The auth token is copied verbatim -- never read or echoed here.
-  if ! $EVAL_SSH "$EVAL_VENV -" <<PY
+  if ! $EVAL_SSH "$EVAL_VENV" - "$EVAL_CFG" "$CFG_REMOTE" "$BASE_URL" <<'PY'
 import json
-src = '$EVAL_CFG'
-dst = '$CFG_REMOTE'
-url = '$BASE_URL'
+import sys
+src, dst, url = sys.argv[1:]
 j = json.load(open(src))
 env = j.get('experiment_env', j)
 for k in list(env.keys()):
@@ -79,15 +78,24 @@ echo "== $BENCH benchmark: run_id=$RID instance=$INST_REMOTE cfg=$CFG_REMOTE =="
 echo "   launching DETACHED on the eval box ..."
 # runs inside the heredoc: yjybench creates results/<run_id>/ and agents drive
 # the server for hours; nohup keeps it alive after the ssh session ends.
-if ! $EVAL_SSH bash -s <<EOF
-cd $EVAL_YJY || exit 1
-nohup $EVAL_VENV -m yjybench.cli \\
-  $BENCH_ARGS --agent_type cc --agent_mode vibe --mode e2e \\
-  --run_id $RID --max_workers 8 --timeout 18000 --exp_name $RID \\
-  --instance_file $INST_REMOTE \\
-  --docker_env_config $CFG_REMOTE \\
-  > results/${RID}_launch.log 2>&1 &
-echo "started pid \$! (launch log: $EVAL_YJY/results/${RID}_launch.log)"
+if ! $EVAL_SSH bash -s -- "$EVAL_YJY" "$EVAL_VENV" "$BENCH_NAME" \
+  "$DATASET_NAME" "$RID" "$INST_REMOTE" "$CFG_REMOTE" <<'EOF'
+set -eu
+yjy=$1
+venv=$2
+bench_name=$3
+dataset_name=$4
+rid=$5
+instance_file=$6
+config_file=$7
+cd -- "$yjy"
+args=(--benchmark "$bench_name" --agent_type cc --agent_mode vibe --mode e2e
+  --run_id "$rid" --max_workers 8 --timeout 18000 --exp_name "$rid"
+  --instance_file "$instance_file" --docker_env_config "$config_file")
+[ -z "$dataset_name" ] || args+=(--dataset "$dataset_name")
+nohup "$venv" -m yjybench.cli "${args[@]}" \
+  > "results/${rid}_launch.log" 2>&1 &
+echo "started pid $! (launch log: $yjy/results/${rid}_launch.log)"
 EOF
 then
   echo "FATAL: remote benchmark launch failed" >&2

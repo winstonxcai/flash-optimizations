@@ -32,6 +32,7 @@ LOG_HOST=${LOG_HOST:-$HOST_REPO/logs}
 GPUS=${GPUS:-0,1,2,3}
 PORT=${PORT:-30212}
 MASTER_PORT=${MASTER_PORT:-29638}
+SERVER_PID_FILE_CT=${SERVER_PID_FILE_CT:-/tmp/remnant-sglang-${PORT}.pid}
 TP=${TP:-4}
 MODEL_NAME=${MODEL_NAME:-deepseek-v4-flash}
 MEM_FRAC=${MEM_FRAC:-0.88}
@@ -56,9 +57,9 @@ ts () { date +%Y%m%d_%H%M%S; }
 # this helper.
 to_ct () { echo "$REPO_CT${1#$HOST_REPO}"; }
 
-# Run one shell command inside the sglang container.
-#   ct <cmd...>          -> docker exec $CONTAINER bash -c "<cmd>"
-ct () { docker exec "$CONTAINER" bash -c "$*"; }
+# Run a script on stdin, passing values as positional arguments. Use this for
+# container commands so paths and JSON values are not interpolated into bash -c.
+ct_script () { docker exec "$CONTAINER" bash -s -- "$@"; }
 
 # ------------------------------ server helpers ------------------------------
 # These manage a server that serve.sh brought up inside $CONTAINER. The launch
@@ -76,9 +77,25 @@ wait_health () {  # [$1=poll cap in 5s steps]
   return 1
 }
 
-# Kill any production-fork server inside the container on $PORT.
+# Stop the production-fork server recorded for $PORT. The launcher creates a
+# dedicated process group, so this does not kill unrelated processes.
 kill_port () {
-  ct "pkill -9 -f 'sglang(\.launch_server| serve).*--port $PORT'" 2>/dev/null
+  ct_script "$SERVER_PID_FILE_CT" <<'BASH' 2>/dev/null || true
+set -u
+pid_file=$1
+if [ -s "$pid_file" ]; then
+  pid=$(cat "$pid_file" 2>/dev/null || true)
+  if [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
+    kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
+    for _ in $(seq 1 20); do
+      kill -0 "$pid" 2>/dev/null || break
+      sleep 0.25
+    done
+    kill -KILL -- "-$pid" 2>/dev/null || kill -KILL "$pid" 2>/dev/null || true
+  fi
+  rm -f -- "$pid_file"
+fi
+BASH
   sleep 4
 }
 

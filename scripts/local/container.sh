@@ -55,10 +55,13 @@ create_container () {
 prep () {
   has_container || die "container $CONTAINER does not exist; run: $0 (no args)"
   echo "== verify production SGLang fork at $SGLANG_ROOT_CT"
-  ct "test -f $SGLANG_ROOT_CT/python/sglang/srt/server_args.py" \
-    || die "production SGLang fork is not present in the image"
-  ct "grep -q dsv4-c4-cache-format $SGLANG_ROOT_CT/python/sglang/srt/server_args.py" \
-    || die "SGLang fork is missing --dsv4-c4-cache-format"
+  ct_script "$SGLANG_ROOT_CT/python/sglang/srt/server_args.py" <<'BASH' \
+    || die "production SGLang fork is not present or missing --dsv4-c4-cache-format"
+set -e
+server_args=$1
+test -f "$server_args"
+grep -q dsv4-c4-cache-format "$server_args"
+BASH
 }
 
 # ------------------------------ dispatch ------------------------------

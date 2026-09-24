@@ -21,7 +21,8 @@ EOF
 usage_err () { echo "bench-serving-capacity.sh: $*" >&2; usage; exit 2; }
 
 validate () {
-  python3 - "$1" "$((3 * $2))" "$3" <<'PY'
+  local expected=$((3 * $2))
+  python3 - "$1" "$expected" "$3" <<'PY'
 import json, sys
 record = None
 with open(sys.argv[1]) as stream:
@@ -53,17 +54,33 @@ summary_line () {
     END {printf "req/s=%.4f tok/s=%.1f ttft_ms=%.1f tpot_ms=%.1f e2e_ms=%.1f", r,t,tt,tp,e}' "$1"
 }
 
-ceiling () { python3 -c "print(int(int('$1') // int('$2')))"; }
+ceiling () { printf '%d\n' "$(( $1 / $2 ))"; }
 
 bench_wave () {
-  ct "export PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT; cd $SGLANG_PY
-      python3 -m sglang.bench_serving \
-        --backend sglang --host 127.0.0.1 --port $PORT \
-        --model $MODEL_CT --tokenizer $MODEL_CT \
-        --dataset-name random --random-input-len $CTX --random-output-len $OUTLEN \
-        --random-range-ratio 1.0 --num-prompts $2 --max-concurrency $1 \
-        --request-rate inf --warmup-requests 0 --flush-cache --tokenize-prompt \
-        --output-file $3 --output-details --seed $SEED" > "$4" 2>&1
+  local concurrency=$1 prompts=$2 output_path=$3 log_path=$4
+  ct_script "$SGLANG_PY" "$REPO_CT" "$PORT" "$MODEL_CT" "$CTX" "$OUTLEN" \
+    "$prompts" "$concurrency" "$output_path" "$SEED" <<'BASH' >"$log_path" 2>&1
+set -eu
+sglang_py=$1
+repo_ct=$2
+port=$3
+model_ct=$4
+ctx=$5
+outlen=$6
+prompts=$7
+concurrency=$8
+output_path=$9
+seed=${10}
+export PYTHONPATH="/opt/sglang-runtime-fixes:$sglang_py:$repo_ct"
+cd -- "$sglang_py"
+exec python3 -m sglang.bench_serving \
+  --backend sglang --host 127.0.0.1 --port "$port" \
+  --model "$model_ct" --tokenizer "$model_ct" \
+  --dataset-name random --random-input-len "$ctx" --random-output-len "$outlen" \
+  --random-range-ratio 1.0 --num-prompts "$prompts" --max-concurrency "$concurrency" \
+  --request-rate inf --warmup-requests 0 --flush-cache --tokenize-prompt \
+  --output-file "$output_path" --output-details --seed "$seed"
+BASH
 }
 
 measure_leg () {
