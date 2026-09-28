@@ -1,0 +1,22 @@
+== /sgl-workspace/sglang-lowrank already present
+   lowrank at v0.5.18
+== confirm pristine /sgl-workspace/sglang is unpatched
+   pristine markers=0 .orig files=0
+== read-only anchor drift vs v0.5.18 -> /home/jovyan/winstonxcai/flash-optimizations/xkv/results/xkv/drift-v0.5.18.md
+   drift rc=0 (nonzero => anchors will need re-basing)
+   [drift] OK    3/3  /sgl-workspace/sglang-lowrank/python/sglang/srt/layers/attention/dsv4/compressor_v2.py  (patched)
+   [drift] OK    4/4  /sgl-workspace/sglang-lowrank/python/sglang/srt/mem_cache/deepseek_v4_memory_pool.py  (patched)
+   [drift] OK    2/2  /sgl-workspace/sglang-lowrank/python/sglang/srt/model_executor/pool_configurator.py  (patched)
+   [drift] OK    6/6  /sgl-workspace/sglang-lowrank/python/sglang/srt/layers/attention/deepseek_v4_backend.py  (patched)
+   [drift] all anchors intact against this tree
+== apply xkv patch to /sgl-workspace/sglang-lowrank (v0.5.18 anchors)
+[xkv] /sgl-workspace/sglang-lowrank/python/sglang/srt/layers/attention/dsv4/compressor_v2.py: patched/verified
+[xkv] /sgl-workspace/sglang-lowrank/python/sglang/srt/mem_cache/deepseek_v4_memory_pool.py: patched/verified
+[xkv] /sgl-workspace/sglang-lowrank/python/sglang/srt/model_executor/pool_configurator.py: patched/verified
+[xkv] /sgl-workspace/sglang-lowrank/python/sglang/srt/layers/attention/deepseek_v4_backend.py: patched/verified
+/sgl-workspace/sglang-lowrank/python/sglang/srt/layers/attention/dsv4/compressor_v2.py: xkv_markers=1
+/sgl-workspace/sglang-lowrank/python/sglang/srt/mem_cache/deepseek_v4_memory_pool.py: xkv_markers=1
+/sgl-workspace/sglang-lowrank/python/sglang/srt/model_executor/pool_configurator.py: xkv_markers=1
+/sgl-workspace/sglang-lowrank/python/sglang/srt/layers/attention/deepseek_v4_backend.py: xkv_markers=1
+== xkv ready. serve with:  bash scripts/local/serve.sh <native|xkv>
+   (xkv needs the patch applied:  bash scripts/local/container.sh patch)

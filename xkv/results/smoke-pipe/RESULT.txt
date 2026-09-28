@@ -1,0 +1,8 @@
+== xkv run-all 2026-09-16T05:52:34Z
+   gpus=0,1,2,3 tp=4 port=30213 ctx=65536 C=32
+   job=smoke project=xkv run_root=/home/jovyan/winstonxcai/flash-optimizations/xkv/results/smoke-pipe
+
+== [0/5] prep: apply + verify the xkv patch (fork tree, v0.5.18 anchors)
+   patch OK
+
+== done 2026-09-16T05:52:36Z; artifacts under /home/jovyan/winstonxcai/flash-optimizations/xkv/results/smoke-pipe

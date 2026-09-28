@@ -6,6 +6,7 @@
 #   serve.sh native             untouched 0731, stock 584-byte C4 (TopMag OFF)
 #   serve.sh packed             328-byte packed C4 (TopMag50, packed)
 #   serve.sh optimized          packed C4 + the optimized fused reconstruction
+#   serve.sh topmag             TopMag50 pruning, native 584-byte layout (control)
 #   serve.sh <mode> stop        kill the server on $PORT
 #
 # All modes use the fp4-native MoE runner (flashinfer_mxfp4), mem-frac 0.88,
@@ -30,7 +31,7 @@
 #
 # Env overrides (all optional): PORT, GPUS, MASTER_PORT, TP, DECODE_CFG,
 # MEM_FRAC, CTX_LEN, MAX_RUN, CHUNK, HICACHE. Boot log:
-#   <LOG_HOST>/serve_<native|packed|optimized>[,_hicache].log
+#   <LOG_HOST>/serve_<native|packed|optimized|topmag>[,_hicache].log
 # Server is left RUNNING; use "serve.sh <mode> stop" to tear it down.
 # =====================================================================
 set -u
@@ -38,8 +39,8 @@ set -u
 
 MODE=${1:-}; ACTION=${2:-boot}
 case "$MODE" in
-  native|packed|optimized) ;;
-  *) echo "usage: $0 <native|packed|optimized> [stop]"; exit 1 ;;
+  native|packed|optimized|topmag) ;;
+  *) echo "usage: $0 <native|packed|optimized|topmag> [stop]"; exit 1 ;;
 esac
 HICACHE=${HICACHE:-0}
 [ "$HICACHE" = 1 ] || [ "$HICACHE" = 0 ] || { echo "HICACHE must be 0 or 1"; exit 1; }
@@ -82,6 +83,20 @@ case "$MODE" in
   optimized)
     MODE_ENVS=(SGLANG_OPT_TOPMAG=1 KEEP=0.5 SGLANG_OPT_TOPMAG_PACKED=1 \
       SGLANG_OPT_TOPMAG_FUSED=1 SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED=1)
+    TREE="$SGLANG_PY_FORK"
+    CT_PYTHONPATH="$TREE:$REPO_CT"
+    ;;
+  topmag)
+    # The control leg: TopMag pruning ON, packed c4 layout OFF. config.py
+    # permits this -- only PACKED=1 requires TOPMAG=1, and nothing requires
+    # PACKED for TOPMAG. It exists because `packed` changes two things at once:
+    # it prunes the latent (perturbing hidden states, and so possibly MoE
+    # routing) AND it stores a 328-byte record instead of 584. This leg prunes
+    # without repacking, which is the only way to attribute a cost to one of
+    # them. Serves the fork so the mustafar hook is on the path, but takes the
+    # `topmag_zero_from_mask` branch rather than `pack_rows`.
+    MODE_ENVS=(SGLANG_OPT_TOPMAG=1 KEEP=0.5 SGLANG_OPT_TOPMAG_PACKED=0 \
+      SGLANG_OPT_TOPMAG_FUSED=0 SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED=0)
     TREE="$SGLANG_PY_FORK"
     CT_PYTHONPATH="$TREE:$REPO_CT"
     ;;

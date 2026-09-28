@@ -1,0 +1,9 @@
+== serve native on gpus=0,1,2,3 port=30213 master=29639 (log: /home/jovyan/winstonxcai/flash-optimizations/xkv/logs/serve_native.log) ==
+launched pid 9089
+  health OK after ~155s
+  pool(max_total_num_tokens)=3745536
+  cuda graph
+  max_total_num_tokens=3745536
+  is fired up and ready
+  cuda graph
+serve native UP on port 30213 -- leave running, tear down with: /home/jovyan/winstonxcai/flash-optimizations/xkv/scripts/local/serve.sh native stop

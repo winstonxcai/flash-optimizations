@@ -1,0 +1,24 @@
+== xkv run-all 2026-09-16T10:56:16Z
+   gpus=0,1,2,3 tp=4 port=30213 ctx=65536 C=32
+   job=job-20260916-105613-5e9796cc project=xkv run_root=/home/jovyan/winstonxcai/flash-optimizations/xkv/results/gpuq-runall
+
+== [0/5] prep: apply + verify the xkv patch (fork tree, v0.5.18 anchors)
+   patch OK
+
+== [1/5] selftest: triton reconstruction vs the torch reference
+   selftest OK
+
+== [3/5] capture proof + fixed-prompt QA (one boot per leg)
+   [native] booting for capture proof + QA
+   [native] pool=3745536
+   [xkv] booting for capture proof + QA
+   [xkv] pool=5072896
+   [xkv] decode graphs captured (backend=full, no capture failure in boot log)
+   --- native vs xkv output QA ---
+   arithmetic: tokens 10 vs 20, vocab overlap 0.10  <-- LOW AGREEMENT
+   recall: tokens 54 vs 104, vocab overlap 0.04  <-- LOW AGREEMENT
+   instruct: tokens 94 vs 111, vocab overlap 0.28  <-- LOW AGREEMENT
+   
+   0 problem(s) across 3 prompt(s)
+
+== done 2026-09-16T11:02:06Z; artifacts under /home/jovyan/winstonxcai/flash-optimizations/xkv/results/gpuq-runall

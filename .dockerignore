@@ -14,3 +14,13 @@ mustafar/logs/
 mustafar/data/
 mustafar/results/
 mustafar/scripts/**/config.json
+
+# starkv runtime artifacts. The starkv/ package itself MUST stay in the context
+# (local.Dockerfile COPYs it), so only the dirs it writes at run time are
+# excluded -- captures in particular, which are hundreds of MB of .pt.
+starkv/ctrl/
+starkv/logs/
+starkv/results/
+starkv/captures/
+starkv/basis/
+starkv/**/__pycache__/

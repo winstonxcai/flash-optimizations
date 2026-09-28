@@ -1,0 +1,9 @@
+== serve xkv on gpus=0,1,2,3 port=30213 master=29639 (log: /home/jovyan/winstonxcai/flash-optimizations/xkv/logs/serve_xkv.log) ==
+launched pid 10421
+  health OK after ~160s
+  pool(max_total_num_tokens)=5072896
+  cuda graph
+  max_total_num_tokens=5072896
+  is fired up and ready
+  cuda graph
+serve xkv UP on port 30213 -- leave running, tear down with: /home/jovyan/winstonxcai/flash-optimizations/xkv/scripts/local/serve.sh xkv stop

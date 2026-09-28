@@ -1,0 +1,4403 @@
+{
+  "capture": "starkv/captures/cap2",
+  "target": 0.99,
+  "ranks": [
+    128,
+    192,
+    256,
+    320,
+    384,
+    448
+  ],
+  "layers": {
+    "2": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.8317183256149292,
+            "min": 0.4964768588542938,
+            "p05": 0.6441750526428223
+          },
+          "heldout": {
+            "mean": 0.7500114440917969,
+            "min": 0.36592453718185425,
+            "p05": 0.4843466877937317
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.7180343270301819,
+            "min": 0.3608786463737488,
+            "p05": 0.4324707090854645
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9051533341407776,
+            "min": 0.6762557625770569,
+            "p05": 0.7941328883171082
+          },
+          "heldout": {
+            "mean": 0.8309577703475952,
+            "min": 0.5128753781318665,
+            "p05": 0.6206181049346924
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8010026812553406,
+            "min": 0.47332897782325745,
+            "p05": 0.5740319490432739
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.94898921251297,
+            "min": 0.8336412906646729,
+            "p05": 0.8906252980232239
+          },
+          "heldout": {
+            "mean": 0.8903695940971375,
+            "min": 0.6317617297172546,
+            "p05": 0.7407264113426208
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8649066686630249,
+            "min": 0.6278387308120728,
+            "p05": 0.6995633840560913
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9756881594657898,
+            "min": 0.9212824106216431,
+            "p05": 0.9485045075416565
+          },
+          "heldout": {
+            "mean": 0.9360024333000183,
+            "min": 0.7555806040763855,
+            "p05": 0.8413686752319336
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9166220426559448,
+            "min": 0.7423394918441772,
+            "p05": 0.804321825504303
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9916513562202454,
+            "min": 0.9724132418632507,
+            "p05": 0.9826263785362244
+          },
+          "heldout": {
+            "mean": 0.9722374081611633,
+            "min": 0.8759862780570984,
+            "p05": 0.9278149008750916
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9611834287643433,
+            "min": 0.8566836714744568,
+            "p05": 0.9055174589157104
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0,
+            "min": 0.9999992251396179,
+            "p05": 0.9999997019767761
+          },
+          "heldout": {
+            "mean": 1.0000001192092896,
+            "min": 0.9999983906745911,
+            "p05": 0.9999995827674866
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 1.0000001192092896,
+            "min": 0.9999987483024597,
+            "p05": 0.9999998211860657
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0000001192092896
+      },
+      "rank_profile_drift": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0000001192092896
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 255,
+          "unmatched_entries": 5525507,
+          "coverage": 4.614748156000928e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 255,
+          "unmatched_entries": 5525507,
+          "coverage": 4.614748156000928e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 255,
+          "unmatched_entries": 5525507,
+          "coverage": 4.614748156000928e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 255,
+          "unmatched_entries": 5525507,
+          "coverage": 4.614748156000928e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 255,
+          "unmatched_entries": 5525507,
+          "coverage": 4.614748156000928e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 255,
+          "unmatched_entries": 5525507,
+          "coverage": 4.614748156000928e-05
+        }
+      }
+    },
+    "4": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9059105515480042,
+            "min": 0.6979712247848511,
+            "p05": 0.8158513903617859
+          },
+          "heldout": {
+            "mean": 0.8469605445861816,
+            "min": 0.5259691476821899,
+            "p05": 0.6760290861129761
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8021979331970215,
+            "min": 0.4403008222579956,
+            "p05": 0.6183345913887024
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9507392048835754,
+            "min": 0.8437103033065796,
+            "p05": 0.9037182331085205
+          },
+          "heldout": {
+            "mean": 0.9051775336265564,
+            "min": 0.6850525736808777,
+            "p05": 0.7893666625022888
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8698468208312988,
+            "min": 0.6190190315246582,
+            "p05": 0.7342204451560974
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9751331806182861,
+            "min": 0.9304103255271912,
+            "p05": 0.9510385990142822
+          },
+          "heldout": {
+            "mean": 0.9437232613563538,
+            "min": 0.7921611070632935,
+            "p05": 0.8720276355743408
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9190537929534912,
+            "min": 0.730410099029541,
+            "p05": 0.8305668234825134
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9891524910926819,
+            "min": 0.9681195020675659,
+            "p05": 0.9790531396865845
+          },
+          "heldout": {
+            "mean": 0.970242440700531,
+            "min": 0.8842834234237671,
+            "p05": 0.928785502910614
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9550543427467346,
+            "min": 0.8600189089775085,
+            "p05": 0.9062913060188293
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9970732927322388,
+            "min": 0.9905304312705994,
+            "p05": 0.9943580627441406
+          },
+          "heldout": {
+            "mean": 0.9905203580856323,
+            "min": 0.9510712623596191,
+            "p05": 0.9769686460494995
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9832719564437866,
+            "min": 0.9277552366256714,
+            "p05": 0.9621824622154236
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 0.9999998807907104,
+            "min": 0.9999988079071045,
+            "p05": 0.9999993443489075
+          },
+          "heldout": {
+            "mean": 1.0,
+            "min": 0.9999990463256836,
+            "p05": 0.9999995827674866
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 1.0,
+            "min": 0.9999992847442627,
+            "p05": 0.9999996423721313
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 384,
+        "bytes": 520,
+        "retention": 0.9905203580856323
+      },
+      "rank_profile_drift": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 221,
+          "unmatched_entries": 5525541,
+          "coverage": 3.999448401867471e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 221,
+          "unmatched_entries": 5525541,
+          "coverage": 3.999448401867471e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 221,
+          "unmatched_entries": 5525541,
+          "coverage": 3.999448401867471e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 221,
+          "unmatched_entries": 5525541,
+          "coverage": 3.999448401867471e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 221,
+          "unmatched_entries": 5525541,
+          "coverage": 3.999448401867471e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 221,
+          "unmatched_entries": 5525541,
+          "coverage": 3.999448401867471e-05
+        }
+      }
+    },
+    "6": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.8768481612205505,
+            "min": 0.5876426696777344,
+            "p05": 0.7618918418884277
+          },
+          "heldout": {
+            "mean": 0.8048187494277954,
+            "min": 0.48995083570480347,
+            "p05": 0.6225262880325317
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.7497454881668091,
+            "min": 0.4398646950721741,
+            "p05": 0.5636796951293945
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9309611916542053,
+            "min": 0.8041442632675171,
+            "p05": 0.8657289743423462
+          },
+          "heldout": {
+            "mean": 0.8704444766044617,
+            "min": 0.6153829097747803,
+            "p05": 0.7353426814079285
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.826585054397583,
+            "min": 0.592766284942627,
+            "p05": 0.6872657537460327
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.962903618812561,
+            "min": 0.8948569893836975,
+            "p05": 0.9302850961685181
+          },
+          "heldout": {
+            "mean": 0.9176598787307739,
+            "min": 0.7245461940765381,
+            "p05": 0.8243051171302795
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8851288557052612,
+            "min": 0.7125350832939148,
+            "p05": 0.7894800305366516
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9825036525726318,
+            "min": 0.9567636251449585,
+            "p05": 0.9675111770629883
+          },
+          "heldout": {
+            "mean": 0.9537230730056763,
+            "min": 0.8475986123085022,
+            "p05": 0.8992310762405396
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9323232769966125,
+            "min": 0.8291217684745789,
+            "p05": 0.8727173209190369
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9942206740379333,
+            "min": 0.9832577109336853,
+            "p05": 0.9892738461494446
+          },
+          "heldout": {
+            "mean": 0.9813268780708313,
+            "min": 0.9279145002365112,
+            "p05": 0.9583494067192078
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9705498814582825,
+            "min": 0.9165405631065369,
+            "p05": 0.9406120777130127
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0000005960464478,
+            "min": 0.9999996423721313,
+            "p05": 1.0000001192092896
+          },
+          "heldout": {
+            "mean": 0.9999998807907104,
+            "min": 0.9999982714653015,
+            "p05": 0.9999989867210388
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 1.0000001192092896,
+            "min": 0.999999463558197,
+            "p05": 0.9999997615814209
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 0.9999998807907104
+      },
+      "rank_profile_drift": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0000001192092896
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 280,
+          "unmatched_entries": 5525482,
+          "coverage": 5.067174445804941e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 280,
+          "unmatched_entries": 5525482,
+          "coverage": 5.067174445804941e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 280,
+          "unmatched_entries": 5525482,
+          "coverage": 5.067174445804941e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 280,
+          "unmatched_entries": 5525482,
+          "coverage": 5.067174445804941e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 280,
+          "unmatched_entries": 5525482,
+          "coverage": 5.067174445804941e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 280,
+          "unmatched_entries": 5525482,
+          "coverage": 5.067174445804941e-05
+        }
+      }
+    },
+    "8": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.8757867217063904,
+            "min": 0.5821935534477234,
+            "p05": 0.774028480052948
+          },
+          "heldout": {
+            "mean": 0.8029190301895142,
+            "min": 0.35754823684692383,
+            "p05": 0.6240929365158081
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.7494843006134033,
+            "min": 0.35167601704597473,
+            "p05": 0.5828989744186401
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.928753137588501,
+            "min": 0.7829521894454956,
+            "p05": 0.8694960474967957
+          },
+          "heldout": {
+            "mean": 0.8666418194770813,
+            "min": 0.557865560054779,
+            "p05": 0.7352149486541748
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8216882348060608,
+            "min": 0.48412004113197327,
+            "p05": 0.6958692073822021
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9601674675941467,
+            "min": 0.8898822665214539,
+            "p05": 0.9286249279975891
+          },
+          "heldout": {
+            "mean": 0.9118541479110718,
+            "min": 0.6553418636322021,
+            "p05": 0.8186533451080322
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8782743215560913,
+            "min": 0.6725358963012695,
+            "p05": 0.7826555967330933
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9799968600273132,
+            "min": 0.9436970353126526,
+            "p05": 0.9646849036216736
+          },
+          "heldout": {
+            "mean": 0.9475169777870178,
+            "min": 0.7584890723228455,
+            "p05": 0.8876336812973022
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9245164394378662,
+            "min": 0.7785277962684631,
+            "p05": 0.8634613752365112
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9926506280899048,
+            "min": 0.980177640914917,
+            "p05": 0.987105131149292
+          },
+          "heldout": {
+            "mean": 0.9765967726707458,
+            "min": 0.9023788571357727,
+            "p05": 0.9492640495300293
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9635897278785706,
+            "min": 0.8914244771003723,
+            "p05": 0.9310106039047241
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0,
+            "min": 0.9999991059303284,
+            "p05": 0.9999996423721313
+          },
+          "heldout": {
+            "mean": 1.0,
+            "min": 0.999998927116394,
+            "p05": 0.9999995231628418
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9999998807907104,
+            "min": 0.999998927116394,
+            "p05": 0.9999994039535522
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0
+      },
+      "rank_profile_drift": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 0.9999998807907104
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 207,
+          "unmatched_entries": 5525555,
+          "coverage": 3.7460896795772236e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 207,
+          "unmatched_entries": 5525555,
+          "coverage": 3.7460896795772236e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 207,
+          "unmatched_entries": 5525555,
+          "coverage": 3.7460896795772236e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 207,
+          "unmatched_entries": 5525555,
+          "coverage": 3.7460896795772236e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 207,
+          "unmatched_entries": 5525555,
+          "coverage": 3.7460896795772236e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 207,
+          "unmatched_entries": 5525555,
+          "coverage": 3.7460896795772236e-05
+        }
+      }
+    },
+    "10": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.8420259356498718,
+            "min": 0.6120370626449585,
+            "p05": 0.7040558457374573
+          },
+          "heldout": {
+            "mean": 0.750032365322113,
+            "min": 0.4031667709350586,
+            "p05": 0.5272089838981628
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.6859312653541565,
+            "min": 0.30260446667671204,
+            "p05": 0.4804289638996124
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9101080894470215,
+            "min": 0.7821817994117737,
+            "p05": 0.8312424421310425
+          },
+          "heldout": {
+            "mean": 0.8302598595619202,
+            "min": 0.5459055304527283,
+            "p05": 0.6589308977127075
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.7740054726600647,
+            "min": 0.45612552762031555,
+            "p05": 0.6107088923454285
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9510476589202881,
+            "min": 0.8677201271057129,
+            "p05": 0.9076177477836609
+          },
+          "heldout": {
+            "mean": 0.8900510668754578,
+            "min": 0.6731700897216797,
+            "p05": 0.7701709270477295
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8441178202629089,
+            "min": 0.6112337708473206,
+            "p05": 0.7156978845596313
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9766444563865662,
+            "min": 0.9373953342437744,
+            "p05": 0.9570020437240601
+          },
+          "heldout": {
+            "mean": 0.9369357824325562,
+            "min": 0.7989801168441772,
+            "p05": 0.8619502186775208
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9057186841964722,
+            "min": 0.7634298801422119,
+            "p05": 0.8262413144111633
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9923074245452881,
+            "min": 0.976147472858429,
+            "p05": 0.9859635829925537
+          },
+          "heldout": {
+            "mean": 0.9743648767471313,
+            "min": 0.9000720977783203,
+            "p05": 0.9419833421707153
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9580870270729065,
+            "min": 0.8898886442184448,
+            "p05": 0.9180707931518555
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0,
+            "min": 0.9999994039535522,
+            "p05": 0.9999997615814209
+          },
+          "heldout": {
+            "mean": 1.0,
+            "min": 0.9999989867210388,
+            "p05": 0.9999995231628418
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9999998211860657,
+            "min": 0.9999986886978149,
+            "p05": 0.9999991655349731
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0
+      },
+      "rank_profile_drift": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 0.9999998211860657
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 179,
+          "unmatched_entries": 5525583,
+          "coverage": 3.2393722349967296e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 179,
+          "unmatched_entries": 5525583,
+          "coverage": 3.2393722349967296e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 179,
+          "unmatched_entries": 5525583,
+          "coverage": 3.2393722349967296e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 179,
+          "unmatched_entries": 5525583,
+          "coverage": 3.2393722349967296e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 179,
+          "unmatched_entries": 5525583,
+          "coverage": 3.2393722349967296e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 179,
+          "unmatched_entries": 5525583,
+          "coverage": 3.2393722349967296e-05
+        }
+      }
+    },
+    "12": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.8553609251976013,
+            "min": 0.6342642903327942,
+            "p05": 0.7551701664924622
+          },
+          "heldout": {
+            "mean": 0.7539499998092651,
+            "min": 0.4246985912322998,
+            "p05": 0.5596606731414795
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.6813289523124695,
+            "min": 0.4263163208961487,
+            "p05": 0.5220410227775574
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9160816073417664,
+            "min": 0.7888892889022827,
+            "p05": 0.856329083442688
+          },
+          "heldout": {
+            "mean": 0.8291771411895752,
+            "min": 0.5334864854812622,
+            "p05": 0.685847282409668
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.7675052881240845,
+            "min": 0.5386184453964233,
+            "p05": 0.6461954116821289
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9530788660049438,
+            "min": 0.8779988288879395,
+            "p05": 0.9206662178039551
+          },
+          "heldout": {
+            "mean": 0.8863265514373779,
+            "min": 0.6479130983352661,
+            "p05": 0.7811864018440247
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8381208181381226,
+            "min": 0.6874802112579346,
+            "p05": 0.7402200698852539
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.976587176322937,
+            "min": 0.9393983483314514,
+            "p05": 0.9610651731491089
+          },
+          "heldout": {
+            "mean": 0.9320385456085205,
+            "min": 0.7749041318893433,
+            "p05": 0.8657464385032654
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8997763395309448,
+            "min": 0.7907171249389648,
+            "p05": 0.8372249603271484
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9916083216667175,
+            "min": 0.9785160422325134,
+            "p05": 0.9858536720275879
+          },
+          "heldout": {
+            "mean": 0.9702308177947998,
+            "min": 0.8843024373054504,
+            "p05": 0.9387876391410828
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9532684087753296,
+            "min": 0.8871548175811768,
+            "p05": 0.9170354008674622
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0000001192092896,
+            "min": 0.9999994039535522,
+            "p05": 0.9999998211860657
+          },
+          "heldout": {
+            "mean": 1.0,
+            "min": 0.9999990463256836,
+            "p05": 0.9999995827674866
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 1.0,
+            "min": 0.9999994039535522,
+            "p05": 0.9999997615814209
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0
+      },
+      "rank_profile_drift": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 214,
+          "unmatched_entries": 5525548,
+          "coverage": 3.8727690407223474e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 214,
+          "unmatched_entries": 5525548,
+          "coverage": 3.8727690407223474e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 214,
+          "unmatched_entries": 5525548,
+          "coverage": 3.8727690407223474e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 214,
+          "unmatched_entries": 5525548,
+          "coverage": 3.8727690407223474e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 214,
+          "unmatched_entries": 5525548,
+          "coverage": 3.8727690407223474e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 214,
+          "unmatched_entries": 5525548,
+          "coverage": 3.8727690407223474e-05
+        }
+      }
+    },
+    "14": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.854329526424408,
+            "min": 0.6253305673599243,
+            "p05": 0.7576726078987122
+          },
+          "heldout": {
+            "mean": 0.7558186650276184,
+            "min": 0.4217219054698944,
+            "p05": 0.5842068791389465
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.6879738569259644,
+            "min": 0.40069958567619324,
+            "p05": 0.5346639752388
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9140837788581848,
+            "min": 0.7802615165710449,
+            "p05": 0.8594154715538025
+          },
+          "heldout": {
+            "mean": 0.830010175704956,
+            "min": 0.5608205795288086,
+            "p05": 0.6976568698883057
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.7724909782409668,
+            "min": 0.5413112640380859,
+            "p05": 0.652474045753479
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9508285522460938,
+            "min": 0.8841786980628967,
+            "p05": 0.9204218983650208
+          },
+          "heldout": {
+            "mean": 0.8853502869606018,
+            "min": 0.6872425079345703,
+            "p05": 0.7869694828987122
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8404300808906555,
+            "min": 0.6668739318847656,
+            "p05": 0.7545801401138306
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9748392701148987,
+            "min": 0.9386656880378723,
+            "p05": 0.9596471786499023
+          },
+          "heldout": {
+            "mean": 0.9308322072029114,
+            "min": 0.7962385416030884,
+            "p05": 0.8693033456802368
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8994777202606201,
+            "min": 0.7831180095672607,
+            "p05": 0.8424637913703918
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9905626177787781,
+            "min": 0.9756473302841187,
+            "p05": 0.9847917556762695
+          },
+          "heldout": {
+            "mean": 0.9687163829803467,
+            "min": 0.897382915019989,
+            "p05": 0.9389169216156006
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9515765309333801,
+            "min": 0.8836460113525391,
+            "p05": 0.9226652383804321
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0000005960464478,
+            "min": 0.9999995231628418,
+            "p05": 1.0000001192092896
+          },
+          "heldout": {
+            "mean": 0.9999998807907104,
+            "min": 0.9999987483024597,
+            "p05": 0.999999463558197
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 1.0,
+            "min": 0.9999991059303284,
+            "p05": 0.9999996423721313
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 0.9999998807907104
+      },
+      "rank_profile_drift": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 144,
+          "unmatched_entries": 5525618,
+          "coverage": 2.6059754292711122e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 144,
+          "unmatched_entries": 5525618,
+          "coverage": 2.6059754292711122e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 144,
+          "unmatched_entries": 5525618,
+          "coverage": 2.6059754292711122e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 144,
+          "unmatched_entries": 5525618,
+          "coverage": 2.6059754292711122e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 144,
+          "unmatched_entries": 5525618,
+          "coverage": 2.6059754292711122e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 144,
+          "unmatched_entries": 5525618,
+          "coverage": 2.6059754292711122e-05
+        }
+      }
+    },
+    "16": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.8460586071014404,
+            "min": 0.6347839832305908,
+            "p05": 0.7538430094718933
+          },
+          "heldout": {
+            "mean": 0.7421067953109741,
+            "min": 0.44431743025779724,
+            "p05": 0.5826205015182495
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.6715616583824158,
+            "min": 0.4236370623111725,
+            "p05": 0.5410183072090149
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.908654510974884,
+            "min": 0.7602497935295105,
+            "p05": 0.8550714254379272
+          },
+          "heldout": {
+            "mean": 0.8185763955116272,
+            "min": 0.5743013024330139,
+            "p05": 0.6972248554229736
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.758101761341095,
+            "min": 0.5523847937583923,
+            "p05": 0.6551432609558105
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9473857283592224,
+            "min": 0.8821842074394226,
+            "p05": 0.9163284301757812
+          },
+          "heldout": {
+            "mean": 0.8772410750389099,
+            "min": 0.6709010004997253,
+            "p05": 0.7894550561904907
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8286289572715759,
+            "min": 0.6630952954292297,
+            "p05": 0.748768150806427
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9728108048439026,
+            "min": 0.9316436052322388,
+            "p05": 0.9573826789855957
+          },
+          "heldout": {
+            "mean": 0.9244599342346191,
+            "min": 0.7887195944786072,
+            "p05": 0.8639532923698425
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8906606435775757,
+            "min": 0.7855448126792908,
+            "p05": 0.8358993530273438
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9897938966751099,
+            "min": 0.9717352986335754,
+            "p05": 0.9838055968284607
+          },
+          "heldout": {
+            "mean": 0.9653842449188232,
+            "min": 0.878257691860199,
+            "p05": 0.9337784647941589
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.947462797164917,
+            "min": 0.8912571668624878,
+            "p05": 0.920113742351532
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0,
+            "min": 0.9999991059303284,
+            "p05": 0.9999995827674866
+          },
+          "heldout": {
+            "mean": 1.0000001192092896,
+            "min": 0.9999993443489075,
+            "p05": 0.9999998807907104
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 1.0,
+            "min": 0.9999994039535522,
+            "p05": 0.9999997019767761
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0000001192092896
+      },
+      "rank_profile_drift": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 151,
+          "unmatched_entries": 5525611,
+          "coverage": 2.7326547904162357e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 151,
+          "unmatched_entries": 5525611,
+          "coverage": 2.7326547904162357e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 151,
+          "unmatched_entries": 5525611,
+          "coverage": 2.7326547904162357e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 151,
+          "unmatched_entries": 5525611,
+          "coverage": 2.7326547904162357e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 151,
+          "unmatched_entries": 5525611,
+          "coverage": 2.7326547904162357e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 151,
+          "unmatched_entries": 5525611,
+          "coverage": 2.7326547904162357e-05
+        }
+      }
+    },
+    "18": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.8625001311302185,
+            "min": 0.6678733825683594,
+            "p05": 0.783982515335083
+          },
+          "heldout": {
+            "mean": 0.763343334197998,
+            "min": 0.44960978627204895,
+            "p05": 0.6146416068077087
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.6827250719070435,
+            "min": 0.3924034535884857,
+            "p05": 0.5509935021400452
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9195995926856995,
+            "min": 0.7907564043998718,
+            "p05": 0.87447190284729
+          },
+          "heldout": {
+            "mean": 0.8371840715408325,
+            "min": 0.5844451785087585,
+            "p05": 0.7279829382896423
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.7708511352539062,
+            "min": 0.5371291041374207,
+            "p05": 0.6676471829414368
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9545603394508362,
+            "min": 0.8813647627830505,
+            "p05": 0.9302867650985718
+          },
+          "heldout": {
+            "mean": 0.8917385339736938,
+            "min": 0.694830060005188,
+            "p05": 0.815334141254425
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8400627970695496,
+            "min": 0.638119637966156,
+            "p05": 0.7611874341964722
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9772164821624756,
+            "min": 0.9457782506942749,
+            "p05": 0.9651214480400085
+          },
+          "heldout": {
+            "mean": 0.9359105825424194,
+            "min": 0.8044442534446716,
+            "p05": 0.8882266879081726
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9015495777130127,
+            "min": 0.7707491517066956,
+            "p05": 0.8514838814735413
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9918217658996582,
+            "min": 0.9790950417518616,
+            "p05": 0.9872020483016968
+          },
+          "heldout": {
+            "mean": 0.9724017381668091,
+            "min": 0.8983919620513916,
+            "p05": 0.9485229849815369
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9544628858566284,
+            "min": 0.8690440654754639,
+            "p05": 0.9247536063194275
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0000001192092896,
+            "min": 0.9999994039535522,
+            "p05": 0.9999998807907104
+          },
+          "heldout": {
+            "mean": 1.0,
+            "min": 0.9999993443489075,
+            "p05": 0.9999996423721313
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 1.000000238418579,
+            "min": 0.9999996423721313,
+            "p05": 0.9999999403953552
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0
+      },
+      "rank_profile_drift": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.000000238418579
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 136,
+          "unmatched_entries": 5525626,
+          "coverage": 2.4611990165338284e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 136,
+          "unmatched_entries": 5525626,
+          "coverage": 2.4611990165338284e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 136,
+          "unmatched_entries": 5525626,
+          "coverage": 2.4611990165338284e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 136,
+          "unmatched_entries": 5525626,
+          "coverage": 2.4611990165338284e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 136,
+          "unmatched_entries": 5525626,
+          "coverage": 2.4611990165338284e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 136,
+          "unmatched_entries": 5525626,
+          "coverage": 2.4611990165338284e-05
+        }
+      }
+    },
+    "20": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.8470036387443542,
+            "min": 0.5997734069824219,
+            "p05": 0.7665262818336487
+          },
+          "heldout": {
+            "mean": 0.7470378875732422,
+            "min": 0.36677271127700806,
+            "p05": 0.6198076605796814
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.6676443219184875,
+            "min": 0.44683152437210083,
+            "p05": 0.5539566278457642
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.909551739692688,
+            "min": 0.7795984745025635,
+            "p05": 0.8622076511383057
+          },
+          "heldout": {
+            "mean": 0.8247145414352417,
+            "min": 0.5222854614257812,
+            "p05": 0.722599446773529
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.7605267763137817,
+            "min": 0.5717555284500122,
+            "p05": 0.6753169894218445
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9482637643814087,
+            "min": 0.8854286074638367,
+            "p05": 0.9218322038650513
+          },
+          "heldout": {
+            "mean": 0.8836128115653992,
+            "min": 0.6849669814109802,
+            "p05": 0.8117201924324036
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8336359262466431,
+            "min": 0.7029933929443359,
+            "p05": 0.7653112411499023
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.973410964012146,
+            "min": 0.9370049238204956,
+            "p05": 0.9596291184425354
+          },
+          "heldout": {
+            "mean": 0.9298744797706604,
+            "min": 0.7744719982147217,
+            "p05": 0.8830674886703491
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8955780267715454,
+            "min": 0.8197187781333923,
+            "p05": 0.8483428359031677
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9899638295173645,
+            "min": 0.9750974774360657,
+            "p05": 0.9845218658447266
+          },
+          "heldout": {
+            "mean": 0.9681829214096069,
+            "min": 0.8808668255805969,
+            "p05": 0.9441589117050171
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.949656069278717,
+            "min": 0.8972447514533997,
+            "p05": 0.9223796129226685
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0,
+            "min": 0.9999994039535522,
+            "p05": 0.9999997615814209
+          },
+          "heldout": {
+            "mean": 1.0000001192092896,
+            "min": 0.9999992251396179,
+            "p05": 0.9999998211860657
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 1.0000001192092896,
+            "min": 0.9999995827674866,
+            "p05": 0.9999998807907104
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0000001192092896
+      },
+      "rank_profile_drift": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0000001192092896
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 157,
+          "unmatched_entries": 5525605,
+          "coverage": 2.8412370999691988e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 157,
+          "unmatched_entries": 5525605,
+          "coverage": 2.8412370999691988e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 157,
+          "unmatched_entries": 5525605,
+          "coverage": 2.8412370999691988e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 157,
+          "unmatched_entries": 5525605,
+          "coverage": 2.8412370999691988e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 157,
+          "unmatched_entries": 5525605,
+          "coverage": 2.8412370999691988e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 157,
+          "unmatched_entries": 5525605,
+          "coverage": 2.8412370999691988e-05
+        }
+      }
+    },
+    "22": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.8702860474586487,
+            "min": 0.6496239900588989,
+            "p05": 0.7710649967193604
+          },
+          "heldout": {
+            "mean": 0.7931345701217651,
+            "min": 0.5071772336959839,
+            "p05": 0.6535642743110657
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.7328678965568542,
+            "min": 0.4841565191745758,
+            "p05": 0.598714292049408
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9263507723808289,
+            "min": 0.7821868062019348,
+            "p05": 0.864585816860199
+          },
+          "heldout": {
+            "mean": 0.8627690076828003,
+            "min": 0.6353009343147278,
+            "p05": 0.7541641592979431
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8125230669975281,
+            "min": 0.5813711881637573,
+            "p05": 0.7091902494430542
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9593923091888428,
+            "min": 0.8770266175270081,
+            "p05": 0.9230847358703613
+          },
+          "heldout": {
+            "mean": 0.9112722873687744,
+            "min": 0.7474538683891296,
+            "p05": 0.8316994309425354
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8726155757904053,
+            "min": 0.6890900731086731,
+            "p05": 0.7938154935836792
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9799546003341675,
+            "min": 0.93393874168396,
+            "p05": 0.961453914642334
+          },
+          "heldout": {
+            "mean": 0.9484314918518066,
+            "min": 0.8302465677261353,
+            "p05": 0.8974608778953552
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9230627417564392,
+            "min": 0.7966561317443848,
+            "p05": 0.8710870742797852
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9927259087562561,
+            "min": 0.9711055159568787,
+            "p05": 0.986038863658905
+          },
+          "heldout": {
+            "mean": 0.9773188829421997,
+            "min": 0.9100379943847656,
+            "p05": 0.9505985975265503
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9646269083023071,
+            "min": 0.9063442945480347,
+            "p05": 0.934301495552063
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0,
+            "min": 0.9999992251396179,
+            "p05": 0.9999996423721313
+          },
+          "heldout": {
+            "mean": 1.0,
+            "min": 0.9999992251396179,
+            "p05": 0.9999996423721313
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 1.0,
+            "min": 0.9999994039535522,
+            "p05": 0.9999997019767761
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0
+      },
+      "rank_profile_drift": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 188,
+          "unmatched_entries": 5525574,
+          "coverage": 3.402245699326174e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 188,
+          "unmatched_entries": 5525574,
+          "coverage": 3.402245699326174e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 188,
+          "unmatched_entries": 5525574,
+          "coverage": 3.402245699326174e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 188,
+          "unmatched_entries": 5525574,
+          "coverage": 3.402245699326174e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 188,
+          "unmatched_entries": 5525574,
+          "coverage": 3.402245699326174e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 188,
+          "unmatched_entries": 5525574,
+          "coverage": 3.402245699326174e-05
+        }
+      }
+    },
+    "24": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.8314500451087952,
+            "min": 0.5369782447814941,
+            "p05": 0.6766188740730286
+          },
+          "heldout": {
+            "mean": 0.7416147589683533,
+            "min": 0.42718976736068726,
+            "p05": 0.5519090294837952
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.6799390912055969,
+            "min": 0.414295494556427,
+            "p05": 0.5087916254997253
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9034550786018372,
+            "min": 0.6698319315910339,
+            "p05": 0.7960196733474731
+          },
+          "heldout": {
+            "mean": 0.826988935470581,
+            "min": 0.511876106262207,
+            "p05": 0.6676380038261414
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.7755317687988281,
+            "min": 0.5379109978675842,
+            "p05": 0.6287661194801331
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9468039274215698,
+            "min": 0.7811391353607178,
+            "p05": 0.883761465549469
+          },
+          "heldout": {
+            "mean": 0.8884696364402771,
+            "min": 0.6142680048942566,
+            "p05": 0.7630566358566284
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.848433792591095,
+            "min": 0.6253170371055603,
+            "p05": 0.729905903339386
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9737949371337891,
+            "min": 0.8993631601333618,
+            "p05": 0.9423652291297913
+          },
+          "heldout": {
+            "mean": 0.9342894554138184,
+            "min": 0.7194858193397522,
+            "p05": 0.8449708223342896
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9082909822463989,
+            "min": 0.7187330722808838,
+            "p05": 0.8253729343414307
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9905033707618713,
+            "min": 0.9662297964096069,
+            "p05": 0.9801484942436218
+          },
+          "heldout": {
+            "mean": 0.9704235792160034,
+            "min": 0.8501362204551697,
+            "p05": 0.9231598377227783
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9567055702209473,
+            "min": 0.8731516599655151,
+            "p05": 0.9104222059249878
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0,
+            "min": 0.9999992251396179,
+            "p05": 0.9999997019767761
+          },
+          "heldout": {
+            "mean": 1.0000001192092896,
+            "min": 0.9999992847442627,
+            "p05": 0.9999997615814209
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 1.0000003576278687,
+            "min": 0.9999996423721313,
+            "p05": 1.0
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0000001192092896
+      },
+      "rank_profile_drift": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0000003576278687
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 175,
+          "unmatched_entries": 5525587,
+          "coverage": 3.1669840286280876e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 175,
+          "unmatched_entries": 5525587,
+          "coverage": 3.1669840286280876e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 175,
+          "unmatched_entries": 5525587,
+          "coverage": 3.1669840286280876e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 175,
+          "unmatched_entries": 5525587,
+          "coverage": 3.1669840286280876e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 175,
+          "unmatched_entries": 5525587,
+          "coverage": 3.1669840286280876e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 175,
+          "unmatched_entries": 5525587,
+          "coverage": 3.1669840286280876e-05
+        }
+      }
+    },
+    "26": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.8812189102172852,
+            "min": 0.6967871785163879,
+            "p05": 0.8107243180274963
+          },
+          "heldout": {
+            "mean": 0.8017807006835938,
+            "min": 0.5580368041992188,
+            "p05": 0.6868962645530701
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.7362326383590698,
+            "min": 0.5438200235366821,
+            "p05": 0.6283758878707886
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9315762519836426,
+            "min": 0.8108884692192078,
+            "p05": 0.8901975750923157
+          },
+          "heldout": {
+            "mean": 0.8669214248657227,
+            "min": 0.6731550097465515,
+            "p05": 0.7813950181007385
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8138103485107422,
+            "min": 0.665775716304779,
+            "p05": 0.729273796081543
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9615077972412109,
+            "min": 0.885158360004425,
+            "p05": 0.9384657144546509
+          },
+          "heldout": {
+            "mean": 0.913033127784729,
+            "min": 0.759696364402771,
+            "p05": 0.855114221572876
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8720962405204773,
+            "min": 0.760826051235199,
+            "p05": 0.8141728043556213
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9805315732955933,
+            "min": 0.9465728998184204,
+            "p05": 0.9696998000144958
+          },
+          "heldout": {
+            "mean": 0.9490845799446106,
+            "min": 0.8241094350814819,
+            "p05": 0.9126022458076477
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.921168327331543,
+            "min": 0.8458529710769653,
+            "p05": 0.8816055655479431
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9928277730941772,
+            "min": 0.9780880808830261,
+            "p05": 0.9888389110565186
+          },
+          "heldout": {
+            "mean": 0.9775136113166809,
+            "min": 0.9174188375473022,
+            "p05": 0.9592061638832092
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9636228680610657,
+            "min": 0.9157357215881348,
+            "p05": 0.9428500533103943
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0,
+            "min": 0.9999991655349731,
+            "p05": 0.9999995231628418
+          },
+          "heldout": {
+            "mean": 0.9999998807907104,
+            "min": 0.9999985694885254,
+            "p05": 0.9999991655349731
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 1.000000238418579,
+            "min": 0.999999463558197,
+            "p05": 0.9999998807907104
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 0.9999998807907104
+      },
+      "rank_profile_drift": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.000000238418579
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 175,
+          "unmatched_entries": 5525587,
+          "coverage": 3.1669840286280876e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 175,
+          "unmatched_entries": 5525587,
+          "coverage": 3.1669840286280876e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 175,
+          "unmatched_entries": 5525587,
+          "coverage": 3.1669840286280876e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 175,
+          "unmatched_entries": 5525587,
+          "coverage": 3.1669840286280876e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 175,
+          "unmatched_entries": 5525587,
+          "coverage": 3.1669840286280876e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 175,
+          "unmatched_entries": 5525587,
+          "coverage": 3.1669840286280876e-05
+        }
+      }
+    },
+    "28": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9044256210327148,
+            "min": 0.7089884281158447,
+            "p05": 0.8357850313186646
+          },
+          "heldout": {
+            "mean": 0.8472786545753479,
+            "min": 0.5143169164657593,
+            "p05": 0.7148221135139465
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.7840940952301025,
+            "min": 0.42939308285713196,
+            "p05": 0.596666157245636
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9463617205619812,
+            "min": 0.8521270751953125,
+            "p05": 0.9087110757827759
+          },
+          "heldout": {
+            "mean": 0.8988854885101318,
+            "min": 0.658428966999054,
+            "p05": 0.80692058801651
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8508656620979309,
+            "min": 0.57846999168396,
+            "p05": 0.7168033719062805
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9713011384010315,
+            "min": 0.9245877265930176,
+            "p05": 0.9512973427772522
+          },
+          "heldout": {
+            "mean": 0.9363501667976379,
+            "min": 0.749428927898407,
+            "p05": 0.875368595123291
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9013257622718811,
+            "min": 0.7498640418052673,
+            "p05": 0.8105350136756897
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9868051409721375,
+            "min": 0.9614448547363281,
+            "p05": 0.9778032302856445
+          },
+          "heldout": {
+            "mean": 0.965426504611969,
+            "min": 0.8556719422340393,
+            "p05": 0.9281675219535828
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9430432915687561,
+            "min": 0.8505393862724304,
+            "p05": 0.8899257183074951
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.996101438999176,
+            "min": 0.9869284629821777,
+            "p05": 0.9931831955909729
+          },
+          "heldout": {
+            "mean": 0.9877560138702393,
+            "min": 0.932853639125824,
+            "p05": 0.9737411141395569
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9769317507743835,
+            "min": 0.9278859496116638,
+            "p05": 0.9553475379943848
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0,
+            "min": 0.9999989867210388,
+            "p05": 0.9999997615814209
+          },
+          "heldout": {
+            "mean": 0.9999998807907104,
+            "min": 0.9999985694885254,
+            "p05": 0.9999992847442627
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 1.0,
+            "min": 0.9999993443489075,
+            "p05": 0.9999997019767761
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 0.9999998807907104
+      },
+      "rank_profile_drift": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 109,
+          "unmatched_entries": 5525653,
+          "coverage": 1.9725786235454948e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 109,
+          "unmatched_entries": 5525653,
+          "coverage": 1.9725786235454948e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 109,
+          "unmatched_entries": 5525653,
+          "coverage": 1.9725786235454948e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 109,
+          "unmatched_entries": 5525653,
+          "coverage": 1.9725786235454948e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 109,
+          "unmatched_entries": 5525653,
+          "coverage": 1.9725786235454948e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 109,
+          "unmatched_entries": 5525653,
+          "coverage": 1.9725786235454948e-05
+        }
+      }
+    },
+    "30": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.8870459198951721,
+            "min": 0.6527403593063354,
+            "p05": 0.7714037895202637
+          },
+          "heldout": {
+            "mean": 0.8144699931144714,
+            "min": 0.4513774514198303,
+            "p05": 0.62916499376297
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.747043788433075,
+            "min": 0.36011072993278503,
+            "p05": 0.5289516448974609
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9372628927230835,
+            "min": 0.762831449508667,
+            "p05": 0.8720939755439758
+          },
+          "heldout": {
+            "mean": 0.8764188885688782,
+            "min": 0.575735867023468,
+            "p05": 0.7351399064064026
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8240014314651489,
+            "min": 0.5261411666870117,
+            "p05": 0.6569287180900574
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9665163159370422,
+            "min": 0.8795886635780334,
+            "p05": 0.9323487877845764
+          },
+          "heldout": {
+            "mean": 0.9210063815116882,
+            "min": 0.710120439529419,
+            "p05": 0.8224747180938721
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8815405964851379,
+            "min": 0.6612797379493713,
+            "p05": 0.7595465779304504
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.984218955039978,
+            "min": 0.9371179938316345,
+            "p05": 0.9695014953613281
+          },
+          "heldout": {
+            "mean": 0.9550130367279053,
+            "min": 0.7919464111328125,
+            "p05": 0.895130455493927
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9286057949066162,
+            "min": 0.7637237906455994,
+            "p05": 0.8470579981803894
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9948016405105591,
+            "min": 0.9802336692810059,
+            "p05": 0.9902513027191162
+          },
+          "heldout": {
+            "mean": 0.9818810224533081,
+            "min": 0.9097800254821777,
+            "p05": 0.9550225734710693
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9680724740028381,
+            "min": 0.8857649564743042,
+            "p05": 0.9298386573791504
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0,
+            "min": 0.9999989867210388,
+            "p05": 0.999999463558197
+          },
+          "heldout": {
+            "mean": 1.0000001192092896,
+            "min": 0.9999991655349731,
+            "p05": 0.9999997615814209
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 1.0000004768371582,
+            "min": 0.9999996423721313,
+            "p05": 1.0
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0000001192092896
+      },
+      "rank_profile_drift": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0000004768371582
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 165,
+          "unmatched_entries": 5525597,
+          "coverage": 2.986013512706483e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 165,
+          "unmatched_entries": 5525597,
+          "coverage": 2.986013512706483e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 165,
+          "unmatched_entries": 5525597,
+          "coverage": 2.986013512706483e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 165,
+          "unmatched_entries": 5525597,
+          "coverage": 2.986013512706483e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 165,
+          "unmatched_entries": 5525597,
+          "coverage": 2.986013512706483e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 165,
+          "unmatched_entries": 5525597,
+          "coverage": 2.986013512706483e-05
+        }
+      }
+    },
+    "32": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.8417708277702332,
+            "min": 0.5729540586471558,
+            "p05": 0.7304702401161194
+          },
+          "heldout": {
+            "mean": 0.7513368725776672,
+            "min": 0.416368305683136,
+            "p05": 0.5874226689338684
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.6835024952888489,
+            "min": 0.38737234473228455,
+            "p05": 0.5315195918083191
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9071003198623657,
+            "min": 0.7542952299118042,
+            "p05": 0.8385041952133179
+          },
+          "heldout": {
+            "mean": 0.8287212252616882,
+            "min": 0.5559251308441162,
+            "p05": 0.6995342373847961
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.770310640335083,
+            "min": 0.5650501847267151,
+            "p05": 0.6509204506874084
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9469799399375916,
+            "min": 0.8639610409736633,
+            "p05": 0.9075338244438171
+          },
+          "heldout": {
+            "mean": 0.8860651254653931,
+            "min": 0.6619528532028198,
+            "p05": 0.7914897799491882
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8400349617004395,
+            "min": 0.6876243352890015,
+            "p05": 0.7460942268371582
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9729687571525574,
+            "min": 0.9261006712913513,
+            "p05": 0.9531838297843933
+          },
+          "heldout": {
+            "mean": 0.9311052560806274,
+            "min": 0.7838351726531982,
+            "p05": 0.8683101534843445
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8998181819915771,
+            "min": 0.790266752243042,
+            "p05": 0.8377760052680969
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9899006485939026,
+            "min": 0.9713342785835266,
+            "p05": 0.9822993874549866
+          },
+          "heldout": {
+            "mean": 0.9686433672904968,
+            "min": 0.8904315829277039,
+            "p05": 0.9355897307395935
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9530715942382812,
+            "min": 0.8805410265922546,
+            "p05": 0.9188500046730042
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0000001192092896,
+            "min": 0.9999993443489075,
+            "p05": 0.9999997615814209
+          },
+          "heldout": {
+            "mean": 1.0,
+            "min": 0.999998927116394,
+            "p05": 0.999999463558197
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 1.0,
+            "min": 0.9999994039535522,
+            "p05": 0.9999997019767761
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0
+      },
+      "rank_profile_drift": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 164,
+          "unmatched_entries": 5525598,
+          "coverage": 2.9679164611143223e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 164,
+          "unmatched_entries": 5525598,
+          "coverage": 2.9679164611143223e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 164,
+          "unmatched_entries": 5525598,
+          "coverage": 2.9679164611143223e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 164,
+          "unmatched_entries": 5525598,
+          "coverage": 2.9679164611143223e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 164,
+          "unmatched_entries": 5525598,
+          "coverage": 2.9679164611143223e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 164,
+          "unmatched_entries": 5525598,
+          "coverage": 2.9679164611143223e-05
+        }
+      }
+    },
+    "34": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.8546345233917236,
+            "min": 0.6191686391830444,
+            "p05": 0.7361793518066406
+          },
+          "heldout": {
+            "mean": 0.7623737454414368,
+            "min": 0.444343239068985,
+            "p05": 0.6091688871383667
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.6851840615272522,
+            "min": 0.41766828298568726,
+            "p05": 0.5364556908607483
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9146629571914673,
+            "min": 0.751757025718689,
+            "p05": 0.8410218358039856
+          },
+          "heldout": {
+            "mean": 0.8373273611068726,
+            "min": 0.5660430788993835,
+            "p05": 0.7159033417701721
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.7766585946083069,
+            "min": 0.5349205136299133,
+            "p05": 0.6643978953361511
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9513685703277588,
+            "min": 0.8522965312004089,
+            "p05": 0.9103708863258362
+          },
+          "heldout": {
+            "mean": 0.8914089798927307,
+            "min": 0.6602510809898376,
+            "p05": 0.8036611080169678
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8422793745994568,
+            "min": 0.6310893297195435,
+            "p05": 0.7494677901268005
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.975077748298645,
+            "min": 0.9028247594833374,
+            "p05": 0.9551834464073181
+          },
+          "heldout": {
+            "mean": 0.9347055554389954,
+            "min": 0.7912464141845703,
+            "p05": 0.8770049810409546
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9008637070655823,
+            "min": 0.7857203483581543,
+            "p05": 0.8355185389518738
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9906765818595886,
+            "min": 0.957808792591095,
+            "p05": 0.9834819436073303
+          },
+          "heldout": {
+            "mean": 0.9705857634544373,
+            "min": 0.8813004493713379,
+            "p05": 0.9417343139648438
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9541648626327515,
+            "min": 0.8925626277923584,
+            "p05": 0.9228461384773254
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0,
+            "min": 0.9999993443489075,
+            "p05": 0.9999997019767761
+          },
+          "heldout": {
+            "mean": 0.9999998807907104,
+            "min": 0.9999983906745911,
+            "p05": 0.9999991655349731
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 1.0,
+            "min": 0.9999992847442627,
+            "p05": 0.9999996423721313
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 0.9999998807907104
+      },
+      "rank_profile_drift": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 149,
+          "unmatched_entries": 5525613,
+          "coverage": 2.6964606872319146e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 149,
+          "unmatched_entries": 5525613,
+          "coverage": 2.6964606872319146e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 149,
+          "unmatched_entries": 5525613,
+          "coverage": 2.6964606872319146e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 149,
+          "unmatched_entries": 5525613,
+          "coverage": 2.6964606872319146e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 149,
+          "unmatched_entries": 5525613,
+          "coverage": 2.6964606872319146e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 149,
+          "unmatched_entries": 5525613,
+          "coverage": 2.6964606872319146e-05
+        }
+      }
+    },
+    "36": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9259291887283325,
+            "min": 0.8140495419502258,
+            "p05": 0.8776648640632629
+          },
+          "heldout": {
+            "mean": 0.8874378204345703,
+            "min": 0.6650184392929077,
+            "p05": 0.8070446252822876
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8436862826347351,
+            "min": 0.6071319580078125,
+            "p05": 0.7101750373840332
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9579179883003235,
+            "min": 0.902595579624176,
+            "p05": 0.9314439296722412
+          },
+          "heldout": {
+            "mean": 0.9256877303123474,
+            "min": 0.7664822340011597,
+            "p05": 0.8685809373855591
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8915964365005493,
+            "min": 0.7150995135307312,
+            "p05": 0.7924995422363281
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9773318767547607,
+            "min": 0.9504449963569641,
+            "p05": 0.9629024267196655
+          },
+          "heldout": {
+            "mean": 0.953618586063385,
+            "min": 0.8532601594924927,
+            "p05": 0.9167872667312622
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9296674132347107,
+            "min": 0.8186059594154358,
+            "p05": 0.863070011138916
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9893968105316162,
+            "min": 0.9755275845527649,
+            "p05": 0.9827740788459778
+          },
+          "heldout": {
+            "mean": 0.9747926592826843,
+            "min": 0.9158935546875,
+            "p05": 0.9541082978248596
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.959002673625946,
+            "min": 0.8879944086074829,
+            "p05": 0.9210687875747681
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9966168403625488,
+            "min": 0.9912645816802979,
+            "p05": 0.9943298697471619
+          },
+          "heldout": {
+            "mean": 0.9906519651412964,
+            "min": 0.9680476784706116,
+            "p05": 0.9822953939437866
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9829587936401367,
+            "min": 0.9500899314880371,
+            "p05": 0.9665893316268921
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 0.9999992847442627,
+            "min": 0.999998152256012,
+            "p05": 0.9999986290931702
+          },
+          "heldout": {
+            "mean": 1.0000003576278687,
+            "min": 0.999999463558197,
+            "p05": 0.9999999403953552
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 1.0000005960464478,
+            "min": 0.9999995827674866,
+            "p05": 1.0000001192092896
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 384,
+        "bytes": 520,
+        "retention": 0.9906519651412964
+      },
+      "rank_profile_drift": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0000005960464478
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 295,
+          "unmatched_entries": 5525467,
+          "coverage": 5.338630219687348e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 295,
+          "unmatched_entries": 5525467,
+          "coverage": 5.338630219687348e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 295,
+          "unmatched_entries": 5525467,
+          "coverage": 5.338630219687348e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 295,
+          "unmatched_entries": 5525467,
+          "coverage": 5.338630219687348e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 295,
+          "unmatched_entries": 5525467,
+          "coverage": 5.338630219687348e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 295,
+          "unmatched_entries": 5525467,
+          "coverage": 5.338630219687348e-05
+        }
+      }
+    },
+    "38": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.8516595363616943,
+            "min": 0.6158401370048523,
+            "p05": 0.7592145800590515
+          },
+          "heldout": {
+            "mean": 0.7748212218284607,
+            "min": 0.4735935628414154,
+            "p05": 0.63833087682724
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.7105776071548462,
+            "min": 0.4412086606025696,
+            "p05": 0.572340190410614
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9178574085235596,
+            "min": 0.7690325975418091,
+            "p05": 0.8633134365081787
+          },
+          "heldout": {
+            "mean": 0.8559044003486633,
+            "min": 0.6425088047981262,
+            "p05": 0.7581381797790527
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8026283383369446,
+            "min": 0.5896588563919067,
+            "p05": 0.6985908150672913
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.956795871257782,
+            "min": 0.8631740212440491,
+            "p05": 0.9286354780197144
+          },
+          "heldout": {
+            "mean": 0.9118984341621399,
+            "min": 0.7627283334732056,
+            "p05": 0.8465303182601929
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8731264472007751,
+            "min": 0.7258526086807251,
+            "p05": 0.7957935929298401
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9807860255241394,
+            "min": 0.9509358406066895,
+            "p05": 0.9682953953742981
+          },
+          "heldout": {
+            "mean": 0.9539824724197388,
+            "min": 0.8583967089653015,
+            "p05": 0.9169195890426636
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9288161993026733,
+            "min": 0.8263965845108032,
+            "p05": 0.8810770511627197
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9949374794960022,
+            "min": 0.9835910797119141,
+            "p05": 0.991398811340332
+          },
+          "heldout": {
+            "mean": 0.9860439300537109,
+            "min": 0.9543069005012512,
+            "p05": 0.9739608764648438
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9744511246681213,
+            "min": 0.9297223687171936,
+            "p05": 0.9556140899658203
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 0.9999996423721313,
+            "min": 0.9999985694885254,
+            "p05": 0.9999991059303284
+          },
+          "heldout": {
+            "mean": 1.0000001192092896,
+            "min": 0.9999991059303284,
+            "p05": 0.9999996423721313
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 1.0000001192092896,
+            "min": 0.999999463558197,
+            "p05": 0.9999998211860657
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0000001192092896
+      },
+      "rank_profile_drift": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0000001192092896
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 147,
+          "unmatched_entries": 5525615,
+          "coverage": 2.660266584047594e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 147,
+          "unmatched_entries": 5525615,
+          "coverage": 2.660266584047594e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 147,
+          "unmatched_entries": 5525615,
+          "coverage": 2.660266584047594e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 147,
+          "unmatched_entries": 5525615,
+          "coverage": 2.660266584047594e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 147,
+          "unmatched_entries": 5525615,
+          "coverage": 2.660266584047594e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 147,
+          "unmatched_entries": 5525615,
+          "coverage": 2.660266584047594e-05
+        }
+      }
+    },
+    "40": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.8058388829231262,
+            "min": 0.5161453485488892,
+            "p05": 0.6507528424263
+          },
+          "heldout": {
+            "mean": 0.7117699980735779,
+            "min": 0.3886362612247467,
+            "p05": 0.533412516117096
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.6521376967430115,
+            "min": 0.3366415798664093,
+            "p05": 0.484370619058609
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.885023295879364,
+            "min": 0.6619335412979126,
+            "p05": 0.7764074206352234
+          },
+          "heldout": {
+            "mean": 0.8013084530830383,
+            "min": 0.5245470404624939,
+            "p05": 0.6505700349807739
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.7495325803756714,
+            "min": 0.455518513917923,
+            "p05": 0.606721043586731
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9340637922286987,
+            "min": 0.7974334955215454,
+            "p05": 0.8688162565231323
+          },
+          "heldout": {
+            "mean": 0.8661680221557617,
+            "min": 0.6320539116859436,
+            "p05": 0.7464507222175598
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8251247406005859,
+            "min": 0.5705254673957825,
+            "p05": 0.7148717641830444
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9659715294837952,
+            "min": 0.8945802450180054,
+            "p05": 0.9311383366584778
+          },
+          "heldout": {
+            "mean": 0.9178901314735413,
+            "min": 0.7505645155906677,
+            "p05": 0.8364415764808655
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.8894928097724915,
+            "min": 0.7193506956100464,
+            "p05": 0.8135281801223755
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9870895743370056,
+            "min": 0.9536982178688049,
+            "p05": 0.973838746547699
+          },
+          "heldout": {
+            "mean": 0.9619845747947693,
+            "min": 0.8602481484413147,
+            "p05": 0.9191348552703857
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9469570517539978,
+            "min": 0.854904055595398,
+            "p05": 0.9033299088478088
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0000001192092896,
+            "min": 0.9999994039535522,
+            "p05": 0.9999997615814209
+          },
+          "heldout": {
+            "mean": 1.0,
+            "min": 0.9999992251396179,
+            "p05": 0.9999996423721313
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 1.000000238418579,
+            "min": 0.999999463558197,
+            "p05": 0.9999998211860657
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.0
+      },
+      "rank_profile_drift": {
+        "rank": 448,
+        "bytes": 584,
+        "retention": 1.000000238418579
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 186,
+          "unmatched_entries": 5525576,
+          "coverage": 3.3660515961418535e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 186,
+          "unmatched_entries": 5525576,
+          "coverage": 3.3660515961418535e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 186,
+          "unmatched_entries": 5525576,
+          "coverage": 3.3660515961418535e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 186,
+          "unmatched_entries": 5525576,
+          "coverage": 3.3660515961418535e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 186,
+          "unmatched_entries": 5525576,
+          "coverage": 3.3660515961418535e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 186,
+          "unmatched_entries": 5525576,
+          "coverage": 3.3660515961418535e-05
+        }
+      }
+    },
+    "42": {
+      "rows": 2708,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.95940762758255,
+            "min": 0.8822793960571289,
+            "p05": 0.9311700463294983
+          },
+          "heldout": {
+            "mean": 0.9403543472290039,
+            "min": 0.827846348285675,
+            "p05": 0.8942098617553711
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9178902506828308,
+            "min": 0.7905427813529968,
+            "p05": 0.8535197973251343
+          }
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9859715700149536,
+            "min": 0.957371711730957,
+            "p05": 0.9758689403533936
+          },
+          "heldout": {
+            "mean": 0.976842999458313,
+            "min": 0.9281853437423706,
+            "p05": 0.9582409858703613
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9649836421012878,
+            "min": 0.9018957614898682,
+            "p05": 0.9362599849700928
+          }
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9952524304389954,
+            "min": 0.9827616810798645,
+            "p05": 0.9916446805000305
+          },
+          "heldout": {
+            "mean": 0.9911060929298401,
+            "min": 0.9708843231201172,
+            "p05": 0.9838657975196838
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9853675961494446,
+            "min": 0.9588725566864014,
+            "p05": 0.9738793969154358
+          }
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9983149766921997,
+            "min": 0.9952871203422546,
+            "p05": 0.9970676302909851
+          },
+          "heldout": {
+            "mean": 0.9962803721427917,
+            "min": 0.9879919290542603,
+            "p05": 0.9929444789886475
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9935821890830994,
+            "min": 0.9825752973556519,
+            "p05": 0.9882704019546509
+          }
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9995700716972351,
+            "min": 0.9985116720199585,
+            "p05": 0.9992355108261108
+          },
+          "heldout": {
+            "mean": 0.9988720417022705,
+            "min": 0.9954235553741455,
+            "p05": 0.9977515339851379
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 0.9978043437004089,
+            "min": 0.9933461546897888,
+            "p05": 0.9959003329277039
+          }
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0,
+            "min": 0.999998927116394,
+            "p05": 0.999999463558197
+          },
+          "heldout": {
+            "mean": 0.9999998807907104,
+            "min": 0.9999986290931702,
+            "p05": 0.9999993443489075
+          },
+          "drift": {
+            "axis": "decode_step",
+            "fit_rows": 677,
+            "eval_rows": 678,
+            "fit_axis_max": 351.75,
+            "eval_axis_min": 1052.0,
+            "mean": 1.0000001192092896,
+            "min": 0.9999993443489075,
+            "p05": 0.9999997615814209
+          }
+        }
+      },
+      "rank_profile_heldout": {
+        "rank": 256,
+        "bytes": 388,
+        "retention": 0.9911060929298401
+      },
+      "rank_profile_drift": {
+        "rank": 320,
+        "bytes": 456,
+        "retention": 0.9935821890830994
+      },
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 208,
+          "unmatched_entries": 5525554,
+          "coverage": 3.7641867311693846e-05
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 208,
+          "unmatched_entries": 5525554,
+          "coverage": 3.7641867311693846e-05
+        },
+        "256": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 208,
+          "unmatched_entries": 5525554,
+          "coverage": 3.7641867311693846e-05
+        },
+        "320": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 208,
+          "unmatched_entries": 5525554,
+          "coverage": 3.7641867311693846e-05
+        },
+        "384": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 208,
+          "unmatched_entries": 5525554,
+          "coverage": 3.7641867311693846e-05
+        },
+        "448": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 208,
+          "unmatched_entries": 5525554,
+          "coverage": 3.7641867311693846e-05
+        }
+      }
+    }
+  }
+}

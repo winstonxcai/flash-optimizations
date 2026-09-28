@@ -1,0 +1,2261 @@
+{
+  "capture": "starkv/captures/cap1",
+  "target": 0.99,
+  "ranks": [
+    128,
+    192,
+    256,
+    320,
+    384,
+    448
+  ],
+  "layers": {
+    "2": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9316663146018982,
+            "min": 0.8378925919532776,
+            "p05": 0.8734347224235535
+          },
+          "heldout": {
+            "mean": 0.7664773464202881,
+            "min": 0.3322768807411194,
+            "p05": 0.46376505494117737
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.976898193359375,
+            "min": 0.9479140043258667,
+            "p05": 0.9609529972076416
+          },
+          "heldout": {
+            "mean": 0.8329105377197266,
+            "min": 0.45923423767089844,
+            "p05": 0.5881025791168213
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9936182498931885,
+            "min": 0.9847137331962585,
+            "p05": 0.988582193851471
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9987974166870117,
+            "min": 0.9961447715759277,
+            "p05": 0.9974150657653809
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9999129176139832,
+            "min": 0.999582052230835,
+            "p05": 0.9997302293777466
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0000001192092896,
+            "min": 0.9999992847442627,
+            "p05": 0.9999995827674866
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 254,
+          "unmatched_entries": 1001476,
+          "coverage": 0.00025356133888373116
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 254,
+          "unmatched_entries": 1001476,
+          "coverage": 0.00025356133888373116
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    },
+    "4": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9622843861579895,
+            "min": 0.9165565371513367,
+            "p05": 0.934329092502594
+          },
+          "heldout": {
+            "mean": 0.8590466976165771,
+            "min": 0.5279889106750488,
+            "p05": 0.6794166564941406
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9868848919868469,
+            "min": 0.9758510589599609,
+            "p05": 0.9793779850006104
+          },
+          "heldout": {
+            "mean": 0.9008340835571289,
+            "min": 0.6586245894432068,
+            "p05": 0.7632477879524231
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9960129261016846,
+            "min": 0.9918738007545471,
+            "p05": 0.9937243461608887
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9991141557693481,
+            "min": 0.9980249404907227,
+            "p05": 0.9983925819396973
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9999054074287415,
+            "min": 0.9997149109840393,
+            "p05": 0.9997896552085876
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0000001192092896,
+            "min": 0.9999992251396179,
+            "p05": 0.9999995827674866
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 217,
+          "unmatched_entries": 1001513,
+          "coverage": 0.00021662523833767581
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 217,
+          "unmatched_entries": 1001513,
+          "coverage": 0.00021662523833767581
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    },
+    "6": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9544689059257507,
+            "min": 0.9026930928230286,
+            "p05": 0.9190490245819092
+          },
+          "heldout": {
+            "mean": 0.8296310901641846,
+            "min": 0.44022324681282043,
+            "p05": 0.6323302984237671
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9839946031570435,
+            "min": 0.9634124636650085,
+            "p05": 0.9739620685577393
+          },
+          "heldout": {
+            "mean": 0.8772878646850586,
+            "min": 0.5606648921966553,
+            "p05": 0.7167810201644897
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9951589107513428,
+            "min": 0.989050567150116,
+            "p05": 0.9915081262588501
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9989233613014221,
+            "min": 0.996885359287262,
+            "p05": 0.997787356376648
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9998793005943298,
+            "min": 0.9994683861732483,
+            "p05": 0.999695897102356
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.000000238418579,
+            "min": 0.9999993443489075,
+            "p05": 0.9999997019767761
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 288,
+          "unmatched_entries": 1001442,
+          "coverage": 0.0002875026204665928
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 288,
+          "unmatched_entries": 1001442,
+          "coverage": 0.0002875026204665928
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    },
+    "8": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9556700587272644,
+            "min": 0.9003117084503174,
+            "p05": 0.9205945730209351
+          },
+          "heldout": {
+            "mean": 0.8293479681015015,
+            "min": 0.4446127712726593,
+            "p05": 0.6021021008491516
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9842193126678467,
+            "min": 0.9652687311172485,
+            "p05": 0.9733326435089111
+          },
+          "heldout": {
+            "mean": 0.8766117691993713,
+            "min": 0.5444862842559814,
+            "p05": 0.6914323568344116
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9951401352882385,
+            "min": 0.988201916217804,
+            "p05": 0.9914854764938354
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9988929033279419,
+            "min": 0.9965560436248779,
+            "p05": 0.9976723790168762
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9998732209205627,
+            "min": 0.9994196891784668,
+            "p05": 0.9996627569198608
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 0.9999999403953552,
+            "min": 0.9999991655349731,
+            "p05": 0.9999994039535522
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 231,
+          "unmatched_entries": 1001499,
+          "coverage": 0.00023060106016591298
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 231,
+          "unmatched_entries": 1001499,
+          "coverage": 0.00023060106016591298
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    },
+    "10": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.94014972448349,
+            "min": 0.8777470588684082,
+            "p05": 0.8935364484786987
+          },
+          "heldout": {
+            "mean": 0.7877076268196106,
+            "min": 0.35752391815185547,
+            "p05": 0.5427533388137817
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9788808226585388,
+            "min": 0.9574383497238159,
+            "p05": 0.9655420184135437
+          },
+          "heldout": {
+            "mean": 0.8453991413116455,
+            "min": 0.4757883548736572,
+            "p05": 0.6510820388793945
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9937403202056885,
+            "min": 0.9868957996368408,
+            "p05": 0.9891562461853027
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9986402988433838,
+            "min": 0.9962668418884277,
+            "p05": 0.9972763061523438
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9998599290847778,
+            "min": 0.9994699358940125,
+            "p05": 0.9996511936187744
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0,
+            "min": 0.9999991059303284,
+            "p05": 0.9999994039535522
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 209,
+          "unmatched_entries": 1001521,
+          "coverage": 0.000208639054435826
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 209,
+          "unmatched_entries": 1001521,
+          "coverage": 0.000208639054435826
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    },
+    "12": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9512636065483093,
+            "min": 0.8942879438400269,
+            "p05": 0.9187161922454834
+          },
+          "heldout": {
+            "mean": 0.8058791160583496,
+            "min": 0.3914620280265808,
+            "p05": 0.5777301788330078
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9817031621932983,
+            "min": 0.9607052206993103,
+            "p05": 0.9711438417434692
+          },
+          "heldout": {
+            "mean": 0.8570699691772461,
+            "min": 0.5185692310333252,
+            "p05": 0.6684491634368896
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9940347671508789,
+            "min": 0.9878482222557068,
+            "p05": 0.9902688264846802
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9985475540161133,
+            "min": 0.9957830309867859,
+            "p05": 0.9972325563430786
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9998290538787842,
+            "min": 0.9993199110031128,
+            "p05": 0.999579131603241
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0000004768371582,
+            "min": 0.999999463558197,
+            "p05": 1.0
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 202,
+          "unmatched_entries": 1001528,
+          "coverage": 0.00020165114352170744
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 202,
+          "unmatched_entries": 1001528,
+          "coverage": 0.00020165114352170744
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    },
+    "14": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9488359689712524,
+            "min": 0.8787579536437988,
+            "p05": 0.9150853157043457
+          },
+          "heldout": {
+            "mean": 0.8117839694023132,
+            "min": 0.39927613735198975,
+            "p05": 0.5614776611328125
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9800642132759094,
+            "min": 0.9490974545478821,
+            "p05": 0.9676706790924072
+          },
+          "heldout": {
+            "mean": 0.8596706390380859,
+            "min": 0.48451951146125793,
+            "p05": 0.6537058353424072
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.993247926235199,
+            "min": 0.9841140508651733,
+            "p05": 0.9884510040283203
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.998338520526886,
+            "min": 0.9957758188247681,
+            "p05": 0.9967993497848511
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9998044371604919,
+            "min": 0.9993051886558533,
+            "p05": 0.9995396137237549
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0000001192092896,
+            "min": 0.9999992251396179,
+            "p05": 0.9999996423721313
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 137,
+          "unmatched_entries": 1001593,
+          "coverage": 0.00013676339931917783
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 137,
+          "unmatched_entries": 1001593,
+          "coverage": 0.00013676339931917783
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    },
+    "16": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9464766979217529,
+            "min": 0.8854466676712036,
+            "p05": 0.9074251651763916
+          },
+          "heldout": {
+            "mean": 0.8014182448387146,
+            "min": 0.40247800946235657,
+            "p05": 0.5541990995407104
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9793972969055176,
+            "min": 0.9522624611854553,
+            "p05": 0.9663243889808655
+          },
+          "heldout": {
+            "mean": 0.8519933223724365,
+            "min": 0.5284867286682129,
+            "p05": 0.6562402844429016
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9930981993675232,
+            "min": 0.9822280406951904,
+            "p05": 0.9876487851142883
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9983078241348267,
+            "min": 0.9948737621307373,
+            "p05": 0.9965879321098328
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9997926354408264,
+            "min": 0.999219536781311,
+            "p05": 0.9995105266571045
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0000004768371582,
+            "min": 0.9999994039535522,
+            "p05": 0.9999998211860657
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 129,
+          "unmatched_entries": 1001601,
+          "coverage": 0.00012877721541732802
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 129,
+          "unmatched_entries": 1001601,
+          "coverage": 0.00012877721541732802
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    },
+    "18": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9533031582832336,
+            "min": 0.8882887959480286,
+            "p05": 0.9260574579238892
+          },
+          "heldout": {
+            "mean": 0.8262741565704346,
+            "min": 0.44922155141830444,
+            "p05": 0.6466150283813477
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9818338751792908,
+            "min": 0.9615459442138672,
+            "p05": 0.972756028175354
+          },
+          "heldout": {
+            "mean": 0.872231662273407,
+            "min": 0.5837584733963013,
+            "p05": 0.731299102306366
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9937365651130676,
+            "min": 0.9794241786003113,
+            "p05": 0.9902743101119995
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9983870983123779,
+            "min": 0.994383692741394,
+            "p05": 0.9971951842308044
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9997799396514893,
+            "min": 0.9989710450172424,
+            "p05": 0.9994913339614868
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0000003576278687,
+            "min": 0.9999996423721313,
+            "p05": 0.9999998807907104
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 167,
+          "unmatched_entries": 1001563,
+          "coverage": 0.00016671158895111457
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 167,
+          "unmatched_entries": 1001563,
+          "coverage": 0.00016671158895111457
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    },
+    "20": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9457666873931885,
+            "min": 0.8801971673965454,
+            "p05": 0.9131336212158203
+          },
+          "heldout": {
+            "mean": 0.8102909922599792,
+            "min": 0.4620971977710724,
+            "p05": 0.5990005135536194
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9784025549888611,
+            "min": 0.9491502046585083,
+            "p05": 0.9653065204620361
+          },
+          "heldout": {
+            "mean": 0.8587003350257874,
+            "min": 0.6048967242240906,
+            "p05": 0.6930572986602783
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.992550253868103,
+            "min": 0.9782538414001465,
+            "p05": 0.9873230457305908
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9980838298797607,
+            "min": 0.9936097860336304,
+            "p05": 0.9964739680290222
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9997568726539612,
+            "min": 0.9987550377845764,
+            "p05": 0.9994379281997681
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0000004768371582,
+            "min": 0.9999997019767761,
+            "p05": 1.0
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 168,
+          "unmatched_entries": 1001562,
+          "coverage": 0.0001677098619388458
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 168,
+          "unmatched_entries": 1001562,
+          "coverage": 0.0001677098619388458
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    },
+    "22": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9521436095237732,
+            "min": 0.8616350889205933,
+            "p05": 0.9090464115142822
+          },
+          "heldout": {
+            "mean": 0.8193373680114746,
+            "min": 0.4394138753414154,
+            "p05": 0.6122626066207886
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.983201801776886,
+            "min": 0.9424191117286682,
+            "p05": 0.9709118604660034
+          },
+          "heldout": {
+            "mean": 0.8695253729820251,
+            "min": 0.5484399199485779,
+            "p05": 0.7022007703781128
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.995000422000885,
+            "min": 0.986918032169342,
+            "p05": 0.9911469221115112
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9989140629768372,
+            "min": 0.9969894886016846,
+            "p05": 0.9978205561637878
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.999880313873291,
+            "min": 0.9995558857917786,
+            "p05": 0.9997104406356812
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0,
+            "min": 0.9999990463256836,
+            "p05": 0.999999463558197
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 199,
+          "unmatched_entries": 1001531,
+          "coverage": 0.00019865632455851376
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 199,
+          "unmatched_entries": 1001531,
+          "coverage": 0.00019865632455851376
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    },
+    "24": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9386060237884521,
+            "min": 0.8252531290054321,
+            "p05": 0.8744228482246399
+          },
+          "heldout": {
+            "mean": 0.7866148948669434,
+            "min": 0.3788081109523773,
+            "p05": 0.5023565292358398
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9794558882713318,
+            "min": 0.949764609336853,
+            "p05": 0.9615384340286255
+          },
+          "heldout": {
+            "mean": 0.8445323705673218,
+            "min": 0.5295811295509338,
+            "p05": 0.6108982563018799
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9942457675933838,
+            "min": 0.985872745513916,
+            "p05": 0.9892432689666748
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9988390803337097,
+            "min": 0.9965821504592896,
+            "p05": 0.9976128339767456
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9998782873153687,
+            "min": 0.9995364546775818,
+            "p05": 0.9996719360351562
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0000004768371582,
+            "min": 0.9999997019767761,
+            "p05": 1.0
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 174,
+          "unmatched_entries": 1001556,
+          "coverage": 0.00017369949986523314
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 174,
+          "unmatched_entries": 1001556,
+          "coverage": 0.00017369949986523314
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    },
+    "26": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9564607739448547,
+            "min": 0.8774622678756714,
+            "p05": 0.9290555715560913
+          },
+          "heldout": {
+            "mean": 0.8372063040733337,
+            "min": 0.5178382396697998,
+            "p05": 0.6348114013671875
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9831565618515015,
+            "min": 0.9608385562896729,
+            "p05": 0.9740663766860962
+          },
+          "heldout": {
+            "mean": 0.8807840347290039,
+            "min": 0.6294737458229065,
+            "p05": 0.7247199416160583
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.994350016117096,
+            "min": 0.9870741963386536,
+            "p05": 0.9907351732254028
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9985745549201965,
+            "min": 0.9968783259391785,
+            "p05": 0.9973768591880798
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9998090863227844,
+            "min": 0.9993664026260376,
+            "p05": 0.999570369720459
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 0.9999998807907104,
+            "min": 0.9999988079071045,
+            "p05": 0.9999992251396179
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 163,
+          "unmatched_entries": 1001567,
+          "coverage": 0.00016271849700018968
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 163,
+          "unmatched_entries": 1001567,
+          "coverage": 0.00016271849700018968
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    },
+    "28": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.965772271156311,
+            "min": 0.9260254502296448,
+            "p05": 0.9402417540550232
+          },
+          "heldout": {
+            "mean": 0.8740543723106384,
+            "min": 0.5963727235794067,
+            "p05": 0.6944403648376465
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9871801733970642,
+            "min": 0.9724228382110596,
+            "p05": 0.9783835411071777
+          },
+          "heldout": {
+            "mean": 0.908829927444458,
+            "min": 0.6791370511054993,
+            "p05": 0.7759228944778442
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9958083629608154,
+            "min": 0.9909629225730896,
+            "p05": 0.992876410484314
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9989657998085022,
+            "min": 0.9972792267799377,
+            "p05": 0.9980497360229492
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9998758435249329,
+            "min": 0.999575138092041,
+            "p05": 0.999720573425293
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0000005960464478,
+            "min": 0.9999993443489075,
+            "p05": 1.0
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 162,
+          "unmatched_entries": 1001568,
+          "coverage": 0.00016172022401245845
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 162,
+          "unmatched_entries": 1001568,
+          "coverage": 0.00016172022401245845
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    },
+    "30": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9617805480957031,
+            "min": 0.901131272315979,
+            "p05": 0.9271467924118042
+          },
+          "heldout": {
+            "mean": 0.8387686610221863,
+            "min": 0.4312296211719513,
+            "p05": 0.6312593221664429
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9870964288711548,
+            "min": 0.9615420699119568,
+            "p05": 0.9785006046295166
+          },
+          "heldout": {
+            "mean": 0.8809435367584229,
+            "min": 0.5607125759124756,
+            "p05": 0.7097185850143433
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9961506724357605,
+            "min": 0.9896342158317566,
+            "p05": 0.9932938814163208
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9991177320480347,
+            "min": 0.997225284576416,
+            "p05": 0.9983459711074829
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9998907446861267,
+            "min": 0.999601423740387,
+            "p05": 0.9997402429580688
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0000001192092896,
+            "min": 0.9999991655349731,
+            "p05": 0.999999463558197
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 190,
+          "unmatched_entries": 1001540,
+          "coverage": 0.00018967186766893275
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 190,
+          "unmatched_entries": 1001540,
+          "coverage": 0.00018967186766893275
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    },
+    "32": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9388335347175598,
+            "min": 0.8238863945007324,
+            "p05": 0.8842124938964844
+          },
+          "heldout": {
+            "mean": 0.7805876731872559,
+            "min": 0.39229413866996765,
+            "p05": 0.5126224756240845
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9774045944213867,
+            "min": 0.9404410719871521,
+            "p05": 0.9572560787200928
+          },
+          "heldout": {
+            "mean": 0.8383746147155762,
+            "min": 0.5188145637512207,
+            "p05": 0.6261128783226013
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9929386973381042,
+            "min": 0.9746570587158203,
+            "p05": 0.9864097833633423
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9983865022659302,
+            "min": 0.9914157390594482,
+            "p05": 0.9966367483139038
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.999824047088623,
+            "min": 0.9988905191421509,
+            "p05": 0.9995121955871582
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0,
+            "min": 0.9999991655349731,
+            "p05": 0.9999995231628418
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 111,
+          "unmatched_entries": 1001619,
+          "coverage": 0.00011080830163816597
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 111,
+          "unmatched_entries": 1001619,
+          "coverage": 0.00011080830163816597
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    },
+    "34": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9392279982566833,
+            "min": 0.8007836937904358,
+            "p05": 0.8855015635490417
+          },
+          "heldout": {
+            "mean": 0.7872286438941956,
+            "min": 0.3820822536945343,
+            "p05": 0.5463782548904419
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9755853414535522,
+            "min": 0.8940600156784058,
+            "p05": 0.9501621723175049
+          },
+          "heldout": {
+            "mean": 0.840939462184906,
+            "min": 0.4781934916973114,
+            "p05": 0.6439779996871948
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9913707375526428,
+            "min": 0.9576097130775452,
+            "p05": 0.9818805456161499
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9977583289146423,
+            "min": 0.9881220459938049,
+            "p05": 0.9952132701873779
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9997009038925171,
+            "min": 0.9983328580856323,
+            "p05": 0.9992934465408325
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0000001192092896,
+            "min": 0.9999995231628418,
+            "p05": 0.9999997615814209
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 161,
+          "unmatched_entries": 1001569,
+          "coverage": 0.0001607219510247272
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 161,
+          "unmatched_entries": 1001569,
+          "coverage": 0.0001607219510247272
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    },
+    "36": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9720543622970581,
+            "min": 0.9472812414169312,
+            "p05": 0.9563051462173462
+          },
+          "heldout": {
+            "mean": 0.9082079529762268,
+            "min": 0.6517950296401978,
+            "p05": 0.8181816339492798
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9890709519386292,
+            "min": 0.979878842830658,
+            "p05": 0.983589768409729
+          },
+          "heldout": {
+            "mean": 0.934153139591217,
+            "min": 0.751191258430481,
+            "p05": 0.8667215704917908
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9962451457977295,
+            "min": 0.9927366971969604,
+            "p05": 0.9946144819259644
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9990260004997253,
+            "min": 0.9981616139411926,
+            "p05": 0.9984860420227051
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9998700022697449,
+            "min": 0.999592661857605,
+            "p05": 0.9997434616088867
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0,
+            "min": 0.9999983906745911,
+            "p05": 0.9999992847442627
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 301,
+          "unmatched_entries": 1001429,
+          "coverage": 0.0003004801693070987
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 301,
+          "unmatched_entries": 1001429,
+          "coverage": 0.0003004801693070987
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    },
+    "38": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9389075040817261,
+            "min": 0.8664460778236389,
+            "p05": 0.892475962638855
+          },
+          "heldout": {
+            "mean": 0.7924613356590271,
+            "min": 0.42948055267333984,
+            "p05": 0.5853757858276367
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9777336716651917,
+            "min": 0.9468697905540466,
+            "p05": 0.9623069763183594
+          },
+          "heldout": {
+            "mean": 0.8523114919662476,
+            "min": 0.5889207124710083,
+            "p05": 0.6900070309638977
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9930562973022461,
+            "min": 0.9818267226219177,
+            "p05": 0.9884821176528931
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9984229803085327,
+            "min": 0.9948320984840393,
+            "p05": 0.9972189664840698
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9998219013214111,
+            "min": 0.9993707537651062,
+            "p05": 0.9995734095573425
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0,
+            "min": 0.9999991655349731,
+            "p05": 0.9999995827674866
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 184,
+          "unmatched_entries": 1001546,
+          "coverage": 0.0001836822297425454
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 184,
+          "unmatched_entries": 1001546,
+          "coverage": 0.0001836822297425454
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    },
+    "40": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9192261695861816,
+            "min": 0.7527205944061279,
+            "p05": 0.8283016681671143
+          },
+          "heldout": {
+            "mean": 0.7413433194160461,
+            "min": 0.346816748380661,
+            "p05": 0.45283034443855286
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.969764232635498,
+            "min": 0.8822797536849976,
+            "p05": 0.9247831106185913
+          },
+          "heldout": {
+            "mean": 0.8080130815505981,
+            "min": 0.4854497015476227,
+            "p05": 0.5672834515571594
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.990314245223999,
+            "min": 0.9453983306884766,
+            "p05": 0.9726735353469849
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9977710247039795,
+            "min": 0.9892266392707825,
+            "p05": 0.9949400424957275
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.999742329120636,
+            "min": 0.9989683032035828,
+            "p05": 0.9993621110916138
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0,
+            "min": 0.9999992847442627,
+            "p05": 0.9999995231628418
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 192,
+          "unmatched_entries": 1001538,
+          "coverage": 0.0001916684136443952
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 192,
+          "unmatched_entries": 1001538,
+          "coverage": 0.0001916684136443952
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    },
+    "42": {
+      "rows": 491,
+      "retention": {
+        "128": {
+          "rank": 128,
+          "requested_rank": 128,
+          "bytes": 260,
+          "selffit": {
+            "mean": 0.9824033379554749,
+            "min": 0.9589275121688843,
+            "p05": 0.9715560674667358
+          },
+          "heldout": {
+            "mean": 0.9367433786392212,
+            "min": 0.8091773986816406,
+            "p05": 0.8863281011581421
+          },
+          "drift": null
+        },
+        "192": {
+          "rank": 192,
+          "requested_rank": 192,
+          "bytes": 324,
+          "selffit": {
+            "mean": 0.9954087138175964,
+            "min": 0.9906505346298218,
+            "p05": 0.992816686630249
+          },
+          "heldout": {
+            "mean": 0.9658561944961548,
+            "min": 0.8870097994804382,
+            "p05": 0.936940610408783
+          },
+          "drift": null
+        },
+        "256": {
+          "rank": 256,
+          "requested_rank": 256,
+          "bytes": 388,
+          "selffit": {
+            "mean": 0.9988824129104614,
+            "min": 0.9975621700286865,
+            "p05": 0.9983395338058472
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "320": {
+          "rank": 320,
+          "requested_rank": 320,
+          "bytes": 456,
+          "selffit": {
+            "mean": 0.9997676610946655,
+            "min": 0.9995224475860596,
+            "p05": 0.9996434450149536
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "384": {
+          "rank": 384,
+          "requested_rank": 384,
+          "bytes": 520,
+          "selffit": {
+            "mean": 0.9999732971191406,
+            "min": 0.9999061822891235,
+            "p05": 0.9999498128890991
+          },
+          "heldout": null,
+          "drift": null
+        },
+        "448": {
+          "rank": 448,
+          "requested_rank": 448,
+          "bytes": 584,
+          "selffit": {
+            "mean": 1.0000004768371582,
+            "min": 0.9999994039535522,
+            "p05": 0.9999999403953552
+          },
+          "heldout": null,
+          "drift": null
+        }
+      },
+      "rank_profile_heldout": null,
+      "rank_profile_drift": null,
+      "score": {
+        "128": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 192,
+          "unmatched_entries": 1001538,
+          "coverage": 0.0001916684136443952
+        },
+        "192": {
+          "eps_basis": null,
+          "eps_quant": null,
+          "entries": 192,
+          "unmatched_entries": 1001538,
+          "coverage": 0.0001916684136443952
+        },
+        "256": null,
+        "320": null,
+        "384": null,
+        "448": null
+      }
+    }
+  }
+}

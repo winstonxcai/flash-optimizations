@@ -28,6 +28,11 @@ POOL_CFG = f"{SRC_ROOT}/sglang/srt/model_executor/pool_configurator.py"
 DSV4_BACKEND = f"{SRC_ROOT}/sglang/srt/layers/attention/deepseek_v4_backend.py"
 MARKER = "## XKV_LOWRANK"
 
+# The 21 CSA layers (compress_ratio == 4), in model order. W3 shares one rank-192
+# basis across each consecutive triple of these: (2,4,6), (8,10,12), ..., (38,40,42).
+CSA_LAYERS = tuple(range(2, 43, 2))
+WINDOW = 3
+
 
 def ctrl_dir() -> str:
     return os.environ.get("SG_CTRL_DIR", str(Path(__file__).resolve().parent / "ctrl"))

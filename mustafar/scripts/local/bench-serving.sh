@@ -1,45 +1,44 @@
 #!/usr/bin/env bash
 # =====================================================================
-# bench-serving.sh -- one bench driver, two interfaces.
+# bench-serving.sh -- the mustafar serving benchmark driver.
 #
-#   1) Report-grade dual-leg protocol (fair/max) inside the eval container:
-#        bench-serving.sh <fair|max> <ctx> [C_fair]
-#      fair -> measure Native AND Packed at the SAME concurrency C_nat, where
-#              C_nat = Native's allocator ceiling for <ctx> (floor(pool/(ctx+2048))).
-#              [C_fair] overrides the shared concurrency for both legs.
-#      max  -> measure each leg at its OWN allocator ceiling
-#              (Native at C_nat, Packed at C_pck = floor(pool_pck/(ctx+2048))).
-#      Each leg boots with serve.sh inside the $CONTAINER (sources env.sh).
+#   Report-grade dual-leg protocol (Native vs Packed), inside the container:
+#     bench-serving.sh <fair|max|both> <ctx> [C_fair]
+#       fair -> both legs at the same concurrency: Native's allocator ceiling
+#               for <ctx>, floor(pool/(ctx+2048)), or [C_fair] if given.
+#       max  -> each leg at its own allocator ceiling.
+#       both -> fair and max in one pass, 2 boots/ctx instead of 5. Native's
+#               boot measures at its ceiling -- that concurrency is fair's and
+#               max's Native row alike -- then Packed's boot measures at
+#               Native's ceiling (fair row) and at its own (max row).
+#       Each leg boots with serve.sh and is stopped before the next.
 #
-#   2) Standalone single-config measurement on the current host:
-#        MODEL_PATH=/checkpoint bash bench-serving.sh <native|packed|fused|optimized> \
-#                                        <in> <out> <concurrency>
-#      One configuration per call, no container / env.sh dependency: self-boots
-#      one TP4 server with the report configuration (fp8 KV, mem-frac 0.88, 1M
-#      ctx, extended decode graphs). This is the interface Modal
-#      (app.py::bench_serving) and tests/test_bench_serving.py drive.
+#   Standalone single-config measurement on the current host:
+#     MODEL_PATH=/checkpoint bash bench-serving.sh <native|packed|fused|optimized> \
+#                                     <in> <out> <concurrency>
+#     One configuration per call, no container or env.sh dependency: boots one
+#     TP4 server with the report config itself. This is the interface Modal
+#     (app.py::bench_serving) and tests/test_bench_serving.py drive.
 #
-# Per point both paths share the report protocol: fresh server, extended decode
-# CUDA graphs (decode on-graph up to max_bs 136), one warm-up wave of C, then 3
-# measured waves (3C requests) via official sglang.bench_serving, flush-cache,
-# seed 42, exact <ctx|in> in / <out> out. The 3C requests must all complete with
-# <out>-token outputs and no errors or the point is FAILED.
+# Both paths run the same protocol per point: fresh server, extended decode
+# CUDA graphs (decode on-graph to max_bs 136), one warm-up wave of C, then 3
+# measured waves (3C requests) via official sglang.bench_serving -- flush-cache,
+# seed 42, exact <ctx|in> in / <out> out. A point FAILS unless all 3C requests
+# complete with <out>-token outputs and no errors.
 #
-# fair/max results:   <RESULTS_HOST>/serving/<mode>-ctx<ctx>-<ts>/
-# standalone results: <RESULTS_DIR>/<ts>-<mode>-<rand>/  (server.log,
-#                      warmup.log/jsonl, measured.log/jsonl;
-#                      default <repo>/mustafar/logs/bench-serving/)
+# Results: <RESULTS_HOST>/serving/<mode>-ctx<ctx>-<ts>/   (fair|max|both)
+#          <RESULTS_DIR>/<ts>-<mode>-<rand>/              (standalone;
+#                                          default <repo>/mustafar/logs/bench-serving)
 # =====================================================================
 set -u
 
 DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 REPO=$(cd -- "$DIR/../../.." && pwd)
 
-# Extended decode graphs so decode stays on-graph up to the packed ceiling --
-# the report config for BOTH interfaces (env.sh's small default targets the
-# agentic evals only). This standalone path cannot source env.sh, so the EXT
-# literal is duplicated here -- keep it in sync with env.sh's DECODE_CFG_EXT.
-# Overridable via DECODE_CFG.
+# Extended decode graphs -- the report config for BOTH interfaces (env.sh's
+# small default targets the agentic evals). The container legs inherit this
+# export through serve.sh; the standalone path cannot source env.sh, so the
+# same literal lives in env.sh too as DECODE_CFG_EXT -- keep the two in sync.
 export DECODE_CFG=${DECODE_CFG:-'{"decode":{"backend":"full","max_bs":136,"bs":[1,2,3,4,5,6,7,8,10,12,14,15,16,18,20,24,28,32,34,40,48,56,64,68,80,96,112,120,136]},"prefill":{"backend":"disabled"}}'}
 
 ts () { date +%Y%m%d_%H%M%S; }
@@ -47,23 +46,22 @@ die () { echo "FATAL: $*" >&2; exit 1; }
 
 help_usage () {
   cat <<'EOF'
-usage: bench-serving.sh <fair|max> <ctx> [C_fair]
+usage: bench-serving.sh <fair|max|both> <ctx> [C_fair]
        bench-serving.sh <native|packed|fused|optimized> <in> <out> <concurrency>
 
-  fair|max  report-grade dual-leg serving protocol inside the eval container
-            (each leg boots with serve.sh; warm-up wave of C then 3 measured
-            waves). fair = both legs at Native's allocator ceiling, or at
-            [C_fair]; max = each leg at its own allocator ceiling.
-            Results: <RESULTS_HOST>/serving/<mode>-ctx<ctx>-<ts>/.
+  fair   both legs at Native's allocator ceiling for <ctx>, or at [C_fair]
+  max    each leg at its own allocator ceiling
+  both   both tables in one pass (2 boots per ctx; see the header comment)
+  Results: <RESULTS_HOST>/serving/<mode>-ctx<ctx>-<ts>/
 
   native|packed|fused|optimized
-            standalone single-config measurement on the current host: self-boots
-            one TP4 server with the report configuration (fp8 KV, mem-frac
-            0.88, 1M ctx, extended decode graphs), warm-up wave of
-            <concurrency> then 3 measured waves. MODEL_PATH must point at the
-            official 0731 checkpoint. Results: <RESULTS_DIR>/<ts>-<mode>-<rand>/.
-            Optional env: PYTHON, RESULTS_DIR, PORT (default 30211), SEED,
-            MEM_FRAC, CTX_LEN, MAX_RUN, CHUNK, DECODE_CFG, MODEL_NAME.
+         standalone single-config measurement on this host: self-boots one TP4
+         server with the report config (fp8 KV, mem-frac 0.88, 1M ctx, extended
+         decode graphs). MODEL_PATH must point at the official 0731 checkpoint.
+         Results: <RESULTS_DIR>/<ts>-<mode>-<rand>/.
+  Standalone env: PYTHON, RESULTS_DIR, PORT (30211), SEED, MEM_FRAC, CTX_LEN,
+         MAX_RUN, CHUNK, DECODE_CFG, MODEL_NAME, SHAREGPT_HOST (a local ShareGPT
+         json; without it the client asks the Hub, which no longer serves it).
 EOF
 }
 usage_err () { echo "bench-serving.sh: $*" >&2; help_usage >&2; exit 2; }
@@ -121,41 +119,62 @@ ceiling () {  # $1=pool $2=req_len -> floor(pool/req_len)
 
 # ------------------------- fair/max (container) ------------------------
 # One bench_serving run (in-container) writing raw jsonl + a stdout summary log.
+# --dataset-path pins the ShareGPT json `--dataset-name random` samples token
+# ids from: sglang >= v0.5.18 fetches it from the Hub when the path is empty,
+# that repo is gone upstream (401/404), and this host has no route to the Hub
+# anyway. See SHAREGPT_* in env.sh.
 bench_wave () {  # $1=C $2=N $3=out.jsonl(ct) $4=out.log(host)
   ct "export PYTHONPATH=$SGLANG_PY; cd $SGLANG_PY
+      export HF_ENDPOINT=https://hf-mirror.com
       python3 -m sglang.bench_serving \
         --backend sglang --host 127.0.0.1 --port $PORT \
         --model $MODEL_CT --tokenizer $MODEL_CT \
-        --dataset-name random --random-input-len $CTX --random-output-len $OUTLEN \
+        --dataset-name random --dataset-path $SHAREGPT_CT \
+        --random-input-len $CTX --random-output-len $OUTLEN \
         --random-range-ratio 1.0 --num-prompts $2 --max-concurrency $1 \
         --request-rate inf --warmup-requests 0 --flush-cache --tokenize-prompt \
         --output-file $3 --output-details --seed $SEED" > "$4" 2>&1
 }
 
-# ---- boot one leg, measure one point, validate, kill ----
-# Learns the pool from the boot log; if C is empty it uses the leg's own
-# allocator ceiling (floor(pool/(ctx+2048))).
-boot_measure_kill () {  # $1=leg $2=C(empty = leg ceiling)
-  local leg=$1 C=${2:-} dir="$RUN_ROOT/$1" POOL rc
+# One measured wave: 3C requests at concurrency $2, validated. Prints one
+# OK/FAILED line and appends it to the run's RESULT.txt.
+measure_point () {  # $1=leg $2=C $3=dir $4=name
+  local leg=$1 C=$2 dir=$3 name=$4 rc
+  bench_wave "$C" "$((3 * C))" "$(to_ct "$dir")/$name.jsonl" "$dir/$name.log"
+  rc=$?
+  if [ $rc -ne 0 ] || [ ! -f "$dir/$name.jsonl" ] || ! validate "$dir/$name.jsonl" "$C" "$OUTLEN"; then
+    echo "  [$leg] FAILED at C=$C (client rc=$rc)" | tee -a "$RUN_ROOT/RESULT.txt"
+    return 1
+  fi
+  echo "  [$leg] OK at C=$C: $(summary_line "$dir/$name.log")" | tee -a "$RUN_ROOT/RESULT.txt"
+}
+
+# Boot one leg, measure one or two points, stop it. Learns the pool from the
+# boot log; an empty C means this leg's own allocator ceiling. A third argument
+# measures a second concurrency off the SAME boot ("own" = this leg's own
+# ceiling) -- the server is already warm and each wave flushes the radix, so
+# `both` gets its two Packed rows out of one boot. Publishes the concurrency it
+# measured at as LAST_C, which is how the Packed leg learns Native's ceiling.
+boot_measure_kill () {  # $1=leg $2=C(empty = leg ceiling) [$3=C2 | "own"]
+  local leg=$1 C=${2:-} C2=${3:-} dir="$RUN_ROOT/$1" POOL
   mkdir -p "$dir"
-  echo "==== [$leg] ctx=$CTX C='${C:-ceiling}' $(date -u +%H:%M:%S)Z ===="
+  echo "==== [$leg] ctx=$CTX C='${C:-ceiling}'${C2:+ C2=$C2} $(date -u +%H:%M:%S)Z ===="
   bash "$DIR/serve.sh" "$leg" || die "serve.sh $leg failed"
   POOL=$(pool_of "$LOG_HOST/serve_$leg.log"); echo "  pool=$POOL"
   [ -n "$C" ] || C=$(ceiling "$POOL" "$REQ_LEN")
-  echo "  using C=$C"
-  bench_wave "$C" "$C" "/tmp/${leg}-warm.jsonl" "$dir/warmup.log"
+  LAST_C=$C
+  bench_wave "$C" "$C" "/tmp/${leg}-warm.jsonl" "$dir/warmup.log" \
+    || echo "  [$leg] WARNING: warm-up wave failed"
   if ! health; then
-    echo "  [$leg] SERVER DOWN after warmup -> FAILED" | tee -a "$RUN_ROOT/RESULT.txt"
+    echo "  [$leg] SERVER DOWN after warm-up -> FAILED" | tee -a "$RUN_ROOT/RESULT.txt"
     bash "$DIR/serve.sh" "$leg" stop
     return 1
   fi
-  bench_wave "$C" "$((3 * C))" "$(to_ct "$dir")/measured.jsonl" "$dir/measured.log"
-  rc=$?
-  if [ $rc -eq 0 ] && [ -f "$dir/measured.jsonl" ] && validate "$dir/measured.jsonl" "$C" "$OUTLEN"; then
-    echo "  [$leg] $(summary_line "$dir/measured.log")" | tee -a "$RUN_ROOT/RESULT.txt"
-    echo "  $leg OK" | tee -a "$RUN_ROOT/RESULT.txt"
-  else
-    echo "  $leg FAILED (rc=$rc)" | tee -a "$RUN_ROOT/RESULT.txt"
+  measure_point "$leg" "$C" "$dir" measured
+  if [ -n "$C2" ]; then
+    [ "$C2" = own ] && C2=$(ceiling "$POOL" "$REQ_LEN")
+    echo "  [$leg] second point C2=$C2, same boot"
+    measure_point "$leg" "$C2" "$dir" measured-max
   fi
   bash "$DIR/serve.sh" "$leg" stop
 }
@@ -173,25 +192,20 @@ fairmax_main () {  # $1=mode $2=ctx [$3=C_fair]
   mkdir -p "$RUN_ROOT"
   REQ_LEN=$((CTX + OUTLEN))
 
+  # fair and both share Packed's first point: Native's ceiling, learnt from
+  # Native's own boot (LAST_C) -- so neither needs a probe boot.
   case "$mode" in
     fair)
-      if [ -n "$c_fair" ]; then
-        boot_measure_kill native "$c_fair"
-        boot_measure_kill packed "$c_fair"
-      else
-        # shared fair C = native's allocator ceiling: probe native's pool first
-        bash "$DIR/serve.sh" native || die "serve.sh native failed"
-        NATIVE_POOL=$(pool_of "$LOG_HOST/serve_native.log")
-        bash "$DIR/serve.sh" native stop
-        echo "native pool=$NATIVE_POOL"
-        C_SHARED=$(ceiling "$NATIVE_POOL" "$REQ_LEN")
-        boot_measure_kill native "$C_SHARED"
-        boot_measure_kill packed "$C_SHARED"
-      fi
+      boot_measure_kill native "${c_fair:-}"
+      boot_measure_kill packed "${c_fair:-$LAST_C}"
       ;;
     max)
-      boot_measure_kill native ""   # C = native ceiling
-      boot_measure_kill packed ""   # C = packed ceiling
+      boot_measure_kill native ""   # C = native's ceiling
+      boot_measure_kill packed ""   # C = packed's ceiling
+      ;;
+    both)
+      boot_measure_kill native "${c_fair:-}"
+      boot_measure_kill packed "${c_fair:-$LAST_C}" own   # fair row, then max row
       ;;
   esac
 
@@ -206,6 +220,7 @@ solo_wave () {  # $1=jsonl $2=log $3=num-prompts -> rc of client
   setsid "$python" -m sglang.bench_serving \
     --backend sglang --host 127.0.0.1 --port "$port" \
     --model "$MODEL_PATH" --tokenizer "$MODEL_PATH" --dataset-name random \
+    --dataset-path "$SHAREGPT_HOST" \
     --random-input-len "$input" --random-output-len "$output" \
     --random-range-ratio 1.0 --num-prompts "$3" --max-concurrency "$conc" \
     --request-rate inf --warmup-requests 0 --flush-cache --tokenize-prompt \
@@ -229,7 +244,7 @@ standalone_main () {  # $1=mode [$2=input $3=output $4=concurrency]
   done
   (( conc <= 136 )) || usage_err "concurrency $conc exceeds 136 (extended decode-graph coverage cap)"
   : "${MODEL_PATH:?Set MODEL_PATH to the official DeepSeek-V4-Flash-0731 checkpoint}"
-  for tool in "${PYTHON:-python3}" curl jq setsid; do
+  for tool in "${PYTHON:-python3}" curl setsid; do
     command -v "$tool" >/dev/null 2>&1 || die "missing required tool: $tool"
   done
 
@@ -241,9 +256,11 @@ standalone_main () {  # $1=mode [$2=input $3=output $4=concurrency]
     export PYTHONPATH="$SG_LOWRANK_SRC:$PYTHONPATH"
   fi
 
-  # TopMag switches on the CURRENT runtime names (mustafar/config.py); clear any
-  # inherited or legacy pre-refactor ones first, then set the mode's values.
-  for name in ${!SGLANG_OPT_TOPMAG@} ${!KEEP@} XKV_TOPMAG_KEEP SGLANG_OPT_TOPMAG_PACKED_C4; do
+  # TopMag switches on the CURRENT runtime names (mustafar/config.py). Clear the
+  # whole gate set -- including any legacy pre-refactor name -- then set this
+  # mode's values, so nothing inherited can leak in.
+  for name in SGLANG_OPT_TOPMAG KEEP SGLANG_OPT_TOPMAG_PACKED SGLANG_OPT_TOPMAG_FUSED \
+              SGLANG_OPT_TOPMAG_FUSED_OPTIMIZED XKV_TOPMAG_KEEP SGLANG_OPT_TOPMAG_PACKED_C4; do
     unset "$name" 2>/dev/null || true
   done
   export SGLANG_OPT_TOPMAG=0 KEEP=1.0 SGLANG_OPT_TOPMAG_PACKED=0 \
@@ -308,7 +325,7 @@ standalone_main () {  # $1=mode [$2=input $3=output $4=concurrency]
 MODE=${1:-}
 case "$MODE" in
   --help|-h) help_usage; exit 0 ;;
-  fair|max) fairmax_main "$@" ;;
+  fair|max|both) fairmax_main "$@" ;;
   native|packed|fused|optimized) standalone_main "$@" ;;
   *) usage_err "unknown mode '$MODE'" ;;
 esac

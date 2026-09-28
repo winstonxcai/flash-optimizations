@@ -1,0 +1,5 @@
+[xkv] PASS  quant: max_rel_err=4.27e-02 (tol 1.25e-01)
+[xkv] PASS  store: identical_buffers=True rejected_rows_untouched=True kept=18/32
+[xkv] PASS  recon: max_abs_diff=1.562e-02 rel=3.47e-03 finite=True
+[xkv] PASS  padding: no_NaN_or_Inf_with_4_negative_slots=True
+[xkv] selftest: 4/4 passed

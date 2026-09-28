@@ -1,0 +1,63 @@
+/sgl-workspace/sglang-lowrank/python/sglang/bench_serving.py:13: FutureWarning: `sglang.bench_serving` is deprecated and will be removed in a future release; use `sglang.benchmark.serving` instead (e.g. `python -m sglang.benchmark.serving`).
+  warnings.warn(
+'[Errno 104] Connection reset by peer' thrown while requesting HEAD https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json
+Retrying in 1s [Retry 1/5].
+'[Errno 104] Connection reset by peer' thrown while requesting HEAD https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json
+Retrying in 2s [Retry 2/5].
+'[Errno 104] Connection reset by peer' thrown while requesting HEAD https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json
+Retrying in 4s [Retry 3/5].
+'[Errno 104] Connection reset by peer' thrown while requesting HEAD https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json
+Retrying in 8s [Retry 4/5].
+'[Errno 104] Connection reset by peer' thrown while requesting HEAD https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json
+Retrying in 8s [Retry 5/5].
+'[Errno 104] Connection reset by peer' thrown while requesting HEAD https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json
+httpcore.ConnectError: [Errno 104] Connection reset by peer
+
+The above exception was the direct cause of the following exception:
+
+httpx.ConnectError: [Errno 104] Connection reset by peer
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/sgl-workspace/sglang-lowrank/python/sglang/bench_serving.py", line 22, in <module>
+    cli_main()
+  File "/sgl-workspace/sglang-lowrank/python/sglang/benchmark/serving.py", line 2748, in cli_main
+    run_benchmark(args)
+  File "/sgl-workspace/sglang-lowrank/python/sglang/benchmark/serving.py", line 2106, in run_benchmark
+    input_requests = get_dataset(args, tokenizer, model_id)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/sgl-workspace/sglang-lowrank/python/sglang/benchmark/datasets/__init__.py", line 46, in get_dataset
+    return dataset.load(tokenizer=tokenizer, model_id=model_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/sgl-workspace/sglang-lowrank/python/sglang/benchmark/datasets/random.py", line 45, in load
+    return sample_random_requests(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/sgl-workspace/sglang-lowrank/python/sglang/benchmark/datasets/random.py", line 89, in sample_random_requests
+    dataset_path = download_and_cache_hf_file(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/sgl-workspace/sglang-lowrank/python/sglang/benchmark/utils.py", line 92, in download_and_cache_hf_file
+    return hf_hub_download(repo_id=repo_id, filename=filename, repo_type=repo_type)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/huggingface_hub/file_download.py", line 1019, in hf_hub_download
+    return _hf_hub_download_to_cache_dir(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/huggingface_hub/file_download.py", line 1166, in _hf_hub_download_to_cache_dir
+    _raise_on_head_call_error(head_call_error, force_download, local_files_only)
+  File "/usr/local/lib/python3.12/dist-packages/huggingface_hub/file_download.py", line 1908, in _raise_on_head_call_error
+    raise LocalEntryNotFoundError(
+huggingface_hub.errors.LocalEntryNotFoundError: An error happened while trying to locate the file on the Hub and we cannot find the requested files in the local cache. Please check your connection and try again or make sure your Internet connection is on.
+benchmark_args=Namespace(backend='sglang', base_url=None, host='127.0.0.1', port=30213, ready_check_timeout_sec=60, dataset_name='random', dataset_path='', dataset_offset=0, agentic_max_turns=None, speed_bench_category=None, speed_bench_output_len=512, model='/mnt/host_root/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731', served_model_name=None, tokenizer='/mnt/host_root/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731', num_prompts=16, sharegpt_output_len=None, sharegpt_context_len=None, random_input_len=65536, random_output_len=8, random_range_ratio=1.0, image_count=1, image_resolution='1080p', random_image_count=False, image_format='jpeg', image_content='random', request_rate=inf, use_trace_timestamps=False, max_concurrency=4, output_file='/dev/null', output_details=False, print_requests=False, disable_tqdm=False, disable_stream=False, return_logprob=False, top_logprobs_num=0, token_ids_logprob=None, logprob_start_len=-1, return_routed_experts=False, cache_report=False, seed=42, disable_ignore_eos=False, temperature=0.0, top_p=1.0, extra_request_body=None, apply_chat_template=False, profile=False, plot_throughput=False, profile_activities=['CPU', 'GPU'], profile_start_step=None, profile_steps=None, profile_num_steps=None, profile_by_stage=False, profile_stages=None, profile_output_dir=None, profile_prefix=None, lora_name=None, lora_request_distribution='uniform', lora_zipf_alpha=1.5, prompt_suffix='', pd_separated=False, profile_prefill_url=None, profile_decode_url=None, flush_cache=True, flush_cache_timeout=60.0, warmup_requests=0, tokenize_prompt=True, gsp_num_groups=64, gsp_prompts_per_group=16, gsp_system_prompt_len=2048, gsp_question_len=128, gsp_output_len=256, gsp_range_ratio=1.0, gsp_fast_prepare=False, gsp_send_routing_key=False, gsp_num_turns=1, gsp_ordered=False, gsp_group_distribution='uniform', gsp_zipf_alpha=None, mooncake_slowdown_factor=1.0, mooncake_num_rounds=1, mooncake_workload='conversation', fake_prefill=False, tag=None, header=None)
+Waiting up to 60s for http://127.0.0.1:30213/v1/models to become ready...
+Server ready in 0.0s.
+
+WARNING It is recommended to use the `Chat` or `Instruct` model for benchmarking.
+Because when the tokenizer counts the output tokens, if there is gibberish, it might count incorrectly.
+
+Namespace(backend='sglang', base_url=None, host='127.0.0.1', port=30213, ready_check_timeout_sec=60, dataset_name='random', dataset_path='', dataset_offset=0, agentic_max_turns=None, speed_bench_category=None, speed_bench_output_len=512, model='/mnt/host_root/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731', served_model_name=None, tokenizer='/mnt/host_root/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731', num_prompts=16, sharegpt_output_len=None, sharegpt_context_len=None, random_input_len=65536, random_output_len=8, random_range_ratio=1.0, image_count=1, image_resolution='1080p', random_image_count=False, image_format='jpeg', image_content='random', request_rate=inf, use_trace_timestamps=False, max_concurrency=4, output_file='/dev/null', output_details=False, print_requests=False, disable_tqdm=False, disable_stream=False, return_logprob=False, top_logprobs_num=0, token_ids_logprob=None, logprob_start_len=-1, return_routed_experts=False, cache_report=False, seed=42, disable_ignore_eos=False, temperature=0.0, top_p=1.0, extra_request_body=None, apply_chat_template=False, profile=False, plot_throughput=False, profile_activities=['CPU', 'GPU'], profile_start_step=None, profile_steps=None, profile_num_steps=None, profile_by_stage=False, profile_stages=None, profile_output_dir=None, profile_prefix=None, lora_name=None, lora_request_distribution='uniform', lora_zipf_alpha=1.5, prompt_suffix='', pd_separated=False, profile_prefill_url=None, profile_decode_url=None, flush_cache=True, flush_cache_timeout=60.0, warmup_requests=0, tokenize_prompt=True, gsp_num_groups=64, gsp_prompts_per_group=16, gsp_system_prompt_len=2048, gsp_question_len=128, gsp_output_len=256, gsp_range_ratio=1.0, gsp_fast_prepare=False, gsp_send_routing_key=False, gsp_num_turns=1, gsp_ordered=False, gsp_group_distribution='uniform', gsp_zipf_alpha=None, mooncake_slowdown_factor=1.0, mooncake_num_rounds=1, mooncake_workload='conversation', fake_prefill=False, tag=None, header=None)
+

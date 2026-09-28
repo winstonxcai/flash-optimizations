@@ -22,6 +22,10 @@ def _reconstruct_kernel(buf_fp8, buf_u8, buf_i32, loc, vrt, freqs, out, n, max_p
     m = pid * BLOCK_M + tl.arange(0, BLOCK_M)
     mm = m < n
     l = tl.load(loc + m, mask=mm, other=0).to(tl.int64)
+    # -1 is the "no slot" padding used by the attention index buffers; the
+    # caller clamps before the gather, and this clamp keeps a stray -1 from
+    # turning into a negative offset (and an OOB read) if one gets through.
+    l = tl.maximum(l, 0)
     base = (l // PAGE_SIZE) * PAGE_BYTES + (l % PAGE_SIZE) * BYTES
     p = tl.load(buf_i32 + (base + META_BYTES) // 4, mask=mm, other=0)
     p = tl.minimum(tl.maximum(p, 0), max_pos - 1)

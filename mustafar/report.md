@@ -109,25 +109,25 @@ Latency distributions — whole completed set per leg (Native n=2,194; Packed n=
 | e2e latency | Native @ 24 | 2.20 s | 9.19 s | **20.09 s** | 29.38 s | 134.36 s | 12.97 s | 174.57 s |
 | e2e latency | Packed @ 28 | 1.95 s | 10.14 s | **22.39 s** | 30.81 s | 167.56 s | 14.70 s | 226.65 s |
 
-Ladder (TTFT p90 / mean TPOT per fresh-boot 1200-s window; ★ = SLO ceiling, ✗ = crossing observed in that window):
+Ladder (TTFT p90 / mean TPOT / requests/s per fresh-boot 1200-s window; ★ = SLO ceiling, ✗ = crossing observed in that window):
 
-| C | Native TTFT p90 | Native TPOT | Packed TTFT p90 | Packed TPOT |
-|---|---:|---:|---:|---:|
-| 15 | 6.66 s | 33.8 ms | 5.93 s | 37.5 ms |
-| 16 | 6.83 s | 36.3 ms | 7.31 s | 38.1 ms |
-| 17 | 7.77 s | 36.9 ms | 7.57 s | 40.9 ms |
-| 18 | 7.67 s | 39.4 ms | 7.80 s | 42.8 ms |
-| 19 | 8.46 s | 41.0 ms | 7.86 s | 45.1 ms |
-| 20 | 8.40 s | 45.0 ms | 8.79 s | 47.2 ms |
-| 21 | 9.03 s | 45.0 ms | 8.74 s | 47.2 ms |
-| 22 | 9.26 s | 45.9 ms | 8.97 s | 51.1 ms |
-| 23 | 9.85 s | 47.7 ms | 8.85 s | 52.9 ms |
-| 24 | 9.36 s ★ | 51.6 ms | 9.14 s | 54.8 ms |
-| 25 | 12.10 s ✗ | 59.6 ms | 9.40 s | 56.6 ms |
-| 26 | — | — | 9.97 s | 57.2 ms |
-| 27 | — | — | 9.44 s | 61.1 ms |
-| 28 | — | — | 9.90 s ★ | 65.9 ms |
-| 29 | — | — | 10.63 s ✗ | 68.6 ms |
+| C | Native TTFT p90 | Native TPOT | Native req/s | Packed TTFT p90 | Packed TPOT | Packed req/s |
+|---:|---:|---:|---:|---:|---:|
+| 15 | 6.66 s | 33.8 ms | 1.7893 | 5.93 s | 37.5 ms | 1.7199 |
+| 16 | 6.83 s | 36.3 ms | 1.7902 | 7.31 s | 38.1 ms | 1.7595 |
+| 17 | 7.77 s | 36.9 ms | 1.8038 | 7.57 s | 40.9 ms | 1.7937 |
+| 18 | 7.67 s | 39.4 ms | 1.8092 | 7.80 s | 42.8 ms | 1.8054 |
+| 19 | 8.46 s | 41.0 ms | 1.8211 | 7.86 s | 45.1 ms | 1.8116 |
+| 20 | 8.40 s | 45.0 ms | 1.7771 | 8.79 s | 47.2 ms | 1.7950 |
+| 21 | 9.03 s | 45.0 ms | 1.8405 | 8.74 s | 47.2 ms | 1.7986 |
+| 22 | 9.26 s | 45.9 ms | 1.8087 | 8.97 s | 51.1 ms | 1.8270 |
+| 23 | 9.85 s | 47.7 ms | 1.8045 | 8.85 s | 52.9 ms | 1.7828 |
+| 24 | 9.36 s ★ | 51.6 ms | 1.8099 | 9.14 s | 54.8 ms | 1.8277 |
+| 25 | 12.10 s ✗ | 59.6 ms | 1.6603 | 9.40 s | 56.6 ms | 1.8055 |
+| 26 | — | — | — | 9.97 s | 57.2 ms | 1.8856 |
+| 27 | — | — | — | 9.44 s | 61.1 ms | 1.8710 |
+| 28 | — | — | — | 9.90 s ★ | 65.9 ms | 1.7697 |
+| 29 | — | — | — | 10.63 s ✗ | 68.6 ms | 1.7697 |
 
 Readings:
 

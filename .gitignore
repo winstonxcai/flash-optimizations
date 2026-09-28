@@ -23,3 +23,17 @@ mustafar/scripts/**/config.json
 mustafar/scripts/config.json
 mustafar/scripts/local/config/config_deepswe.json
 mustafar/scripts/local/config/config_swe_sangfor.json
+
+# starkv runtime artifacts: the store/serve debug logs and the retention
+# telemetry curve
+starkv/ctrl/
+starkv/logs/
+
+# Per-layer capture shards (.pt, hundreds of MB). Large, and regenerable -- but
+# only with GPU time through the scheduler, so they stay out of the repo.
+starkv/captures/
+starkv/basis/
+
+# The spectrum/stability tables under starkv/results/ ARE tracked: they are small
+# (a few hundred KB) and they are the evidence behind report.md's numbers.
+# Ignoring them would leave the report citing files a reader cannot open.

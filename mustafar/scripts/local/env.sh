@@ -45,6 +45,14 @@ REPLAY_MANIFEST=$REPLAY_DIR/cache/official-longswebench/longswebench-openai-v1.j
 LB2_DATA=${LB2_DATA:-$HOST_REPO/mustafar/data/lb2_data.json}
 LB2_TOKENS=${LB2_TOKENS:-$HOST_REPO/mustafar/data/lb2_tokens.json}
 
+# ShareGPT json that `bench_serving --dataset-name random` samples token ids
+# from. sglang >= v0.5.18 hard-requires it and fetches it from the Hub when
+# --dataset-path is empty -- but that repo is gone upstream (401/404, and
+# hf-mirror cannot proxy it), so pass this local copy explicitly. Byte-identical
+# to /home/jovyan/19110/vscode/me-tools/benchmark/data/ (md5 8d2f1dcd...).
+SHAREGPT_HOST=${SHAREGPT_HOST:-/home/jovyan/zongyi/vllm-bench/ShareGPT_V3_unfiltered_cleaned_split.json}
+SHAREGPT_CT=${SHAREGPT_CT:-/mnt/host_root$SHAREGPT_HOST}
+
 # Remote agentic-eval box that runs the Sangfor / SWE-bench clients (they reach
 # our local sglang server over http). A docker_env_config JSON on that box holds
 # the env keys (experiment_env.ANTHROPIC_BASE_URL / ...MODEL) incl. the auth
