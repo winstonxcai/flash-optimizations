@@ -123,12 +123,16 @@ def bench_serving(
     """One configuration per call, identical to the local shell command."""
     if not 1 <= timeout_minutes <= 240:
         raise ValueError("timeout_minutes must be 1–240")
+    _ensure_sglang_kernel(enable_sm100=False)
     env = {
         **os.environ,
         "PYTHON": sys.executable,
         "MODEL_PATH": str(MODEL_DIR),
         "SGLANG_ROOT": str(SGLANG_ROOT),
         "RESULTS_DIR": str(RESULTS_ROOT),
+        "REMNANT_PARENT_SHA": SOURCE_REVISIONS["parent"],
+        "REMNANT_SGLANG_SHA": SOURCE_REVISIONS["sglang"],
+        "REMNANT_FLASHMLA_SHA": SOURCE_REVISIONS["flashmla"],
     }
     try:
         subprocess.run(
@@ -151,6 +155,61 @@ def bench_serving(
     finally:
         results_volume.commit()
     return str(RESULTS_ROOT)
+
+
+def _kernel_package_dir() -> Path:
+    return Path(
+        subprocess.check_output(
+            [
+                sys.executable,
+                "-c",
+                "import pathlib, sgl_kernel; print(pathlib.Path(sgl_kernel.__file__).parent)",
+            ],
+            text=True,
+        ).strip()
+    )
+
+
+def _kernel_extensions_ready() -> bool:
+    try:
+        package_dir = _kernel_package_dir()
+        flash_mla = package_dir / "flash_mla.py"
+        flash_mla_source = flash_mla.read_text()
+        return (
+            any(package_dir.glob("flashmla_ops*.so"))
+            and any(package_dir.glob("remnant_ops*.so"))
+            and flash_mla.is_file()
+            and "remnant_buffers" in flash_mla_source
+            and "remnant_sparse_decode_fwd" in flash_mla_source
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return False
+
+
+def _ensure_sglang_kernel(
+    *,
+    enable_sm100: bool = False,
+    source_revisions: dict[str, str] | None = None,
+) -> None:
+    revisions = source_revisions or SOURCE_REVISIONS
+    if _kernel_extensions_ready():
+        print(
+            "[flashmla-build] using cached image extensions "
+            f"parent={revisions['parent']} "
+            f"sglang={revisions['sglang']} "
+            f"flashmla={revisions['flashmla']}",
+            flush=True,
+        )
+        return
+
+    print(
+        "[flashmla-build] cached image extensions are unavailable; "
+        "falling back to the runtime build",
+        flush=True,
+    )
+    _build_sglang_kernel(enable_sm100=enable_sm100)
+    if not _kernel_extensions_ready():
+        raise RuntimeError("runtime build completed without usable Remnant extensions")
 
 
 def _build_sglang_kernel(*, enable_sm100: bool = False) -> None:
@@ -194,12 +253,7 @@ def _build_sglang_kernel(*, enable_sm100: bool = False) -> None:
         build = ["cmake", "--build", str(build_root), "--target", target, "--parallel", "2"]
         print(f"[flashmla-build] {' '.join(build)}", flush=True)
         subprocess.run(build, cwd=aot_root, check=True, timeout=1800)
-    package_dir = Path(
-        subprocess.check_output(
-            [sys.executable, "-c", "import pathlib, sgl_kernel; print(pathlib.Path(sgl_kernel.__file__).parent)"],
-            text=True,
-        ).strip()
-    )
+    package_dir = _kernel_package_dir()
     installed = list(build_root.glob("flashmla_ops*.so"))
     if not installed:
         raise RuntimeError(f"FlashMLA build produced no extension under {install_root}")
@@ -266,18 +320,29 @@ def validate_flashmla_direct_decode(
     repeats: int = 100,
     warmup: int = 10,
     rounds: int = 30,
+    benchmark_path: str = "direct",
+    parent_sha: str = "",
+    sglang_sha: str = "",
+    flashmla_sha: str = "",
 ) -> str:
-    """Build and validate direct FlashMLA decode without loading model weights."""
+    """Validate direct FlashMLA decode without loading model weights."""
     if repeats <= 0 or rounds < 2 or warmup < 0:
         raise ValueError("repeats must be positive, rounds must be at least 2, and warmup nonnegative")
-    _build_sglang_kernel()
+    if benchmark_path not in {"all", "native", "adapter", "direct"}:
+        raise ValueError("benchmark_path must be all, native, adapter, or direct")
+    source_revisions = {
+        "parent": parent_sha or SOURCE_REVISIONS["parent"],
+        "sglang": sglang_sha or SOURCE_REVISIONS["sglang"],
+        "flashmla": flashmla_sha or SOURCE_REVISIONS["flashmla"],
+    }
+    _ensure_sglang_kernel(enable_sm100=False, source_revisions=source_revisions)
     env = {
         **os.environ,
         "PYTHONPATH": f"{SGLANG_ROOT / 'python'}:{os.environ.get('PYTHONPATH', '')}",
         "PYTHONUNBUFFERED": "1",
-        "REMNANT_PARENT_SHA": SOURCE_REVISIONS["parent"],
-        "REMNANT_SGLANG_SHA": SOURCE_REVISIONS["sglang"],
-        "REMNANT_FLASHMLA_SHA": SOURCE_REVISIONS["flashmla"],
+        "REMNANT_PARENT_SHA": source_revisions["parent"],
+        "REMNANT_SGLANG_SHA": source_revisions["sglang"],
+        "REMNANT_FLASHMLA_SHA": source_revisions["flashmla"],
         "REMNANT_RESULTS_DIR": str(RESULTS_ROOT),
     }
     test = [
@@ -301,10 +366,27 @@ def validate_flashmla_direct_decode(
         str(rounds),
         "--topk-lengths",
         "512,317",
+        "--path",
+        benchmark_path,
     ]
-    for command in (test, benchmark):
-        print(f"[flashmla-direct] {' '.join(command)}", flush=True)
-        subprocess.run(command, env=env, cwd=SGLANG_ROOT, check=True)
+    print(f"[flashmla-direct] {' '.join(test)}", flush=True)
+    subprocess.run(test, env=env, cwd=SGLANG_ROOT, check=True)
+    print(f"[flashmla-direct] {' '.join(benchmark)}", flush=True)
+    result = subprocess.run(
+        benchmark,
+        env=env,
+        cwd=SGLANG_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    print(result.stdout, end="", flush=True)
+    print(result.stderr, end="", file=sys.stderr, flush=True)
+    if result.returncode:
+        expected_miss = "direct decode exceeds the" in result.stderr
+        if expected_miss:
+            return "direct FlashMLA validity passed; benchmark completed with target misses"
+        raise subprocess.CalledProcessError(result.returncode, benchmark)
     return "direct FlashMLA parity and benchmark passed"
 
 
@@ -315,15 +397,35 @@ def validate_flashmla_direct_decode(
     timeout=2400,
     retries=0,
 )
-def sanitize_flashmla_direct_decode() -> str:
-    """Run model-free memory, race, and synchronization checks on direct decode."""
-    _build_sglang_kernel(enable_sm100=False)
+def sanitize_flashmla_direct_decode(
+    sanitizer_tools: str = "memcheck,racecheck,synccheck",
+    test_selector: str = "direct_matches_fused_adapter or direct_decode_cuda_graph_replay",
+    parent_sha: str = "",
+    sglang_sha: str = "",
+    flashmla_sha: str = "",
+) -> str:
+    """Run selected model-free Compute Sanitizer checks on direct decode."""
+    source_revisions = {
+        "parent": parent_sha or SOURCE_REVISIONS["parent"],
+        "sglang": sglang_sha or SOURCE_REVISIONS["sglang"],
+        "flashmla": flashmla_sha or SOURCE_REVISIONS["flashmla"],
+    }
+    _ensure_sglang_kernel(enable_sm100=False, source_revisions=source_revisions)
     if shutil.which("compute-sanitizer") is None:
         raise RuntimeError("compute-sanitizer is not installed in the server image")
+    tools = [tool.strip() for tool in sanitizer_tools.split(",") if tool.strip()]
+    allowed_tools = {"memcheck", "racecheck", "synccheck"}
+    if not tools or any(tool not in allowed_tools for tool in tools):
+        raise ValueError(
+            f"sanitizer_tools must be a comma-separated subset of {sorted(allowed_tools)}"
+        )
     env = {
         **os.environ,
         "PYTHONPATH": f"{SGLANG_ROOT / 'python'}:{os.environ.get('PYTHONPATH', '')}",
         "PYTHONUNBUFFERED": "1",
+        "REMNANT_PARENT_SHA": source_revisions["parent"],
+        "REMNANT_SGLANG_SHA": source_revisions["sglang"],
+        "REMNANT_FLASHMLA_SHA": source_revisions["flashmla"],
     }
     test = [
         sys.executable,
@@ -332,15 +434,17 @@ def sanitize_flashmla_direct_decode() -> str:
         "-q",
         "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py",
         "-k",
-        "direct_matches_native_adapter",
+        test_selector,
     ]
-    for tool in ("memcheck", "racecheck", "synccheck"):
+    for tool in tools:
         command = [
             "compute-sanitizer",
             "--tool",
             tool,
             "--error-exitcode",
             "99",
+            "--print-limit",
+            "20",
             *test,
         ]
         print(f"[flashmla-sanitizer:{tool}] {' '.join(command)}", flush=True)
@@ -392,9 +496,18 @@ def validate_flashmla_fork() -> str:
     retries=0,
     volumes={str(RESULTS_ROOT): results_volume},
 )
-def profile_flashmla_direct() -> str:
+def profile_flashmla_direct(
+    parent_sha: str = "",
+    sglang_sha: str = "",
+    flashmla_sha: str = "",
+) -> str:
     """Capture direct FlashMLA decode timing and H100 resource counters."""
-    _build_sglang_kernel(enable_sm100=False)
+    source_revisions = {
+        "parent": parent_sha or SOURCE_REVISIONS["parent"],
+        "sglang": sglang_sha or SOURCE_REVISIONS["sglang"],
+        "flashmla": flashmla_sha or SOURCE_REVISIONS["flashmla"],
+    }
+    _ensure_sglang_kernel(enable_sm100=False, source_revisions=source_revisions)
     for tool in ("nsys", "ncu", "cuobjdump"):
         if shutil.which(tool) is None:
             raise RuntimeError(f"{tool} is not installed in the server image")
@@ -405,8 +518,12 @@ def profile_flashmla_direct() -> str:
         **os.environ,
         "PYTHONPATH": f"{SGLANG_ROOT / 'python'}:{os.environ.get('PYTHONPATH', '')}",
         "PYTHONUNBUFFERED": "1",
+        "REMNANT_PARENT_SHA": source_revisions["parent"],
+        "REMNANT_SGLANG_SHA": source_revisions["sglang"],
+        "REMNANT_FLASHMLA_SHA": source_revisions["flashmla"],
     }
     def target(path: str, heads: int | str, batches: str) -> list[str]:
+        shape_tag = f"h{str(heads).replace(',', '-')}-b{batches.replace(',', '-')}"
         return [
             sys.executable,
             "benchmark/remnant/microbench.py",
@@ -423,12 +540,12 @@ def profile_flashmla_direct() -> str:
             "--topk-lengths",
             "512",
             "--output",
-            str(directory / f"{path}-microbench"),
+            str(directory / f"{path}-{shape_tag}-microbench"),
             "--path",
             path,
         ]
     try:
-        for path in ("native", "direct"):
+        for path in ("direct",):
             subprocess.run(
                 [
                     "nsys",
@@ -445,7 +562,7 @@ def profile_flashmla_direct() -> str:
                 check=True,
                 timeout=900,
             )
-        for path in ("native", "direct"):
+        for path in ("direct",):
             for heads in (64, 128):
                 for batch in (8, 16):
                     stem = f"{path}-h{heads}-b{batch}-ncu"
