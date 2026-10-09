@@ -50,7 +50,7 @@
     "repo": "https://github.com/winstonxcai/flash-optimizations",
     "branch_base": "origin/remnant",
     "base_commit_at_report_time": "273f898",
-    "commit_sha": "PENDING",
+    "commit_sha": "199a61593fe46388a5bc35a1df886b0406864817",
     "pushed_paths": ["results/lineinfo/FINDINGS.md", "results/lineinfo/FINDINGS.json"],
     "extra_paths_in_branch": ["results/lineinfo/pilot/mb_parity_timing.py", "results/lineinfo/mb_run.sh", "results/lineinfo/pilot_out/mb_timing.json", "results/lineinfo/pilot_out/mb_parity.json", "results/lineinfo/source_correlation_remnant.txt", "results/lineinfo/source_correlation_native.txt"],
     "excluded_large": ["results/nsys/** (GB-scale nsys-rep/sqlite)", "results/lineinfo/**/*.ncu-rep", "results/lineinfo/**/*.cubin"],
