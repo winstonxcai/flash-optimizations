@@ -23,3 +23,6 @@ remnant/scripts/**/config.json
 remnant/scripts/config.json
 remnant/scripts/local/config/config_deepswe.json
 remnant/scripts/local/config/config_swe_sangfor.json
+
+# Local experiment work
+/experiments/
