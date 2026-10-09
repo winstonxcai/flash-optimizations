@@ -1,0 +1,22 @@
+{
+  "h": 64,
+  "b": 32,
+  "topk": 512,
+  "seed": 20260919,
+  "out_shape": [
+    32,
+    1,
+    64,
+    512
+  ],
+  "lse_shape": [
+    32,
+    64,
+    1
+  ],
+  "out_max_abs_diff": 0.001953125,
+  "lse_max_abs_diff": 1.9073486328125e-06,
+  "atol": 0.02,
+  "rtol": 0.02,
+  "status": "PASS"
+}
