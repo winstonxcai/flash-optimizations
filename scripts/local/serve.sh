@@ -8,6 +8,7 @@
 #   serve.sh triton             Packed C4 with Triton packing/reconstruction
 #   serve.sh kernel             Packed C4 with current optimized dispatch
 #   serve.sh packed             compatibility alias for kernel
+#   serve.sh <mode> profile     Nsight Systems, capture waits for profiler API
 #   serve.sh <mode> stop        kill the server on $PORT
 #
 # All modes use the same production fork.
@@ -28,11 +29,11 @@ set -u
 MODE=${1:-}; ACTION=${2:-boot}
 case "$MODE" in
   native|triton|kernel|packed) ;;
-  *) echo "usage: $0 <native|triton|kernel> [stop] (packed aliases kernel)"; exit 1 ;;
+  *) echo "usage: $0 <native|triton|kernel> [boot|profile|stop] (packed aliases kernel)"; exit 1 ;;
 esac
 case "$ACTION" in
-  boot|stop) ;;
-  *) echo "usage: $0 <native|triton|kernel> [stop]"; exit 1 ;;
+  boot|profile|stop) ;;
+  *) echo "usage: $0 <native|triton|kernel> [boot|profile|stop]"; exit 1 ;;
 esac
 SERVE_LOG="$LOG_HOST/serve_${MODE}.log"  # host-side log path
 SERVE_LOG_CT=$(to_ct "$SERVE_LOG")             # same file inside container
@@ -49,6 +50,16 @@ if [ "$ACTION" = stop ]; then
   fi
   echo "stopped $MODE server on port $PORT"
   exit 0
+fi
+
+# Validate profiling before replacing a running server. The output directory
+# is unique and host-mounted, so reports survive container recreation.
+NSYS_OUTPUT_CT=
+if [ "$ACTION" = profile ]; then
+  docker exec "$CONTAINER" nsys --version || exit $?
+  profile_dir=$(mktemp -d "$LOG_HOST/nsys-${MODE}-$(ts)-XXXXXX") || exit 1
+  NSYS_OUTPUT_CT=$(to_ct "$profile_dir/server")
+  echo "Nsight capture waits for CUDA profiler API; reports: $profile_dir"
 fi
 
 if ! kill_port; then
@@ -69,7 +80,7 @@ echo "== serve $MODE on gpus=$GPUS port=$PORT master=$MASTER_PORT (log: $SERVE_L
 
 ct_script "$TREE" "$GPUS" "$MASTER_PORT" "$MODEL_NAME" "$TP" "$MEM_FRAC" \
   "$CTX_LEN" "$MAX_RUN" "$CHUNK" "$DECODE_CFG" "$SGLANG_PY" "$REPO_CT" \
-  "$MODE" "$MODEL_CT" "$PORT" "$SERVE_LOG_CT" "$SERVER_PID_FILE_CT" <<'BASH'
+  "$MODE" "$MODEL_CT" "$PORT" "$SERVE_LOG_CT" "$SERVER_PID_FILE_CT" "$NSYS_OUTPUT_CT" <<'BASH'
 set -u
 tree=$1
 gpus=$2
@@ -88,12 +99,13 @@ model_ct=${14}
 port=${15}
 serve_log_ct=${16}
 pid_file=${17}
+nsys_output=${18}
 
 cd -- "$tree"
 export CUDA_VISIBLE_DEVICES="$gpus" MASTER_PORT="$master_port"
 export MODEL_NAME="$model_name" TP="$tp" MEM_FRAC="$mem_frac" CTX_LEN="$ctx_len"
 export MAX_RUN="$max_run" CHUNK="$chunk" DECODE_CFG="$decode_cfg"
-export SERVER_PID_FILE="$pid_file"
+export SERVER_PID_FILE="$pid_file" NSYS_OUTPUT="$nsys_output"
 export PYTHONPATH="/opt/sglang-runtime-fixes:$sglang_py:$repo_ct"
 export NCCL_IB_DISABLE=1 NCCL_SOCKET_IFNAME=lo NCCL_P2P_LEVEL=NVL NCCL_PROTO=Simple NCCL_ALGO=Ring
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
@@ -103,6 +115,11 @@ nohup setsid bash "$repo_ct/scripts/local/run-server.sh" "$mode" "$model_ct" 0.0
 pid=$!
 echo "launched pid $pid"
 BASH
+launch_status=$?
+if [ "$launch_status" -ne 0 ]; then
+  echo "FATAL: container launch failed ($launch_status)" >&2
+  exit "$launch_status"
+fi
 
 if ! wait_health 240; then
   tail -40 "$SERVE_LOG"

@@ -63,4 +63,15 @@ args=(
   --watchdog-timeout 1800
 )
 
+# Nsight attaches at launch but collects nothing until /start_profile asks
+# SGLang for CUDA_PROFILER. Do not enable startup profiling: loading weights
+# and creating CUDA graphs must finish before the capture range starts.
+if [ -n "${NSYS_OUTPUT:-}" ]; then
+  command -v nsys >/dev/null 2>&1 || { echo "Nsight Systems (nsys) is required" >&2; exit 127; }
+  echo "Nsight capture inactive until CUDA_PROFILER start; output: $NSYS_OUTPUT"
+  exec nsys profile --trace=cuda,nvtx --sample=none --cpuctxsw=none \
+    --capture-range=cudaProfilerApi --capture-range-end=stop \
+    --kill=none --output="$NSYS_OUTPUT" sglang "${args[@]}"
+fi
+
 exec sglang "${args[@]}"

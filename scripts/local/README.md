@@ -33,7 +33,7 @@ implementation flag has no effect on Native. Both Packed implementations retain
   the relevant variables explicitly.
 - `run-server.sh` — shared foreground launcher used by both local-container
   and Modal serving. It is normally called by the other scripts.
-- `serve.sh <native|triton|kernel> [stop]` — boot or stop a server using the same
+- `serve.sh <native|triton|kernel> [boot|profile|stop]` — boot or stop a server using the same
   production fork and explicitly select its cache format and implementation.
 - `bench-serving.sh` — compatibility dispatcher preserving both public command
   forms below.
@@ -108,3 +108,25 @@ Eval results land under `results/` and server logs under
 - Decode CUDA-graph config default = small (agentic benchmark concurrency). The
   serving drivers and C>15 legs override with the extended config so decode
   stays on-graph up to the packed allocator ceiling.
+
+## Nsight Systems capture
+
+Run `./serve.sh triton profile` to launch Packed Triton under Nsight Systems.
+The container must already provide `nsys`; launcher edits need only a Git pull,
+not an image rebuild. Reports go to a unique host directory under
+`logs/nsys-triton-*/server.nsys-rep` and survive container recreation.
+CUDA/NVTX tracing waits for `cudaProfilerStart`, so model loading and CUDA-graph
+creation are excluded. CPU sampling and context-switch tracing are disabled.
+After the launcher reports healthy, explicitly bracket the workload:
+
+```sh
+curl -fsS -X POST "http://127.0.0.1:30212/start_profile" \
+  -H 'Content-Type: application/json' -d '{"activities":["CUDA_PROFILER"]}'
+# Send the requests to measure here.
+curl -fsS -X POST "http://127.0.0.1:30212/stop_profile"
+```
+
+This captures one range. Stopping capture writes the report and leaves the
+server running; relaunch with `profile` for another capture. Use the configured
+`PORT` in the URLs if overridden. `./serve.sh triton stop` tears down the owned
+server and profiler process group.
