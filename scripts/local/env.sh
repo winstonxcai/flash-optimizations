@@ -87,15 +87,22 @@ pid_file=$1
 port=$2
 status=0
 remove_pid_file=1
+# Container PID 1 may leave exited children unreaped. kill -0 also sees
+# zombies, which cannot execute or retain GPU allocations.
+group_exited() {
+  local rows
+  rows=$(ps -eo pgid=,stat=) || return 1
+  awk -v group="$pgid" '$1 == group && $2 !~ /^[ZX]/ {live=1} END {exit live}' <<< "$rows"
+}
 terminate_group() {
   kill -TERM -- "-$pgid" 2>/dev/null || true
   for _ in $(seq 1 20); do
-    kill -0 -- "-$pgid" 2>/dev/null || break
+    group_exited && return 0
     sleep 0.25
   done
   kill -KILL -- "-$pgid" 2>/dev/null || true
   for _ in $(seq 1 4); do
-    kill -0 -- "-$pgid" 2>/dev/null || return 0
+    group_exited && return 0
     sleep 0.25
   done
   return 1
