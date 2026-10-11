@@ -132,3 +132,15 @@ Each start/stop pair captures a separate range and writes a separate report.
 Stopping capture leaves the server running and armed for the next range. Use the configured
 `PORT` in the URLs if overridden. `./serve.sh triton stop` tears down the owned
 server and profiler process group.
+
+For timed benchmark captures, pass ordered start:end offsets as the fifth
+argument to the existing replay script, for example:
+
+```sh
+./bench-lswb.sh triton-c24 30212 24 1200 300:360,900:960
+```
+
+The offsets start when the client launches. Capture events and actual elapsed
+times are saved in the run's `nsys-windows.jsonl`. Capture API failures or an
+early client exit before all windows complete make the run fail. Launch the
+server with `profile` first; use the same windows for Native comparisons.
