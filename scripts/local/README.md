@@ -3,9 +3,11 @@
 # Production-fork driver scripts (local)
 
 These scripts run the same reviewed SGLang fork used by the Modal production
-image. The local path uses Docker for isolation; the image clones the fork at
+image. The local path uses Docker for isolation; the image installs the fork at
 `/sgl-workspace/sglang-remnant`. The image copies the checked-out forks in
-`third_party/`; rebuild it after changing their source.
+`third_party/`; rebuild it after changing their source. Builds use host networking
+so they also work on GPU nodes without Docker's `docker0` bridge. A rebuild keeps
+the existing container until the image builds successfully, then replaces it.
 
 | Serving mode | Cache format | Implementation |
 |---|---|---|
@@ -66,6 +68,7 @@ implementation flag has no effect on Native. Both Packed implementations retain
 # 0) first time (or after a container recreate): build and verify the image
 ./container.sh up
 # use this after changing Dockerfile or the production fork revision
+git submodule update --init --recursive
 ./container.sh rebuild
 
 # 1) boot a server (native, triton or kernel), leave it running

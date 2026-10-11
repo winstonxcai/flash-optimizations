@@ -8,7 +8,7 @@
 #   container.sh rebuild      rebuild the image and recreate the container
 #   container.sh recreate     docker rm -f the container, recreate, prep
 #
-# The Dockerfile clones the reviewed production fork into
+# The Dockerfile copies the checked-out production fork into
 # /sgl-workspace/sglang-remnant. Native, Triton and Kernel serving use that tree;
 # native is selected by the default cache-format argument.
 #
@@ -42,7 +42,9 @@ wait_exec_ready () {  # poll until `docker exec` works inside the container
 
 build_image () {
   echo "== build $IMAGE from $DOCKERFILE"
-  docker build -t "$IMAGE" -f "$DOCKERFILE" "$HOST_REPO" || die "docker build failed"
+  # GPU nodes may have no docker0 bridge; build workers use the same host
+  # network as the serving container rather than Docker's default bridge.
+  docker build --network host -t "$IMAGE" -f "$DOCKERFILE" "$HOST_REPO" || die "docker build failed"
 }
 
 create_container () {
@@ -76,8 +78,8 @@ case "$ACTION" in
     prep
     ;;
   rebuild)
-    docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
     build_image
+    docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
     create_container
     prep
     ;;
