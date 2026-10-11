@@ -1,0 +1,163 @@
+{
+  "author": "Winston Cai.",
+  "record_kind": "Aggregate derived locally from canonical VDI summaries; large artifacts remain on VDI",
+  "host": "10.72.1.175",
+  "remote_repository": "/home/jovyan/winstonxcai/flash-optimizations",
+  "source_commit": "2e7ed626b8ab727b9f4d785279467198889ba48f",
+  "sglang_commit": "8a520765f7295ece6a8989bb7419ffc8637d5703",
+  "flashmla_commit": "9f9a2e5da6e82d5f7730e1515d21fa313fb34604",
+  "docker_image": "ba170a2eafc6",
+  "gpu_ids": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "duration_requested_s": 1200,
+  "nsight_windows_requested_s": [
+    [
+      300,
+      360
+    ],
+    [
+      900,
+      960
+    ]
+  ],
+  "runs": [
+    {
+      "tag": "triton-c24",
+      "concurrency": 24,
+      "remote_result": "results/lswb-replay/triton-c24/20261012_040414",
+      "successful": 866,
+      "failed": 13,
+      "success_rate": 0.9852104664391353,
+      "valid": false,
+      "failure_reasons": {
+        "missing_output_event": 13
+      },
+      "completion_token_throughput": 101.95946029771162,
+      "tpot_p50_ms": 171.59970733793634,
+      "tpot_p95_ms": 514.060397094501,
+      "device_cache_hit_rate": 0.9617695855369918,
+      "duration_s": 1216.875801791437,
+      "nsight_events": [
+        {
+          "action": "start",
+          "requested_s": 300.00088100973517,
+          "elapsed_s": 307.9339303066954
+        },
+        {
+          "action": "stop",
+          "requested_s": 360.0003631329164,
+          "elapsed_s": 396.2253909353167
+        },
+        {
+          "action": "start",
+          "requested_s": 900.0002915663645,
+          "elapsed_s": 900.3311983766034
+        },
+        {
+          "action": "stop",
+          "requested_s": 960.0002631433308,
+          "elapsed_s": 999.8907905062661
+        }
+      ]
+    },
+    {
+      "tag": "triton-c28",
+      "concurrency": 28,
+      "remote_result": "results/lswb-replay/triton-c28/20261012_043125",
+      "successful": 388,
+      "failed": 9,
+      "success_rate": 0.9773299748110831,
+      "valid": false,
+      "failure_reasons": {
+        "missing_output_event": 9
+      },
+      "completion_token_throughput": 35.735059341443716,
+      "tpot_p50_ms": 656.9778064265847,
+      "tpot_p95_ms": 1496.1498974454264,
+      "device_cache_hit_rate": 0.728675409565019,
+      "duration_s": 1224.8755369838327,
+      "nsight_events": [
+        {
+          "action": "start",
+          "requested_s": 300.00098646245897,
+          "elapsed_s": 300.8732982603833
+        },
+        {
+          "action": "stop",
+          "requested_s": 360.0003404766321,
+          "elapsed_s": 384.16282213293016
+        },
+        {
+          "action": "start",
+          "requested_s": 900.0002773208544,
+          "elapsed_s": 900.5801841849461
+        },
+        {
+          "action": "stop",
+          "requested_s": 960.0002588760108,
+          "elapsed_s": 1007.762470155023
+        }
+      ]
+    },
+    {
+      "tag": "native-c24",
+      "concurrency": 24,
+      "remote_result": "results/lswb-replay/native-c24/20261012_045724",
+      "successful": 873,
+      "failed": 10,
+      "success_rate": 0.9886749716874292,
+      "valid": false,
+      "failure_reasons": {
+        "missing_output_event": 10
+      },
+      "completion_token_throughput": 102.61880399627243,
+      "tpot_p50_ms": 174.45327063038383,
+      "tpot_p95_ms": 573.9256191214448,
+      "device_cache_hit_rate": 0.9621285406538187,
+      "duration_s": 1217.8859539674595,
+      "nsight_events": [
+        {
+          "action": "start",
+          "requested_s": 300.000934782438,
+          "elapsed_s": 308.3501585321501
+        },
+        {
+          "action": "stop",
+          "requested_s": 360.0003818143159,
+          "elapsed_s": 394.8428015206009
+        },
+        {
+          "action": "start",
+          "requested_s": 900.0002919128165,
+          "elapsed_s": 900.4385469062254
+        },
+        {
+          "action": "stop",
+          "requested_s": 960.0002595195547,
+          "elapsed_s": 997.0246017454192
+        }
+      ]
+    }
+  ],
+  "remote_profiles": {
+    "packed": "logs/nsys-triton-20261012_035951-jhemyj/server.{1,2,3,4}.nsys-rep",
+    "native": "logs/nsys-native-20261012_045344-8LmAk9/server.{1,2}.nsys-rep"
+  },
+  "limitations": [
+    "All runs below 0.99 success threshold; failure cause not diagnosed.",
+    "Profiled serving runs are not uninstrumented acceptance timing.",
+    "Packed c28 reused the Packed c24 server and cache.",
+    "Reports saved and nonempty; trace contents not analyzed.",
+    "Client audit candidate; official comparison ineligible."
+  ],
+  "cleanup": {
+    "server": "stopped",
+    "lease_id": "lease-20261011-182733-8206965c",
+    "lease_expiry_utc": "2026-10-12T01:20:33.453509+00:00"
+  },
+  "results_commit": "eafe4bb"
+}
