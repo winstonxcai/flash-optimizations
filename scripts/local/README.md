@@ -114,7 +114,7 @@ Eval results land under `results/` and server logs under
 Run `./serve.sh triton profile` to launch Packed Triton under Nsight Systems.
 The container must already provide `nsys`; launcher edits need only a Git pull,
 not an image rebuild. Reports go to a unique host directory under
-`logs/nsys-triton-*/server.nsys-rep` and survive container recreation.
+`logs/nsys-triton-*/server*.nsys-rep` and survive container recreation.
 CUDA/NVTX tracing waits for `cudaProfilerStart`, so model loading and CUDA-graph
 creation are excluded. CPU sampling and context-switch tracing are disabled.
 The launcher allows 40 minutes for cold-start kernel compilation and graph
@@ -128,7 +128,7 @@ curl -fsS -X POST "http://127.0.0.1:30212/start_profile" \
 curl -fsS -X POST "http://127.0.0.1:30212/stop_profile"
 ```
 
-This captures one range. Stopping capture writes the report and leaves the
-server running; relaunch with `profile` for another capture. Use the configured
+Each start/stop pair captures a separate range and writes a separate report.
+Stopping capture leaves the server running and armed for the next range. Use the configured
 `PORT` in the URLs if overridden. `./serve.sh triton stop` tears down the owned
 server and profiler process group.

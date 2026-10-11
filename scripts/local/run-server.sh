@@ -70,7 +70,7 @@ if [ -n "${NSYS_OUTPUT:-}" ]; then
   command -v nsys >/dev/null 2>&1 || { echo "Nsight Systems (nsys) is required" >&2; exit 127; }
   echo "Nsight capture inactive until CUDA_PROFILER start; output: $NSYS_OUTPUT"
   exec nsys profile --trace=cuda,nvtx --sample=none --cpuctxsw=none \
-    --capture-range=cudaProfilerApi --capture-range-end=stop \
+    --capture-range=cudaProfilerApi --capture-range-end=repeat \
     --kill=none --output="$NSYS_OUTPUT" sglang "${args[@]}"
 fi
 
