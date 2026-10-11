@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Start one production-fork SGLang server in the foreground.
 #
-# Usage: run-server.sh <native|packed> <model> <host> <port>
+# Usage: run-server.sh <native|triton|kernel> <model> <host> <port>
+# Author: Winston Cai.
 # The caller owns process groups, logging, and cleanup. Shared server flags
 # live here so local-container and Modal launches cannot silently diverge.
 set -u
@@ -12,9 +13,10 @@ HOST=${3:-127.0.0.1}
 PORT_VALUE=${4:-}
 
 case "$MODE" in
-  native) CACHE_FORMAT=native ;;
-  packed) CACHE_FORMAT=remnant ;;
-  *) echo "usage: $0 <native|packed> <model> <host> <port>" >&2; exit 2 ;;
+  native) CACHE_FORMAT=native; CACHE_IMPLEMENTATION=kernel ;;
+  triton|kernel) CACHE_FORMAT=remnant; CACHE_IMPLEMENTATION=$MODE ;;
+  packed) CACHE_FORMAT=remnant; CACHE_IMPLEMENTATION=kernel ;;
+  *) echo "usage: $0 <native|triton|kernel> <model> <host> <port> (packed aliases kernel)" >&2; exit 2 ;;
 esac
 [ -n "$MODEL" ] || { echo "missing model path" >&2; exit 2; }
 [ -n "$PORT_VALUE" ] || { echo "missing port" >&2; exit 2; }
@@ -49,6 +51,7 @@ args=(
   --max-running-requests "${MAX_RUN:-256}"
   --chunked-prefill-size "${CHUNK:-8192}"
   --dsv4-c4-cache-format "$CACHE_FORMAT"
+  --dsv4-c4-cache-implementation "$CACHE_IMPLEMENTATION"
   --kv-cache-dtype fp8_e4m3
   --moe-runner-backend flashinfer_mxfp4
   --reasoning-parser deepseek-v4

@@ -1,10 +1,23 @@
+<!-- Author: Winston Cai. -->
+
 # Production-fork driver scripts (local)
 
 These scripts run the same reviewed SGLang fork used by the Modal production
 image. The local path uses Docker for isolation; the image clones the fork at
-`/sgl-workspace/sglang-remnant`. Native and packed are cache-format variants
-of that one runtime. The old repository-mounted `third_party/sglang` tree is
-not used for serving.
+`/sgl-workspace/sglang-remnant`. The image copies the checked-out forks in
+`third_party/`; rebuild it after changing their source.
+
+| Serving mode | Cache format | Implementation |
+|---|---|---|
+| `native` (default server format) | Native, stock 584-byte C4 | Stock producer and FlashMLA |
+| `triton` | Packed, 328-byte C4 | Torch selection, Triton packing and Native-page reconstruction, stock FlashMLA |
+| `kernel` | Packed, 328-byte C4 | Current fused producer and optimized decode dispatch (Direct on SM90) |
+
+`packed` remains a compatibility alias for `kernel`. Direct SGLang invocation
+selects Packed with `--dsv4-c4-cache-format remnant` and its implementation with
+`--dsv4-c4-cache-implementation triton|kernel` (default `kernel`). The
+implementation flag has no effect on Native. Both Packed implementations retain
+256 coordinates and share the same allocation and HiCache layout.
 
 ## Layout
 
@@ -18,17 +31,17 @@ not used for serving.
   the relevant variables explicitly.
 - `run-server.sh` — shared foreground launcher used by both local-container
   and Modal serving. It is normally called by the other scripts.
-- `serve.sh <native|packed> [stop]` — boot or stop a server using the same
-  production fork. Native uses the default layout; packed passes
-  `--dsv4-c4-cache-format remnant`.
+- `serve.sh <native|triton|kernel> [stop]` — boot or stop a server using the same
+  production fork and explicitly select its cache format and implementation.
 - `bench-serving.sh` — compatibility dispatcher preserving both public command
   forms below.
 - `bench-serving-capacity.sh <fair|max> <ctx> [C_fair]` — local Docker dual-leg
   comparison. `fair` measures Native vs Packed at the same concurrency; `max`
   measures each layout at its own allocator ceiling.
-- `bench-serving-image.sh <native|packed> <in> <out> <concurrency>` — standalone
+- `bench-serving-image.sh <native|triton|kernel> <in> <out> <concurrency>` — standalone
   measurement used by Modal. It self-boots a server directly in the production
-  image and is separate from the local Docker capacity driver.
+  image and is separate from the local Docker capacity driver. Each run's
+  `config.json` records the resolved mode, cache format and implementation.
 - `bench-lswb.sh <tag> [port] [C] [dur]` — LongSWE-Bench replay client against a
   running server (prefix-reuse workload).
 - `lswb-row.sh <run_dir|tag>` — print the 7 recorded SLO-run fields from a
@@ -55,13 +68,13 @@ not used for serving.
 # use this after changing Dockerfile or the production fork revision
 ./container.sh rebuild
 
-# 1) boot a server (native or packed), leave it running
-./serve.sh packed
-./serve.sh packed stop          # later
+# 1) boot a server (native, triton or kernel), leave it running
+./serve.sh triton
+./serve.sh triton stop          # later
 
 # 2) attach any eval / bench to the running server
-./bench-lb2.sh packed-0731               # official LongBench v2
-./bench-lswb.sh packed                   # LSWB replay c15 @ 1200s
+./bench-lb2.sh triton-0731               # official LongBench v2
+./bench-lswb.sh triton                   # LSWB replay c15 @ 1200s
 ./bench-agentic.sh sangfor config/sangfor-bench-hard50.txt  # Sangfor hard-50
 ./bench-agentic.sh swe    config/swe_instances_50_sweb_verified_mini.txt  # SWE-bench 50
 
@@ -71,7 +84,7 @@ not used for serving.
 ./bench-serving.sh max  65536
 
 # standalone single-config (Modal-style image environment)
-MODEL_PATH=/models/DeepSeek-V4-Flash-0731 ./bench-serving.sh packed 32768 2048 8
+MODEL_PATH=/models/DeepSeek-V4-Flash-0731 ./bench-serving.sh kernel 32768 2048 8
 ```
 
 Benchmarks that attach assume the server on `$PORT` (from `env.sh`). `sangfor`/`swe`

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Standalone serving benchmark used by the production image and Modal.
+# Author: Winston Cai.
 set -u
 
 DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
@@ -12,10 +13,11 @@ ts () { date +%Y%m%d_%H%M%S; }
 die () { echo "FATAL: $*" >&2; exit 1; }
 usage () {
   cat >&2 <<'EOF'
-usage: bench-serving-image.sh <native|packed> <input_tokens> <output_tokens> <concurrency>
+usage: bench-serving-image.sh <native|triton|kernel> <input_tokens> <output_tokens> <concurrency>
 
 The server is started and stopped inside this process group. MODEL_PATH must
 point at the official DeepSeek-V4-Flash-0731 checkpoint.
+packed is a compatibility alias for kernel.
 EOF
 }
 usage_err () { echo "bench-serving-image.sh: $*" >&2; usage; exit 2; }
@@ -95,7 +97,11 @@ main () {
   fi
   mode=${1:-native}; input=${2:-32768}; output=${3:-2048}; conc=${4:-8}
   (( $# <= 4 )) || usage_err "expected at most 4 arguments"
-  case "$mode" in native|packed) ;; *) usage_err "mode must be native or packed" ;; esac
+  case "$mode" in
+    native|triton|kernel) ;;
+    packed) mode=kernel ;;
+    *) usage_err "mode must be native, triton, or kernel" ;;
+  esac
   for value in "$input" "$output" "$conc"; do
     [[ "$value" =~ ^[1-9][0-9]*$ ]] || usage_err "counts must be positive integers"
   done
@@ -117,6 +123,20 @@ main () {
   fi
   mkdir -p "$results_dir"
   run=$(mktemp -d "$results_dir/$(ts)-$mode-XXXXXX") || die "could not create run directory"
+  "$python" - "$run/config.json" "$mode" <<'PY'
+import json
+import sys
+
+mode = sys.argv[2]
+with open(sys.argv[1], "w") as stream:
+    json.dump({
+        "mode": mode,
+        "dsv4_c4_cache_format": "native" if mode == "native" else "remnant",
+        "dsv4_c4_cache_implementation": "triton" if mode == "triton" else "kernel",
+    }, stream, indent=2)
+    stream.write("\n")
+PY
+  [ "$?" -eq 0 ] || die "could not record cache configuration"
   echo "Results: $run"
   echo "boot: mode=$mode tp=${TP:-4} mem=${MEM_FRAC:-0.88} ctx=${CTX_LEN:-1048576} max_run=${MAX_RUN:-256} chunk=${CHUNK:-8192} fp8_kv port=$port"
 

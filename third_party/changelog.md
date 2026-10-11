@@ -1,3 +1,5 @@
+<!-- Author: Winston Cai. -->
+
 # Remnant fork change map
 
 This file records the files changed by the Remnant work in the two large
@@ -55,7 +57,7 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 
 ### Runtime and build integration
 
-- `python/sglang/srt/server_args.py` — `--dsv4-c4-cache-format` flag.
+- `python/sglang/srt/server_args.py` — cache-format and Triton/Kernel implementation flags.
 - `python/sglang/srt/mem_cache/deepseek_v4_memory_pool.py` — packed pool.
 - `python/sglang/srt/layers/attention/deepseek_v4_backend.py` — decode dispatch.
 - `python/sglang/srt/layers/attention/dsv4/compressor_v2.py` — packed writes.
@@ -63,11 +65,12 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 - `python/sglang/srt/model_executor/pool_configurator.py` — packed capacity accounting.
 - `python/sglang/srt/remnant/__init__.py` — internal package exports.
 - `python/sglang/srt/remnant/bitmap.py` — bitmap helpers.
-- `python/sglang/srt/remnant/config.py` — format configuration and validation.
-- `python/sglang/srt/remnant/packed.py` — packed storage helpers.
+- `python/sglang/srt/remnant/config.py` — startup format/implementation configuration and validation.
+- `python/sglang/srt/remnant/packed.py` — packing/reconstruction dispatch and reusable Triton workspace.
 - `python/sglang/srt/remnant/reference.py` — reference reconstruction.
 - `python/sglang/srt/remnant/triton/__init__.py` — Triton package exports.
-- `python/sglang/srt/remnant/triton/kernels.py` — packed reconstruction kernels.
+- `python/sglang/srt/remnant/triton/kernels.py` — strided gather, guarded RoPE, restored Native-page materialization and corrected prefill plan mapping.
+- `python/sglang/srt/remnant/triton/fused_store.py` — fused FP32 selection, normalization and Packed C4 storage.
 - `python/sglang/kernels/aot/cmake/flashmla.cmake` — FlashMLA fork build pinning.
 - `python/sglang/kernels/aot/csrc/flashmla_extension.cc` — extension bindings.
 - `python/sglang/kernels/aot/python/sgl_kernel/flash_mla.py` — Python dispatch wrapper.
@@ -77,6 +80,8 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 - `test/registered/unit/test_dsv4_c4_cache_format.py` — startup argument validation.
 - `test/registered/attention/unittests/dsv4/test_remnant_pool.py` — pool layout/capacity.
 - `test/registered/attention/unittests/dsv4/test_remnant_pack.py` — pack correctness.
+- `test/registered/attention/unittests/dsv4/test_remnant_fused_store.py` — fused-store bytes, fallback, destinations and graph replay.
+- `test/registered/attention/unittests/dsv4/test_remnant_compressor_store.py` — serving compressor routing.
 - `test/registered/attention/unittests/dsv4/test_remnant_backend.py` — backend reconstruction/dispatch.
 - `test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py` — graph replay.
 - `test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py` — direct FlashMLA parity.

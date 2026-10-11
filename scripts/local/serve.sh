@@ -2,20 +2,24 @@
 # =====================================================================
 # serve.sh -- boot (or stop) a production-fork DeepSeek-V4-Flash-0731 TP server
 # on the local GPU node, inside the reproducible SGLang container.
+# Author: Winston Cai.
 #
 #   serve.sh native             untouched 0731, stock 584-byte C4 (default)
-#   serve.sh packed             328-byte packed C4 (Remnant)
+#   serve.sh triton             Packed C4 with Triton packing/reconstruction
+#   serve.sh kernel             Packed C4 with current optimized dispatch
+#   serve.sh packed             compatibility alias for kernel
 #   serve.sh <mode> stop        kill the server on $PORT
 #
-# Both modes use the same production fork and differ only in cache format.
+# All modes use the same production fork.
 # They use the fp4-native MoE runner (flashinfer_mxfp4), mem-frac 0.88,
 # 1M ctx cap, fp8 KV, and DeepSeek reasoning/tool parsers (needed by the
 # agentic evals; harmless for benches). Native uses the fork's default cache
-# format; packed passes --dsv4-c4-cache-format remnant.
+# format; triton/kernel use the same 328-byte Remnant format and select their
+# implementation with --dsv4-c4-cache-implementation.
 #
 # Env overrides (all optional): PORT, GPUS, MASTER_PORT, TP, DECODE_CFG,
 # MEM_FRAC, CTX_LEN, MAX_RUN, CHUNK. Boot log:
-#   <LOG_HOST>/serve_<native|packed>.log
+#   <LOG_HOST>/serve_<native|triton|kernel>.log
 # Server is left RUNNING; use "serve.sh <mode> stop" to tear it down.
 # =====================================================================
 set -u
@@ -23,12 +27,12 @@ set -u
 
 MODE=${1:-}; ACTION=${2:-boot}
 case "$MODE" in
-  native|packed) ;;
-  *) echo "usage: $0 <native|packed> [stop]"; exit 1 ;;
+  native|triton|kernel|packed) ;;
+  *) echo "usage: $0 <native|triton|kernel> [stop] (packed aliases kernel)"; exit 1 ;;
 esac
 case "$ACTION" in
   boot|stop) ;;
-  *) echo "usage: $0 <native|packed> [stop]"; exit 1 ;;
+  *) echo "usage: $0 <native|triton|kernel> [stop]"; exit 1 ;;
 esac
 SERVE_LOG="$LOG_HOST/serve_${MODE}.log"  # host-side log path
 SERVE_LOG_CT=$(to_ct "$SERVE_LOG")             # same file inside container

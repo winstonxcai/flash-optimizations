@@ -1,8 +1,15 @@
-"""Modal resources only; serving runs the same Bash script as local H100s."""
+"""Modal resources only; serving runs the same Bash script as local H100s.
+
+Author: Winston Cai.
+"""
 
 from __future__ import annotations
 
 import os
+import hashlib
+import json
+import time
+import xml.etree.ElementTree as ET
 import shutil
 import subprocess
 import sys
@@ -121,6 +128,10 @@ def bench_serving(
     timeout_minutes: int = 60,
 ) -> str:
     """One configuration per call, identical to the local shell command."""
+    if mode not in {"native", "triton", "kernel", "packed"}:
+        raise ValueError("mode must be native, triton, or kernel (packed aliases kernel)")
+    if mode == "packed":
+        mode = "kernel"
     if not 1 <= timeout_minutes <= 240:
         raise ValueError("timeout_minutes must be 1–240")
     _ensure_sglang_kernel(enable_sm100=False)
@@ -163,7 +174,7 @@ def _kernel_package_dir() -> Path:
             [
                 sys.executable,
                 "-c",
-                "import pathlib, sgl_kernel; print(pathlib.Path(sgl_kernel.__file__).parent)",
+                "import importlib.util; print(list(importlib.util.find_spec('sgl_kernel').submodule_search_locations)[0])",
             ],
             text=True,
         ).strip()
@@ -274,37 +285,134 @@ def _build_sglang_kernel(*, enable_sm100: bool = False) -> None:
     )
 
 
-@app.function(
-    image=fork_image,
-    gpu="H100!",
-    cpu=8,
-    timeout=3600,
-    retries=0,
+_NON_MODEL_TESTS = (
+    "test/registered/unit/test_dsv4_c4_cache_format.py",
+    "test/registered/attention/unittests/dsv4/test_remnant_pool.py",
+    "test/registered/attention/unittests/dsv4/test_remnant_pack.py",
+    "test/registered/attention/unittests/dsv4/test_remnant_backend.py",
+    "test/registered/attention/unittests/dsv4/test_remnant_compressor_store.py",
+    "test/registered/attention/unittests/dsv4/test_remnant_fused_store.py",
+    "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py",
+    "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py",
+    "python/sglang/test/kernels/deepseek_v4/test_remnant_pack_kernel.py",
+    "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py",
 )
-def validate_remnant_non_model() -> str:
-    """Run fork tests without loading weights."""
-    env = {
-        **os.environ,
-        "PYTHONPATH": f"{SGLANG_ROOT / 'python'}:{os.environ.get('PYTHONPATH', '')}",
-        "PYTHONUNBUFFERED": "1",
-        "REMNANT_PARENT_SHA": SOURCE_REVISIONS["parent"],
-        "REMNANT_SGLANG_SHA": SOURCE_REVISIONS["sglang"],
-        "REMNANT_FLASHMLA_SHA": SOURCE_REVISIONS["flashmla"],
-        "REMNANT_RESULTS_DIR": str(RESULTS_ROOT),
-    }
-    test_paths = [
-        "test/registered/unit/test_dsv4_c4_cache_format.py",
-        "test/registered/attention/unittests/dsv4/test_remnant_pool.py",
-        "test/registered/attention/unittests/dsv4/test_remnant_pack.py",
-        "test/registered/attention/unittests/dsv4/test_remnant_backend.py",
-        "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py",
-        "python/sglang/test/kernels/deepseek_v4/test_remnant_pack_kernel.py",
-        "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py",
-    ]
-    command = [sys.executable, "-m", "pytest", "-q", *test_paths]
-    print(f"[remnant-non-model] {' '.join(command)}", flush=True)
-    subprocess.run(command, env=env, cwd=SGLANG_ROOT, check=True)
-    return "remnant non-model tests passed"
+
+
+def _non_model_manifest() -> dict:
+    """Record dirty Python inputs and the image's compiled extensions."""
+    if not _kernel_extensions_ready():
+        raise RuntimeError("non-model preflight: extensions absent; rebuild on CPU")
+    paths = list((SGLANG_ROOT / "python/sglang/srt/remnant").rglob("*.py"))
+    paths += [SGLANG_ROOT / path for path in _NON_MODEL_TESTS]
+    paths += [SGLANG_ROOT / "python/sglang" / path for path in (
+        "srt/server_args.py", "srt/layers/attention/deepseek_v4_backend.py",
+        "srt/layers/attention/dsv4/compressor_v2.py",
+    )]
+    package = _kernel_package_dir()
+    paths += list(package.glob("remnant_ops*.so"))
+    paths += list(package.glob("flashmla_ops*.so"))
+    paths.append(package / "flash_mla.py")
+    return {str(path): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in sorted(paths)}
+
+
+def _non_model_run(run_id: str, stage: str, commands: list[list[str]]) -> dict:
+    if not run_id or any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_" for c in run_id):
+        raise ValueError("run_id must be a unique simple identifier")
+    root = RESULTS_ROOT / "non-model" / run_id / stage
+    root.mkdir(parents=True, exist_ok=False)
+    record = {"stage": stage, "revisions": SOURCE_REVISIONS,
+              "started_at": datetime.now(timezone.utc).isoformat(),
+              "manifest": _non_model_manifest(), "commands": [], "status": "running"}
+    env = {**os.environ, "PYTHONPATH": f"{SGLANG_ROOT / 'python'}:{os.environ.get('PYTHONPATH', '')}",
+           "PYTHONUNBUFFERED": "1", "TRITON_CACHE_DIR": "/triton-cache"}
+    started = time.monotonic()
+    try:
+        for index, command in enumerate(commands):
+            # The allocation has a fixed deadline, including JIT and sanitizer.
+            remaining = (240 if stage == "preflight" else 1100) - (time.monotonic() - started)
+            if remaining <= 0:
+                raise TimeoutError("non-model allocation deadline exhausted")
+            log = root / f"command-{index}.log"
+            junit = root / f"command-{index}.xml"
+            if "pytest" in command and "--collect-only" not in command:
+                command = [*command, f"--junitxml={junit}"]
+            record["commands"].append({"argv": command, "log": str(log)})
+            print(f"[non-model/{stage}] {' '.join(command)}", flush=True)
+            with log.open("w") as output:
+                result = subprocess.run(command, cwd=SGLANG_ROOT, env=env,
+                                        stdout=output, stderr=subprocess.STDOUT,
+                                        timeout=remaining, check=False)
+            record["commands"][-1]["returncode"] = result.returncode
+            if junit.exists():
+                suites = ET.parse(junit).getroot().iter("testsuite")
+                counts = {key: 0 for key in ("tests", "failures", "errors", "skipped")}
+                for suite in suites:
+                    for key in counts:
+                        counts[key] += int(suite.get(key, "0"))
+                record["commands"][-1]["counts"] = counts
+                if stage == "gpu" and (counts["tests"] == 0 or counts["skipped"]):
+                    raise RuntimeError(f"GPU coverage missing: {counts}")
+            print(log.read_text()[-16000:], flush=True)
+            result.check_returncode()
+        record["status"] = "passed"
+        return record
+    except BaseException as error:
+        record["status"] = "failed"
+        record["error"] = str(error)
+        raise
+    finally:
+        record["elapsed_seconds"] = time.monotonic() - started
+        (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
+        results_volume.commit()
+
+
+@app.function(image=fork_image, cpu=4, memory=16384, timeout=300, retries=0,
+              volumes={str(RESULTS_ROOT): results_volume})
+def preflight_remnant_non_model(run_id: str) -> dict:
+    """Collect every test on CPU before allocating H100; no model mount."""
+    return _non_model_run(run_id, "preflight", [
+        [sys.executable, "-m", "pytest", "--collect-only", "-q", *_NON_MODEL_TESTS],
+        [sys.executable, "-m", "pytest", "-q", _NON_MODEL_TESTS[0],
+         _NON_MODEL_TESTS[2], _NON_MODEL_TESTS[3], _NON_MODEL_TESTS[4]],
+    ])
+
+
+@app.function(image=fork_image, gpu="H100!", cpu=4, memory=32768,
+              timeout=1200, retries=0,
+              volumes={str(RESULTS_ROOT): results_volume,
+                       "/triton-cache": modal.Volume.from_name("remnant-triton-cache", create_if_missing=True)})
+def validate_remnant_non_model(run_id: str, expected_manifest: dict,
+                               sanitizer: bool = False) -> dict:
+    """Run synthetic tensor tests on one SM90 GPU, without model weights."""
+    import torch
+
+    if torch.cuda.get_device_capability() != (9, 0):
+        raise RuntimeError("non-model validation requires H100/SM90")
+    if _non_model_manifest() != expected_manifest:
+        raise RuntimeError("non-model sources/extensions changed after CPU preflight")
+    commands = [[sys.executable, "-m", "pytest", "-q", "-rs", *_NON_MODEL_TESTS]]
+    if sanitizer:
+        executable = shutil.which("compute-sanitizer")
+        if executable is None:
+            raise RuntimeError("compute-sanitizer missing; sanitizer coverage unavailable")
+        focused = [
+            "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference",
+            "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py::TestRemnantCudaGraph::test_store_and_native_reconstruction_replays_changed_inputs",
+        ]
+        for tool in ("memcheck", "racecheck", "synccheck"):
+            commands.append([executable, "--tool", tool, "--error-exitcode", "1",
+                             sys.executable, "-m", "pytest", "-q", *focused])
+    return _non_model_run(run_id, "gpu", commands)
+
+
+@app.local_entrypoint()
+def non_model(run_id: str, sanitizer: bool = False):
+    """CPU preflight followed by a single bounded H100 allocation."""
+    preflight = preflight_remnant_non_model.remote(run_id)
+    result = validate_remnant_non_model.remote(run_id, preflight["manifest"], sanitizer)
+    print(json.dumps(result, indent=2))
 
 
 @app.function(
@@ -612,7 +720,7 @@ def profile_flashmla_direct(
                 [
                     sys.executable,
                     "-c",
-                    "import pathlib, sgl_kernel; print(pathlib.Path(sgl_kernel.__file__).parent)",
+                    "import importlib.util; print(list(importlib.util.find_spec('sgl_kernel').submodule_search_locations)[0])",
                 ],
                 env=env,
                 text=True,

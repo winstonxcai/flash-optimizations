@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # =====================================================================
 # container.sh -- bring up the production-fork container and verify its tree.
+# Author: Winston Cai.
 #
 #   container.sh              ensure image + container exist, then prep
 #   container.sh prep         prep only (container must already exist)
@@ -8,7 +9,7 @@
 #   container.sh recreate     docker rm -f the container, recreate, prep
 #
 # The Dockerfile clones the reviewed production fork into
-# /sgl-workspace/sglang-remnant. Both native and packed serving use that tree;
+# /sgl-workspace/sglang-remnant. Native, Triton and Kernel serving use that tree;
 # native is selected by the default cache-format argument.
 #
 # env.sh defaults to the production runtime trio (GPUS 0-3 / PORT 30212 /
@@ -56,11 +57,12 @@ prep () {
   has_container || die "container $CONTAINER does not exist; run: $0 (no args)"
   echo "== verify production SGLang fork at $SGLANG_ROOT_CT"
   ct_script "$SGLANG_ROOT_CT/python/sglang/srt/server_args.py" <<'BASH' \
-    || die "production SGLang fork is not present or missing --dsv4-c4-cache-format"
+    || die "production SGLang fork is not present or missing C4 cache selection flags"
 set -e
 server_args=$1
 test -f "$server_args"
 grep -q dsv4-c4-cache-format "$server_args"
+grep -q dsv4_c4_cache_implementation "$server_args"
 BASH
 }
 
@@ -91,4 +93,4 @@ case "$ACTION" in
     ;;
   *) echo "usage: $0 [prep|recreate|up|rebuild]" >&2; exit 2 ;;
 esac
-echo "== production image ready. serve with:  bash scripts/local/serve.sh <native|packed>"
+echo "== production image ready. serve with:  bash scripts/local/serve.sh <native|triton|kernel>"

@@ -1,3 +1,5 @@
+<!-- Author: Winston Cai. -->
+
 # Remnant serving benchmark
 
 One Bash script: `scripts/local/bench-serving.sh`. It starts SGLang and
@@ -21,8 +23,9 @@ bash scripts/local/bench-serving.sh packed 32768 2048 8
 ```
 
 The four arguments are **mode, input tokens, output tokens, concurrency**.
-Modes: `native` and `packed`. Packed passes
-`--dsv4-c4-cache-format remnant`; native uses the default. Run the command
+Modes: `native`, `triton`, and `kernel`; `packed` aliases `kernel`. Native uses
+the default C4 layout. Triton and Kernel pass `--dsv4-c4-cache-format remnant`
+and select `--dsv4-c4-cache-implementation triton|kernel`. Run the command
 separately for each configuration. Defaults: native, 32k input, 2,048 output,
 concurrency 8
 (`concurrency` ≤ 136, the extended decode-graph coverage cap). `MODEL_PATH`
@@ -53,6 +56,35 @@ local and Modal runs. GPU visibility and NCCL settings are inherited unchanged.
 Local runs have no total timeout; use Linux `timeout` around the command if
 desired.
 
+## Model-free fork tests
+
+After authorizing a budget, run:
+
+```bash
+modal run --detach scripts/modal/app.py::non_model --run-id <unique-run-id> --sanitizer
+```
+
+CPU preflight checks compiled extensions, collects all tests, and runs startup,
+reference, dispatch, and compressor routing contracts. Only then does one H100
+run packing, reconstruction, Direct/Adapter parity, and graph replay tests for
+both implementations. Focused memcheck, racecheck, and synccheck cover Triton
+native-page reconstruction and changing graph inputs. GPU skips fail coverage.
+No weights are mounted or loaded, and extensions are built on image workers.
+There are no automatic retries; GPU allocation is bounded to 20 minutes.
+Logs, JUnit reports, dirty source/binary hashes, commands, and result JSON live
+in `remnant-stage2a-results:/non-model/<run-id>/`.
+
+The 2026-10-11 acceptance run `cache-modes-20261011T134933Z` passed:
+34 CPU tests plus 15 subtests; 159 H100 tests plus 17 subtests, with no skips;
+and seven focused tests plus two subtests under each sanitizer, with zero
+reported errors/hazards. GPU test execution took 104.25 seconds. The observed
+compute-spend delta across the build and diagnosed retries was about $0.25. Adjustments after allocation shutdown are retained in the local billing record.
+CPU/GPU manifests matched for the tested dirty checkout. Its manifests record
+SGLang 5ab95b7f84 and FlashMLA 57e9560; the commit retains the parent's published FlashMLA pin 9f9a2e5 and omits unrelated capture instrumentation. The records above include the earlier CPU fixture
+failure; the fixes remove a nonexistent backend mock and generate finite FP8
+codes for exact graph replay comparisons. No model weights were mounted/loaded,
+and all allocations were stopped.
+
 ## Modal
 
 `app.py` mounts and executes the same shell file, supplying paths and resources:
@@ -64,7 +96,7 @@ MODAL_PROFILE=your-profile modal run --detach scripts/modal/app.py::bench_servin
 ```
 
 Modal wraps the shell command in a 60-minute timeout by default.
-Run separate calls for native, fused, and optimized. No account is automatically
+Run separate calls for Native, Triton, and Kernel. No account is automatically
 selected. Matching benchmark code does not eliminate differences in hardware,
 software, or environment settings.
 
