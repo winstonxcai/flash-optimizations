@@ -140,7 +140,9 @@ argument to the existing replay script, for example:
 ./bench-lswb.sh triton-c24 30212 24 1200 300:360,900:960
 ```
 
-The offsets start when the client launches. Capture events and actual elapsed
-times are saved in the run's `nsys-windows.jsonl`. Capture API failures or an
+The offsets start when the client launches. Capture API request and acknowledgement
+times are saved in the run's
+`nsys-windows.jsonl`. API calls allow up to 180 seconds for Nsight trace export;
+export time does not shift the next scheduled window. Capture API failures or an
 early client exit before all windows complete make the run fail. Launch the
 server with `profile` first; use the same windows for Native comparisons.

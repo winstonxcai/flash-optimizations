@@ -61,7 +61,7 @@ trap cleanup EXIT
 trap 'cleanup; exit 130' INT
 trap 'cleanup; exit 143' TERM
 
-( cd "$REPLAY_DIR" && "${PYTHON:-python3}" -B "$REPLAY_RUNNER" \
+( cd "$REPLAY_DIR" && exec "${PYTHON:-python3}" -B "$REPLAY_RUNNER" \
     --result-root "$RUN_ROOT/client" \
     --dataset-root "$REPLAY_DATASET" \
     --dataset-manifest-input "$REPLAY_MANIFEST" \
@@ -102,9 +102,13 @@ def profile(action):
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(request, timeout=30) as response:
+    # cudaProfilerStop may block while Nsight exports the completed range.
+    # Keep a bounded timeout without mistaking a successful export for failure.
+    requested_at = time.monotonic() - origin
+    with urllib.request.urlopen(request, timeout=180) as response:
         response.read()
-    print(json.dumps({"action": action, "elapsed_s": time.monotonic() - origin}), flush=True)
+    print(json.dumps({"action": action, "requested_s": requested_at,
+                      "elapsed_s": time.monotonic() - origin}), flush=True)
 
 try:
     windows = [tuple(map(int, pair.split(":"))) for pair in specification.split(",")]
