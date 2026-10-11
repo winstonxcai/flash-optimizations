@@ -117,7 +117,9 @@ not an image rebuild. Reports go to a unique host directory under
 `logs/nsys-triton-*/server.nsys-rep` and survive container recreation.
 CUDA/NVTX tracing waits for `cudaProfilerStart`, so model loading and CUDA-graph
 creation are excluded. CPU sampling and context-switch tracing are disabled.
-After the launcher reports healthy, explicitly bracket the workload:
+The launcher allows 40 minutes for cold-start kernel compilation and graph
+creation before cleaning up a failed startup. After it reports healthy,
+explicitly bracket the workload:
 
 ```sh
 curl -fsS -X POST "http://127.0.0.1:30212/start_profile" \

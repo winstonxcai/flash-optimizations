@@ -121,7 +121,9 @@ if [ "$launch_status" -ne 0 ]; then
   exit "$launch_status"
 fi
 
-if ! wait_health 240; then
+# Cold starts compile MHC and DeepGEMM kernels before graph creation.
+# Allow 40 minutes for this initialization, with cleanup on timeout.
+if ! wait_health 480; then
   tail -40 "$SERVE_LOG"
   if ! kill_port; then
     echo "FATAL: could not verify or terminate the timed-out server process group" >&2
