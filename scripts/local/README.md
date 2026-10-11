@@ -128,7 +128,9 @@ curl -fsS -X POST "http://127.0.0.1:30212/start_profile" \
 curl -fsS -X POST "http://127.0.0.1:30212/stop_profile"
 ```
 
-Each start/stop pair captures a separate range and writes a separate report.
+Each start/stop pair captures a separate range. Nsight exports reports
+asynchronously after each range, before server teardown. The repeat limit is
+999 ranges per server launch.
 Stopping capture leaves the server running and armed for the next range. Use the configured
 `PORT` in the URLs if overridden. `./serve.sh triton stop` tears down the owned
 server and profiler process group.
