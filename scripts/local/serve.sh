@@ -112,6 +112,8 @@ export MAX_RUN="$max_run" CHUNK="$chunk" DECODE_CFG="$decode_cfg"
 export SERVER_PID_FILE="$pid_file" NSYS_OUTPUT="$nsys_output"
 export PYTHONPATH="/opt/sglang-runtime-fixes:$sglang_py:$repo_ct"
 export NCCL_IB_DISABLE=1 NCCL_SOCKET_IFNAME=lo NCCL_P2P_LEVEL=NVL NCCL_PROTO=Simple NCCL_ALGO=Ring
+# All TP workers are local; keep Gloo off hostname-selected external interfaces.
+export GLOO_SOCKET_IFNAME=lo
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 command -v setsid >/dev/null 2>&1 || { echo "setsid is required" >&2; exit 127; }
 nohup setsid bash "$repo_ct/scripts/local/run-server.sh" "$mode" "$model_ct" 0.0.0.0 "$port" \
