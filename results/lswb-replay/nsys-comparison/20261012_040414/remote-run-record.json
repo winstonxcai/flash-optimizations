@@ -62,7 +62,9 @@
           "requested_s": 960.0002631433308,
           "elapsed_s": 999.8907905062661
         }
-      ]
+      ],
+      "profiled": true,
+      "decode_graph_max_bs": 15
     },
     {
       "tag": "triton-c28",
@@ -101,7 +103,9 @@
           "requested_s": 960.0002588760108,
           "elapsed_s": 1007.762470155023
         }
-      ]
+      ],
+      "profiled": true,
+      "decode_graph_max_bs": 15
     },
     {
       "tag": "native-c24",
@@ -140,7 +144,9 @@
           "requested_s": 960.0002595195547,
           "elapsed_s": 997.0246017454192
         }
-      ]
+      ],
+      "profiled": true,
+      "decode_graph_max_bs": 15
     },
     {
       "tag": "kernel-c24",
@@ -181,7 +187,9 @@
         }
       ],
       "source_commit": "34dc2e227e4747e4f235157919b8a14ede0a9fdf",
-      "results_commit": "f8cc479f0e230f564a4e86913f4f6ae8c2ae0954"
+      "results_commit": "f8cc479f0e230f564a4e86913f4f6ae8c2ae0954",
+      "profiled": true,
+      "decode_graph_max_bs": 15
     },
     {
       "tag": "kernel-c28",
@@ -222,16 +230,88 @@
         }
       ],
       "source_commit": "34dc2e227e4747e4f235157919b8a14ede0a9fdf",
-      "results_commit": "030af99656dceddb3cceeae3a2fe0a26e16313dd"
+      "results_commit": "030af99656dceddb3cceeae3a2fe0a26e16313dd",
+      "profiled": true,
+      "decode_graph_max_bs": 15
+    },
+    {
+      "tag": "native-graph-c24",
+      "concurrency": 24,
+      "remote_result": "results/lswb-replay/native-graph-c24/20261012_081956",
+      "profiled": false,
+      "decode_graph_max_bs": 136,
+      "source_commit": "8bbcbae38fde372a4b7ed1166d871fb8d0525b66",
+      "results_commit": "81a9acc",
+      "token_pool_size": 3738624,
+      "nsight_events": [],
+      "success_rate": 0.990493435943866,
+      "valid": true,
+      "failure_reasons": {
+        "missing_output_event": 21
+      },
+      "completion_token_throughput": 277.26718853008293,
+      "duration_s": 1204.6322602061555,
+      "successful": 2188,
+      "failed": 21,
+      "tpot_p50_ms": 22.79353496340806,
+      "tpot_p95_ms": 132.4405559681748,
+      "device_cache_hit_rate": 0.9721796360494168
+    },
+    {
+      "tag": "native-graph-nsys-c24",
+      "concurrency": 24,
+      "remote_result": "results/lswb-replay/native-graph-nsys-c24/20261012_100313",
+      "profiled": true,
+      "decode_graph_max_bs": 136,
+      "results_commit": "d89a4d3",
+      "trace_commit": "57631f8",
+      "token_pool_size": 3735296,
+      "source_commit": null,
+      "source_identity_note": "Parent launch commit not recorded in client manifest; no fork changes are asserted by this aggregate.",
+      "nsight_events": [
+        {
+          "action": "start",
+          "requested_s": 300.00104125496,
+          "elapsed_s": 308.79846759326756
+        },
+        {
+          "action": "stop",
+          "requested_s": 360.00036488100886,
+          "elapsed_s": 384.7290616184473
+        },
+        {
+          "action": "start",
+          "requested_s": 900.000318352133,
+          "elapsed_s": 901.4547390472144
+        },
+        {
+          "action": "stop",
+          "requested_s": 960.0003252606839,
+          "elapsed_s": 985.8236518967897
+        }
+      ],
+      "success_rate": 0.9912408759124087,
+      "valid": true,
+      "failure_reasons": {
+        "missing_output_event": 18
+      },
+      "completion_token_throughput": 260.0151035318404,
+      "duration_s": 1204.5723334746435,
+      "successful": 2037,
+      "failed": 18,
+      "tpot_p50_ms": 24.9279476950566,
+      "tpot_p95_ms": 156.59402931729952,
+      "device_cache_hit_rate": 0.9714922715380263
     }
   ],
   "remote_profiles": {
     "packed": "logs/nsys-triton-20261012_035951-jhemyj/server.{1,2,3,4}.nsys-rep",
     "native": "logs/nsys-native-20261012_045344-8LmAk9/server.{1,2}.nsys-rep",
-    "packed_kernel": "logs/nsys-kernel-20261012_071333-2812wI/server.{1,2,3,4}.nsys-rep"
+    "packed_kernel": "logs/nsys-kernel-20261012_071333-2812wI/server.{1,2,3,4}.nsys-rep",
+    "corrected_native": "logs/nsys-native-20261012_100018-odyr90/server.{1,2}.nsys-rep"
   },
   "limitations": [
-    "All runs below 0.99 success threshold; failure cause not diagnosed.",
+    "The five earlier profiled runs miss the success gate; missing_output_event failures remain unresolved. Corrected unprofiled Native passes with 21 such failures.",
     "Profiled serving runs are not uninstrumented acceptance timing.",
     "For each Packed implementation, c28 reused its c24 server and cache.",
     "Reports saved and nonempty; trace contents not analyzed.",
@@ -240,9 +320,9 @@
     "All five recent runs launched with decode max_bs=15 despite c24/c28, forcing larger decode batches off graph. Retain as misconfigured evidence; do not use for implementation performance comparisons."
   ],
   "cleanup": {
-    "server": "stopped",
+    "server": "Corrected Native was left running after replay; observed stopped on VDI after chat pause. Subsequent profiling is user-operated.",
     "lease_id": "lease-20261011-182733-8206965c",
-    "lease_expiry_utc": "2026-10-12T04:08:46.011848+00:00"
+    "lease_expiry_utc": "2026-10-12T04:42:41.959070+00:00"
   },
   "results_commit": "eafe4bb",
   "kernel_profile_mapping": {
@@ -265,7 +345,7 @@
   "kernel_server_ready_s_approx": 160,
   "token_pool_size": 3735296,
   "model": "/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731",
-  "decision": "Inconclusive for performance acceptance: all five profiled runs miss success gate; retain artifacts for failure and trace analysis.",
+  "decision": "Keep graph configuration correction: unprofiled Native c24 recovered original throughput and median TPOT and passed the 0.99 success gate. Five earlier profiled runs remain invalid for implementation comparisons. Corrected Packed performance is not yet validated.",
   "native_regression_diagnosis": {
     "reference": "results/lswb-replay/native-slo-c24/20260909_081547",
     "reference_completion_token_throughput": 277.9779543009494,
@@ -276,6 +356,324 @@
     "adapter_sha256_changed": true,
     "mechanism": "Standalone serve.sh inherited small graph config max_bs=15. Decode graph runner falls back to eager above that batch size.",
     "validation_plan": "Keep fork/image/replay configuration fixed; relaunch Native with extended graphs and repeat unprofiled c24 for 1200s. Confirm graph use in logs and compare to original. Stop after recovery is demonstrated or investigate remaining regression.",
-    "acceptance": "Full graphs cover c24/c28; Native throughput and TPOT recover toward original control, with success gate reported independently."
+    "acceptance": "Full graphs cover c24/c28; Native throughput and TPOT recover toward original control, with success gate reported independently.",
+    "live_graph_evidence": "2026-10-12 00:22:14 TP0 Decode batch, running-req=24, cuda graph: True",
+    "old_sweep_log_graph_max_bs": 136,
+    "reference_gpu_ids_inferred_from_samples": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "reference_source_and_host_identity": "Not recorded in the supplied original client artifacts; historical comparison is not a paired controlled measurement.",
+    "corrected_run": "results/lswb-replay/native-graph-c24/20261012_081956",
+    "corrected_pool_tokens": 3738624,
+    "reference_summary_sha256": "5b4157ec9bdd1b4285c92a3e8b67b5e0ffed67ff61c0a8ddca5c73346a382311",
+    "reference_counts": {
+      "attempted": 2212,
+      "completion_tokens": 336965,
+      "failed": 18,
+      "not_started_due_to_duration": 2704,
+      "prompt_tokens": 313281209,
+      "selected": 4916,
+      "successful": 2194,
+      "users_completed": 30,
+      "users_selected": 92,
+      "users_started": 52
+    },
+    "reference_failure_reasons": {
+      "missing_output_event": 18
+    },
+    "checks_completed": [
+      "bash -n for changed shell scripts",
+      "Six decode graph preflight cases: undersized, c24, c28, disabled, empty, no-padding mismatch",
+      "Standalone serving defaults to extended; explicit graph override preserved",
+      "Live server preflight contains c24/c28",
+      "Live c24 decode logs cuda graph: True"
+    ],
+    "validation_outcome": "Completed unprofiled Native c24 replay with extended decode graphs; throughput and median TPOT recovered and success gate passed.",
+    "corrected_completion_token_throughput": 277.26718853008293,
+    "corrected_tpot_p50_ms": 22.79353496340806,
+    "corrected_success_rate": 0.990493435943866
+  },
+  "corrected_native_trace_objects": [
+    {
+      "file": "server.1.nsys-rep",
+      "sha256": "9749e16cf14da43ded796f303d36a4e68b70fdd03064752a8aded470196beb5d",
+      "bytes": 142488922
+    },
+    {
+      "file": "server.2.nsys-rep",
+      "sha256": "92fdb60aeef2331604ae8518eb3563186f86f4cf1a24019a5fb3531fe351f3a7",
+      "bytes": 151203578
+    }
+  ],
+  "corrected_native_profile_comparison": {
+    "throughput_change_pct": -6.222187735124207,
+    "tpot_p50_change_pct": 9.364114583696859,
+    "tpot_p95_change_pct": 18.237218329805827,
+    "interpretation": "Profiled Native passes the success gate. Both traces confirm graph launches on all four GPUs. Graph-level tracing omits decode node kernels, retains historical graph records outside the captured interval, and reports incomplete boundary events; these are limitations for quantitative kernel attribution. The throughput difference is consistent with profiler overhead, but the runs do not isolate a causal profiler effect."
+  },
+  "corrected_native_trace_analysis": [
+    {
+      "file": "server.1.nsys-rep",
+      "exporter": "Nsight Systems 2026.5.1.161 (Linux ARM64 CPU-only container)",
+      "duration_s": 52.444988226,
+      "capture_start_utc": "2026-10-12T02:08:22",
+      "graph_trace_mode": "Graph",
+      "kernel_records": 1572143,
+      "graph_nodes_present": false,
+      "graph_launch_api_count": 9376,
+      "devices": [
+        {
+          "id": 0,
+          "captured_graphs": 2344,
+          "graph_time_s": 27.198713614,
+          "mean_graph_ms": 11.603546763651877,
+          "recorded_gpu_busy_fraction": 0.9281087271723167
+        },
+        {
+          "id": 1,
+          "captured_graphs": 2344,
+          "graph_time_s": 27.005539217,
+          "mean_graph_ms": 11.52113447824232,
+          "recorded_gpu_busy_fraction": 0.8960237765046037
+        },
+        {
+          "id": 2,
+          "captured_graphs": 2344,
+          "graph_time_s": 27.236381453,
+          "mean_graph_ms": 11.619616660836178,
+          "recorded_gpu_busy_fraction": 0.9637132076224484
+        },
+        {
+          "id": 3,
+          "captured_graphs": 2344,
+          "graph_time_s": 26.993854458,
+          "mean_graph_ms": 11.516149512798636,
+          "recorded_gpu_busy_fraction": 0.7325779759247419
+        }
+      ],
+      "historical_graph_records_excluded": 16956,
+      "top_non_graph_kernels": [
+        {
+          "name": "void sglang::all_reduce_kernel<sglang::AllReducePullImpl<__nv_bfloat16, (unsigned int)4, (sglang::PullMode)2, (bool)1>, (unsigned int)4, (int)2>(sglang::AllReduceParams<T2>)",
+          "count": 44892,
+          "summed_gpu_s": 34.803806233
+        },
+        {
+          "name": "void cutlass::device_kernel<cutlass::gemm::kernel::GemmUniversal<cutlass::gemm::GroupProblemShape<cute::tuple<int, int, int>>, cutlass::gemm::collective::CollectiveMmaArrayMixedInput<cutlass::gemm::MainloopSm90ArrayTmaGmmaWarpSpecializedMixedInput<(int)24, cute::tuple<cute::C<(int)1>, cute::C<(int)1>, cute::C<(int)1>>, cutlass::gemm::KernelPtrArrayTmaWarpSpecializedPingpong>, cute::tuple<cute::C<(int)64>, cute::C<(int)16>, cute::C<(int)128>>, cute::tuple<cutlass::float_e2m1_t, cutlass::Array<cutlass::float_ue8m0_t, (int)4, (bool)0>>, cute::tuple<long, cute::C<(int)1>, cute::C<(int)0>> *, cutlass::bfloat16_t, cute::tuple<long, cute::C<(int)1>, cute::C<(int)0>> *, cute::TiledMMA<cute::MMA_Atom<cute::SM90::GMMA::MMA_64x16x16_F32BF16BF16_RS<(cute::SM90::GMMA::Major)0, (cute::SM90::GMMA::Major)0, (cute::SM90::GMMA::ScaleIn)1, (cute::SM90::GMMA::ScaleIn)1>>, cute::Layout<cute::tuple<cute::C<(int)1>, cute::C<(int)1>, cute::C<(int)1>>, cute::tuple<cute::C<(int)0>, cute::C<(int)0>, cute::C<(int)0>>>, cute::tuple<cute::Underscore, cute::Underscore, cute::Underscore>>, cute::SM90_TMA_LOAD, cute::ComposedLayout<cute::Swizzle<(int)2, (int)4, (int)3>, cute::smem_ptr_flag_bits<(int)4>, cute::Layout<cute::tuple<cute::C<(int)8>, cute::C<(int)128>>, cute::tuple<cute::C<(int)128>, cute::C<(int)1>>>>, cute::Copy_Atom<cute::AutoVectorizingCopyWithAssumedAlignment<(int)128>, cutlass::float_e2m1_t>, cute::identity, cute::SM90_TMA_LOAD, cute::ComposedLayout<cute::Swizzle<(int)3, (int)4, (int)3>, cute::smem_ptr_flag_bits<(int)16>, cute::Layout<cute::tuple<cute::C<(int)8>, cute::C<(int)64>>, cute::tuple<cute::C<(int)64>, cute::C<(int)1>>>>, void, cute::identity>, cutlass::epilogue::collective::CollectiveEpilogue<cutlass::epilogue::Sm90PtrArrayTmaWarpSpecialized<(int)2, (int)1, (int)8, (bool)1, (bool)0, (int)2>, cute::tuple<cute::C<(int)64>, cute::C<(int)16>, cute::C<(int)128>>, cute::tuple<cute::C<(int)64>, cute::C<(int)16>>, cutlass::bfloat16_t, cute::tuple<cute::C<(int)1>, long, cute::C<(int)0>> *, cutlass::bfloat16_t, cute::tuple<cute::C<(int)1>, long, cute::C<(int)0>> *, cutlass::epilogue::fusion::FusionCallbacks<cutlass::epilogue::Sm90PtrArrayTmaWarpSpecialized<(int)2, (int)1, (int)8, (bool)1, (bool)0, (int)2>, cutlass::epilogue::fusion::LinearCombination<cutlass::bfloat16_t, float, cutlass::bfloat16_t, float, (cutlass::FloatRoundStyle)2>, cute::tuple<cute::C<(int)64>, cute::C<(int)16>, cute::C<(int)128>>, cute::tuple<cute::C<(int)64>, cute::C<(int)16>>, >, cute::SM90_TMA_LOAD, cute::ComposedLayout<cute::Swizzle<(int)3, (int)4, (int)3>, cute::smem_ptr_flag_bits<(int)16>, cute::Layout<cute::tuple<cute::C<(int)64>, cute::C<(int)8>>, cute::tuple<cute::C<(int)1>, cute::C<(int)64>>>>, cute::SM75_U16x8_LDSM_T, cute::SM90_TMA_STORE, cute::ComposedLayout<cute::Swizzle<(int)3, (int)4, (int)3>, cute::smem_ptr_flag_bits<(int)16>, cute::Layout<cute::tuple<cute::C<(int)64>, cute::C<(int)8>>, cute::tuple<cute::C<(int)1>, cute::C<(int)64>>>>, cute::SM90_U16x8_STSM_T, cute::Copy_Atom<cute::SM90_U32x4_STSM_N, cutlass::half_t>, void>, void, void>>(T1::Params)",
+          "count": 39796,
+          "summed_gpu_s": 18.213657156
+        },
+        {
+          "name": "void deep_gemm::sm90_fp8_paged_mqa_logits<(unsigned int)1, (unsigned int)64, (unsigned int)128, (unsigned int)64, (bool)1, (bool)0, (unsigned int)3, (unsigned int)3, (unsigned int)256, (unsigned int)128, (unsigned int)512, float>(unsigned int, unsigned int, unsigned int, const unsigned int *, T12 *, const unsigned int *, const unsigned int *, const unsigned int *, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st)",
+          "count": 11340,
+          "summed_gpu_s": 4.95040114
+        },
+        {
+          "name": "void sm90::fwd::sparse_attn_fwd_kernel<sm90::fwd::KernelTemplate<(int)512, (bool)1>, sm90::fwd::KernelTemplate<(int)512, (bool)1>::TmaParams<cute::tuple<int, int, int>, cute::TiledCopy<cute::Copy_Atom<cute::Copy_Traits<cute::SM90_TMA_LOAD, cute::C<(int)65536>, cute::AuxTmaParams<cute::tuple<cute::ScaledBasis<cute::C<(int)1>, (int)1>, cute::ScaledBasis<cute::C<(int)1>, (int)0>, cute::ScaledBasis<cute::C<(int)1>, (int)2>>, const cute::Layout<cute::tuple<cute::C<(int)64>, cute::C<(int)64>, cute::C<(int)1>>, cute::tuple<cute::ScaledBasis<cute::C<(int)1>, (int)1>, cute::ScaledBasis<cute::C<(int)1>, (int)0>, cute::ScaledBasis<cute::C<(int)1>, (int)2>>> &, const cute::Swizzle<(int)3, (int)4, (int)3> &>>, cutlass::bfloat16_t>, cute::Layout<cute::tuple<cute::C<(int)1>, cute::tuple<cute::tuple<cute::tuple<cute::C<(int)64>, cute::C<(int)64>>, cute::C<(int)8>>>>, cute::tuple<cute::C<(int)0>, cute::tuple<cute::tuple<cute::tuple<cute::C<(int)64>, cute::C<(int)1>>, cute::C<(int)4096>>>>>, cute::tuple<cute::C<(int)64>, cute::C<(int)512>>>>>(SparseAttnFwdParams, T2)",
+          "count": 23335,
+          "summed_gpu_s": 3.92813803
+        },
+        {
+          "name": "_dequantize_k_cache_paged_kernel",
+          "count": 45588,
+          "summed_gpu_s": 1.068259466
+        },
+        {
+          "name": "void cutlass::device_kernel<cutlass::gemm::kernel::GemmUniversal<cutlass::gemm::GroupProblemShape<cute::tuple<int, int, int>>, cutlass::gemm::collective::CollectiveMmaArrayMixedInput<cutlass::gemm::MainloopSm90ArrayTmaGmmaWarpSpecializedMixedInput<(int)16, cute::tuple<cute::C<(int)1>, cute::C<(int)1>, cute::C<(int)1>>, cutlass::gemm::KernelPtrArrayTmaWarpSpecializedCooperative>, cute::tuple<cute::C<(int)128>, cute::C<(int)16>, cute::C<(int)128>>, cute::tuple<cutlass::float_e2m1_t, cutlass::Array<cutlass::float_ue8m0_t, (int)4, (bool)0>>, cute::tuple<long, cute::C<(int)1>, cute::C<(int)0>> *, cutlass::bfloat16_t, cute::tuple<long, cute::C<(int)1>, cute::C<(int)0>> *, cute::TiledMMA<cute::MMA_Atom<cute::SM90::GMMA::MMA_64x16x16_F32BF16BF16_RS<(cute::SM90::GMMA::Major)0, (cute::SM90::GMMA::Major)0, (cute::SM90::GMMA::ScaleIn)1, (cute::SM90::GMMA::ScaleIn)1>>, cute::Layout<cute::tuple<cute::C<(int)2>, cute::C<(int)1>, cute::C<(int)1>>, cute::tuple<cute::C<(int)1>, cute::C<(int)0>, cute::C<(int)0>>>, cute::tuple<cute::Underscore, cute::Underscore, cute::Underscore>>, cute::SM90_TMA_LOAD, cute::ComposedLayout<cute::Swizzle<(int)2, (int)4, (int)3>, cute::smem_ptr_flag_bits<(int)4>, cute::Layout<cute::tuple<cute::C<(int)8>, cute::C<(int)128>>, cute::tuple<cute::C<(int)128>, cute::C<(int)1>>>>, cute::Copy_Atom<cute::AutoVectorizingCopyWithAssumedAlignment<(int)128>, cutlass::float_e2m1_t>, cute::identity, cute::SM90_TMA_LOAD, cute::ComposedLayout<cute::Swizzle<(int)3, (int)4, (int)3>, cute::smem_ptr_flag_bits<(int)16>, cute::Layout<cute::tuple<cute::C<(int)8>, cute::C<(int)64>>, cute::tuple<cute::C<(int)64>, cute::C<(int)1>>>>, void, cute::identity>, cutlass::epilogue::collective::CollectiveEpilogue<cutlass::epilogue::Sm90PtrArrayTmaWarpSpecialized<(int)2, (int)1, (int)8, (bool)1, (bool)0, (int)2>, cute::tuple<cute::C<(int)128>, cute::C<(int)16>, cute::C<(int)128>>, cute::tuple<cute::C<(int)128>, cute::C<(int)16>>, cutlass::bfloat16_t, cute::tuple<cute::C<(int)1>, long, cute::C<(int)0>> *, cutlass::bfloat16_t, cute::tuple<cute::C<(int)1>, long, cute::C<(int)0>> *, cutlass::epilogue::fusion::FusionCallbacks<cutlass::epilogue::Sm90PtrArrayTmaWarpSpecialized<(int)2, (int)1, (int)8, (bool)1, (bool)0, (int)2>, cutlass::epilogue::fusion::LinearCombination<cutlass::bfloat16_t, float, cutlass::bfloat16_t, float, (cutlass::FloatRoundStyle)2>, cute::tuple<cute::C<(int)128>, cute::C<(int)16>, cute::C<(int)128>>, cute::tuple<cute::C<(int)128>, cute::C<(int)16>>, >, cute::SM90_TMA_LOAD, cute::ComposedLayout<cute::Swizzle<(int)3, (int)4, (int)3>, cute::smem_ptr_flag_bits<(int)16>, cute::Layout<cute::tuple<cute::C<(int)64>, cute::C<(int)8>>, cute::tuple<cute::C<(int)1>, cute::C<(int)64>>>>, cute::SM75_U16x8_LDSM_T, cute::SM90_TMA_STORE, cute::ComposedLayout<cute::Swizzle<(int)3, (int)4, (int)3>, cute::smem_ptr_flag_bits<(int)16>, cute::Layout<cute::tuple<cute::C<(int)64>, cute::C<(int)8>>, cute::tuple<cute::C<(int)1>, cute::C<(int)64>>>>, cute::SM90_U16x8_STSM_T, cute::Copy_Atom<cute::SM90_U32x4_STSM_N, cutlass::half_t>, void>, void, void>>(T1::Params)",
+          "count": 5891,
+          "summed_gpu_s": 1.024826094
+        },
+        {
+          "name": "mhc_post_tilelang_kernel",
+          "count": 46676,
+          "summed_gpu_s": 0.906615526
+        },
+        {
+          "name": "void sglang::topk_main_kernel<(bool)1, (int)2>(sglang::TopKLaunchParams)",
+          "count": 11313,
+          "summed_gpu_s": 0.6428392
+        }
+      ],
+      "coverage_diagnostics": [
+        {
+          "severity": 1,
+          "text": "CUDA hardware tracing is not supported on this system. A legacy (software instrumented) trace was collected instead.",
+          "count": 6
+        },
+        {
+          "severity": 1,
+          "text": "Number of CUPTI events produced: \t1610286, CUPTI buffers: 48 of 50. Some CUPTI events might be missing. To make sure all the events are collected, let the application run until it quits, and make sure cudaDeviceReset() is called before exit. Try using the \"Flush data periodically\" checkbox in CUDA trace options.",
+          "count": 1
+        },
+        {
+          "severity": 1,
+          "text": "Number of CUPTI events produced: \t1612137, CUPTI buffers: 49 of 50. Some CUPTI events might be missing. To make sure all the events are collected, let the application run until it quits, and make sure cudaDeviceReset() is called before exit. Try using the \"Flush data periodically\" checkbox in CUDA trace options.",
+          "count": 1
+        },
+        {
+          "severity": 1,
+          "text": "Number of CUPTI events produced: \t1622290, CUPTI buffers: 48 of 50. Some CUPTI events might be missing. To make sure all the events are collected, let the application run until it quits, and make sure cudaDeviceReset() is called before exit. Try using the \"Flush data periodically\" checkbox in CUDA trace options.",
+          "count": 1
+        },
+        {
+          "severity": 1,
+          "text": "Number of incomplete CUPTI events dropped: 379. Incomplete events appear when GPU timestamp information have not been retrieved at the time the profiling session was stopped.",
+          "count": 1
+        },
+        {
+          "severity": 1,
+          "text": "Number of incomplete CUPTI events dropped: 391. Incomplete events appear when GPU timestamp information have not been retrieved at the time the profiling session was stopped.",
+          "count": 1
+        },
+        {
+          "severity": 1,
+          "text": "Number of incomplete CUPTI events dropped: 392. Incomplete events appear when GPU timestamp information have not been retrieved at the time the profiling session was stopped.",
+          "count": 1
+        },
+        {
+          "severity": 2,
+          "text": "Not all CUDA events might have been collected.",
+          "count": 4
+        }
+      ],
+      "incomplete_cupti_events_dropped": 1162
+    },
+    {
+      "file": "server.2.nsys-rep",
+      "exporter": "Nsight Systems 2026.5.1.161 (Linux ARM64 CPU-only container)",
+      "duration_s": 60.123945081,
+      "capture_start_utc": "2026-10-12T02:18:14",
+      "graph_trace_mode": "Graph",
+      "kernel_records": 1593573,
+      "graph_nodes_present": false,
+      "graph_launch_api_count": 9601,
+      "devices": [
+        {
+          "id": 0,
+          "captured_graphs": 2401,
+          "graph_time_s": 28.170652201,
+          "mean_graph_ms": 11.732883049146189,
+          "recorded_gpu_busy_fraction": 0.906185745389777
+        },
+        {
+          "id": 1,
+          "captured_graphs": 2400,
+          "graph_time_s": 28.054103542,
+          "mean_graph_ms": 11.689209809166666,
+          "recorded_gpu_busy_fraction": 0.9074810371390972
+        },
+        {
+          "id": 2,
+          "captured_graphs": 2400,
+          "graph_time_s": 28.203888734,
+          "mean_graph_ms": 11.751620305833335,
+          "recorded_gpu_busy_fraction": 0.9657994624399687
+        },
+        {
+          "id": 3,
+          "captured_graphs": 2400,
+          "graph_time_s": 28.038840745,
+          "mean_graph_ms": 11.682850310416667,
+          "recorded_gpu_busy_fraction": 0.8183860046394283
+        }
+      ],
+      "historical_graph_records_excluded": 66283,
+      "top_non_graph_kernels": [
+        {
+          "name": "void cutlass::device_kernel<cutlass::gemm::kernel::GemmUniversal<cutlass::gemm::GroupProblemShape<cute::tuple<int, int, int>>, cutlass::gemm::collective::CollectiveMmaArrayMixedInput<cutlass::gemm::MainloopSm90ArrayTmaGmmaWarpSpecializedMixedInput<(int)24, cute::tuple<cute::C<(int)1>, cute::C<(int)1>, cute::C<(int)1>>, cutlass::gemm::KernelPtrArrayTmaWarpSpecializedPingpong>, cute::tuple<cute::C<(int)64>, cute::C<(int)16>, cute::C<(int)128>>, cute::tuple<cutlass::float_e2m1_t, cutlass::Array<cutlass::float_ue8m0_t, (int)4, (bool)0>>, cute::tuple<long, cute::C<(int)1>, cute::C<(int)0>> *, cutlass::bfloat16_t, cute::tuple<long, cute::C<(int)1>, cute::C<(int)0>> *, cute::TiledMMA<cute::MMA_Atom<cute::SM90::GMMA::MMA_64x16x16_F32BF16BF16_RS<(cute::SM90::GMMA::Major)0, (cute::SM90::GMMA::Major)0, (cute::SM90::GMMA::ScaleIn)1, (cute::SM90::GMMA::ScaleIn)1>>, cute::Layout<cute::tuple<cute::C<(int)1>, cute::C<(int)1>, cute::C<(int)1>>, cute::tuple<cute::C<(int)0>, cute::C<(int)0>, cute::C<(int)0>>>, cute::tuple<cute::Underscore, cute::Underscore, cute::Underscore>>, cute::SM90_TMA_LOAD, cute::ComposedLayout<cute::Swizzle<(int)2, (int)4, (int)3>, cute::smem_ptr_flag_bits<(int)4>, cute::Layout<cute::tuple<cute::C<(int)8>, cute::C<(int)128>>, cute::tuple<cute::C<(int)128>, cute::C<(int)1>>>>, cute::Copy_Atom<cute::AutoVectorizingCopyWithAssumedAlignment<(int)128>, cutlass::float_e2m1_t>, cute::identity, cute::SM90_TMA_LOAD, cute::ComposedLayout<cute::Swizzle<(int)3, (int)4, (int)3>, cute::smem_ptr_flag_bits<(int)16>, cute::Layout<cute::tuple<cute::C<(int)8>, cute::C<(int)64>>, cute::tuple<cute::C<(int)64>, cute::C<(int)1>>>>, void, cute::identity>, cutlass::epilogue::collective::CollectiveEpilogue<cutlass::epilogue::Sm90PtrArrayTmaWarpSpecialized<(int)2, (int)1, (int)8, (bool)1, (bool)0, (int)2>, cute::tuple<cute::C<(int)64>, cute::C<(int)16>, cute::C<(int)128>>, cute::tuple<cute::C<(int)64>, cute::C<(int)16>>, cutlass::bfloat16_t, cute::tuple<cute::C<(int)1>, long, cute::C<(int)0>> *, cutlass::bfloat16_t, cute::tuple<cute::C<(int)1>, long, cute::C<(int)0>> *, cutlass::epilogue::fusion::FusionCallbacks<cutlass::epilogue::Sm90PtrArrayTmaWarpSpecialized<(int)2, (int)1, (int)8, (bool)1, (bool)0, (int)2>, cutlass::epilogue::fusion::LinearCombination<cutlass::bfloat16_t, float, cutlass::bfloat16_t, float, (cutlass::FloatRoundStyle)2>, cute::tuple<cute::C<(int)64>, cute::C<(int)16>, cute::C<(int)128>>, cute::tuple<cute::C<(int)64>, cute::C<(int)16>>, >, cute::SM90_TMA_LOAD, cute::ComposedLayout<cute::Swizzle<(int)3, (int)4, (int)3>, cute::smem_ptr_flag_bits<(int)16>, cute::Layout<cute::tuple<cute::C<(int)64>, cute::C<(int)8>>, cute::tuple<cute::C<(int)1>, cute::C<(int)64>>>>, cute::SM75_U16x8_LDSM_T, cute::SM90_TMA_STORE, cute::ComposedLayout<cute::Swizzle<(int)3, (int)4, (int)3>, cute::smem_ptr_flag_bits<(int)16>, cute::Layout<cute::tuple<cute::C<(int)64>, cute::C<(int)8>>, cute::tuple<cute::C<(int)1>, cute::C<(int)64>>>>, cute::SM90_U16x8_STSM_T, cute::Copy_Atom<cute::SM90_U32x4_STSM_N, cutlass::half_t>, void>, void, void>>(T1::Params)",
+          "count": 46096,
+          "summed_gpu_s": 34.671212277
+        },
+        {
+          "name": "void sglang::all_reduce_kernel<sglang::AllReducePullImpl<__nv_bfloat16, (unsigned int)4, (sglang::PullMode)2, (bool)1>, (unsigned int)4, (int)2>(sglang::AllReduceParams<T2>)",
+          "count": 40020,
+          "summed_gpu_s": 30.364074892
+        },
+        {
+          "name": "void sm90::fwd::sparse_attn_fwd_kernel<sm90::fwd::KernelTemplate<(int)512, (bool)1>, sm90::fwd::KernelTemplate<(int)512, (bool)1>::TmaParams<cute::tuple<int, int, int>, cute::TiledCopy<cute::Copy_Atom<cute::Copy_Traits<cute::SM90_TMA_LOAD, cute::C<(int)65536>, cute::AuxTmaParams<cute::tuple<cute::ScaledBasis<cute::C<(int)1>, (int)1>, cute::ScaledBasis<cute::C<(int)1>, (int)0>, cute::ScaledBasis<cute::C<(int)1>, (int)2>>, const cute::Layout<cute::tuple<cute::C<(int)64>, cute::C<(int)64>, cute::C<(int)1>>, cute::tuple<cute::ScaledBasis<cute::C<(int)1>, (int)1>, cute::ScaledBasis<cute::C<(int)1>, (int)0>, cute::ScaledBasis<cute::C<(int)1>, (int)2>>> &, const cute::Swizzle<(int)3, (int)4, (int)3> &>>, cutlass::bfloat16_t>, cute::Layout<cute::tuple<cute::C<(int)1>, cute::tuple<cute::tuple<cute::tuple<cute::C<(int)64>, cute::C<(int)64>>, cute::C<(int)8>>>>, cute::tuple<cute::C<(int)0>, cute::tuple<cute::tuple<cute::tuple<cute::C<(int)64>, cute::C<(int)1>>, cute::C<(int)4096>>>>>, cute::tuple<cute::C<(int)64>, cute::C<(int)512>>>>>(SparseAttnFwdParams, T2)",
+          "count": 23564,
+          "summed_gpu_s": 7.334167169
+        },
+        {
+          "name": "void deep_gemm::sm90_fp8_paged_mqa_logits<(unsigned int)1, (unsigned int)64, (unsigned int)128, (unsigned int)64, (bool)1, (bool)0, (unsigned int)3, (unsigned int)3, (unsigned int)256, (unsigned int)128, (unsigned int)512, float>(unsigned int, unsigned int, unsigned int, const unsigned int *, T12 *, const unsigned int *, const unsigned int *, const unsigned int *, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st)",
+          "count": 10248,
+          "summed_gpu_s": 6.029686155
+        },
+        {
+          "name": "ncclDevKernel_AllReduce_Sum_bf16_RING_LL(ncclDevKernelArgsStorage<(unsigned long)4096>)",
+          "count": 7656,
+          "summed_gpu_s": 2.558882117
+        },
+        {
+          "name": "void deep_gemm::sm90_fp8_mqa_logits<(unsigned int)64, (unsigned int)128, (bool)1, (unsigned int)2, (unsigned int)256, (unsigned int)3, (unsigned int)3, (unsigned int)132, (unsigned int)128, (unsigned int)512, float>(unsigned int, unsigned int, unsigned int, unsigned int, unsigned int *, unsigned int *, T11 *, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st)",
+          "count": 1260,
+          "summed_gpu_s": 2.536695663
+        },
+        {
+          "name": "mhc_post_tilelang_kernel",
+          "count": 47128,
+          "summed_gpu_s": 1.952085942
+        },
+        {
+          "name": "void deep_gemm::sm90_fp8_gemm_1d2d_impl<(cute::UMMA::Major)0, (unsigned int)0, (unsigned int)0, (unsigned int)0, (unsigned int)1, (unsigned int)256, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)3, (unsigned int)128, (unsigned int)256, (unsigned int)2, (bool)1, (unsigned int)132, (deep_gemm::GemmType)0, cutlass::bfloat16_t, deep_gemm::epilogue::transform::EpilogueIdentity>(float *, int *, unsigned int, unsigned int, unsigned int, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st)",
+          "count": 24420,
+          "summed_gpu_s": 1.584105792
+        }
+      ],
+      "coverage_diagnostics": [
+        {
+          "severity": 1,
+          "text": "CUDA hardware tracing is not supported on this system. A legacy (software instrumented) trace was collected instead.",
+          "count": 6
+        },
+        {
+          "severity": 1,
+          "text": "Number of CUPTI events produced: \t1686167, CUPTI buffers: 49 of 50. Some CUPTI events might be missing. To make sure all the events are collected, let the application run until it quits, and make sure cudaDeviceReset() is called before exit. Try using the \"Flush data periodically\" checkbox in CUDA trace options.",
+          "count": 1
+        },
+        {
+          "severity": 1,
+          "text": "Number of CUPTI events produced: \t1686717, CUPTI buffers: 49 of 50. Some CUPTI events might be missing. To make sure all the events are collected, let the application run until it quits, and make sure cudaDeviceReset() is called before exit. Try using the \"Flush data periodically\" checkbox in CUDA trace options.",
+          "count": 1
+        },
+        {
+          "severity": 1,
+          "text": "Number of CUPTI events produced: \t1694756, CUPTI buffers: 49 of 50. Some CUPTI events might be missing. To make sure all the events are collected, let the application run until it quits, and make sure cudaDeviceReset() is called before exit. Try using the \"Flush data periodically\" checkbox in CUDA trace options.",
+          "count": 1
+        },
+        {
+          "severity": 1,
+          "text": "Number of incomplete CUPTI events dropped: 898. Incomplete events appear when GPU timestamp information have not been retrieved at the time the profiling session was stopped.",
+          "count": 1
+        },
+        {
+          "severity": 1,
+          "text": "Number of incomplete CUPTI events dropped: 905. Incomplete events appear when GPU timestamp information have not been retrieved at the time the profiling session was stopped.",
+          "count": 1
+        },
+        {
+          "severity": 1,
+          "text": "Number of incomplete CUPTI events dropped: 939. Incomplete events appear when GPU timestamp information have not been retrieved at the time the profiling session was stopped.",
+          "count": 1
+        },
+        {
+          "severity": 2,
+          "text": "Not all CUDA events might have been collected.",
+          "count": 6
+        }
+      ],
+      "incomplete_cupti_events_dropped": 2742
+    }
+  ],
+  "corrected_native_trace_analysis_method": {
+    "collector_library_version": "2026.4.1 (from the loaded CUPTI path in diagnostics)",
+    "exporter_package_sha256": "087c08b5ddf3ed6f913748f8206d6bbdc225f2aa275ff33af4c487e8b319c8ab",
+    "interval": "0 <= start and end <= ANALYSIS_DETAILS duration for graph/kernel summaries; exclude historical negative-timestamp graph records.",
+    "busy_fraction": "Union of kernel, graph, memcpy, and memset intervals clipped to the captured interval, per device; overlapping intervals count once. Missing events can undercount busy time.",
+    "kernel_scope": "Only separately recorded non-graph kernels; summed GPU durations across ranks are not wall time or complete decode cost.",
+    "sqlite_exports": "/Users/poohthewinnie/Library/Caches/remnant/nsight-analysis/nsys-native-20261012_100018-odyr90/server.{1,2}.sqlite"
   }
 }
