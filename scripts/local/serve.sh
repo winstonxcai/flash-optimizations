@@ -24,7 +24,11 @@
 # Server is left RUNNING; use "serve.sh <mode> stop" to tear it down.
 # =====================================================================
 set -u
+DECODE_CFG_WAS_SET=${DECODE_CFG+x}
 . "$(dirname "$0")/env.sh"
+# Standalone serving must cover replay c24/c28, like the capacity drivers.
+# Keep an explicit caller override for smaller agentic workloads.
+[ -n "$DECODE_CFG_WAS_SET" ] || DECODE_CFG="$DECODE_CFG_EXT"
 
 MODE=${1:-}; ACTION=${2:-boot}
 case "$MODE" in

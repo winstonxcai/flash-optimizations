@@ -105,9 +105,12 @@ Eval results land under `results/` and server logs under
 - Servers run on `$GPUS` (default 0,1,2,3) inside the `remnant` container,
   using the Dockerfile-installed fork, fp4-native MoE runner, mem-frac 0.88,
   1M ctx, fp8 KV, and DeepSeek reasoning/tool parsers.
-- Decode CUDA-graph config default = small (agentic benchmark concurrency). The
-  serving drivers and C>15 legs override with the extended config so decode
-  stays on-graph up to the packed allocator ceiling.
+- `serve.sh` and serving capacity drivers default to the extended decode graph
+  config, covering c24/c28 and batches through 136. Set `DECODE_CFG` explicitly
+  to use a smaller config for agentic workloads. `bench-lswb.sh` saves the
+  resolved `/server_info` configuration and refuses to start if full decode
+  graphs do not cover the requested concurrency. The shared `env.sh` default
+  remains small for other callers.
 
 ## Nsight Systems capture
 

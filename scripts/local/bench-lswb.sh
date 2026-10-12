@@ -45,6 +45,29 @@ health || { echo "FATAL: no server on 127.0.0.1:$PORT (run serve.sh first)"; exi
 RUN_ROOT="$RESULTS_HOST/lswb-replay/$TAG/$(ts)"
 mkdir -p "$RUN_ROOT/client"
 
+# Record the resolved server configuration and reject eager decode caused by
+# an undersized graph setup before spending a replay window on it.
+curl -fsS -m 30 "http://127.0.0.1:$PORT/server_info" > "$RUN_ROOT/server-info.json" || exit 1
+python3 - "$RUN_ROOT/server-info.json" "$C" <<'PY_PREFLIGHT' || exit 1
+import json
+import sys
+
+with open(sys.argv[1]) as stream:
+    info = json.load(stream)
+concurrency = int(sys.argv[2])
+decode = info.get("cuda_graph_config", {}).get("decode", {})
+sizes = decode.get("bs") or []
+covered = any(size >= concurrency for size in sizes)
+if info.get("disable_cuda_graph_padding", False):
+    covered = concurrency in sizes
+if decode.get("backend") != "full" or not covered:
+    raise SystemExit(
+        f"Replay c{concurrency} requires full decode graphs covering that batch; "
+        f"server reports {decode}. Restart serve.sh with the extended graph config."
+    )
+print(f"[lswb] decode graph preflight OK: c{concurrency}, captured sizes={sizes}")
+PY_PREFLIGHT
+
 echo "== lswb replay tag=$TAG port=$PORT c$C @ ${DUR}s -> $RUN_ROOT =="
 SAMPLER=
 CLIENT=

@@ -236,7 +236,8 @@
     "For each Packed implementation, c28 reused its c24 server and cache.",
     "Reports saved and nonempty; trace contents not analyzed.",
     "Client audit candidate; official comparison ineligible.",
-    "Capture API acknowledgment times include response delay; exact trace boundaries require trace inspection."
+    "Capture API acknowledgment times include response delay; exact trace boundaries require trace inspection.",
+    "All five recent runs launched with decode max_bs=15 despite c24/c28, forcing larger decode batches off graph. Retain as misconfigured evidence; do not use for implementation performance comparisons."
   ],
   "cleanup": {
     "server": "stopped",
@@ -264,5 +265,17 @@
   "kernel_server_ready_s_approx": 160,
   "token_pool_size": 3735296,
   "model": "/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731",
-  "decision": "Inconclusive for performance acceptance: all five profiled runs miss success gate; retain artifacts for failure and trace analysis."
+  "decision": "Inconclusive for performance acceptance: all five profiled runs miss success gate; retain artifacts for failure and trace analysis.",
+  "native_regression_diagnosis": {
+    "reference": "results/lswb-replay/native-slo-c24/20260909_081547",
+    "reference_completion_token_throughput": 277.9779543009494,
+    "reference_tpot_p50_ms": 22.318617673062818,
+    "reference_success_rate": 0.9918625678119349,
+    "dataset_sha256_unchanged": true,
+    "runner_sha256_unchanged": true,
+    "adapter_sha256_changed": true,
+    "mechanism": "Standalone serve.sh inherited small graph config max_bs=15. Decode graph runner falls back to eager above that batch size.",
+    "validation_plan": "Keep fork/image/replay configuration fixed; relaunch Native with extended graphs and repeat unprofiled c24 for 1200s. Confirm graph use in logs and compare to original. Stop after recovery is demonstrated or investigate remaining regression.",
+    "acceptance": "Full graphs cover c24/c28; Native throughput and TPOT recover toward original control, with success gate reported independently."
+  }
 }
