@@ -141,23 +141,128 @@
           "elapsed_s": 997.0246017454192
         }
       ]
+    },
+    {
+      "tag": "kernel-c24",
+      "concurrency": 24,
+      "remote_result": "results/lswb-replay/kernel-c24/20261012_071732",
+      "successful": 867,
+      "failed": 12,
+      "success_rate": 0.9863481228668942,
+      "valid": false,
+      "failure_reasons": {
+        "missing_output_event": 12
+      },
+      "completion_token_throughput": 101.97803082525878,
+      "tpot_p50_ms": 174.50199031189783,
+      "tpot_p95_ms": 538.4562158938118,
+      "device_cache_hit_rate": 0.9618507460565575,
+      "duration_s": 1215.8697221018374,
+      "nsight_events": [
+        {
+          "action": "start",
+          "requested_s": 300.0009304638952,
+          "elapsed_s": 308.82738451100886
+        },
+        {
+          "action": "stop",
+          "requested_s": 360.0003246255219,
+          "elapsed_s": 394.25637921784073
+        },
+        {
+          "action": "start",
+          "requested_s": 900.0002935547382,
+          "elapsed_s": 900.6435740171
+        },
+        {
+          "action": "stop",
+          "requested_s": 960.0002718567848,
+          "elapsed_s": 996.359546017833
+        }
+      ],
+      "source_commit": "34dc2e227e4747e4f235157919b8a14ede0a9fdf",
+      "results_commit": "f8cc479f0e230f564a4e86913f4f6ae8c2ae0954"
+    },
+    {
+      "tag": "kernel-c28",
+      "concurrency": 28,
+      "remote_result": "results/lswb-replay/kernel-c28/20261012_074121",
+      "successful": 395,
+      "failed": 7,
+      "success_rate": 0.9825870646766169,
+      "valid": false,
+      "failure_reasons": {
+        "missing_output_event": 7
+      },
+      "completion_token_throughput": 36.69293994437567,
+      "tpot_p50_ms": 596.353676271004,
+      "tpot_p95_ms": 1395.9123752813073,
+      "device_cache_hit_rate": 0.7235095934614556,
+      "duration_s": 1232.9074767129496,
+      "nsight_events": [
+        {
+          "action": "start",
+          "requested_s": 300.00091250706464,
+          "elapsed_s": 300.7159762782976
+        },
+        {
+          "action": "stop",
+          "requested_s": 360.0003928299993,
+          "elapsed_s": 383.81010781787336
+        },
+        {
+          "action": "start",
+          "requested_s": 900.0003046998754,
+          "elapsed_s": 900.7092473097146
+        },
+        {
+          "action": "stop",
+          "requested_s": 960.000290886499,
+          "elapsed_s": 983.2560168271884
+        }
+      ],
+      "source_commit": "34dc2e227e4747e4f235157919b8a14ede0a9fdf",
+      "results_commit": "030af99656dceddb3cceeae3a2fe0a26e16313dd"
     }
   ],
   "remote_profiles": {
     "packed": "logs/nsys-triton-20261012_035951-jhemyj/server.{1,2,3,4}.nsys-rep",
-    "native": "logs/nsys-native-20261012_045344-8LmAk9/server.{1,2}.nsys-rep"
+    "native": "logs/nsys-native-20261012_045344-8LmAk9/server.{1,2}.nsys-rep",
+    "packed_kernel": "logs/nsys-kernel-20261012_071333-2812wI/server.{1,2,3,4}.nsys-rep"
   },
   "limitations": [
     "All runs below 0.99 success threshold; failure cause not diagnosed.",
     "Profiled serving runs are not uninstrumented acceptance timing.",
-    "Packed c28 reused the Packed c24 server and cache.",
+    "For each Packed implementation, c28 reused its c24 server and cache.",
     "Reports saved and nonempty; trace contents not analyzed.",
-    "Client audit candidate; official comparison ineligible."
+    "Client audit candidate; official comparison ineligible.",
+    "Capture API acknowledgment times include response delay; exact trace boundaries require trace inspection."
   ],
   "cleanup": {
     "server": "stopped",
     "lease_id": "lease-20261011-182733-8206965c",
-    "lease_expiry_utc": "2026-10-12T01:20:33.453509+00:00"
+    "lease_expiry_utc": "2026-10-12T04:08:46.011848+00:00"
   },
-  "results_commit": "eafe4bb"
+  "results_commit": "eafe4bb",
+  "kernel_profile_mapping": {
+    "kernel-c24": [
+      1,
+      2
+    ],
+    "kernel-c28": [
+      3,
+      4
+    ]
+  },
+  "kernel_profile_sizes_human": [
+    "216M",
+    "234M",
+    "132M",
+    "129M"
+  ],
+  "kernel_launch_command": "bash scripts/local/serve.sh kernel profile",
+  "kernel_server_ready_s_approx": 160,
+  "token_pool_size": 3735296,
+  "model": "/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731",
+  "decision": "Inconclusive for performance acceptance: all five profiled runs miss success gate; retain artifacts for failure and trace analysis."
 }
