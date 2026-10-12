@@ -3,8 +3,7 @@
 # Control question: does the Packed c24 throughput drop persist without Nsight?
 # Protocol: same image, inputs and graph configuration; c24, 1200s, cold prefix
 # cache via bench-lswb.sh. Two controls only; reuse the completed Native control.
-# Stop on failed archive/upload/preflight/replay. Leave final Kernel server up.
-bash <<'BASH'
+# Stop on failed archive/upload/preflight/replay. GPUQ owns the control lifetime.
 set -euo pipefail
 cd /home/jovyan/winstonxcai/flash-optimizations
 [[ $(git branch --show-current) == remnant ]]
@@ -33,6 +32,47 @@ push_files() {
   fi
   git push origin remnant
 }
+
+if [[ ${1:-} == --control-worker ]]; then
+  mode=
+  cleanup() {
+    local status=$?
+    trap - EXIT
+    if [[ -n "$mode" ]]; then
+      bash scripts/local/serve.sh "$mode" stop || true
+    fi
+    exit "$status"
+  }
+  trap cleanup EXIT
+  trap 'exit 143' TERM
+  trap 'exit 130' INT
+  for mode in triton kernel; do
+    echo "[controls] starting $mode c24 without Nsight"
+    bash scripts/local/serve.sh "$mode"
+    grep -q "format=remnant implementation=$mode" "logs/serve_${mode}.log" || die "worker mode mismatch"
+    grep -q 'logical_row_bytes=328' "logs/serve_${mode}.log" || die "Packed pool missing"
+    tag="${mode}-unprofiled-c24"
+    previous=$(latest_run "$tag" 2>/dev/null || true)
+    bash scripts/local/bench-lswb.sh "$tag" 30212 24 1200
+    run=$(latest_run "$tag")
+    [[ -n "$run" && "$run" != "$previous" ]] || die "new control result missing"
+    cp "logs/serve_${mode}.log" "$run/server.log"
+    {
+      git rev-parse HEAD
+      git -C third_party/sglang rev-parse HEAD
+      docker inspect remnant --format '{{.Image}}'
+      docker exec remnant sha256sum /sgl-workspace/sglang-remnant/python/sglang/srt/runtime_context.py
+    } > "$run/source-identity.txt"
+    files=()
+    compact_files "$run"
+    files+=("$run/server.log" "$run/source-identity.txt")
+    push_files "Record unprofiled $mode c24 control"
+    cat "$run/client/REPORT.md"
+    echo "[controls] $mode completed and pushed: $run"
+  done
+  echo '[controls] both unprofiled controls completed and pushed'
+  exit 0
+fi
 
 files=()
 profile_runs=()
@@ -92,35 +132,11 @@ for run in sys.argv[1:]:
     }), flush=True)
 PY
 
-# The earlier interactive lease has expired. Reserve our existing GPU set again
-# after archiving, before starting controls; do not disturb GPUs 4-7.
-bash scripts/local/serve.sh kernel stop
-timeout 300 gpuq lease acquire --user winstonxcai --project flash-optimizations \
-  --gpus 4 --gpu-ids 0,1,2,3 --ttl 14400 --keep-idle --detach
-
-for mode in triton kernel; do
-  echo "[controls] starting $mode c24 without Nsight"
-  bash scripts/local/serve.sh "$mode"
-  grep -q "format=remnant implementation=$mode" "logs/serve_${mode}.log" || die "worker mode mismatch"
-  grep -q 'logical_row_bytes=328' "logs/serve_${mode}.log" || die "Packed pool missing"
-  tag="${mode}-unprofiled-c24"
-  previous=$(latest_run "$tag" 2>/dev/null || true)
-  bash scripts/local/bench-lswb.sh "$tag" 30212 24 1200
-  run=$(latest_run "$tag")
-  [[ -n "$run" && "$run" != "$previous" ]] || die "new control result missing"
-  cp "logs/serve_${mode}.log" "$run/server.log"
-  {
-    git rev-parse HEAD
-    git -C third_party/sglang rev-parse HEAD
-    docker inspect remnant --format '{{.Image}}'
-    docker exec remnant sha256sum /sgl-workspace/sglang-remnant/python/sglang/srt/runtime_context.py
-  } > "$run/source-identity.txt"
-  files=()
-  compact_files "$run"
-  files+=("$run/server.log" "$run/source-identity.txt")
-  push_files "Record unprofiled $mode c24 control"
-  cat "$run/client/REPORT.md"
-  echo "[controls] $mode completed and pushed: $run"
-done
-echo '[controls] both unprofiled controls completed; Kernel server remains running'
-BASH
+mkdir -p logs
+gpuq run --user winstonxcai --project flash-optimizations \
+  --gpus 4 --gpu-ids 0,1,2,3 \
+  --cwd /home/jovyan/winstonxcai/flash-optimizations \
+  --env REPLAY_DIR="$REPLAY_DIR" \
+  --output /home/jovyan/winstonxcai/flash-optimizations/logs/unprofiled-controls-20261012.log \
+  --workload-key remnant-unprofiled-c24 --expected-duration 50m \
+  --timeout 7200 --detach -- bash foo.txt --control-worker
