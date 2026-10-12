@@ -1,36 +1,120 @@
 # Author: Winston Cai.
-# Requires the image rebuilt with the spawned-worker mode fix.
-# This script change itself needs only a pull, not another image rebuild.
+# Preserve the completed 2026-10-12 profiles before replacing their servers.
+# Control question: does the Packed c24 throughput drop persist without Nsight?
+# Protocol: same image, inputs and graph configuration; c24, 1200s, cold prefix
+# cache via bench-lswb.sh. Two controls only; reuse the completed Native control.
+# Stop on failed archive/upload/preflight/replay. Leave final Kernel server up.
 bash <<'BASH'
 set -euo pipefail
 cd /home/jovyan/winstonxcai/flash-optimizations
-
-git pull --ff-only origin remnant
-git submodule update --init --recursive
+[[ $(git branch --show-current) == remnant ]]
 export REPLAY_DIR=${REPLAY_DIR:-/home/jovyan/wenyuhong/benchmarks}
 export PORT=30212 GPUS=0,1,2,3
 
-# Verify Native, Packed Triton, and Packed Kernel in spawned workers.
-# These tests do not load model weights or allocate KV pools.
-docker exec remnant python3 -m unittest discover \
-  -s /sgl-workspace/sglang-remnant/test/registered/unit \
-  -p test_dsv4_c4_cache_format.py -v
+die() { echo "FATAL: $*" >&2; exit 1; }
+latest_run() {
+  find "results/lswb-replay/$1" -mindepth 1 -maxdepth 1 -type d |
+    LC_ALL=C sort | tail -n 1
+}
+compact_files() {
+  local run=$1 artifact
+  for artifact in client/summary.json client/manifest.json client/done.json \
+    client/REPORT.md server-info.json gpu-samples.csv cache-flush.log client.log; do
+    test -s "$run/$artifact" || die "missing/unfinished artifact $run/$artifact"
+    files+=("$run/$artifact")
+  done
+}
+push_files() {
+  local message=$1
+  git add -f -- "${files[@]}"
+  git diff --cached --stat -- "${files[@]}"
+  if ! git diff --cached --quiet -- "${files[@]}"; then
+    git commit --only -m "$message" -- "${files[@]}"
+  fi
+  git push origin remnant
+}
 
-# Each replay flushes the prefix cache before its 1200-second measurement.
-# Nsight capture is inactive during model loading, graphs, and cache flushing.
-bash scripts/local/serve.sh native profile
-grep -E 'C4 worker cache|Remnant packed pool' logs/serve_native.log
-bash scripts/local/bench-lswb.sh native-graph-nsys-c24 30212 24 1200 300:360,900:960
+files=()
+profile_runs=()
+for tag in native-graph-nsys-c24 triton-graph-nsys-c24 triton-graph-nsys-c28 \
+  kernel-graph-nsys-c24 kernel-graph-nsys-c28; do
+  run=$(latest_run "$tag")
+  [[ -n "$run" && "${run##*/}" > 20261012_150000 ]] || die "no new run for $tag"
+  compact_files "$run"
+  test -s "$run/nsys-windows.jsonl" || die "missing captures for $run"
+  files+=("$run/nsys-windows.jsonl")
+  profile_runs+=("$run")
+  case "$tag" in
+    native-graph-nsys-c24|triton-graph-nsys-c24|kernel-graph-nsys-c24)
+      mode=${tag%%-*}
+      cp "logs/serve_${mode}.log" "$run/server.log"
+      files+=("$run/server.log")
+      ;;
+  esac
+done
 
-bash scripts/local/serve.sh triton profile
-grep -E 'C4 worker cache|Remnant packed pool' logs/serve_triton.log
-bash scripts/local/bench-lswb.sh triton-graph-nsys-c24 30212 24 1200 300:360,900:960
-bash scripts/local/bench-lswb.sh triton-graph-nsys-c28 30212 28 1200 300:360,900:960
+# Each fresh launch produced two reports for c24; Packed launches have two
+# more reports for c28. Large reports must stay in LFS, not ordinary Git blobs.
+git lfs install --local
+for mode in native triton kernel; do
+  profile=$(find logs -maxdepth 1 -type d -name "nsys-${mode}-*" |
+    LC_ALL=C sort | tail -n 1)
+  [[ -n "$profile" ]] || die "missing $mode profile directory"
+  mapfile -d '' traces < <(find "$profile" -maxdepth 1 -type f \
+    -name 'server.*.nsys-rep' -print0)
+  expected=4
+  [[ "$mode" != native ]] || expected=2
+  ((${#traces[@]} == expected)) || die "expected $expected traces in $profile"
+  for trace in "${traces[@]}"; do
+    test -s "$trace" || die "empty trace $trace"
+    [[ $(git check-attr filter -- "$trace") == *': filter: lfs' ]] || die "missing LFS rule: $trace"
+  done
+  files+=("${traces[@]}")
+done
+push_files 'Record corrected three-mode profiles and replay results'
+echo '[controls] all five profiling results and traces pushed'
 
-bash scripts/local/serve.sh kernel profile
-grep -E 'C4 worker cache|Remnant packed pool' logs/serve_kernel.log
-bash scripts/local/bench-lswb.sh kernel-graph-nsys-c24 30212 24 1200 300:360,900:960
-bash scripts/local/bench-lswb.sh kernel-graph-nsys-c28 30212 28 1200 300:360,900:960
+# Print the completed controls before collecting more data. JSON remains the
+# canonical record; this view separates cache/prefill costs from decode costs.
+python3 - "${profile_runs[@]}" <<'PY'
+import json
+import pathlib
+import sys
+for run in sys.argv[1:]:
+    summary = json.loads((pathlib.Path(run) / 'client/summary.json').read_text())
+    cache = summary.get('cache', {})
+    print(json.dumps({
+        'run': run, 'successful': summary['counts']['successful'],
+        'output_tokens_s': summary.get('completion_token_throughput'),
+        'device_hit_rate': cache.get('device_hit_rate'),
+        'uncached_prompt_tokens': cache.get('prompt_tokens', 0) - cache.get('total_cached_tokens', 0),
+        'ttft_ms': summary.get('ttft_ms'), 'tpot_ms': summary.get('tpot_ms'),
+    }), flush=True)
+PY
 
-# Kernel server remains running after the final replay.
+for mode in triton kernel; do
+  echo "[controls] starting $mode c24 without Nsight"
+  bash scripts/local/serve.sh "$mode"
+  grep -q "format=remnant implementation=$mode" "logs/serve_${mode}.log" || die "worker mode mismatch"
+  grep -q 'logical_row_bytes=328' "logs/serve_${mode}.log" || die "Packed pool missing"
+  tag="${mode}-unprofiled-c24"
+  previous=$(latest_run "$tag" 2>/dev/null || true)
+  bash scripts/local/bench-lswb.sh "$tag" 30212 24 1200
+  run=$(latest_run "$tag")
+  [[ -n "$run" && "$run" != "$previous" ]] || die "new control result missing"
+  cp "logs/serve_${mode}.log" "$run/server.log"
+  {
+    git rev-parse HEAD
+    git -C third_party/sglang rev-parse HEAD
+    docker inspect remnant --format '{{.Image}}'
+    docker exec remnant sha256sum /sgl-workspace/sglang-remnant/python/sglang/srt/runtime_context.py
+  } > "$run/source-identity.txt"
+  files=()
+  compact_files "$run"
+  files+=("$run/server.log" "$run/source-identity.txt")
+  push_files "Record unprofiled $mode c24 control"
+  cat "$run/client/REPORT.md"
+  echo "[controls] $mode completed and pushed: $run"
+done
+echo '[controls] both unprofiled controls completed; Kernel server remains running'
 BASH
