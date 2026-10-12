@@ -1,0 +1,4 @@
+{"action": "start", "requested_s": 300.0005135387182, "elapsed_s": 308.2466606190428}
+{"action": "stop", "requested_s": 360.0002621207386, "elapsed_s": 373.22467928752303}
+{"action": "start", "requested_s": 900.0002316692844, "elapsed_s": 900.2997235376388}
+{"action": "stop", "requested_s": 960.000176385045, "elapsed_s": 974.3885382525623}
