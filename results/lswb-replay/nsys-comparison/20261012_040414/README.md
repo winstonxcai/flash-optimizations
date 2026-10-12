@@ -2,6 +2,8 @@
 
 Author: Winston Cai.
 
+Update after inspection of all ten corrected traces: **the runs labelled Packed strongly indicate Native fallback inside spawned GPU workers. Treat the performance table below as requested labels, not verified implementations. Earlier suggestions of a Packed speedup are superseded by this diagnosis.** Replay success remains a separate, passing client gate.
+
 These five runs used `scripts/local/bench-lswb.sh` for 1200 seconds each, with Nsight start/stop requests at 300/360 and 900/960 seconds. Capture was inactive during model loading and graph creation. `remote-run-record.json` indexes the canonical summaries, measured capture API acknowledgment times, source identity, and remote trace locations; `summary.csv` is derived from the canonical summaries.
 
 The five profiled runs missed the 99% success requirement with `missing_output_event` failures. Their cause is unresolved. These are candidate profiled runs, not an acceptance speed comparison. For both Packed Triton and Packed Kernel, c28 reused that implementation’s c24 server/cache; Native restarted with the same token pool size. The earlier ten trace files are saved and nonempty but their contents have not been analyzed. The corrected Native traces are analyzed below.
@@ -38,6 +40,33 @@ Corrected profiled c24 comparison (1200 seconds each):
 | Packed Triton | 267.21 | 24.39 / 127.81 | 6283.29 / 16216.06 | 97.30% | 2094 / 2114 (99.05%) |
 | Packed Kernel | 270.27 | 25.56 / 128.16 | 5797.12 / 15320.64 | 97.35% | 2131 / 2149 (99.16%) |
 
-All three pass the 99% success gate. Packed Triton throughput is 2.77% above Native; Packed Kernel is 3.94% above Native and 1.15% above Triton. Kernel median TPOT is 4.80% higher than Triton, p95 TPOT is 0.28% higher, and median TTFT is 7.74% lower. The aggregate throughput lead is not evidence of faster decode. Runner, adapter, dataset, replay settings, token pool (3,735,296), and extended decode graph configuration match. Cache format and implementation selections are correct. Different random seeds and completion-conditioned request subsets remain uncontrolled; one profiled run each gives no repeated-run uncertainty estimate.
+All three pass the 99% success gate. Packed Triton throughput is 2.77% above Native; Packed Kernel is 3.94% above Native and 1.15% above Triton. Kernel median TPOT is 4.80% higher than Triton, p95 TPOT is 0.28% higher, and median TTFT is 7.74% lower. The aggregate throughput lead is not evidence of faster decode. Runner, adapter, dataset, replay settings, token pool (3,735,296), and extended decode graph configuration match. Requested cache format and implementation flags match the labels. Effective worker dispatch is not verified by those flags; the trace/source diagnosis below indicates Native fallback. Different random seeds and completion-conditioned request subsets remain uncontrolled; one profiled run each gives no repeated-run uncertainty estimate.
 
-The reported token pool is identical in Native and both Packed modes, and hit rates differ by at most 0.20 percentage points. These runs do not establish a Packed cache-capacity benefit. No new Packed `.nsys-rep` files are present in result commit `3a14925`, so actual Packed trace intervals and kernel/graph timings remain unverified. The earlier Packed traces listed above belong to the misconfigured runs and must not substitute for these runs. Corrected c28 results are also not yet pushed. Preserve these as candidate serving evidence; do not declare a kernel-speed or SLO-capacity win from this comparison.
+The reported token pool is identical in Native and both Packed modes, and hit rates differ by at most 0.20 percentage points. These runs do not establish a Packed cache-capacity benefit. Result commit `3a14925` contained summaries only; trace commit `e9e1fb9` subsequently supplied eight new Packed-labelled reports, now analyzed locally. The earlier Packed traces listed above belong to the misconfigured runs and must not substitute for these runs. Corrected c28 results are also not yet pushed. Preserve these as candidate serving evidence; do not declare a kernel-speed or SLO-capacity win from this comparison.
+
+Trace diagnosis: Native fallback in runs labelled Packed
+
+All eight requested Packed reports contain Native producer kernels and no expected Remnant pack/unpack kernel fingerprints. Decode graph nodes are not instrumented, so their absence alone would not prove a problem; however, eager prefill is separately traced and should execute the Packed producer. Identical pool allocation is supporting evidence. Source commit `8a520765f7295ece6a8989bb7419ffc8637d5703` keeps the mode in process-local globals in `remnant/config.py`, configured by `ServerArgs` resolution in the parent. The engine forces `spawn`. Worker publication through `runtime_context` does not reconfigure those globals, leaving the Native default. A CPU reproduction using that exact configuration source preserves requested flags but returns Native/Kernel defaults in a freshly spawned process for both Packed requests. This is source-and-trace diagnosis; no live GPU worker state or full model startup was queried.
+
+The next fix must initialize mode inside each worker before memory sizing and graph capture, then verify effective mode, pool class, record bytes, and kernel dispatch per rank. Until then, the reported c24 throughput differences cannot establish a Packed or optimized-kernel speedup. Raw measurements, requested labels, success gates, and traces are preserved.
+
+GPU0 decode graph observations (batch sizes inferred from graph creation order, checked against all 29 configured sizes in each of four workers):
+
+| Requested label | Window | Mean captured batch | Mean graph ms | Graphs/s |
+|---|---:|---:|---:|---:|
+| Native c24 | 300 | 9.64 | 11.60 | 44.69 |
+| Native c24 | 900 | 9.55 | 11.73 | 39.93 |
+| Triton c24 | 300 | 7.78 | 10.77 | 44.87 |
+| Triton c24 | 900 | 9.48 | 11.59 | 37.65 |
+| Kernel c24 | 300 | 9.60 | 11.59 | 42.25 |
+| Kernel c24 | 900 | 11.43 | 12.40 | 35.53 |
+| Triton c28 | 300 | 28.00 | 16.71 | 2.11 |
+| Triton c28 | 900 | 28.00 | 17.14 | 0.87 |
+| Kernel c28 | 300 | 28.00 | 16.87 | 2.00 |
+| Kernel c28 | 900 | 28.00 | 17.21 | 0.47 |
+
+At captured batch 24, mean graph durations are Native 15.42/15.64 ms, Triton-labelled 15.50/15.61 ms, and Kernel-labelled 15.36/15.63 ms in the two windows. The larger average batch mix in Kernel-labelled c24 explains much of its higher unconditioned graph duration; it is not evidence that optimized packing is slower. Context length and request subsets still differ, and all three appear to execute Native.
+
+Both c28 pairs retain batch-28 graphs. Graph executions fall from tens per second to about 0.5–2 per second; graphs occupy only 0.8–3.5% of captured GPU0 intervals, while recorded GPU0 busy time is 96–97%. Non-graph grouped GEMM and attention dominate, consistent with prefill/re-prefill crowding out decode. This rules out wholly disabled c28 graphs as the explanation. The reason for that prefill pressure remains unproven: c28 summaries and server logs are needed to assess prefix misses, cache eviction, and retractions. The eight reports use graph-level tracing and report possible event loss; boundary and historical-record exclusions are recorded in JSON. Full decode node costs cannot be recovered from these traces.
+
+All large SQLite exports are kept in the local Remnant analysis cache, outside Git. The ephemeral CPU export container exited and was removed. No runtime source, image, fork pin, remote server, or GPU allocation was changed by this analysis.

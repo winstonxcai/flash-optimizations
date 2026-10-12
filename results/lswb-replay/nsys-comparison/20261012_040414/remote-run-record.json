@@ -338,7 +338,7 @@
           "elapsed_s": 987.8653198247775
         }
       ],
-      "packed_traces_pushed": false,
+      "packed_traces_pushed": true,
       "artifact_sha256": {
         "client/summary.json": "a6f4db39b33d619a97b2ef3a3ed658c239585f4dc665a8a9db05b3a8ccd1192c",
         "client/manifest.json": "d7cca8f960ebead626021783d4331a171770146b395a40fe0ecde452e4428eea",
@@ -358,7 +358,14 @@
       "tpot_p95_ms": 127.80555120080442,
       "ttft_p50_ms": 6283.288550563157,
       "ttft_p95_ms": 16216.06392133981,
-      "device_cache_hit_rate": 0.9730331035128498
+      "device_cache_hit_rate": 0.9730331035128498,
+      "trace_commit": "e9e1fb9",
+      "implementation_verified": false,
+      "mode_validation": "Native fallback strongly indicated; retain requested mode label and raw metrics, reject as Packed implementation comparison.",
+      "trace_files": [
+        "logs/nsys-triton-20261012_102954-v2vDd5/server.1.nsys-rep",
+        "logs/nsys-triton-20261012_102954-v2vDd5/server.2.nsys-rep"
+      ]
     },
     {
       "tag": "kernel-graph-nsys-c24",
@@ -395,7 +402,7 @@
           "elapsed_s": 986.9676167592406
         }
       ],
-      "packed_traces_pushed": false,
+      "packed_traces_pushed": true,
       "artifact_sha256": {
         "client/summary.json": "74d20a29c3c4fc53f7a0f3433e87b92478fd6c85e497bb85ff0d4a9c52099767",
         "client/manifest.json": "5f14ae93a453b3d17b0ebbfa4ef8021095171305c073b283afb9efe1f60ff60c",
@@ -415,7 +422,14 @@
       "tpot_p95_ms": 128.15706332524618,
       "ttft_p50_ms": 5797.121142968535,
       "ttft_p95_ms": 15320.636872202158,
-      "device_cache_hit_rate": 0.9734698953931398
+      "device_cache_hit_rate": 0.9734698953931398,
+      "trace_commit": "e9e1fb9",
+      "implementation_verified": false,
+      "mode_validation": "Native fallback strongly indicated; retain requested mode label and raw metrics, reject as Packed implementation comparison.",
+      "trace_files": [
+        "logs/nsys-kernel-20261012_111730-tzgOM7/server.1.nsys-rep",
+        "logs/nsys-kernel-20261012_111730-tzgOM7/server.2.nsys-rep"
+      ]
     }
   ],
   "remote_profiles": {
@@ -459,7 +473,7 @@
   "kernel_server_ready_s_approx": 160,
   "token_pool_size": 3735296,
   "model": "/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731",
-  "decision": "Keep graph configuration correction and valid corrected c24 runs. Five earlier profiled runs are misconfigured evidence. Corrected Packed c24 results pass the replay gate; small throughput differences do not establish a kernel speedup. Corrected c28 results and Packed traces are not yet available.",
+  "decision": "Keep the Native graph-configuration recovery. Reject labelled-Packed c24 performance comparisons pending worker-local configuration repair and live dispatch verification. c28 traces retain batch-28 graphs but show non-graph compute saturation and greatly reduced decode cadence.",
   "native_regression_diagnosis": {
     "reference": "results/lswb-replay/native-slo-c24/20260909_081547",
     "reference_completion_token_throughput": 277.9779543009494,
@@ -822,11 +836,3048 @@
     "limitations": [
       "One profiled run per mode; no repeated-run uncertainty estimate.",
       "Different completion-conditioned request/user subsets and random seeds.",
-      "Actual Packed trace durations, graph execution, and kernel costs cannot be inspected until their trace files are pushed.",
       "Capture API acknowledgments include export/response latency; they are not exact trace intervals.",
       "Candidate audit; official comparison ineligible.",
-      "All three modes have equal reported token capacity; these runs do not demonstrate greater cache capacity from Packed."
+      "All three modes have equal reported token capacity; these runs do not demonstrate greater cache capacity from Packed.",
+      "Packed trace inspection strongly indicates Native fallback in GPU workers; requested flags and replay success do not verify implementation mode."
     ],
-    "decision": "Keep as valid candidate serving evidence. Packed Kernel has a small throughput lead but higher median TPOT than Packed Triton. Do not declare an optimized-kernel speedup or capacity benefit from these single profiled runs."
+    "decision": "Discard as evidence of a Packed speedup: effective Packed dispatch is not verified, and worker-global initialization source plus trace fingerprints strongly indicate Native fallback. Preserve raw serving results and traces for diagnosis."
+  },
+  "complete_trace_comparison": [
+    {
+      "label": "native",
+      "concurrency": 24,
+      "window": 300,
+      "file": "logs/nsys-native-20261012_100018-odyr90/server.1.nsys-rep",
+      "export": "/Users/poohthewinnie/Library/Caches/remnant/nsight-analysis/nsys-native-20261012_100018-odyr90/server.1.sqlite",
+      "duration_s": 52.444988226,
+      "capture_start_utc": "2026-10-12T02:08:22",
+      "requested_cache_format": "native",
+      "requested_implementation": "kernel",
+      "graph_trace_mode": "Graph",
+      "graph_nodes_present": false,
+      "devices": [
+        {
+          "id": 0,
+          "graph_count": 2344,
+          "graphs_per_s": 44.69445183015494,
+          "mean_graph_ms": 11.603546763651877,
+          "median_graph_ms": 11.649826000000001,
+          "graph_time_s": 27.198713614,
+          "inferred_mean_captured_batch": 9.63523890784983,
+          "graphs_by_inferred_batch": {
+            "3": {
+              "count": 20,
+              "mean_ms": 8.5662066,
+              "median_ms": 8.523972
+            },
+            "4": {
+              "count": 191,
+              "mean_ms": 9.211830392670157,
+              "median_ms": 9.105566
+            },
+            "5": {
+              "count": 144,
+              "mean_ms": 9.730041881944445,
+              "median_ms": 9.466474000000002
+            },
+            "6": {
+              "count": 180,
+              "mean_ms": 10.180836766666667,
+              "median_ms": 9.9452845
+            },
+            "7": {
+              "count": 150,
+              "mean_ms": 10.811793093333334,
+              "median_ms": 10.5775495
+            },
+            "8": {
+              "count": 303,
+              "mean_ms": 11.028083759075908,
+              "median_ms": 10.878251
+            },
+            "10": {
+              "count": 618,
+              "mean_ms": 11.895691894822006,
+              "median_ms": 11.683986
+            },
+            "12": {
+              "count": 421,
+              "mean_ms": 12.622720275534443,
+              "median_ms": 12.434714
+            },
+            "14": {
+              "count": 173,
+              "mean_ms": 13.24085165317919,
+              "median_ms": 13.064691
+            },
+            "15": {
+              "count": 37,
+              "mean_ms": 13.450281594594594,
+              "median_ms": 13.260401
+            },
+            "16": {
+              "count": 6,
+              "mean_ms": 14.857092999999999,
+              "median_ms": 13.731836000000001
+            },
+            "18": {
+              "count": 15,
+              "mean_ms": 14.605289066666666,
+              "median_ms": 14.340805
+            },
+            "20": {
+              "count": 38,
+              "mean_ms": 14.966218236842105,
+              "median_ms": 14.8388165
+            },
+            "24": {
+              "count": 48,
+              "mean_ms": 15.416794083333333,
+              "median_ms": 15.391290999999999
+            }
+          },
+          "recorded_gpu_busy_fraction": 0.9281087271723167
+        },
+        {
+          "id": 1,
+          "graph_count": 2344,
+          "graphs_per_s": 44.69445183015494,
+          "mean_graph_ms": 11.52113447824232,
+          "median_graph_ms": 11.637232999999998,
+          "graph_time_s": 27.005539217000003,
+          "inferred_mean_captured_batch": 9.63523890784983,
+          "graphs_by_inferred_batch": {
+            "3": {
+              "count": 20,
+              "mean_ms": 8.56764635,
+              "median_ms": 8.525929999999999
+            },
+            "4": {
+              "count": 191,
+              "mean_ms": 9.169250104712042,
+              "median_ms": 9.107797
+            },
+            "5": {
+              "count": 144,
+              "mean_ms": 9.628082729166668,
+              "median_ms": 9.46781
+            },
+            "6": {
+              "count": 180,
+              "mean_ms": 10.10264936111111,
+              "median_ms": 9.9478865
+            },
+            "7": {
+              "count": 150,
+              "mean_ms": 10.707214306666666,
+              "median_ms": 10.579961
+            },
+            "8": {
+              "count": 303,
+              "mean_ms": 10.96669305940594,
+              "median_ms": 10.879718
+            },
+            "10": {
+              "count": 618,
+              "mean_ms": 11.814090708737863,
+              "median_ms": 11.684368
+            },
+            "12": {
+              "count": 421,
+              "mean_ms": 12.520825004750593,
+              "median_ms": 12.43465
+            },
+            "14": {
+              "count": 173,
+              "mean_ms": 13.158037485549134,
+              "median_ms": 13.066389
+            },
+            "15": {
+              "count": 37,
+              "mean_ms": 13.337431891891892,
+              "median_ms": 13.264467
+            },
+            "16": {
+              "count": 6,
+              "mean_ms": 14.056044833333333,
+              "median_ms": 13.731951500000001
+            },
+            "18": {
+              "count": 15,
+              "mean_ms": 14.472434,
+              "median_ms": 14.342763
+            },
+            "20": {
+              "count": 38,
+              "mean_ms": 14.894390473684211,
+              "median_ms": 14.8409185
+            },
+            "24": {
+              "count": 48,
+              "mean_ms": 15.402877333333333,
+              "median_ms": 15.393203
+            }
+          }
+        },
+        {
+          "id": 2,
+          "graph_count": 2344,
+          "graphs_per_s": 44.69445183015494,
+          "mean_graph_ms": 11.619616660836178,
+          "median_graph_ms": 11.651938000000001,
+          "graph_time_s": 27.236381453000003,
+          "inferred_mean_captured_batch": 9.63523890784983,
+          "graphs_by_inferred_batch": {
+            "3": {
+              "count": 20,
+              "mean_ms": 8.5653476,
+              "median_ms": 8.5234015
+            },
+            "4": {
+              "count": 191,
+              "mean_ms": 9.239414057591624,
+              "median_ms": 9.105865
+            },
+            "5": {
+              "count": 144,
+              "mean_ms": 9.7798099375,
+              "median_ms": 9.466007999999999
+            },
+            "6": {
+              "count": 180,
+              "mean_ms": 10.186635588888889,
+              "median_ms": 9.946791000000001
+            },
+            "7": {
+              "count": 150,
+              "mean_ms": 10.834049086666667,
+              "median_ms": 10.577669
+            },
+            "8": {
+              "count": 303,
+              "mean_ms": 11.043454425742574,
+              "median_ms": 10.876292
+            },
+            "10": {
+              "count": 618,
+              "mean_ms": 11.91283986407767,
+              "median_ms": 11.682370500000001
+            },
+            "12": {
+              "count": 421,
+              "mean_ms": 12.62806981472684,
+              "median_ms": 12.432449
+            },
+            "14": {
+              "count": 173,
+              "mean_ms": 13.246674208092486,
+              "median_ms": 13.063935
+            },
+            "15": {
+              "count": 37,
+              "mean_ms": 13.456774945945947,
+              "median_ms": 13.25984
+            },
+            "16": {
+              "count": 6,
+              "mean_ms": 14.857179833333333,
+              "median_ms": 13.731406499999999
+            },
+            "18": {
+              "count": 15,
+              "mean_ms": 14.744312,
+              "median_ms": 14.339613
+            },
+            "20": {
+              "count": 38,
+              "mean_ms": 14.964184394736842,
+              "median_ms": 14.838332000000001
+            },
+            "24": {
+              "count": 48,
+              "mean_ms": 15.418975416666667,
+              "median_ms": 15.392186500000001
+            }
+          }
+        },
+        {
+          "id": 3,
+          "graph_count": 2344,
+          "graphs_per_s": 44.69445183015494,
+          "mean_graph_ms": 11.516149512798634,
+          "median_graph_ms": 11.635306,
+          "graph_time_s": 26.993854458,
+          "inferred_mean_captured_batch": 9.63523890784983,
+          "graphs_by_inferred_batch": {
+            "3": {
+              "count": 20,
+              "mean_ms": 8.56589655,
+              "median_ms": 8.5243125
+            },
+            "4": {
+              "count": 191,
+              "mean_ms": 9.164613020942408,
+              "median_ms": 9.106019
+            },
+            "5": {
+              "count": 144,
+              "mean_ms": 9.622445027777777,
+              "median_ms": 9.4656955
+            },
+            "6": {
+              "count": 180,
+              "mean_ms": 10.09757668888889,
+              "median_ms": 9.9462195
+            },
+            "7": {
+              "count": 150,
+              "mean_ms": 10.701400186666667,
+              "median_ms": 10.5776845
+            },
+            "8": {
+              "count": 303,
+              "mean_ms": 10.962088848184818,
+              "median_ms": 10.87765
+            },
+            "10": {
+              "count": 618,
+              "mean_ms": 11.808983556634304,
+              "median_ms": 11.6818815
+            },
+            "12": {
+              "count": 421,
+              "mean_ms": 12.516586688836105,
+              "median_ms": 12.433251
+            },
+            "14": {
+              "count": 173,
+              "mean_ms": 13.151065849710983,
+              "median_ms": 13.063101
+            },
+            "15": {
+              "count": 37,
+              "mean_ms": 13.33426445945946,
+              "median_ms": 13.260987
+            },
+            "16": {
+              "count": 6,
+              "mean_ms": 14.044515166666667,
+              "median_ms": 13.7314945
+            },
+            "18": {
+              "count": 15,
+              "mean_ms": 14.469094266666666,
+              "median_ms": 14.341648
+            },
+            "20": {
+              "count": 38,
+              "mean_ms": 14.89101497368421,
+              "median_ms": 14.8391
+            },
+            "24": {
+              "count": 48,
+              "mean_ms": 15.397448291666667,
+              "median_ms": 15.392278000000001
+            }
+          }
+        }
+      ],
+      "top_non_graph_kernels": [
+        {
+          "short_name": "all_reduce_kernel",
+          "count": 45240,
+          "summed_gpu_s": 35.170548901
+        },
+        {
+          "short_name": "device_kernel",
+          "count": 46676,
+          "summed_gpu_s": 19.39283757
+        },
+        {
+          "short_name": "sm90_fp8_paged_mqa_logits",
+          "count": 11340,
+          "summed_gpu_s": 4.95040114
+        },
+        {
+          "short_name": "sparse_attn_fwd_kernel",
+          "count": 23335,
+          "summed_gpu_s": 3.92813803
+        },
+        {
+          "short_name": "sm90_fp8_gemm_1d2d_impl",
+          "count": 128081,
+          "summed_gpu_s": 2.138891042
+        },
+        {
+          "short_name": "_dequantize_k_cache_paged_kern_5...",
+          "count": 45588,
+          "summed_gpu_s": 1.068259466
+        },
+        {
+          "short_name": "mhc_post_tilelang_kernel",
+          "count": 46676,
+          "summed_gpu_s": 0.906615526
+        },
+        {
+          "short_name": "topk_main_kernel",
+          "count": 11397,
+          "summed_gpu_s": 0.651690237
+        },
+        {
+          "short_name": "ncclDevKernel_AllReduce_Sum_bf16_RING_LL",
+          "count": 1977,
+          "summed_gpu_s": 0.620407081
+        },
+        {
+          "short_name": "mhc_pre_big_fuse_with_norm_til_1...",
+          "count": 46673,
+          "summed_gpu_s": 0.590585256
+        }
+      ],
+      "packed_kernel_name_matches": 0,
+      "stock_compressed_producer_calls": 22013,
+      "incomplete_cupti_events_dropped": 1162,
+      "possible_missing_cuda_event_warnings": 4,
+      "historical_graph_records_excluded": 16956
+    },
+    {
+      "label": "native",
+      "concurrency": 24,
+      "window": 900,
+      "file": "logs/nsys-native-20261012_100018-odyr90/server.2.nsys-rep",
+      "export": "/Users/poohthewinnie/Library/Caches/remnant/nsight-analysis/nsys-native-20261012_100018-odyr90/server.2.sqlite",
+      "duration_s": 60.123945081,
+      "capture_start_utc": "2026-10-12T02:18:14",
+      "requested_cache_format": "native",
+      "requested_implementation": "kernel",
+      "graph_trace_mode": "Graph",
+      "graph_nodes_present": false,
+      "devices": [
+        {
+          "id": 0,
+          "graph_count": 2401,
+          "graphs_per_s": 39.934172595715935,
+          "mean_graph_ms": 11.732883049146189,
+          "median_graph_ms": 11.733984,
+          "graph_time_s": 28.170652201,
+          "inferred_mean_captured_batch": 9.550603915035403,
+          "graphs_by_inferred_batch": {
+            "4": {
+              "count": 21,
+              "mean_ms": 9.343124952380952,
+              "median_ms": 9.183098
+            },
+            "5": {
+              "count": 125,
+              "mean_ms": 9.647553496,
+              "median_ms": 9.513591
+            },
+            "6": {
+              "count": 158,
+              "mean_ms": 10.20506714556962,
+              "median_ms": 9.988882499999999
+            },
+            "7": {
+              "count": 286,
+              "mean_ms": 10.763015353146853,
+              "median_ms": 10.629674999999999
+            },
+            "8": {
+              "count": 519,
+              "mean_ms": 11.218049479768785,
+              "median_ms": 11.015879
+            },
+            "10": {
+              "count": 817,
+              "mean_ms": 12.050086653610771,
+              "median_ms": 11.828318
+            },
+            "12": {
+              "count": 278,
+              "mean_ms": 12.725176039568346,
+              "median_ms": 12.578727
+            },
+            "14": {
+              "count": 68,
+              "mean_ms": 13.465507176470588,
+              "median_ms": 13.182305
+            },
+            "15": {
+              "count": 10,
+              "mean_ms": 13.8461117,
+              "median_ms": 13.4616455
+            },
+            "16": {
+              "count": 8,
+              "mean_ms": 14.199357625000001,
+              "median_ms": 13.8425855
+            },
+            "18": {
+              "count": 30,
+              "mean_ms": 14.7975319,
+              "median_ms": 14.6495845
+            },
+            "20": {
+              "count": 25,
+              "mean_ms": 15.43171608,
+              "median_ms": 15.098525
+            },
+            "24": {
+              "count": 56,
+              "mean_ms": 15.63861875,
+              "median_ms": 15.615031
+            }
+          },
+          "recorded_gpu_busy_fraction": 0.906185745389777
+        },
+        {
+          "id": 1,
+          "graph_count": 2400,
+          "graphs_per_s": 39.91754028726291,
+          "mean_graph_ms": 11.689209809166666,
+          "median_graph_ms": 11.730464000000001,
+          "graph_time_s": 28.054103542,
+          "inferred_mean_captured_batch": 9.550416666666667,
+          "graphs_by_inferred_batch": {
+            "4": {
+              "count": 21,
+              "mean_ms": 9.343623571428571,
+              "median_ms": 9.185237
+            },
+            "5": {
+              "count": 125,
+              "mean_ms": 9.614784744,
+              "median_ms": 9.513362
+            },
+            "6": {
+              "count": 158,
+              "mean_ms": 10.15933661392405,
+              "median_ms": 9.9899185
+            },
+            "7": {
+              "count": 286,
+              "mean_ms": 10.734606702797203,
+              "median_ms": 10.631449
+            },
+            "8": {
+              "count": 519,
+              "mean_ms": 11.16783928901734,
+              "median_ms": 11.017766
+            },
+            "10": {
+              "count": 816,
+              "mean_ms": 12.00034925122549,
+              "median_ms": 11.829615
+            },
+            "12": {
+              "count": 278,
+              "mean_ms": 12.70044821942446,
+              "median_ms": 12.580089000000001
+            },
+            "14": {
+              "count": 68,
+              "mean_ms": 13.392337161764706,
+              "median_ms": 13.183268
+            },
+            "15": {
+              "count": 10,
+              "mean_ms": 13.7195899,
+              "median_ms": 13.464162
+            },
+            "16": {
+              "count": 8,
+              "mean_ms": 13.975589375,
+              "median_ms": 13.842766999999998
+            },
+            "18": {
+              "count": 30,
+              "mean_ms": 14.7702895,
+              "median_ms": 14.6500715
+            },
+            "20": {
+              "count": 25,
+              "mean_ms": 15.317511960000001,
+              "median_ms": 15.102181
+            },
+            "24": {
+              "count": 56,
+              "mean_ms": 15.641472178571428,
+              "median_ms": 15.615681
+            }
+          }
+        },
+        {
+          "id": 2,
+          "graph_count": 2400,
+          "graphs_per_s": 39.91754028726291,
+          "mean_graph_ms": 11.751620305833333,
+          "median_graph_ms": 11.735347,
+          "graph_time_s": 28.203888734,
+          "inferred_mean_captured_batch": 9.550416666666667,
+          "graphs_by_inferred_batch": {
+            "4": {
+              "count": 21,
+              "mean_ms": 9.34280838095238,
+              "median_ms": 9.182727
+            },
+            "5": {
+              "count": 125,
+              "mean_ms": 9.666254592,
+              "median_ms": 9.51127
+            },
+            "6": {
+              "count": 158,
+              "mean_ms": 10.22467832278481,
+              "median_ms": 9.988262
+            },
+            "7": {
+              "count": 286,
+              "mean_ms": 10.772666671328672,
+              "median_ms": 10.6288525
+            },
+            "8": {
+              "count": 519,
+              "mean_ms": 11.235808522157996,
+              "median_ms": 11.015683
+            },
+            "10": {
+              "count": 816,
+              "mean_ms": 12.06915880392157,
+              "median_ms": 11.8259225
+            },
+            "12": {
+              "count": 278,
+              "mean_ms": 12.753265769784173,
+              "median_ms": 12.577409
+            },
+            "14": {
+              "count": 68,
+              "mean_ms": 13.501175323529411,
+              "median_ms": 13.1796965
+            },
+            "15": {
+              "count": 10,
+              "mean_ms": 13.8416666,
+              "median_ms": 13.4630245
+            },
+            "16": {
+              "count": 8,
+              "mean_ms": 14.19447475,
+              "median_ms": 13.840831999999999
+            },
+            "18": {
+              "count": 30,
+              "mean_ms": 14.798911366666667,
+              "median_ms": 14.647469000000001
+            },
+            "20": {
+              "count": 25,
+              "mean_ms": 15.51271876,
+              "median_ms": 15.098909
+            },
+            "24": {
+              "count": 56,
+              "mean_ms": 15.640398285714285,
+              "median_ms": 15.6120435
+            }
+          }
+        },
+        {
+          "id": 3,
+          "graph_count": 2400,
+          "graphs_per_s": 39.91754028726291,
+          "mean_graph_ms": 11.682850310416667,
+          "median_graph_ms": 11.728392,
+          "graph_time_s": 28.038840745,
+          "inferred_mean_captured_batch": 9.550416666666667,
+          "graphs_by_inferred_batch": {
+            "4": {
+              "count": 21,
+              "mean_ms": 9.334696904761906,
+              "median_ms": 9.18304
+            },
+            "5": {
+              "count": 125,
+              "mean_ms": 9.608784992,
+              "median_ms": 9.511549
+            },
+            "6": {
+              "count": 158,
+              "mean_ms": 10.152062082278482,
+              "median_ms": 9.987787
+            },
+            "7": {
+              "count": 286,
+              "mean_ms": 10.72834072027972,
+              "median_ms": 10.629826
+            },
+            "8": {
+              "count": 519,
+              "mean_ms": 11.156313421965319,
+              "median_ms": 11.016434
+            },
+            "10": {
+              "count": 816,
+              "mean_ms": 11.999369591911766,
+              "median_ms": 11.8265855
+            },
+            "12": {
+              "count": 278,
+              "mean_ms": 12.690219413669064,
+              "median_ms": 12.578209000000001
+            },
+            "14": {
+              "count": 68,
+              "mean_ms": 13.380893661764706,
+              "median_ms": 13.180477
+            },
+            "15": {
+              "count": 10,
+              "mean_ms": 13.709572900000001,
+              "median_ms": 13.462954
+            },
+            "16": {
+              "count": 8,
+              "mean_ms": 13.97178175,
+              "median_ms": 13.840807
+            },
+            "18": {
+              "count": 30,
+              "mean_ms": 14.7638445,
+              "median_ms": 14.647423499999999
+            },
+            "20": {
+              "count": 25,
+              "mean_ms": 15.30436852,
+              "median_ms": 15.098827
+            },
+            "24": {
+              "count": 56,
+              "mean_ms": 15.635610375,
+              "median_ms": 15.613574
+            }
+          }
+        }
+      ],
+      "top_non_graph_kernels": [
+        {
+          "short_name": "device_kernel",
+          "count": 47128,
+          "summed_gpu_s": 34.855755489
+        },
+        {
+          "short_name": "all_reduce_kernel",
+          "count": 40020,
+          "summed_gpu_s": 30.364074892
+        },
+        {
+          "short_name": "sparse_attn_fwd_kernel",
+          "count": 23564,
+          "summed_gpu_s": 7.334167169
+        },
+        {
+          "short_name": "sm90_fp8_paged_mqa_logits",
+          "count": 10248,
+          "summed_gpu_s": 6.029686155
+        },
+        {
+          "short_name": "sm90_fp8_gemm_1d2d_impl",
+          "count": 129328,
+          "summed_gpu_s": 3.340223476
+        },
+        {
+          "short_name": "ncclDevKernel_AllReduce_Sum_bf16_RING_LL",
+          "count": 7656,
+          "summed_gpu_s": 2.558882117
+        },
+        {
+          "short_name": "sm90_fp8_mqa_logits",
+          "count": 1260,
+          "summed_gpu_s": 2.536695663
+        },
+        {
+          "short_name": "mhc_post_tilelang_kernel",
+          "count": 47128,
+          "summed_gpu_s": 1.952085942
+        },
+        {
+          "short_name": "expandInputRowsKernel",
+          "count": 23564,
+          "summed_gpu_s": 1.237505324
+        },
+        {
+          "short_name": "mhc_pre_big_fuse_with_norm_til_5...",
+          "count": 47128,
+          "summed_gpu_s": 1.206242552
+        }
+      ],
+      "packed_kernel_name_matches": 0,
+      "stock_compressed_producer_calls": 22468,
+      "incomplete_cupti_events_dropped": 2742,
+      "possible_missing_cuda_event_warnings": 6,
+      "historical_graph_records_excluded": 66283
+    },
+    {
+      "label": "triton",
+      "concurrency": 24,
+      "window": 300,
+      "file": "logs/nsys-triton-20261012_102954-v2vDd5/server.1.nsys-rep",
+      "export": "/Users/poohthewinnie/Library/Caches/remnant/nsight-analysis/nsys-triton-20261012_102954-v2vDd5/server.1.sqlite",
+      "duration_s": 50.260492788,
+      "capture_start_utc": "2026-10-12T02:38:11",
+      "requested_cache_format": "remnant",
+      "requested_implementation": "triton",
+      "graph_trace_mode": "Graph",
+      "graph_nodes_present": false,
+      "devices": [
+        {
+          "id": 0,
+          "graph_count": 2255,
+          "graphs_per_s": 44.866253291857795,
+          "mean_graph_ms": 10.769530295343682,
+          "median_graph_ms": 10.65415,
+          "graph_time_s": 24.285290816,
+          "inferred_mean_captured_batch": 7.783592017738359,
+          "graphs_by_inferred_batch": {
+            "1": {
+              "count": 8,
+              "mean_ms": 7.44540675,
+              "median_ms": 7.276649
+            },
+            "2": {
+              "count": 62,
+              "mean_ms": 8.140756322580645,
+              "median_ms": 7.975217000000001
+            },
+            "3": {
+              "count": 118,
+              "mean_ms": 8.781319584745763,
+              "median_ms": 8.6335775
+            },
+            "4": {
+              "count": 193,
+              "mean_ms": 9.251393533678756,
+              "median_ms": 9.151125
+            },
+            "5": {
+              "count": 294,
+              "mean_ms": 9.552831680272108,
+              "median_ms": 9.438530499999999
+            },
+            "6": {
+              "count": 320,
+              "mean_ms": 10.090304328125,
+              "median_ms": 9.960413500000001
+            },
+            "7": {
+              "count": 246,
+              "mean_ms": 10.652140329268292,
+              "median_ms": 10.57617
+            },
+            "8": {
+              "count": 296,
+              "mean_ms": 10.988701030405405,
+              "median_ms": 10.9312855
+            },
+            "10": {
+              "count": 460,
+              "mean_ms": 11.856708469565218,
+              "median_ms": 11.7377895
+            },
+            "12": {
+              "count": 68,
+              "mean_ms": 12.497921573529412,
+              "median_ms": 12.4409995
+            },
+            "14": {
+              "count": 99,
+              "mean_ms": 13.210909505050505,
+              "median_ms": 13.109809
+            },
+            "15": {
+              "count": 6,
+              "mean_ms": 13.515314166666666,
+              "median_ms": 13.3590065
+            },
+            "16": {
+              "count": 4,
+              "mean_ms": 13.56312425,
+              "median_ms": 13.566683999999999
+            },
+            "18": {
+              "count": 13,
+              "mean_ms": 14.520599846153846,
+              "median_ms": 14.456899
+            },
+            "20": {
+              "count": 2,
+              "mean_ms": 14.985453,
+              "median_ms": 14.985453
+            },
+            "24": {
+              "count": 66,
+              "mean_ms": 15.497975636363636,
+              "median_ms": 15.511334999999999
+            }
+          },
+          "recorded_gpu_busy_fraction": 0.9192235214022948
+        },
+        {
+          "id": 1,
+          "graph_count": 2255,
+          "graphs_per_s": 44.866253291857795,
+          "mean_graph_ms": 10.773761798226165,
+          "median_graph_ms": 10.639494,
+          "graph_time_s": 24.294832855,
+          "inferred_mean_captured_batch": 7.783592017738359,
+          "graphs_by_inferred_batch": {
+            "1": {
+              "count": 8,
+              "mean_ms": 7.44610225,
+              "median_ms": 7.2763675
+            },
+            "2": {
+              "count": 62,
+              "mean_ms": 8.109105290322582,
+              "median_ms": 7.97625
+            },
+            "3": {
+              "count": 118,
+              "mean_ms": 8.741993745762711,
+              "median_ms": 8.634933
+            },
+            "4": {
+              "count": 193,
+              "mean_ms": 9.205943455958549,
+              "median_ms": 9.151889
+            },
+            "5": {
+              "count": 294,
+              "mean_ms": 9.530590724489796,
+              "median_ms": 9.4381105
+            },
+            "6": {
+              "count": 320,
+              "mean_ms": 10.123359571875,
+              "median_ms": 9.962188000000001
+            },
+            "7": {
+              "count": 246,
+              "mean_ms": 10.693462552845528,
+              "median_ms": 10.576936
+            },
+            "8": {
+              "count": 296,
+              "mean_ms": 11.013377493243244,
+              "median_ms": 10.932373
+            },
+            "10": {
+              "count": 460,
+              "mean_ms": 11.869714463043477,
+              "median_ms": 11.739775
+            },
+            "12": {
+              "count": 68,
+              "mean_ms": 12.482811426470589,
+              "median_ms": 12.442601499999999
+            },
+            "14": {
+              "count": 99,
+              "mean_ms": 13.201209464646464,
+              "median_ms": 13.110803
+            },
+            "15": {
+              "count": 6,
+              "mean_ms": 13.526058666666666,
+              "median_ms": 13.3614255
+            },
+            "16": {
+              "count": 4,
+              "mean_ms": 13.56418325,
+              "median_ms": 13.567823
+            },
+            "18": {
+              "count": 13,
+              "mean_ms": 14.526402538461538,
+              "median_ms": 14.456456
+            },
+            "20": {
+              "count": 2,
+              "mean_ms": 14.985652,
+              "median_ms": 14.985652
+            },
+            "24": {
+              "count": 66,
+              "mean_ms": 15.486813772727272,
+              "median_ms": 15.512207499999999
+            }
+          }
+        },
+        {
+          "id": 2,
+          "graph_count": 2255,
+          "graphs_per_s": 44.866253291857795,
+          "mean_graph_ms": 10.77759900443459,
+          "median_graph_ms": 10.654075,
+          "graph_time_s": 24.303485755,
+          "inferred_mean_captured_batch": 7.783592017738359,
+          "graphs_by_inferred_batch": {
+            "1": {
+              "count": 8,
+              "mean_ms": 7.443387875,
+              "median_ms": 7.2734760000000005
+            },
+            "2": {
+              "count": 62,
+              "mean_ms": 8.159113548387097,
+              "median_ms": 7.9733149999999995
+            },
+            "3": {
+              "count": 118,
+              "mean_ms": 8.797253813559323,
+              "median_ms": 8.633184
+            },
+            "4": {
+              "count": 193,
+              "mean_ms": 9.265521875647668,
+              "median_ms": 9.149663
+            },
+            "5": {
+              "count": 294,
+              "mean_ms": 9.562037894557823,
+              "median_ms": 9.436909499999999
+            },
+            "6": {
+              "count": 320,
+              "mean_ms": 10.094900796875,
+              "median_ms": 9.959215
+            },
+            "7": {
+              "count": 246,
+              "mean_ms": 10.650833357723577,
+              "median_ms": 10.5739035
+            },
+            "8": {
+              "count": 296,
+              "mean_ms": 10.99754431418919,
+              "median_ms": 10.9293105
+            },
+            "10": {
+              "count": 460,
+              "mean_ms": 11.859257984782609,
+              "median_ms": 11.735852999999999
+            },
+            "12": {
+              "count": 68,
+              "mean_ms": 12.497860382352941,
+              "median_ms": 12.438846000000002
+            },
+            "14": {
+              "count": 99,
+              "mean_ms": 13.212068232323233,
+              "median_ms": 13.10675
+            },
+            "15": {
+              "count": 6,
+              "mean_ms": 13.525010833333333,
+              "median_ms": 13.359822000000001
+            },
+            "16": {
+              "count": 4,
+              "mean_ms": 13.561614,
+              "median_ms": 13.56627
+            },
+            "18": {
+              "count": 13,
+              "mean_ms": 14.523923538461538,
+              "median_ms": 14.454971
+            },
+            "20": {
+              "count": 2,
+              "mean_ms": 14.982938,
+              "median_ms": 14.982938
+            },
+            "24": {
+              "count": 66,
+              "mean_ms": 15.567955818181819,
+              "median_ms": 15.507560999999999
+            }
+          }
+        },
+        {
+          "id": 3,
+          "graph_count": 2255,
+          "graphs_per_s": 44.866253291857795,
+          "mean_graph_ms": 10.77004744345898,
+          "median_graph_ms": 10.633898,
+          "graph_time_s": 24.286456985,
+          "inferred_mean_captured_batch": 7.783592017738359,
+          "graphs_by_inferred_batch": {
+            "1": {
+              "count": 8,
+              "mean_ms": 7.444664125,
+              "median_ms": 7.274314
+            },
+            "2": {
+              "count": 62,
+              "mean_ms": 8.104377080645161,
+              "median_ms": 7.9735555
+            },
+            "3": {
+              "count": 118,
+              "mean_ms": 8.736656279661016,
+              "median_ms": 8.634795
+            },
+            "4": {
+              "count": 193,
+              "mean_ms": 9.201785896373057,
+              "median_ms": 9.152308
+            },
+            "5": {
+              "count": 294,
+              "mean_ms": 9.527861517006803,
+              "median_ms": 9.4378575
+            },
+            "6": {
+              "count": 320,
+              "mean_ms": 10.11831281875,
+              "median_ms": 9.961613499999999
+            },
+            "7": {
+              "count": 246,
+              "mean_ms": 10.690144609756098,
+              "median_ms": 10.575836500000001
+            },
+            "8": {
+              "count": 296,
+              "mean_ms": 11.010926817567567,
+              "median_ms": 10.9310495
+            },
+            "10": {
+              "count": 460,
+              "mean_ms": 11.867757658695652,
+              "median_ms": 11.738739500000001
+            },
+            "12": {
+              "count": 68,
+              "mean_ms": 12.481797264705882,
+              "median_ms": 12.44027
+            },
+            "14": {
+              "count": 99,
+              "mean_ms": 13.188526616161615,
+              "median_ms": 13.10972
+            },
+            "15": {
+              "count": 6,
+              "mean_ms": 13.508438,
+              "median_ms": 13.359239500000001
+            },
+            "16": {
+              "count": 4,
+              "mean_ms": 13.5632935,
+              "median_ms": 13.5680055
+            },
+            "18": {
+              "count": 13,
+              "mean_ms": 14.512349153846154,
+              "median_ms": 14.455693
+            },
+            "20": {
+              "count": 2,
+              "mean_ms": 14.984983,
+              "median_ms": 14.984983
+            },
+            "24": {
+              "count": 66,
+              "mean_ms": 15.484359015151515,
+              "median_ms": 15.5097625
+            }
+          }
+        }
+      ],
+      "top_non_graph_kernels": [
+        {
+          "short_name": "device_kernel",
+          "count": 41516,
+          "summed_gpu_s": 25.647996118
+        },
+        {
+          "short_name": "all_reduce_kernel",
+          "count": 37236,
+          "summed_gpu_s": 24.796256209
+        },
+        {
+          "short_name": "sparse_attn_fwd_kernel",
+          "count": 20755,
+          "summed_gpu_s": 5.387820442
+        },
+        {
+          "short_name": "sm90_fp8_paged_mqa_logits",
+          "count": 9324,
+          "summed_gpu_s": 4.294875112
+        },
+        {
+          "short_name": "sm90_fp8_gemm_1d2d_impl",
+          "count": 113921,
+          "summed_gpu_s": 2.499893467
+        },
+        {
+          "short_name": "sm90_fp8_mqa_logits",
+          "count": 813,
+          "summed_gpu_s": 2.189102575
+        },
+        {
+          "short_name": "ncclDevKernel_AllReduce_Sum_bf16_RING_LL",
+          "count": 4761,
+          "summed_gpu_s": 1.629474913
+        },
+        {
+          "short_name": "mhc_post_tilelang_kernel",
+          "count": 41516,
+          "summed_gpu_s": 1.377732797
+        },
+        {
+          "short_name": "_dequantize_k_cache_paged_kern_5...",
+          "count": 40548,
+          "summed_gpu_s": 0.960475243
+        },
+        {
+          "short_name": "expandInputRowsKernel",
+          "count": 20758,
+          "summed_gpu_s": 0.870386248
+        }
+      ],
+      "packed_kernel_name_matches": 0,
+      "stock_compressed_producer_calls": 19633,
+      "incomplete_cupti_events_dropped": 3069,
+      "possible_missing_cuda_event_warnings": 6,
+      "historical_graph_records_excluded": 19772,
+      "trace_sha256": "ec5beb89f3dcb9a5e26ca888f554be5c7c87b72defe9670762d61943ee90ba10",
+      "trace_bytes": 129269287
+    },
+    {
+      "label": "triton",
+      "concurrency": 24,
+      "window": 900,
+      "file": "logs/nsys-triton-20261012_102954-v2vDd5/server.2.nsys-rep",
+      "export": "/Users/poohthewinnie/Library/Caches/remnant/nsight-analysis/nsys-triton-20261012_102954-v2vDd5/server.2.sqlite",
+      "duration_s": 61.565110164,
+      "capture_start_utc": "2026-10-12T02:48:02",
+      "requested_cache_format": "remnant",
+      "requested_implementation": "triton",
+      "graph_trace_mode": "Graph",
+      "graph_nodes_present": false,
+      "devices": [
+        {
+          "id": 0,
+          "graph_count": 2318,
+          "graphs_per_s": 37.65119552007954,
+          "mean_graph_ms": 11.593839936583262,
+          "median_graph_ms": 11.738670500000001,
+          "graph_time_s": 26.874520973,
+          "inferred_mean_captured_batch": 9.480155306298533,
+          "graphs_by_inferred_batch": {
+            "1": {
+              "count": 6,
+              "mean_ms": 7.578659333333333,
+              "median_ms": 7.305505
+            },
+            "2": {
+              "count": 38,
+              "mean_ms": 8.201046815789473,
+              "median_ms": 8.020233000000001
+            },
+            "3": {
+              "count": 81,
+              "mean_ms": 8.6769607654321,
+              "median_ms": 8.599362
+            },
+            "4": {
+              "count": 38,
+              "mean_ms": 9.278128842105263,
+              "median_ms": 9.118459999999999
+            },
+            "5": {
+              "count": 47,
+              "mean_ms": 9.603328382978724,
+              "median_ms": 9.505943
+            },
+            "6": {
+              "count": 149,
+              "mean_ms": 10.084874,
+              "median_ms": 9.986771
+            },
+            "7": {
+              "count": 243,
+              "mean_ms": 10.70698624691358,
+              "median_ms": 10.611082
+            },
+            "8": {
+              "count": 468,
+              "mean_ms": 11.053587467948718,
+              "median_ms": 10.9707115
+            },
+            "10": {
+              "count": 678,
+              "mean_ms": 11.990327138643067,
+              "median_ms": 11.850508999999999
+            },
+            "12": {
+              "count": 221,
+              "mean_ms": 12.729120819004525,
+              "median_ms": 12.605719
+            },
+            "14": {
+              "count": 212,
+              "mean_ms": 13.307440221698114,
+              "median_ms": 13.184224
+            },
+            "15": {
+              "count": 60,
+              "mean_ms": 13.507587666666666,
+              "median_ms": 13.3386695
+            },
+            "16": {
+              "count": 13,
+              "mean_ms": 13.838873461538462,
+              "median_ms": 13.713417
+            },
+            "18": {
+              "count": 16,
+              "mean_ms": 14.5822495625,
+              "median_ms": 14.573442
+            },
+            "20": {
+              "count": 6,
+              "mean_ms": 14.987490166666667,
+              "median_ms": 14.992332999999999
+            },
+            "24": {
+              "count": 42,
+              "mean_ms": 15.613592619047619,
+              "median_ms": 15.607894
+            }
+          },
+          "recorded_gpu_busy_fraction": 0.9101025281160577
+        },
+        {
+          "id": 1,
+          "graph_count": 2318,
+          "graphs_per_s": 37.65119552007954,
+          "mean_graph_ms": 11.647693968507333,
+          "median_graph_ms": 11.739791499999999,
+          "graph_time_s": 26.999354619,
+          "inferred_mean_captured_batch": 9.480155306298533,
+          "graphs_by_inferred_batch": {
+            "1": {
+              "count": 6,
+              "mean_ms": 7.578882166666666,
+              "median_ms": 7.305956500000001
+            },
+            "2": {
+              "count": 38,
+              "mean_ms": 8.177389789473684,
+              "median_ms": 8.019406
+            },
+            "3": {
+              "count": 81,
+              "mean_ms": 8.682451765432099,
+              "median_ms": 8.601401
+            },
+            "4": {
+              "count": 38,
+              "mean_ms": 9.383035157894737,
+              "median_ms": 9.119717000000001
+            },
+            "5": {
+              "count": 47,
+              "mean_ms": 9.600167276595744,
+              "median_ms": 9.508305
+            },
+            "6": {
+              "count": 149,
+              "mean_ms": 10.080150422818791,
+              "median_ms": 9.98795
+            },
+            "7": {
+              "count": 243,
+              "mean_ms": 10.71482833744856,
+              "median_ms": 10.612937
+            },
+            "8": {
+              "count": 468,
+              "mean_ms": 11.090322641025642,
+              "median_ms": 10.9718615
+            },
+            "10": {
+              "count": 678,
+              "mean_ms": 12.040282998525074,
+              "median_ms": 11.853486
+            },
+            "12": {
+              "count": 221,
+              "mean_ms": 12.90959805882353,
+              "median_ms": 12.60748
+            },
+            "14": {
+              "count": 212,
+              "mean_ms": 13.444619188679246,
+              "median_ms": 13.186052
+            },
+            "15": {
+              "count": 60,
+              "mean_ms": 13.511736516666666,
+              "median_ms": 13.338835
+            },
+            "16": {
+              "count": 13,
+              "mean_ms": 13.831354923076923,
+              "median_ms": 13.715119
+            },
+            "18": {
+              "count": 16,
+              "mean_ms": 14.5834085625,
+              "median_ms": 14.5741205
+            },
+            "20": {
+              "count": 6,
+              "mean_ms": 14.9891415,
+              "median_ms": 14.9939415
+            },
+            "24": {
+              "count": 42,
+              "mean_ms": 15.61448869047619,
+              "median_ms": 15.609919999999999
+            }
+          }
+        },
+        {
+          "id": 2,
+          "graph_count": 2318,
+          "graphs_per_s": 37.65119552007954,
+          "mean_graph_ms": 11.615739572907678,
+          "median_graph_ms": 11.738736500000002,
+          "graph_time_s": 26.92528433,
+          "inferred_mean_captured_batch": 9.480155306298533,
+          "graphs_by_inferred_batch": {
+            "1": {
+              "count": 6,
+              "mean_ms": 7.576178333333333,
+              "median_ms": 7.303357500000001
+            },
+            "2": {
+              "count": 38,
+              "mean_ms": 8.24858997368421,
+              "median_ms": 8.017308
+            },
+            "3": {
+              "count": 81,
+              "mean_ms": 8.696426814814815,
+              "median_ms": 8.597994
+            },
+            "4": {
+              "count": 38,
+              "mean_ms": 9.271004631578947,
+              "median_ms": 9.117464
+            },
+            "5": {
+              "count": 47,
+              "mean_ms": 9.630564531914894,
+              "median_ms": 9.506757
+            },
+            "6": {
+              "count": 149,
+              "mean_ms": 10.105249187919464,
+              "median_ms": 9.985764
+            },
+            "7": {
+              "count": 243,
+              "mean_ms": 10.729244781893003,
+              "median_ms": 10.610115
+            },
+            "8": {
+              "count": 468,
+              "mean_ms": 11.058605662393163,
+              "median_ms": 10.9694735
+            },
+            "10": {
+              "count": 678,
+              "mean_ms": 12.032684446902655,
+              "median_ms": 11.848894999999999
+            },
+            "12": {
+              "count": 221,
+              "mean_ms": 12.730705814479638,
+              "median_ms": 12.602881
+            },
+            "14": {
+              "count": 212,
+              "mean_ms": 13.304463834905661,
+              "median_ms": 13.18363
+            },
+            "15": {
+              "count": 60,
+              "mean_ms": 13.533767016666667,
+              "median_ms": 13.337228
+            },
+            "16": {
+              "count": 13,
+              "mean_ms": 13.938804307692308,
+              "median_ms": 13.711867
+            },
+            "18": {
+              "count": 16,
+              "mean_ms": 14.580007125,
+              "median_ms": 14.570108999999999
+            },
+            "20": {
+              "count": 6,
+              "mean_ms": 14.985164,
+              "median_ms": 14.989596
+            },
+            "24": {
+              "count": 42,
+              "mean_ms": 15.716798833333334,
+              "median_ms": 15.606698
+            }
+          }
+        },
+        {
+          "id": 3,
+          "graph_count": 2318,
+          "graphs_per_s": 37.65119552007954,
+          "mean_graph_ms": 11.64464632830026,
+          "median_graph_ms": 11.7399915,
+          "graph_time_s": 26.992290189,
+          "inferred_mean_captured_batch": 9.480155306298533,
+          "graphs_by_inferred_batch": {
+            "1": {
+              "count": 6,
+              "mean_ms": 7.577779333333334,
+              "median_ms": 7.304646
+            },
+            "2": {
+              "count": 38,
+              "mean_ms": 8.17697502631579,
+              "median_ms": 8.018255
+            },
+            "3": {
+              "count": 81,
+              "mean_ms": 8.681082543209877,
+              "median_ms": 8.600937
+            },
+            "4": {
+              "count": 38,
+              "mean_ms": 9.38058555263158,
+              "median_ms": 9.119904
+            },
+            "5": {
+              "count": 47,
+              "mean_ms": 9.597994851063829,
+              "median_ms": 9.507964
+            },
+            "6": {
+              "count": 149,
+              "mean_ms": 10.076365093959732,
+              "median_ms": 9.986139
+            },
+            "7": {
+              "count": 243,
+              "mean_ms": 10.709332691358025,
+              "median_ms": 10.611984
+            },
+            "8": {
+              "count": 468,
+              "mean_ms": 11.086401771367521,
+              "median_ms": 10.97043
+            },
+            "10": {
+              "count": 678,
+              "mean_ms": 12.036710926253686,
+              "median_ms": 11.852243999999999
+            },
+            "12": {
+              "count": 221,
+              "mean_ms": 12.90680909954751,
+              "median_ms": 12.605987
+            },
+            "14": {
+              "count": 212,
+              "mean_ms": 13.445779773584906,
+              "median_ms": 13.1856095
+            },
+            "15": {
+              "count": 60,
+              "mean_ms": 13.513323683333333,
+              "median_ms": 13.338773
+            },
+            "16": {
+              "count": 13,
+              "mean_ms": 13.82753353846154,
+              "median_ms": 13.714833
+            },
+            "18": {
+              "count": 16,
+              "mean_ms": 14.583201625,
+              "median_ms": 14.572848
+            },
+            "20": {
+              "count": 6,
+              "mean_ms": 14.988129,
+              "median_ms": 14.9932595
+            },
+            "24": {
+              "count": 42,
+              "mean_ms": 15.608643023809524,
+              "median_ms": 15.608245499999999
+            }
+          }
+        }
+      ],
+      "top_non_graph_kernels": [
+        {
+          "short_name": "device_kernel",
+          "count": 49090,
+          "summed_gpu_s": 37.833748947
+        },
+        {
+          "short_name": "all_reduce_kernel",
+          "count": 40610,
+          "summed_gpu_s": 32.30199202
+        },
+        {
+          "short_name": "sparse_attn_fwd_kernel",
+          "count": 24542,
+          "summed_gpu_s": 7.730423764
+        },
+        {
+          "short_name": "sm90_fp8_paged_mqa_logits",
+          "count": 10560,
+          "summed_gpu_s": 5.839507522
+        },
+        {
+          "short_name": "sm90_fp8_gemm_1d2d_impl",
+          "count": 134706,
+          "summed_gpu_s": 3.620411746
+        },
+        {
+          "short_name": "ncclDevKernel_AllReduce_Sum_bf16_RING_LL",
+          "count": 9048,
+          "summed_gpu_s": 3.138769659
+        },
+        {
+          "short_name": "sm90_fp8_mqa_logits",
+          "count": 1428,
+          "summed_gpu_s": 2.588574024
+        },
+        {
+          "short_name": "mhc_post_tilelang_kernel",
+          "count": 49090,
+          "summed_gpu_s": 2.142658437
+        },
+        {
+          "short_name": "expandInputRowsKernel",
+          "count": 24545,
+          "summed_gpu_s": 1.374506584
+        },
+        {
+          "short_name": "mhc_pre_big_fuse_with_norm_til_2...",
+          "count": 49087,
+          "summed_gpu_s": 1.318056365
+        }
+      ],
+      "packed_kernel_name_matches": 0,
+      "stock_compressed_producer_calls": 23404,
+      "incomplete_cupti_events_dropped": 3069,
+      "possible_missing_cuda_event_warnings": 6,
+      "historical_graph_records_excluded": 72220,
+      "trace_sha256": "fd2b812f45deffd8eec1327c6358a11de2127366300aa87fb20b28550198b484",
+      "trace_bytes": 156482558
+    },
+    {
+      "label": "triton",
+      "concurrency": 28,
+      "window": 300,
+      "file": "logs/nsys-triton-20261012_102954-v2vDd5/server.3.nsys-rep",
+      "export": "/Users/poohthewinnie/Library/Caches/remnant/nsight-analysis/nsys-triton-20261012_102954-v2vDd5/server.3.sqlite",
+      "duration_s": 60.179372846,
+      "capture_start_utc": "2026-10-12T02:58:16",
+      "requested_cache_format": "remnant",
+      "requested_implementation": "triton",
+      "graph_trace_mode": "Graph",
+      "graph_nodes_present": false,
+      "devices": [
+        {
+          "id": 0,
+          "graph_count": 127,
+          "graphs_per_s": 2.1103576523636276,
+          "mean_graph_ms": 16.709948582677164,
+          "median_graph_ms": 16.568009,
+          "graph_time_s": 2.12216347,
+          "inferred_mean_captured_batch": 28.0,
+          "graphs_by_inferred_batch": {
+            "28": {
+              "count": 127,
+              "mean_ms": 16.709948582677164,
+              "median_ms": 16.568009
+            }
+          },
+          "recorded_gpu_busy_fraction": 0.9611951518674688
+        },
+        {
+          "id": 1,
+          "graph_count": 127,
+          "graphs_per_s": 2.1103576523636276,
+          "mean_graph_ms": 16.70532705511811,
+          "median_graph_ms": 16.568652,
+          "graph_time_s": 2.121576536,
+          "inferred_mean_captured_batch": 28.0,
+          "graphs_by_inferred_batch": {
+            "28": {
+              "count": 127,
+              "mean_ms": 16.70532705511811,
+              "median_ms": 16.568652
+            }
+          }
+        },
+        {
+          "id": 2,
+          "graph_count": 127,
+          "graphs_per_s": 2.1103576523636276,
+          "mean_graph_ms": 16.71340012598425,
+          "median_graph_ms": 16.563972,
+          "graph_time_s": 2.122601816,
+          "inferred_mean_captured_batch": 28.0,
+          "graphs_by_inferred_batch": {
+            "28": {
+              "count": 127,
+              "mean_ms": 16.71340012598425,
+              "median_ms": 16.563972
+            }
+          }
+        },
+        {
+          "id": 3,
+          "graph_count": 127,
+          "graphs_per_s": 2.1103576523636276,
+          "mean_graph_ms": 16.721018062992126,
+          "median_graph_ms": 16.568332,
+          "graph_time_s": 2.1235692939999997,
+          "inferred_mean_captured_batch": 28.0,
+          "graphs_by_inferred_batch": {
+            "28": {
+              "count": 127,
+              "mean_ms": 16.721018062992126,
+              "median_ms": 16.568332
+            }
+          }
+        }
+      ],
+      "top_non_graph_kernels": [
+        {
+          "short_name": "device_kernel",
+          "count": 36356,
+          "summed_gpu_s": 100.512728276
+        },
+        {
+          "short_name": "sm90_fp8_mqa_logits",
+          "count": 7113,
+          "summed_gpu_s": 25.638800819
+        },
+        {
+          "short_name": "sparse_attn_fwd_kernel",
+          "count": 18175,
+          "summed_gpu_s": 24.638632039
+        },
+        {
+          "short_name": "ncclDevKernel_AllReduce_Sum_bf16_RING_LL",
+          "count": 34689,
+          "summed_gpu_s": 12.785073784
+        },
+        {
+          "short_name": "sm90_fp8_gemm_1d2d_impl",
+          "count": 99761,
+          "summed_gpu_s": 7.773088241
+        },
+        {
+          "short_name": "mhc_post_tilelang_kernel",
+          "count": 36356,
+          "summed_gpu_s": 6.616592698
+        },
+        {
+          "short_name": "sm90_fp8_paged_mqa_logits",
+          "count": 1764,
+          "summed_gpu_s": 4.43761514
+        },
+        {
+          "short_name": "expandInputRowsKernel",
+          "count": 18178,
+          "summed_gpu_s": 4.43010026
+        },
+        {
+          "short_name": "mhc_pre_big_fuse_with_norm_til_1...",
+          "count": 36353,
+          "summed_gpu_s": 3.933723236
+        },
+        {
+          "short_name": "topk_main_kernel",
+          "count": 8877,
+          "summed_gpu_s": 3.55737385
+        }
+      ],
+      "packed_kernel_name_matches": 0,
+      "stock_compressed_producer_calls": 17333,
+      "incomplete_cupti_events_dropped": 1609,
+      "possible_missing_cuda_event_warnings": 6,
+      "historical_graph_records_excluded": 39068,
+      "trace_sha256": "f5ef9b841a4928892e0c14f052b638833c96a63cd77e7502a4a0af34b07c6ea7",
+      "trace_bytes": 109621229
+    },
+    {
+      "label": "triton",
+      "concurrency": 28,
+      "window": 900,
+      "file": "logs/nsys-triton-20261012_102954-v2vDd5/server.4.nsys-rep",
+      "export": "/Users/poohthewinnie/Library/Caches/remnant/nsight-analysis/nsys-triton-20261012_102954-v2vDd5/server.4.sqlite",
+      "duration_s": 59.702397709,
+      "capture_start_utc": "2026-10-12T03:08:16",
+      "requested_cache_format": "remnant",
+      "requested_implementation": "triton",
+      "graph_trace_mode": "Graph",
+      "graph_nodes_present": false,
+      "devices": [
+        {
+          "id": 0,
+          "graph_count": 52,
+          "graphs_per_s": 0.8709867944241897,
+          "mean_graph_ms": 17.13641628846154,
+          "median_graph_ms": 16.876856500000002,
+          "graph_time_s": 0.891093647,
+          "inferred_mean_captured_batch": 28.0,
+          "graphs_by_inferred_batch": {
+            "28": {
+              "count": 52,
+              "mean_ms": 17.13641628846154,
+              "median_ms": 16.876856500000002
+            }
+          },
+          "recorded_gpu_busy_fraction": 0.9701608132945815
+        },
+        {
+          "id": 1,
+          "graph_count": 52,
+          "graphs_per_s": 0.8709867944241897,
+          "mean_graph_ms": 17.03765675,
+          "median_graph_ms": 16.8763635,
+          "graph_time_s": 0.8859581510000001,
+          "inferred_mean_captured_batch": 28.0,
+          "graphs_by_inferred_batch": {
+            "28": {
+              "count": 52,
+              "mean_ms": 17.03765675,
+              "median_ms": 16.8763635
+            }
+          }
+        },
+        {
+          "id": 2,
+          "graph_count": 52,
+          "graphs_per_s": 0.8709867944241897,
+          "mean_graph_ms": 17.137034,
+          "median_graph_ms": 16.873196,
+          "graph_time_s": 0.891125768,
+          "inferred_mean_captured_batch": 28.0,
+          "graphs_by_inferred_batch": {
+            "28": {
+              "count": 52,
+              "mean_ms": 17.137034,
+              "median_ms": 16.873196
+            }
+          }
+        },
+        {
+          "id": 3,
+          "graph_count": 52,
+          "graphs_per_s": 0.8709867944241897,
+          "mean_graph_ms": 17.06570255769231,
+          "median_graph_ms": 16.875650999999998,
+          "graph_time_s": 0.887416533,
+          "inferred_mean_captured_batch": 28.0,
+          "graphs_by_inferred_batch": {
+            "28": {
+              "count": 52,
+              "mean_ms": 17.06570255769231,
+              "median_ms": 16.875650999999998
+            }
+          }
+        }
+      ],
+      "top_non_graph_kernels": [
+        {
+          "short_name": "device_kernel",
+          "count": 37122,
+          "summed_gpu_s": 108.858425856
+        },
+        {
+          "short_name": "sparse_attn_fwd_kernel",
+          "count": 18558,
+          "summed_gpu_s": 23.961432014
+        },
+        {
+          "short_name": "sm90_fp8_mqa_logits",
+          "count": 8309,
+          "summed_gpu_s": 22.327818621
+        },
+        {
+          "short_name": "ncclDevKernel_AllReduce_Sum_bf16_RING_LL",
+          "count": 36506,
+          "summed_gpu_s": 13.412191378
+        },
+        {
+          "short_name": "sm90_fp8_gemm_1d2d_impl",
+          "count": 101862,
+          "summed_gpu_s": 8.411737462
+        },
+        {
+          "short_name": "mhc_post_tilelang_kernel",
+          "count": 37122,
+          "summed_gpu_s": 7.218165975
+        },
+        {
+          "short_name": "expandInputRowsKernel",
+          "count": 18561,
+          "summed_gpu_s": 4.849599977
+        },
+        {
+          "short_name": "mhc_pre_big_fuse_with_norm_til_5...",
+          "count": 37119,
+          "summed_gpu_s": 4.287945522
+        },
+        {
+          "short_name": "finalizeMoeRoutingKernel",
+          "count": 18561,
+          "summed_gpu_s": 3.682587714
+        },
+        {
+          "short_name": "doActivationKernel",
+          "count": 18561,
+          "summed_gpu_s": 3.665708724
+        }
+      ],
+      "packed_kernel_name_matches": 0,
+      "stock_compressed_producer_calls": 17700,
+      "incomplete_cupti_events_dropped": 1557,
+      "possible_missing_cuda_event_warnings": 6,
+      "historical_graph_records_excluded": 2316,
+      "trace_sha256": "18389c898a55bf8802663d75be04a60b199254caf6ef773ca42a739f79bf9838",
+      "trace_bytes": 109837381
+    },
+    {
+      "label": "kernel",
+      "concurrency": 24,
+      "window": 300,
+      "file": "logs/nsys-kernel-20261012_111730-tzgOM7/server.1.nsys-rep",
+      "export": "/Users/poohthewinnie/Library/Caches/remnant/nsight-analysis/nsys-kernel-20261012_111730-tzgOM7/server.1.sqlite",
+      "duration_s": 52.231608282,
+      "capture_start_utc": "2026-10-12T03:25:49",
+      "requested_cache_format": "remnant",
+      "requested_implementation": "kernel",
+      "graph_trace_mode": "Graph",
+      "graph_nodes_present": false,
+      "devices": [
+        {
+          "id": 0,
+          "graph_count": 2207,
+          "graphs_per_s": 42.254107667608885,
+          "mean_graph_ms": 11.594128932034437,
+          "median_graph_ms": 11.688948,
+          "graph_time_s": 25.588242553,
+          "inferred_mean_captured_batch": 9.603081105573176,
+          "graphs_by_inferred_batch": {
+            "4": {
+              "count": 75,
+              "mean_ms": 9.275620493333333,
+              "median_ms": 9.15941
+            },
+            "5": {
+              "count": 206,
+              "mean_ms": 9.637715349514563,
+              "median_ms": 9.440878999999999
+            },
+            "6": {
+              "count": 264,
+              "mean_ms": 10.126327606060606,
+              "median_ms": 9.915385
+            },
+            "7": {
+              "count": 210,
+              "mean_ms": 10.7192791,
+              "median_ms": 10.5064505
+            },
+            "8": {
+              "count": 189,
+              "mean_ms": 11.045907793650793,
+              "median_ms": 10.907773
+            },
+            "10": {
+              "count": 526,
+              "mean_ms": 11.89145980418251,
+              "median_ms": 11.7188035
+            },
+            "12": {
+              "count": 515,
+              "mean_ms": 12.646836483495145,
+              "median_ms": 12.436555
+            },
+            "14": {
+              "count": 114,
+              "mean_ms": 13.199738596491228,
+              "median_ms": 13.00634
+            },
+            "15": {
+              "count": 6,
+              "mean_ms": 14.2152695,
+              "median_ms": 13.2929925
+            },
+            "16": {
+              "count": 1,
+              "mean_ms": 13.499262,
+              "median_ms": 13.499262
+            },
+            "18": {
+              "count": 8,
+              "mean_ms": 14.4890345,
+              "median_ms": 14.506738
+            },
+            "20": {
+              "count": 55,
+              "mean_ms": 14.978610818181819,
+              "median_ms": 14.827118
+            },
+            "24": {
+              "count": 38,
+              "mean_ms": 15.363168052631579,
+              "median_ms": 15.338761000000002
+            }
+          },
+          "recorded_gpu_busy_fraction": 0.9519343801660195
+        },
+        {
+          "id": 1,
+          "graph_count": 2207,
+          "graphs_per_s": 42.254107667608885,
+          "mean_graph_ms": 11.532016479836882,
+          "median_graph_ms": 11.67877,
+          "graph_time_s": 25.451160371,
+          "inferred_mean_captured_batch": 9.603081105573176,
+          "graphs_by_inferred_batch": {
+            "4": {
+              "count": 75,
+              "mean_ms": 9.22775584,
+              "median_ms": 9.163434
+            },
+            "5": {
+              "count": 206,
+              "mean_ms": 9.593921398058253,
+              "median_ms": 9.444951
+            },
+            "6": {
+              "count": 264,
+              "mean_ms": 10.087870102272728,
+              "median_ms": 9.916129999999999
+            },
+            "7": {
+              "count": 210,
+              "mean_ms": 10.665819338095238,
+              "median_ms": 10.507933
+            },
+            "8": {
+              "count": 189,
+              "mean_ms": 11.00934271957672,
+              "median_ms": 10.909338
+            },
+            "10": {
+              "count": 526,
+              "mean_ms": 11.835631496197719,
+              "median_ms": 11.721810000000001
+            },
+            "12": {
+              "count": 515,
+              "mean_ms": 12.5573900407767,
+              "median_ms": 12.44062
+            },
+            "14": {
+              "count": 114,
+              "mean_ms": 13.096642201754387,
+              "median_ms": 13.010359000000001
+            },
+            "15": {
+              "count": 6,
+              "mean_ms": 13.6393715,
+              "median_ms": 13.29618
+            },
+            "16": {
+              "count": 1,
+              "mean_ms": 13.500898,
+              "median_ms": 13.500898
+            },
+            "18": {
+              "count": 8,
+              "mean_ms": 14.491457,
+              "median_ms": 14.508921
+            },
+            "20": {
+              "count": 55,
+              "mean_ms": 14.874900109090909,
+              "median_ms": 14.829781
+            },
+            "24": {
+              "count": 38,
+              "mean_ms": 15.366889342105264,
+              "median_ms": 15.342465
+            }
+          }
+        },
+        {
+          "id": 2,
+          "graph_count": 2207,
+          "graphs_per_s": 42.254107667608885,
+          "mean_graph_ms": 11.601601301314,
+          "median_graph_ms": 11.693429,
+          "graph_time_s": 25.604734072,
+          "inferred_mean_captured_batch": 9.603081105573176,
+          "graphs_by_inferred_batch": {
+            "4": {
+              "count": 75,
+              "mean_ms": 9.279895026666667,
+              "median_ms": 9.161471
+            },
+            "5": {
+              "count": 206,
+              "mean_ms": 9.651917844660193,
+              "median_ms": 9.4427015
+            },
+            "6": {
+              "count": 264,
+              "mean_ms": 10.133774393939394,
+              "median_ms": 9.915963999999999
+            },
+            "7": {
+              "count": 210,
+              "mean_ms": 10.730406647619047,
+              "median_ms": 10.5064415
+            },
+            "8": {
+              "count": 189,
+              "mean_ms": 11.045566777777777,
+              "median_ms": 10.907032
+            },
+            "10": {
+              "count": 526,
+              "mean_ms": 11.895803623574144,
+              "median_ms": 11.716901
+            },
+            "12": {
+              "count": 515,
+              "mean_ms": 12.645938955339806,
+              "median_ms": 12.437203
+            },
+            "14": {
+              "count": 114,
+              "mean_ms": 13.199199149122807,
+              "median_ms": 13.0077125
+            },
+            "15": {
+              "count": 6,
+              "mean_ms": 14.216790333333334,
+              "median_ms": 13.293054999999999
+            },
+            "16": {
+              "count": 1,
+              "mean_ms": 13.499535,
+              "median_ms": 13.499535
+            },
+            "18": {
+              "count": 8,
+              "mean_ms": 14.489071625000001,
+              "median_ms": 14.505964
+            },
+            "20": {
+              "count": 55,
+              "mean_ms": 14.979277309090909,
+              "median_ms": 14.827658
+            },
+            "24": {
+              "count": 38,
+              "mean_ms": 15.552627342105263,
+              "median_ms": 15.3400245
+            }
+          }
+        },
+        {
+          "id": 3,
+          "graph_count": 2207,
+          "graphs_per_s": 42.254107667608885,
+          "mean_graph_ms": 11.530967759401904,
+          "median_graph_ms": 11.677598,
+          "graph_time_s": 25.448845845,
+          "inferred_mean_captured_batch": 9.603081105573176,
+          "graphs_by_inferred_batch": {
+            "4": {
+              "count": 75,
+              "mean_ms": 9.225708506666667,
+              "median_ms": 9.161946
+            },
+            "5": {
+              "count": 206,
+              "mean_ms": 9.59553440776699,
+              "median_ms": 9.4448555
+            },
+            "6": {
+              "count": 264,
+              "mean_ms": 10.077166571969697,
+              "median_ms": 9.917218
+            },
+            "7": {
+              "count": 210,
+              "mean_ms": 10.660931685714285,
+              "median_ms": 10.5068275
+            },
+            "8": {
+              "count": 189,
+              "mean_ms": 11.007131878306879,
+              "median_ms": 10.908838
+            },
+            "10": {
+              "count": 526,
+              "mean_ms": 11.836633418250951,
+              "median_ms": 11.7211655
+            },
+            "12": {
+              "count": 515,
+              "mean_ms": 12.553692922330097,
+              "median_ms": 12.44175
+            },
+            "14": {
+              "count": 114,
+              "mean_ms": 13.127147807017543,
+              "median_ms": 13.009744
+            },
+            "15": {
+              "count": 6,
+              "mean_ms": 13.629347333333333,
+              "median_ms": 13.295724
+            },
+            "16": {
+              "count": 1,
+              "mean_ms": 13.502667,
+              "median_ms": 13.502667
+            },
+            "18": {
+              "count": 8,
+              "mean_ms": 14.491103875,
+              "median_ms": 14.5088955
+            },
+            "20": {
+              "count": 55,
+              "mean_ms": 14.872236945454546,
+              "median_ms": 14.831579
+            },
+            "24": {
+              "count": 38,
+              "mean_ms": 15.363830736842106,
+              "median_ms": 15.342438000000001
+            }
+          }
+        }
+      ],
+      "top_non_graph_kernels": [
+        {
+          "short_name": "all_reduce_kernel",
+          "count": 45588,
+          "summed_gpu_s": 33.870056967
+        },
+        {
+          "short_name": "device_kernel",
+          "count": 47364,
+          "summed_gpu_s": 21.890616075
+        },
+        {
+          "short_name": "sm90_fp8_paged_mqa_logits",
+          "count": 11256,
+          "summed_gpu_s": 4.926892583
+        },
+        {
+          "short_name": "sparse_attn_fwd_kernel",
+          "count": 23679,
+          "summed_gpu_s": 4.575121647
+        },
+        {
+          "short_name": "sm90_fp8_gemm_1d2d_impl",
+          "count": 129969,
+          "summed_gpu_s": 2.347825761
+        },
+        {
+          "short_name": "sm90_fp8_mqa_logits",
+          "count": 309,
+          "summed_gpu_s": 1.078487484
+        },
+        {
+          "short_name": "_dequantize_k_cache_paged_kern_5...",
+          "count": 46260,
+          "summed_gpu_s": 1.071172237
+        },
+        {
+          "short_name": "mhc_post_tilelang_kernel",
+          "count": 47364,
+          "summed_gpu_s": 1.063862277
+        },
+        {
+          "short_name": "ncclDevKernel_AllReduce_Sum_bf16_RING_LL",
+          "count": 2325,
+          "summed_gpu_s": 0.963822945
+        },
+        {
+          "short_name": "topk_main_kernel",
+          "count": 11565,
+          "summed_gpu_s": 0.752205522
+        }
+      ],
+      "packed_kernel_name_matches": 0,
+      "stock_compressed_producer_calls": 22501,
+      "incomplete_cupti_events_dropped": 2437,
+      "possible_missing_cuda_event_warnings": 6,
+      "historical_graph_records_excluded": 16536,
+      "trace_sha256": "180b9c01d40f3c25c908a937da6e1cf86bcc3d346288a683238e4257bb0ad952",
+      "trace_bytes": 142658612
+    },
+    {
+      "label": "kernel",
+      "concurrency": 24,
+      "window": 900,
+      "file": "logs/nsys-kernel-20261012_111730-tzgOM7/server.2.nsys-rep",
+      "export": "/Users/poohthewinnie/Library/Caches/remnant/nsight-analysis/nsys-kernel-20261012_111730-tzgOM7/server.2.sqlite",
+      "duration_s": 60.319426984,
+      "capture_start_utc": "2026-10-12T03:35:39",
+      "requested_cache_format": "remnant",
+      "requested_implementation": "kernel",
+      "graph_trace_mode": "Graph",
+      "graph_nodes_present": false,
+      "devices": [
+        {
+          "id": 0,
+          "graph_count": 2143,
+          "graphs_per_s": 35.527525826272196,
+          "mean_graph_ms": 12.395090862809147,
+          "median_graph_ms": 12.477066,
+          "graph_time_s": 26.562679719,
+          "inferred_mean_captured_batch": 11.427438170788614,
+          "graphs_by_inferred_batch": {
+            "5": {
+              "count": 30,
+              "mean_ms": 9.7032612,
+              "median_ms": 9.588686
+            },
+            "6": {
+              "count": 85,
+              "mean_ms": 10.234813388235294,
+              "median_ms": 10.011017
+            },
+            "7": {
+              "count": 210,
+              "mean_ms": 10.795568476190477,
+              "median_ms": 10.641552
+            },
+            "8": {
+              "count": 276,
+              "mean_ms": 11.133349521739131,
+              "median_ms": 11.022075000000001
+            },
+            "10": {
+              "count": 392,
+              "mean_ms": 11.999062522959184,
+              "median_ms": 11.8169295
+            },
+            "12": {
+              "count": 432,
+              "mean_ms": 12.673836532407407,
+              "median_ms": 12.548969
+            },
+            "14": {
+              "count": 424,
+              "mean_ms": 13.44816687971698,
+              "median_ms": 13.2331365
+            },
+            "15": {
+              "count": 141,
+              "mean_ms": 13.599138531914894,
+              "median_ms": 13.439034
+            },
+            "16": {
+              "count": 42,
+              "mean_ms": 13.94830307142857,
+              "median_ms": 13.6749555
+            },
+            "18": {
+              "count": 40,
+              "mean_ms": 14.677746175,
+              "median_ms": 14.472317
+            },
+            "20": {
+              "count": 25,
+              "mean_ms": 14.87310616,
+              "median_ms": 14.871144
+            },
+            "24": {
+              "count": 46,
+              "mean_ms": 15.625032304347826,
+              "median_ms": 15.526225
+            }
+          },
+          "recorded_gpu_busy_fraction": 0.9465769723599203
+        },
+        {
+          "id": 1,
+          "graph_count": 2143,
+          "graphs_per_s": 35.527525826272196,
+          "mean_graph_ms": 12.457603935137657,
+          "median_graph_ms": 12.49988,
+          "graph_time_s": 26.696645232999998,
+          "inferred_mean_captured_batch": 11.427438170788614,
+          "graphs_by_inferred_batch": {
+            "5": {
+              "count": 30,
+              "mean_ms": 9.705822566666667,
+              "median_ms": 9.590598
+            },
+            "6": {
+              "count": 85,
+              "mean_ms": 10.301898188235294,
+              "median_ms": 10.01213
+            },
+            "7": {
+              "count": 210,
+              "mean_ms": 10.869063828571429,
+              "median_ms": 10.644858500000002
+            },
+            "8": {
+              "count": 276,
+              "mean_ms": 11.183702956521739,
+              "median_ms": 11.0231575
+            },
+            "10": {
+              "count": 392,
+              "mean_ms": 12.08138625,
+              "median_ms": 11.820333999999999
+            },
+            "12": {
+              "count": 432,
+              "mean_ms": 12.736876113425925,
+              "median_ms": 12.550661999999999
+            },
+            "14": {
+              "count": 424,
+              "mean_ms": 13.482675787735849,
+              "median_ms": 13.2358725
+            },
+            "15": {
+              "count": 141,
+              "mean_ms": 13.686860886524823,
+              "median_ms": 13.443289
+            },
+            "16": {
+              "count": 42,
+              "mean_ms": 14.14757919047619,
+              "median_ms": 13.678109
+            },
+            "18": {
+              "count": 40,
+              "mean_ms": 14.653520125,
+              "median_ms": 14.475838499999998
+            },
+            "20": {
+              "count": 25,
+              "mean_ms": 14.97920604,
+              "median_ms": 14.875819
+            },
+            "24": {
+              "count": 46,
+              "mean_ms": 15.674971695652173,
+              "median_ms": 15.531157
+            }
+          }
+        },
+        {
+          "id": 2,
+          "graph_count": 2143,
+          "graphs_per_s": 35.527525826272196,
+          "mean_graph_ms": 12.412172156789547,
+          "median_graph_ms": 12.48985,
+          "graph_time_s": 26.599284932,
+          "inferred_mean_captured_batch": 11.427438170788614,
+          "graphs_by_inferred_batch": {
+            "5": {
+              "count": 30,
+              "mean_ms": 9.7037492,
+              "median_ms": 9.588929
+            },
+            "6": {
+              "count": 85,
+              "mean_ms": 10.28794851764706,
+              "median_ms": 10.011711
+            },
+            "7": {
+              "count": 210,
+              "mean_ms": 10.829423876190477,
+              "median_ms": 10.6420785
+            },
+            "8": {
+              "count": 276,
+              "mean_ms": 11.141715608695652,
+              "median_ms": 11.021806999999999
+            },
+            "10": {
+              "count": 392,
+              "mean_ms": 12.012864548469388,
+              "median_ms": 11.8155645
+            },
+            "12": {
+              "count": 432,
+              "mean_ms": 12.686438613425926,
+              "median_ms": 12.548283000000001
+            },
+            "14": {
+              "count": 424,
+              "mean_ms": 13.471303238207547,
+              "median_ms": 13.2336715
+            },
+            "15": {
+              "count": 141,
+              "mean_ms": 13.61295365248227,
+              "median_ms": 13.44025
+            },
+            "16": {
+              "count": 42,
+              "mean_ms": 13.940332619047618,
+              "median_ms": 13.674375
+            },
+            "18": {
+              "count": 40,
+              "mean_ms": 14.67571,
+              "median_ms": 14.471461999999999
+            },
+            "20": {
+              "count": 25,
+              "mean_ms": 14.86925312,
+              "median_ms": 14.871381
+            },
+            "24": {
+              "count": 46,
+              "mean_ms": 15.637112826086957,
+              "median_ms": 15.5270445
+            }
+          }
+        },
+        {
+          "id": 3,
+          "graph_count": 2143,
+          "graphs_per_s": 35.527525826272196,
+          "mean_graph_ms": 12.454602930004667,
+          "median_graph_ms": 12.494783,
+          "graph_time_s": 26.690214079,
+          "inferred_mean_captured_batch": 11.427438170788614,
+          "graphs_by_inferred_batch": {
+            "5": {
+              "count": 30,
+              "mean_ms": 9.7051105,
+              "median_ms": 9.590857
+            },
+            "6": {
+              "count": 85,
+              "mean_ms": 10.29799671764706,
+              "median_ms": 10.01282
+            },
+            "7": {
+              "count": 210,
+              "mean_ms": 10.865704519047618,
+              "median_ms": 10.6442235
+            },
+            "8": {
+              "count": 276,
+              "mean_ms": 11.180531326086957,
+              "median_ms": 11.0231175
+            },
+            "10": {
+              "count": 392,
+              "mean_ms": 12.078631403061225,
+              "median_ms": 11.818693499999998
+            },
+            "12": {
+              "count": 432,
+              "mean_ms": 12.734390210648147,
+              "median_ms": 12.5515825
+            },
+            "14": {
+              "count": 424,
+              "mean_ms": 13.47884699764151,
+              "median_ms": 13.235877
+            },
+            "15": {
+              "count": 141,
+              "mean_ms": 13.684323907801419,
+              "median_ms": 13.442679
+            },
+            "16": {
+              "count": 42,
+              "mean_ms": 14.142164023809524,
+              "median_ms": 13.677442
+            },
+            "18": {
+              "count": 40,
+              "mean_ms": 14.652342425,
+              "median_ms": 14.4770375
+            },
+            "20": {
+              "count": 25,
+              "mean_ms": 14.97980684,
+              "median_ms": 14.873834
+            },
+            "24": {
+              "count": 46,
+              "mean_ms": 15.67273504347826,
+              "median_ms": 15.5300835
+            }
+          }
+        }
+      ],
+      "top_non_graph_kernels": [
+        {
+          "short_name": "device_kernel",
+          "count": 49778,
+          "summed_gpu_s": 37.57728061
+        },
+        {
+          "short_name": "all_reduce_kernel",
+          "count": 41655,
+          "summed_gpu_s": 29.71898339
+        },
+        {
+          "short_name": "sparse_attn_fwd_kernel",
+          "count": 24886,
+          "summed_gpu_s": 7.719277628
+        },
+        {
+          "short_name": "sm90_fp8_paged_mqa_logits",
+          "count": 10728,
+          "summed_gpu_s": 5.911701673
+        },
+        {
+          "short_name": "sm90_fp8_gemm_1d2d_impl",
+          "count": 136595,
+          "summed_gpu_s": 3.596702223
+        },
+        {
+          "short_name": "ncclDevKernel_AllReduce_Sum_bf16_RING_LL",
+          "count": 8700,
+          "summed_gpu_s": 2.891342296
+        },
+        {
+          "short_name": "sm90_fp8_mqa_logits",
+          "count": 1428,
+          "summed_gpu_s": 2.604056941
+        },
+        {
+          "short_name": "mhc_post_tilelang_kernel",
+          "count": 49778,
+          "summed_gpu_s": 2.11575618
+        },
+        {
+          "short_name": "expandInputRowsKernel",
+          "count": 24889,
+          "summed_gpu_s": 1.350883315
+        },
+        {
+          "short_name": "mhc_pre_big_fuse_with_norm_til_5...",
+          "count": 49775,
+          "summed_gpu_s": 1.302236734
+        }
+      ],
+      "packed_kernel_name_matches": 0,
+      "stock_compressed_producer_calls": 23652,
+      "incomplete_cupti_events_dropped": 2580,
+      "possible_missing_cuda_event_warnings": 6,
+      "historical_graph_records_excluded": 68056,
+      "trace_sha256": "2fcb6e31947cc953d8981fc745e54067a3a78acb52f9796eb0bbf138f6070227",
+      "trace_bytes": 156162301
+    },
+    {
+      "label": "kernel",
+      "concurrency": 28,
+      "window": 300,
+      "file": "logs/nsys-kernel-20261012_111730-tzgOM7/server.3.nsys-rep",
+      "export": "/Users/poohthewinnie/Library/Caches/remnant/nsight-analysis/nsys-kernel-20261012_111730-tzgOM7/server.3.sqlite",
+      "duration_s": 59.923276297,
+      "capture_start_utc": "2026-10-12T03:45:59",
+      "requested_cache_format": "remnant",
+      "requested_implementation": "kernel",
+      "graph_trace_mode": "Graph",
+      "graph_nodes_present": false,
+      "devices": [
+        {
+          "id": 0,
+          "graph_count": 120,
+          "graphs_per_s": 2.0025607312463936,
+          "mean_graph_ms": 16.8701598,
+          "median_graph_ms": 16.6005565,
+          "graph_time_s": 2.0244191760000003,
+          "inferred_mean_captured_batch": 28.0,
+          "graphs_by_inferred_batch": {
+            "28": {
+              "count": 120,
+              "mean_ms": 16.8701598,
+              "median_ms": 16.6005565
+            }
+          },
+          "recorded_gpu_busy_fraction": 0.9642205576448539
+        },
+        {
+          "id": 1,
+          "graph_count": 120,
+          "graphs_per_s": 2.0025607312463936,
+          "mean_graph_ms": 16.863759875,
+          "median_graph_ms": 16.594642,
+          "graph_time_s": 2.023651185,
+          "inferred_mean_captured_batch": 28.0,
+          "graphs_by_inferred_batch": {
+            "28": {
+              "count": 120,
+              "mean_ms": 16.863759875,
+              "median_ms": 16.594642
+            }
+          }
+        },
+        {
+          "id": 2,
+          "graph_count": 120,
+          "graphs_per_s": 2.0025607312463936,
+          "mean_graph_ms": 16.874385375,
+          "median_graph_ms": 16.601049500000002,
+          "graph_time_s": 2.024926245,
+          "inferred_mean_captured_batch": 28.0,
+          "graphs_by_inferred_batch": {
+            "28": {
+              "count": 120,
+              "mean_ms": 16.874385375,
+              "median_ms": 16.601049500000002
+            }
+          }
+        },
+        {
+          "id": 3,
+          "graph_count": 120,
+          "graphs_per_s": 2.0025607312463936,
+          "mean_graph_ms": 16.863815083333332,
+          "median_graph_ms": 16.5956015,
+          "graph_time_s": 2.02365781,
+          "inferred_mean_captured_batch": 28.0,
+          "graphs_by_inferred_batch": {
+            "28": {
+              "count": 120,
+              "mean_ms": 16.863815083333332,
+              "median_ms": 16.5956015
+            }
+          }
+        }
+      ],
+      "top_non_graph_kernels": [
+        {
+          "short_name": "device_kernel",
+          "count": 36012,
+          "summed_gpu_s": 99.957253909
+        },
+        {
+          "short_name": "sparse_attn_fwd_kernel",
+          "count": 18003,
+          "summed_gpu_s": 24.55439773
+        },
+        {
+          "short_name": "sm90_fp8_mqa_logits",
+          "count": 6777,
+          "summed_gpu_s": 24.330704412
+        },
+        {
+          "short_name": "ncclDevKernel_AllReduce_Sum_bf16_RING_LL",
+          "count": 33993,
+          "summed_gpu_s": 12.555725787
+        },
+        {
+          "short_name": "sm90_fp8_gemm_1d2d_impl",
+          "count": 98817,
+          "summed_gpu_s": 7.763516659
+        },
+        {
+          "short_name": "mhc_post_tilelang_kernel",
+          "count": 36012,
+          "summed_gpu_s": 6.583608273
+        },
+        {
+          "short_name": "sm90_fp8_paged_mqa_logits",
+          "count": 2016,
+          "summed_gpu_s": 5.91612945
+        },
+        {
+          "short_name": "expandInputRowsKernel",
+          "count": 18006,
+          "summed_gpu_s": 4.41505918
+        },
+        {
+          "short_name": "mhc_pre_big_fuse_with_norm_til_1...",
+          "count": 36009,
+          "summed_gpu_s": 3.912705552
+        },
+        {
+          "short_name": "topk_main_kernel",
+          "count": 8793,
+          "summed_gpu_s": 3.547711935
+        }
+      ],
+      "packed_kernel_name_matches": 0,
+      "stock_compressed_producer_calls": 17089,
+      "incomplete_cupti_events_dropped": 18,
+      "possible_missing_cuda_event_warnings": 6,
+      "historical_graph_records_excluded": 39424,
+      "trace_sha256": "e97b691c2f6d17adccdfde697ea5ae962bf6e9991667f8f5ebaf3d400be8e7a1",
+      "trace_bytes": 108517694
+    },
+    {
+      "label": "kernel",
+      "concurrency": 28,
+      "window": 900,
+      "file": "logs/nsys-kernel-20261012_111730-tzgOM7/server.4.nsys-rep",
+      "export": "/Users/poohthewinnie/Library/Caches/remnant/nsight-analysis/nsys-kernel-20261012_111730-tzgOM7/server.4.sqlite",
+      "duration_s": 59.870286232,
+      "capture_start_utc": "2026-10-12T03:55:59",
+      "requested_cache_format": "remnant",
+      "requested_implementation": "kernel",
+      "graph_trace_mode": "Graph",
+      "graph_nodes_present": false,
+      "devices": [
+        {
+          "id": 0,
+          "graph_count": 28,
+          "graphs_per_s": 0.46767773735870855,
+          "mean_graph_ms": 17.21179475,
+          "median_graph_ms": 16.770648,
+          "graph_time_s": 0.481930253,
+          "inferred_mean_captured_batch": 28.0,
+          "graphs_by_inferred_batch": {
+            "28": {
+              "count": 28,
+              "mean_ms": 17.21179475,
+              "median_ms": 16.770648
+            }
+          },
+          "recorded_gpu_busy_fraction": 0.9711781139593467
+        },
+        {
+          "id": 1,
+          "graph_count": 28,
+          "graphs_per_s": 0.46767773735870855,
+          "mean_graph_ms": 17.186655357142858,
+          "median_graph_ms": 16.7737725,
+          "graph_time_s": 0.48122635,
+          "inferred_mean_captured_batch": 28.0,
+          "graphs_by_inferred_batch": {
+            "28": {
+              "count": 28,
+              "mean_ms": 17.186655357142858,
+              "median_ms": 16.7737725
+            }
+          }
+        },
+        {
+          "id": 2,
+          "graph_count": 28,
+          "graphs_per_s": 0.46767773735870855,
+          "mean_graph_ms": 17.213275107142856,
+          "median_graph_ms": 16.770408500000002,
+          "graph_time_s": 0.481971703,
+          "inferred_mean_captured_batch": 28.0,
+          "graphs_by_inferred_batch": {
+            "28": {
+              "count": 28,
+              "mean_ms": 17.213275107142856,
+              "median_ms": 16.770408500000002
+            }
+          }
+        },
+        {
+          "id": 3,
+          "graph_count": 28,
+          "graphs_per_s": 0.46767773735870855,
+          "mean_graph_ms": 17.170558857142858,
+          "median_graph_ms": 16.774897,
+          "graph_time_s": 0.480775648,
+          "inferred_mean_captured_batch": 28.0,
+          "graphs_by_inferred_batch": {
+            "28": {
+              "count": 28,
+              "mean_ms": 17.170558857142858,
+              "median_ms": 16.774897
+            }
+          }
+        }
+      ],
+      "top_non_graph_kernels": [
+        {
+          "short_name": "device_kernel",
+          "count": 37484,
+          "summed_gpu_s": 110.213449917
+        },
+        {
+          "short_name": "sparse_attn_fwd_kernel",
+          "count": 18739,
+          "summed_gpu_s": 24.240201026
+        },
+        {
+          "short_name": "sm90_fp8_mqa_logits",
+          "count": 8313,
+          "summed_gpu_s": 22.174973906
+        },
+        {
+          "short_name": "ncclDevKernel_AllReduce_Sum_bf16_RING_LL",
+          "count": 37220,
+          "summed_gpu_s": 13.499834642
+        },
+        {
+          "short_name": "sm90_fp8_gemm_1d2d_impl",
+          "count": 102856,
+          "summed_gpu_s": 8.482293719
+        },
+        {
+          "short_name": "mhc_post_tilelang_kernel",
+          "count": 37483,
+          "summed_gpu_s": 7.297405502
+        },
+        {
+          "short_name": "expandInputRowsKernel",
+          "count": 18742,
+          "summed_gpu_s": 4.907858775
+        },
+        {
+          "short_name": "mhc_pre_big_fuse_with_norm_til_2...",
+          "count": 37481,
+          "summed_gpu_s": 4.334668592
+        },
+        {
+          "short_name": "finalizeMoeRoutingKernel",
+          "count": 18742,
+          "summed_gpu_s": 3.716317216
+        },
+        {
+          "short_name": "doActivationKernel",
+          "count": 18742,
+          "summed_gpu_s": 3.71442755
+        }
+      ],
+      "packed_kernel_name_matches": 0,
+      "stock_compressed_producer_calls": 17873,
+      "incomplete_cupti_events_dropped": 18,
+      "possible_missing_cuda_event_warnings": 6,
+      "historical_graph_records_excluded": 2713,
+      "trace_sha256": "6667ee3a850aaa702e4fe99177b3ea126e29e5ae7ee66ed6969c12c38fe2f78f",
+      "trace_bytes": 110573144
+    }
+  ],
+  "complete_trace_comparison_method": {
+    "exporter": "Nsight Systems 2026.5.1.161 Linux ARM64 CPU-only container; verified cached official NVIDIA package",
+    "interval": "0 <= start and end <= ANALYSIS_DETAILS duration; historical negative graph entries excluded",
+    "kernel_totals": "Summed GPU seconds across all ranks for non-graph kernels, not critical-path wall time. Decode nodes are absent.",
+    "batch_mapping": "Inferred, not explicit tensor-shape metadata: match GraphExec Creation order within each PID to reverse of 29 configured batch sizes, following 8a520765 runner/decode_cuda_graph_runner.py _capture_one_stream. All ten reports have exactly 29 unique graph executables per each of four worker processes.",
+    "busy_fraction": "GPU0 interval union of kernels, graphs, memcpy and memset, clipped to the report interval; incomplete records can undercount."
+  },
+  "packed_worker_configuration_diagnosis": {
+    "status": "Strong source-and-trace evidence of Native fallback in runs labelled Packed; live worker state has not been queried.",
+    "source_commit": "8a520765f7295ece6a8989bb7419ffc8637d5703",
+    "config_source_sha256": "8305359a43b50dac6be311fb8739238d78a79813dbef57d49516edd886617f99",
+    "source_path": [
+      "remnant/config.py: _CACHE_FORMAT defaults to native; configure_cache_format changes process-local module state",
+      "server_args.py: configuration called only from ServerArgs resolution helpers",
+      "entrypoints/engine.py: forces multiprocessing spawn",
+      "model_executor/model_runner.py: worker publishes received ServerArgs",
+      "server_args.py/runtime_context.py: publication projects argument bags without configuring remnant globals",
+      "layers/attention/dsv4/compressor_v2.py and mem_cache/deepseek_v4_memory_pool.py: dispatch depends on packed_enabled()"
+    ],
+    "trace_evidence": [
+      "All eight labelled-Packed reports have zero matches for expected Remnant/pack_fp8/unpack_gather/RoPE reconstruction kernel names; eager prefill is individually instrumented, although decode nodes are absent.",
+      "Native producer fused_norm_rope_flashmla appears in every labelled-Packed report.",
+      "All three c24 configurations report identical token capacity 3735296 and memory allocation values.",
+      "Requested cache flags in trace launch metadata differ as expected; these flags alone do not verify effective worker state."
+    ],
+    "cpu_reproduction": {
+      "scope": "Actual config.py source executed in parent and fresh multiprocessing-spawn process; requested flags passed as values. This verifies loss of process-local globals, not the complete SGLang scheduler/model startup. No GPU or model load.",
+      "cases": [
+        {
+          "requested": [
+            "native",
+            "kernel"
+          ],
+          "spawn_default": [
+            "native",
+            "kernel"
+          ]
+        },
+        {
+          "requested": [
+            "remnant",
+            "triton"
+          ],
+          "spawn_default": [
+            "native",
+            "kernel"
+          ]
+        },
+        {
+          "requested": [
+            "remnant",
+            "kernel"
+          ],
+          "spawn_default": [
+            "native",
+            "kernel"
+          ]
+        }
+      ]
+    },
+    "next_step": "Initialize Remnant cache format/implementation inside each spawned worker before pool sizing, allocation and graph capture; verify effective config, pool class/record size, and expected dispatch per rank before rerunning benchmarks."
+  },
+  "c28_trace_interpretation": {
+    "graphs_present": true,
+    "inferred_captured_batch": 28,
+    "gpu0_graphs_per_second": {
+      "triton-window300": 2.1103576523636276,
+      "triton-window900": 0.8709867944241897,
+      "kernel-window300": 2.0025607312463936,
+      "kernel-window900": 0.46767773735870855
+    },
+    "observation": "Graph time occupies about 0.8\u20133.5% of captured intervals, while recorded GPU0 busy fraction is 96\u201397%. Grouped GEMM and non-graph attention dominate. This is consistent with heavy prefill/re-prefill starving decode, not wholly disabled batch-28 graphs.",
+    "not_established": "Underlying cache eviction, prefix misses, or scheduler retractions require c28 replay summaries and server logs; they have not been pushed. User reports around 400 successes per c28 run, but no exact c28 counts or cache statistics are inferred."
+  },
+  "c24_trace_tpot_interpretation": {
+    "observation": "Kernel-labelled traces have larger inferred mean captured batches than Triton-labelled traces. Graph durations at matched batch 24 are nearly identical across requested modes. Batch composition helps explain unconditioned graph-time/TPOT differences; full-run causality is not established.",
+    "native_gpu0_mean_graph_ms": [
+      11.603546763651877,
+      11.732883049146189
+    ],
+    "triton_gpu0_mean_captured_batch": [
+      7.783592017738359,
+      9.480155306298533
+    ],
+    "kernel_gpu0_mean_captured_batch": [
+      9.603081105573176,
+      11.427438170788614
+    ]
   }
 }
