@@ -6,7 +6,7 @@ These five runs used `scripts/local/bench-lswb.sh` for 1200 seconds each, with N
 
 The five profiled runs missed the 99% success requirement with `missing_output_event` failures. Their cause is unresolved. These are candidate profiled runs, not an acceptance speed comparison. For both Packed Triton and Packed Kernel, c28 reused that implementation’s c24 server/cache; Native restarted with the same token pool size. The earlier ten trace files are saved and nonempty but their contents have not been analyzed. The corrected Native traces are analyzed below.
 
-Canonical small artifacts are in the five profiled run directories and the corrected unprofiled Native run directory. Raw requests/responses and ten large `.nsys-rep` files remain on the VDI at the paths recorded in JSON. Do not substitute this aggregate for those raw artifacts when diagnosing failures.
+Canonical small artifacts are in the five earlier profiled run directories, the corrected unprofiled Native directory, and three corrected profiled c24 directories. Raw requests/responses and ten large `.nsys-rep` files remain on the VDI at the paths recorded in JSON. Do not substitute this aggregate for those raw artifacts when diagnosing failures.
 
 Reproduction entry point (after launching the chosen mode with `serve.sh <mode> profile` and configuring the replay environment):
 
@@ -29,3 +29,15 @@ The corrected Native traces use graph-level CUDA tracing. There are 9,376 and 9,
 Actual report durations are 52.445 and 60.124 seconds, beginning at 10:08:22 and 10:18:14 Shanghai time. Both reports include historical graph entries with negative timestamps; these were excluded from the summaries. Nsight reports 1,162 and 2,742 incomplete CUPTI events dropped, plus possible unflushed events. It used software instrumentation. These coverage and instrumentation limits prevent treating the reports as complete, uninstrumented acceptance measurements. The 1200-second replay success gate remains independently valid.
 
 The canonical `.nsys-rep` files are stored through LFS. Large SQLite exports remain outside Git in the local Remnant analysis cache; compact trace analysis and its interval rules are in `remote-run-record.json`. Re-export with the installed Nsight CLI using `nsys export --type sqlite --output server.1.sqlite server.1.nsys-rep` (repeat for report 2); inspect the exported schema before adapting SQL. No runtime, image, or fork pins changed during this analysis.
+
+Corrected profiled c24 comparison (1200 seconds each):
+
+| Configuration | Output tokens/s | TPOT p50 / p95 (ms) | TTFT p50 / p95 (ms) | Device cache hit | Successful / attempted |
+|---|---:|---:|---:|---:|---:|
+| Native | 260.02 | 24.93 / 156.59 | 6009.54 / 16463.38 | 97.15% | 2037 / 2055 (99.12%) |
+| Packed Triton | 267.21 | 24.39 / 127.81 | 6283.29 / 16216.06 | 97.30% | 2094 / 2114 (99.05%) |
+| Packed Kernel | 270.27 | 25.56 / 128.16 | 5797.12 / 15320.64 | 97.35% | 2131 / 2149 (99.16%) |
+
+All three pass the 99% success gate. Packed Triton throughput is 2.77% above Native; Packed Kernel is 3.94% above Native and 1.15% above Triton. Kernel median TPOT is 4.80% higher than Triton, p95 TPOT is 0.28% higher, and median TTFT is 7.74% lower. The aggregate throughput lead is not evidence of faster decode. Runner, adapter, dataset, replay settings, token pool (3,735,296), and extended decode graph configuration match. Cache format and implementation selections are correct. Different random seeds and completion-conditioned request subsets remain uncontrolled; one profiled run each gives no repeated-run uncertainty estimate.
+
+The reported token pool is identical in Native and both Packed modes, and hit rates differ by at most 0.20 percentage points. These runs do not establish a Packed cache-capacity benefit. No new Packed `.nsys-rep` files are present in result commit `3a14925`, so actual Packed trace intervals and kernel/graph timings remain unverified. The earlier Packed traces listed above belong to the misconfigured runs and must not substitute for these runs. Corrected c28 results are also not yet pushed. Preserve these as candidate serving evidence; do not declare a kernel-speed or SLO-capacity win from this comparison.

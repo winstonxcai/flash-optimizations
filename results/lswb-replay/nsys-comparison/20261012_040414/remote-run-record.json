@@ -302,6 +302,120 @@
       "tpot_p50_ms": 24.9279476950566,
       "tpot_p95_ms": 156.59402931729952,
       "device_cache_hit_rate": 0.9714922715380263
+    },
+    {
+      "tag": "triton-graph-nsys-c24",
+      "concurrency": 24,
+      "remote_result": "results/lswb-replay/triton-graph-nsys-c24/20261012_103300",
+      "profiled": true,
+      "decode_graph_max_bs": 136,
+      "results_commit": "3a14925",
+      "source_commit": null,
+      "source_identity_note": "Launch source commits are not recorded in the replay manifest. Configuration and client content hashes are verified; no new source identity is inferred.",
+      "token_pool_size": 3735296,
+      "cache_format": "remnant",
+      "cache_implementation": "triton",
+      "random_seed": 717959254,
+      "nsight_events": [
+        {
+          "action": "start",
+          "requested_s": 300.00098181702197,
+          "elapsed_s": 310.678552496247
+        },
+        {
+          "action": "stop",
+          "requested_s": 360.00048044044524,
+          "elapsed_s": 382.6681943144649
+        },
+        {
+          "action": "start",
+          "requested_s": 900.0003846483305,
+          "elapsed_s": 901.4764190064743
+        },
+        {
+          "action": "stop",
+          "requested_s": 960.0003452757373,
+          "elapsed_s": 987.8653198247775
+        }
+      ],
+      "packed_traces_pushed": false,
+      "artifact_sha256": {
+        "client/summary.json": "a6f4db39b33d619a97b2ef3a3ed658c239585f4dc665a8a9db05b3a8ccd1192c",
+        "client/manifest.json": "d7cca8f960ebead626021783d4331a171770146b395a40fe0ecde452e4428eea",
+        "server-info.json": "990a79a8ca3b11875d222635c0b70741d5e2624d98669864129b0afcf787fe98",
+        "nsys-windows.jsonl": "103fb561dcfb3f151207c76606dad1b3527a7c39981d52a84d71b3bcd5ad9d19"
+      },
+      "success_rate": 0.9905392620624409,
+      "valid": true,
+      "failure_reasons": {
+        "missing_output_event": 20
+      },
+      "completion_token_throughput": 267.2113417523514,
+      "duration_s": 1207.029603926465,
+      "successful": 2094,
+      "failed": 20,
+      "tpot_p50_ms": 24.393188543617725,
+      "tpot_p95_ms": 127.80555120080442,
+      "ttft_p50_ms": 6283.288550563157,
+      "ttft_p95_ms": 16216.06392133981,
+      "device_cache_hit_rate": 0.9730331035128498
+    },
+    {
+      "tag": "kernel-graph-nsys-c24",
+      "concurrency": 24,
+      "remote_result": "results/lswb-replay/kernel-graph-nsys-c24/20261012_112038",
+      "profiled": true,
+      "decode_graph_max_bs": 136,
+      "results_commit": "3a14925",
+      "source_commit": null,
+      "source_identity_note": "Launch source commits are not recorded in the replay manifest. Configuration and client content hashes are verified; no new source identity is inferred.",
+      "token_pool_size": 3735296,
+      "cache_format": "remnant",
+      "cache_implementation": "kernel",
+      "random_seed": 250362631,
+      "nsight_events": [
+        {
+          "action": "start",
+          "requested_s": 300.00106306839734,
+          "elapsed_s": 310.39334812015295
+        },
+        {
+          "action": "stop",
+          "requested_s": 360.000384286046,
+          "elapsed_s": 386.3478242093697
+        },
+        {
+          "action": "start",
+          "requested_s": 900.000292563811,
+          "elapsed_s": 902.0168464230374
+        },
+        {
+          "action": "stop",
+          "requested_s": 960.0002961661667,
+          "elapsed_s": 986.9676167592406
+        }
+      ],
+      "packed_traces_pushed": false,
+      "artifact_sha256": {
+        "client/summary.json": "74d20a29c3c4fc53f7a0f3433e87b92478fd6c85e497bb85ff0d4a9c52099767",
+        "client/manifest.json": "5f14ae93a453b3d17b0ebbfa4ef8021095171305c073b283afb9efe1f60ff60c",
+        "server-info.json": "4d643013673a767745d0776cb9b6a544f92d3b634bc6ab20fa529560d8178a49",
+        "nsys-windows.jsonl": "945458f9c67f3c286c843eceeabcafd116bf7c98f335b230ece2dede0f44fed3"
+      },
+      "success_rate": 0.9916240111679852,
+      "valid": true,
+      "failure_reasons": {
+        "missing_output_event": 18
+      },
+      "completion_token_throughput": 270.27015354558046,
+      "duration_s": 1209.0273221563548,
+      "successful": 2131,
+      "failed": 18,
+      "tpot_p50_ms": 25.56283811702946,
+      "tpot_p95_ms": 128.15706332524618,
+      "ttft_p50_ms": 5797.121142968535,
+      "ttft_p95_ms": 15320.636872202158,
+      "device_cache_hit_rate": 0.9734698953931398
     }
   ],
   "remote_profiles": {
@@ -345,7 +459,7 @@
   "kernel_server_ready_s_approx": 160,
   "token_pool_size": 3735296,
   "model": "/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731",
-  "decision": "Keep graph configuration correction: unprofiled Native c24 recovered original throughput and median TPOT and passed the 0.99 success gate. Five earlier profiled runs remain invalid for implementation comparisons. Corrected Packed performance is not yet validated.",
+  "decision": "Keep graph configuration correction and valid corrected c24 runs. Five earlier profiled runs are misconfigured evidence. Corrected Packed c24 results pass the replay gate; small throughput differences do not establish a kernel speedup. Corrected c28 results and Packed traces are not yet available.",
   "native_regression_diagnosis": {
     "reference": "results/lswb-replay/native-slo-c24/20260909_081547",
     "reference_completion_token_throughput": 277.9779543009494,
@@ -675,5 +789,44 @@
     "busy_fraction": "Union of kernel, graph, memcpy, and memset intervals clipped to the captured interval, per device; overlapping intervals count once. Missing events can undercount busy time.",
     "kernel_scope": "Only separately recorded non-graph kernels; summed GPU durations across ranks are not wall time or complete decode cost.",
     "sqlite_exports": "/Users/poohthewinnie/Library/Caches/remnant/nsight-analysis/nsys-native-20261012_100018-odyr90/server.{1,2}.sqlite"
+  },
+  "corrected_profiled_c24_comparison": {
+    "native_result": "results/lswb-replay/native-graph-nsys-c24/20261012_100313",
+    "triton_vs_native_pct": {
+      "completion_token_throughput": 2.767623158333099,
+      "tpot_p50_ms": -2.1452193256363383,
+      "tpot_p95_ms": -18.384148004878455,
+      "ttft_p50_ms": 4.555238612383783,
+      "ttft_p95_ms": -1.5021950011547047
+    },
+    "kernel_vs_native_pct": {
+      "completion_token_throughput": 3.9440208951109224,
+      "tpot_p50_ms": 2.5469020945465326,
+      "tpot_p95_ms": -18.159674488248058,
+      "ttft_p50_ms": -3.5346889625743727,
+      "ttft_p95_ms": -6.941098011433711
+    },
+    "kernel_vs_triton_pct": {
+      "completion_token_throughput": 1.1447163032712648,
+      "tpot_p50_ms": 4.794984351144871,
+      "tpot_p95_ms": 0.27503666400958693,
+      "ttft_p50_ms": -7.737467469181358,
+      "ttft_p95_ms": -5.521851994917826
+    },
+    "matched_controls": [
+      "Client runner, adapter, and dataset SHA256",
+      "Replay configuration: c24, 1200s, fixed active users",
+      "Resolved server configuration except cache format/implementation, random seed and startup timing",
+      "Token pool 3735296 and extended full decode graphs max_bs136"
+    ],
+    "limitations": [
+      "One profiled run per mode; no repeated-run uncertainty estimate.",
+      "Different completion-conditioned request/user subsets and random seeds.",
+      "Actual Packed trace durations, graph execution, and kernel costs cannot be inspected until their trace files are pushed.",
+      "Capture API acknowledgments include export/response latency; they are not exact trace intervals.",
+      "Candidate audit; official comparison ineligible.",
+      "All three modes have equal reported token capacity; these runs do not demonstrate greater cache capacity from Packed."
+    ],
+    "decision": "Keep as valid candidate serving evidence. Packed Kernel has a small throughput lead but higher median TPOT than Packed Triton. Do not declare an optimized-kernel speedup or capacity benefit from these single profiled runs."
   }
 }
