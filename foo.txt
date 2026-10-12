@@ -4,32 +4,43 @@ set -euo pipefail
 cd /home/jovyan/winstonxcai/flash-optimizations
 git pull --ff-only origin remnant
 
-dirs=(
-  results/lswb-replay/triton-graph-nsys-c24
-  results/lswb-replay/kernel-graph-nsys-c24
-)
-for dir in "${dirs[@]}"; do
-  test -d "$dir"
+git lfs install --local
+
+# Select the newest launch for each Packed mode by its timestamped name.
+# Include all completed capture windows (c24 and c28 when present).
+traces=()
+for mode in triton kernel; do
+  profile_dir=$(find logs -maxdepth 1 -type d -name "nsys-${mode}-*" -print |
+    LC_ALL=C sort | tail -n 1)
+  if [[ -z "$profile_dir" ]]; then
+    echo "No Nsight launch directory found for $mode" >&2
+    exit 1
+  fi
+  mapfile -d '' mode_traces < <(
+    find "$profile_dir" -maxdepth 1 -type f -name 'server.*.nsys-rep' -print0
+  )
+  if ((${#mode_traces[@]} < 2)); then
+    echo "Expected at least two completed reports in $profile_dir" >&2
+    exit 1
+  fi
+  traces+=("${mode_traces[@]}")
 done
 
-# Collect compact results from every timestamped run.
-mapfile -d '' artifacts < <(
-  find "${dirs[@]}" -type f \( \
-    -path '*/client/REPORT.md' -o \
-    -path '*/client/summary.json' -o \
-    -path '*/client/manifest.json' -o \
-    -path '*/client/done.json' -o \
-    -name server-info.json -o \
-    -name gpu-samples.csv -o \
-    -name nsys-windows.jsonl -o \
-    -name client.log \
-  \) -print0
-)
-((${#artifacts[@]} > 0))
+# The repository already tracks *.nsys-rep through LFS.
+for trace in "${traces[@]}"; do
+  if [[ $(git check-attr filter -- "$trace") != *': filter: lfs' ]]; then
+    echo "Missing LFS rule for $trace; refusing to stage a large Git blob" >&2
+    exit 1
+  fi
+done
 
-git add -- "${artifacts[@]}"
-git diff --cached --stat -- "${artifacts[@]}"
-git commit --only -m "Record Packed Triton and Kernel c24 profiled results" \
-  -- "${artifacts[@]}"
+du -h -- "${traces[@]}"
+git add -f -- "${traces[@]}"
+git lfs status
+git diff --cached --stat -- "${traces[@]}"
+if ! git diff --cached --quiet -- "${traces[@]}"; then
+  git commit --only -m "Store Packed Triton and Kernel Nsight traces in LFS" \
+    -- "${traces[@]}"
+fi
 git push origin remnant
 BASH
