@@ -68,6 +68,19 @@ if decode.get("backend") != "full" or not covered:
 print(f"[lswb] decode graph preflight OK: c{concurrency}, captured sizes={sizes}")
 PY_PREFLIGHT
 
+# Start every replay with an empty prefix cache, including c28 after c24 on
+# the same server. Wait for outstanding requests to drain; do not launch the
+# client or Nsight capture if any worker cannot flush. Model/graphs stay loaded.
+echo "[lswb] waiting for idle server and flushing prefix cache"
+if ! curl --fail-with-body -sS --max-time 330 -X POST \
+    "http://127.0.0.1:$PORT/flush_cache?timeout=300" \
+    > "$RUN_ROOT/cache-flush.log" 2>&1; then
+  echo "FATAL: prefix cache flush failed; replay not started (see $RUN_ROOT/cache-flush.log)" >&2
+  cat "$RUN_ROOT/cache-flush.log" >&2
+  exit 1
+fi
+cat "$RUN_ROOT/cache-flush.log"
+
 echo "== lswb replay tag=$TAG port=$PORT c$C @ ${DUR}s -> $RUN_ROOT =="
 SAMPLER=
 CLIENT=

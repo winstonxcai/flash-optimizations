@@ -1,12 +1,14 @@
 # Author: Winston Cai.
-# Rebuild replaces the container and stops its current server.
+# Requires the image rebuilt with the spawned-worker mode fix.
+# This script change itself needs only a pull, not another image rebuild.
 bash <<'BASH'
 set -euo pipefail
 cd /home/jovyan/winstonxcai/flash-optimizations
 
 git pull --ff-only origin remnant
 git submodule update --init --recursive
-bash scripts/local/container.sh rebuild
+export REPLAY_DIR=${REPLAY_DIR:-/home/jovyan/wenyuhong/benchmarks}
+export PORT=30212 GPUS=0,1,2,3
 
 # Verify Native, Packed Triton, and Packed Kernel in spawned workers.
 # These tests do not load model weights or allocate KV pools.
@@ -14,11 +16,21 @@ docker exec remnant python3 -m unittest discover \
   -s /sgl-workspace/sglang-remnant/test/registered/unit \
   -p test_dsv4_c4_cache_format.py -v
 
-# Choose native, triton, or kernel for the next profiling server.
-MODE=triton
-bash scripts/local/serve.sh "$MODE" profile
-grep -E 'C4 worker cache|Remnant packed pool' "logs/serve_${MODE}.log"
+# Each replay flushes the prefix cache before its 1200-second measurement.
+# Nsight capture is inactive during model loading, graphs, and cache flushing.
+bash scripts/local/serve.sh native profile
+grep -E 'C4 worker cache|Remnant packed pool' logs/serve_native.log
+bash scripts/local/bench-lswb.sh native-graph-nsys-c24 30212 24 1200 300:360,900:960
 
-# Every worker must report the selected format/implementation.
-# Both Packed modes must also report logical_row_bytes=328 before replay.
+bash scripts/local/serve.sh triton profile
+grep -E 'C4 worker cache|Remnant packed pool' logs/serve_triton.log
+bash scripts/local/bench-lswb.sh triton-graph-nsys-c24 30212 24 1200 300:360,900:960
+bash scripts/local/bench-lswb.sh triton-graph-nsys-c28 30212 28 1200 300:360,900:960
+
+bash scripts/local/serve.sh kernel profile
+grep -E 'C4 worker cache|Remnant packed pool' logs/serve_kernel.log
+bash scripts/local/bench-lswb.sh kernel-graph-nsys-c24 30212 24 1200 300:360,900:960
+bash scripts/local/bench-lswb.sh kernel-graph-nsys-c28 30212 28 1200 300:360,900:960
+
+# Kernel server remains running after the final replay.
 BASH
