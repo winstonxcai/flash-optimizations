@@ -6,6 +6,14 @@
 # Stop on failed archive/upload/preflight/replay. GPUQ owns the control lifetime.
 set -euo pipefail
 cd /home/jovyan/winstonxcai/flash-optimizations
+# GPUQ runs under its runner account, while this shared checkout has a
+# different owner. Trust only these exact paths for this job and its children.
+export GIT_CONFIG_COUNT=${GIT_CONFIG_COUNT:-0}
+for git_path in "$PWD" "$PWD/third_party/sglang"; do
+  export "GIT_CONFIG_KEY_${GIT_CONFIG_COUNT}=safe.directory"
+  export "GIT_CONFIG_VALUE_${GIT_CONFIG_COUNT}=$git_path"
+  GIT_CONFIG_COUNT=$((GIT_CONFIG_COUNT + 1))
+done
 [[ $(git branch --show-current) == remnant ]]
 export REPLAY_DIR=${REPLAY_DIR:-/home/jovyan/wenyuhong/benchmarks}
 # Keep these controls on GPUs 4-7 and a separate server port even if the
