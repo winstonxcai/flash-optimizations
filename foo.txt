@@ -1,0 +1,35 @@
+# Author: Winston Cai.
+bash <<'BASH'
+set -euo pipefail
+cd /home/jovyan/winstonxcai/flash-optimizations
+git pull --ff-only origin remnant
+
+dirs=(
+  results/lswb-replay/triton-graph-nsys-c24
+  results/lswb-replay/kernel-graph-nsys-c24
+)
+for dir in "${dirs[@]}"; do
+  test -d "$dir"
+done
+
+# Collect compact results from every timestamped run.
+mapfile -d '' artifacts < <(
+  find "${dirs[@]}" -type f \( \
+    -path '*/client/REPORT.md' -o \
+    -path '*/client/summary.json' -o \
+    -path '*/client/manifest.json' -o \
+    -path '*/client/done.json' -o \
+    -name server-info.json -o \
+    -name gpu-samples.csv -o \
+    -name nsys-windows.jsonl -o \
+    -name client.log \
+  \) -print0
+)
+((${#artifacts[@]} > 0))
+
+git add -- "${artifacts[@]}"
+git diff --cached --stat -- "${artifacts[@]}"
+git commit --only -m "Record Packed Triton and Kernel c24 profiled results" \
+  -- "${artifacts[@]}"
+git push origin remnant
+BASH
