@@ -8,7 +8,8 @@ set -euo pipefail
 cd /home/jovyan/winstonxcai/flash-optimizations
 [[ $(git branch --show-current) == remnant ]]
 export REPLAY_DIR=${REPLAY_DIR:-/home/jovyan/wenyuhong/benchmarks}
-export PORT=30212 GPUS=0,1,2,3
+export PORT=${PORT:-30213} GPUS=${GPUS:-4,5,6,7}
+export MASTER_PORT=${MASTER_PORT:-29639}
 
 die() { echo "FATAL: $*" >&2; exit 1; }
 latest_run() {
@@ -26,7 +27,7 @@ compact_files() {
 push_files() {
   local message=$1
   git add -f -- "${files[@]}"
-  git diff --cached --stat -- "${files[@]}"
+  git --no-pager diff --cached --stat -- "${files[@]}"
   if ! git diff --cached --quiet -- "${files[@]}"; then
     git commit --only -m "$message" -- "${files[@]}"
   fi
@@ -53,7 +54,7 @@ if [[ ${1:-} == --control-worker ]]; then
     grep -q 'logical_row_bytes=328' "logs/serve_${mode}.log" || die "Packed pool missing"
     tag="${mode}-unprofiled-c24"
     previous=$(latest_run "$tag" 2>/dev/null || true)
-    bash scripts/local/bench-lswb.sh "$tag" 30212 24 1200
+    bash scripts/local/bench-lswb.sh "$tag" "$PORT" 24 1200
     run=$(latest_run "$tag")
     [[ -n "$run" && "$run" != "$previous" ]] || die "new control result missing"
     cp "logs/serve_${mode}.log" "$run/server.log"
@@ -134,9 +135,10 @@ PY
 
 mkdir -p logs
 gpuq run --user winstonxcai --project flash-optimizations \
-  --gpus 4 --gpu-ids 0,1,2,3 \
+  --gpus 4 --gpu-ids "$GPUS" \
   --cwd /home/jovyan/winstonxcai/flash-optimizations \
-  --env REPLAY_DIR="$REPLAY_DIR" \
+  --env REPLAY_DIR="$REPLAY_DIR" --env GPUS="$GPUS" \
+  --env PORT="$PORT" --env MASTER_PORT="$MASTER_PORT" \
   --output /home/jovyan/winstonxcai/flash-optimizations/logs/unprofiled-controls-20261012.log \
   --workload-key remnant-unprofiled-c24 --expected-duration 50m \
   --timeout 7200 --detach -- bash foo.txt --control-worker
