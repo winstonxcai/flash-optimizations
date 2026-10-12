@@ -8,8 +8,9 @@ set -euo pipefail
 cd /home/jovyan/winstonxcai/flash-optimizations
 [[ $(git branch --show-current) == remnant ]]
 export REPLAY_DIR=${REPLAY_DIR:-/home/jovyan/wenyuhong/benchmarks}
-export PORT=${PORT:-30213} GPUS=${GPUS:-4,5,6,7}
-export MASTER_PORT=${MASTER_PORT:-29639}
+# Keep these controls on GPUs 4-7 and a separate server port even if the
+# interactive shell still exports the previous GPUs 0-3 configuration.
+export PORT=30213 GPUS=4,5,6,7 MASTER_PORT=29639
 
 die() { echo "FATAL: $*" >&2; exit 1; }
 latest_run() {
