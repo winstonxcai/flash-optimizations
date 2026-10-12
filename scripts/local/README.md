@@ -112,6 +112,26 @@ Eval results land under `results/` and server logs under
   graphs do not cover the requested concurrency. The shared `env.sh` default
   remains small for other callers.
 
+After updating the worker cache-mode fix, rebuild with `container.sh rebuild`:
+the installed runtime is copied into the image. Verify all three modes without
+loading model weights or allocating KV pools:
+
+```sh
+docker exec remnant python3 -m unittest discover \
+  -s /sgl-workspace/sglang-remnant/test/registered/unit \
+  -p test_dsv4_c4_cache_format.py -v
+```
+
+The spawn tests pass resolved `ServerArgs` through multiprocessing serialization
+and use the same publication hook as `ModelRunner`, before KV pool sizing.
+On the next server startup, each scheduler logs
+`C4 worker cache: pid=... format=... implementation=...`. Native should report
+`format=native`; Packed should report `format=remnant` and the selected
+`implementation=triton` or `implementation=kernel`. Both Packed modes should
+also log `Remnant packed pool` with `logical_row_bytes=328`. Check these worker
+and pool messages before running a replay; `/server_info` flags alone do not
+prove the worker dispatch mode.
+
 ## Nsight Systems capture
 
 Run `./serve.sh triton profile` to launch Packed Triton under Nsight Systems.

@@ -52,12 +52,13 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 - Upstream base: `sgl-project/sglang`
 - Base commit: `71de97b264b04dcd514cf904003028aefe9775c8` (`v0.5.18`)
 - Remnant branch: `remnant/v0.5.18`
-- Current branch head: `1961f1383db3f95fc40699bac7c6823ac09c87ac`
+- Current branch head: `78ab0ff514` (spawned-worker cache-mode initialization)
 - Comparison: `71de97b264b04dcd514cf904003028aefe9775c8..origin/remnant/v0.5.18`
 
 ### Runtime and build integration
 
 - `python/sglang/srt/server_args.py` — cache-format and Triton/Kernel implementation flags.
+- `python/sglang/srt/runtime_context.py` — restore cache format/implementation when each spawned worker publishes resolved arguments, before pool sizing and graph capture; log effective scheduler mode.
 - `python/sglang/srt/mem_cache/deepseek_v4_memory_pool.py` — packed pool.
 - `python/sglang/srt/layers/attention/deepseek_v4_backend.py` — decode dispatch.
 - `python/sglang/srt/layers/attention/dsv4/compressor_v2.py` — packed writes.
@@ -77,7 +78,7 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 
 ### SGLang validation and benchmarks
 
-- `test/registered/unit/test_dsv4_c4_cache_format.py` — startup argument validation.
+- `test/registered/unit/test_dsv4_c4_cache_format.py` — startup argument validation, all three modes in spawned workers, republication, Native defaults and invalid-publication handling.
 - `test/registered/attention/unittests/dsv4/test_remnant_pool.py` — pool layout/capacity.
 - `test/registered/attention/unittests/dsv4/test_remnant_pack.py` — pack correctness.
 - `test/registered/attention/unittests/dsv4/test_remnant_fused_store.py` — fused-store bytes, fallback, destinations and graph replay.
