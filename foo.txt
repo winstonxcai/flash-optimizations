@@ -92,6 +92,12 @@ for run in sys.argv[1:]:
     }), flush=True)
 PY
 
+# The earlier interactive lease has expired. Reserve our existing GPU set again
+# after archiving, before starting controls; do not disturb GPUs 4-7.
+bash scripts/local/serve.sh kernel stop
+timeout 300 gpuq lease acquire --user winstonxcai --project flash-optimizations \
+  --gpus 4 --gpu-ids 0,1,2,3 --ttl 14400 --keep-idle --detach
+
 for mode in triton kernel; do
   echo "[controls] starting $mode c24 without Nsight"
   bash scripts/local/serve.sh "$mode"
