@@ -75,8 +75,8 @@ if [ -n "${NSYS_OUTPUT:-}" ]; then
   esac
   # These must be set before SGLang imports its profiler helpers.
   export SGLANG_ENABLE_NVTX_SCHEDULER=1 SGLANG_ENABLE_NVTX_OPERATIONS=1
-  python3 -c 'import nvtx; from sglang.srt.utils.nvtx_utils import batch_profile_range' || {
-    echo "Nsight requires nvtx and the reviewed batch profiling hooks in the active SGLang source" >&2
+  python3 -c 'from sglang.srt.utils.nvtx_utils import batch_profile_range, validate_nvtx_backend; validate_nvtx_backend()' || {
+    echo "Nsight requires built-in torch.cuda.nvtx and the reviewed batch profiling hooks in the active SGLang source" >&2
     exit 1
   }
   echo "Nsight capture inactive until CUDA_PROFILER start; output: $NSYS_OUTPUT"

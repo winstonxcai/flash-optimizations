@@ -89,8 +89,9 @@ The final Kernel server stays running. Use `serve.sh kernel stop` when finished.
 ## Short graph-node captures at C24
 
 `serve.sh <mode> profile` now defaults to `NSYS_GRAPH_TRACE=node` and enables
-scheduler/operation NVTX before SGLang imports. Startup checks `nvtx` and the
-updated hooks before replacing a server. Node mode exposes graph kernels;
+scheduler/operation NVTX before SGLang imports. Startup probes PyTorch's built-in
+`torch.cuda.nvtx` and the updated hooks before replacing a server. No external
+package, package mirror or Docker change is needed. Node mode exposes graph kernels;
 `NSYS_GRAPH_TRACE=graph` retains lower-overhead controls.
 
 `scheduler.batch` records step/rank, mode, actual request counts, prefill tokens

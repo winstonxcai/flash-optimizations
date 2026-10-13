@@ -67,8 +67,8 @@ if [ "$ACTION" = profile ]; then
   esac
   docker exec "$CONTAINER" nsys --version || exit $?
   docker exec -e "PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT" "$CONTAINER" python3 -c \
-    'import inspect, nvtx; from sglang.srt.utils.nvtx_utils import batch_profile_range; print("Batch profiling source:", inspect.getsourcefile(batch_profile_range))' || {
-      echo "profile requires nvtx and updated SGLang hooks; rebuild the image or select the reviewed fork source" >&2
+    'import inspect; from sglang.srt.utils.nvtx_utils import batch_profile_range, validate_nvtx_backend; validate_nvtx_backend(); print("Batch profiling source:", inspect.getsourcefile(batch_profile_range))' || {
+      echo "profile requires built-in torch.cuda.nvtx and updated SGLang hooks; select the reviewed fork source" >&2
       exit 1
     }
   profile_dir=$(mktemp -d "$LOG_HOST/nsys-${MODE}-$(ts)-XXXXXX") || exit 1
