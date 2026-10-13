@@ -52,11 +52,14 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 - Upstream base: `sgl-project/sglang`
 - Base commit: `71de97b264b04dcd514cf904003028aefe9775c8` (`v0.5.18`)
 - Remnant branch: `remnant/v0.5.18`
-- Current branch head: `78ab0ff514` (spawned-worker cache-mode initialization)
+- Current branch head: `006df2345bbd33fd8fce41e6ee5f751851ae59b5` (graph-node profiling hooks)
 - Comparison: `71de97b264b04dcd514cf904003028aefe9775c8..origin/remnant/v0.5.18`
 
 ### Runtime and build integration
 
+- `python/sglang/srt/utils/nvtx_utils.py` — gated CPU-only scheduler batch metadata and graph-replay annotations.
+- `python/sglang/srt/managers/scheduler.py` — step/rank metadata nested inside the existing scheduler span.
+- `python/sglang/srt/model_executor/runner/decode_cuda_graph_runner.py` — exact padded-batch annotation around the graph replay launch.
 - `python/sglang/srt/server_args.py` — cache-format and Triton/Kernel implementation flags.
 - `python/sglang/srt/runtime_context.py` — restore cache format/implementation when each spawned worker publishes resolved arguments, before pool sizing and graph capture; log effective scheduler mode.
 - `python/sglang/srt/mem_cache/deepseek_v4_memory_pool.py` — packed pool.
@@ -78,6 +81,7 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 
 ### SGLang validation and benchmarks
 
+- `test/registered/unit/utils/test_nvtx_utils.py` — CPU annotation contracts, disabled-path behavior and exception cleanup.
 - `test/registered/unit/test_dsv4_c4_cache_format.py` — startup argument validation, all three modes in spawned workers, republication, Native defaults and invalid-publication handling.
 - `test/registered/attention/unittests/dsv4/test_remnant_pool.py` — pool layout/capacity.
 - `test/registered/attention/unittests/dsv4/test_remnant_pack.py` — pack correctness.

@@ -60,7 +60,17 @@ fi
 # is unique and host-mounted, so reports survive container recreation.
 NSYS_OUTPUT_CT=
 if [ "$ACTION" = profile ]; then
+  NSYS_GRAPH_TRACE=${NSYS_GRAPH_TRACE:-node}
+  case "$NSYS_GRAPH_TRACE" in
+    node|graph) ;;
+    *) echo "NSYS_GRAPH_TRACE must be node or graph" >&2; exit 2 ;;
+  esac
   docker exec "$CONTAINER" nsys --version || exit $?
+  docker exec -e "PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT" "$CONTAINER" python3 -c \
+    'import inspect, nvtx; from sglang.srt.utils.nvtx_utils import batch_profile_range; print("Batch profiling source:", inspect.getsourcefile(batch_profile_range))' || {
+      echo "profile requires nvtx and updated SGLang hooks; rebuild the image or select the reviewed fork source" >&2
+      exit 1
+    }
   profile_dir=$(mktemp -d "$LOG_HOST/nsys-${MODE}-$(ts)-XXXXXX") || exit 1
   NSYS_OUTPUT_CT=$(to_ct "$profile_dir/server")
   echo "Nsight capture waits for CUDA profiler API; reports: $profile_dir"
@@ -84,7 +94,7 @@ echo "== serve $MODE on gpus=$GPUS port=$PORT master=$MASTER_PORT (log: $SERVE_L
 
 ct_script "$TREE" "$GPUS" "$MASTER_PORT" "$MODEL_NAME" "$TP" "$MEM_FRAC" \
   "$CTX_LEN" "$MAX_RUN" "$CHUNK" "$DECODE_CFG" "$SGLANG_PY" "$REPO_CT" \
-  "$MODE" "$MODEL_CT" "$PORT" "$SERVE_LOG_CT" "$SERVER_PID_FILE_CT" "$NSYS_OUTPUT_CT" <<'BASH'
+  "$MODE" "$MODEL_CT" "$PORT" "$SERVE_LOG_CT" "$SERVER_PID_FILE_CT" "$NSYS_OUTPUT_CT" "${NSYS_GRAPH_TRACE:-node}" <<'BASH'
 set -u
 tree=$1
 gpus=$2
@@ -104,12 +114,14 @@ port=${15}
 serve_log_ct=${16}
 pid_file=${17}
 nsys_output=${18}
+nsys_graph_trace=${19}
 
 cd -- "$tree"
 export CUDA_VISIBLE_DEVICES="$gpus" MASTER_PORT="$master_port"
 export MODEL_NAME="$model_name" TP="$tp" MEM_FRAC="$mem_frac" CTX_LEN="$ctx_len"
 export MAX_RUN="$max_run" CHUNK="$chunk" DECODE_CFG="$decode_cfg"
 export SERVER_PID_FILE="$pid_file" NSYS_OUTPUT="$nsys_output"
+export NSYS_GRAPH_TRACE="$nsys_graph_trace"
 export PYTHONPATH="/opt/sglang-runtime-fixes:$sglang_py:$repo_ct"
 export NCCL_IB_DISABLE=1 NCCL_SOCKET_IFNAME=lo NCCL_P2P_LEVEL=NVL NCCL_PROTO=Simple NCCL_ALGO=Ring
 # All TP workers are local; keep Gloo off hostname-selected external interfaces.

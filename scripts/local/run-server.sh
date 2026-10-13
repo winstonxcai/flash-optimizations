@@ -68,8 +68,20 @@ args=(
 # and creating CUDA graphs must finish before the capture range starts.
 if [ -n "${NSYS_OUTPUT:-}" ]; then
   command -v nsys >/dev/null 2>&1 || { echo "Nsight Systems (nsys) is required" >&2; exit 127; }
+  NSYS_GRAPH_TRACE=${NSYS_GRAPH_TRACE:-node}
+  case "$NSYS_GRAPH_TRACE" in
+    node|graph) ;;
+    *) echo "NSYS_GRAPH_TRACE must be node or graph" >&2; exit 2 ;;
+  esac
+  # These must be set before SGLang imports its profiler helpers.
+  export SGLANG_ENABLE_NVTX_SCHEDULER=1 SGLANG_ENABLE_NVTX_OPERATIONS=1
+  python3 -c 'import nvtx; from sglang.srt.utils.nvtx_utils import batch_profile_range' || {
+    echo "Nsight requires nvtx and the reviewed batch profiling hooks in the active SGLang source" >&2
+    exit 1
+  }
   echo "Nsight capture inactive until CUDA_PROFILER start; output: $NSYS_OUTPUT"
   exec nsys profile --trace=cuda,nvtx --sample=none --cpuctxsw=none \
+    --cuda-graph-trace="$NSYS_GRAPH_TRACE" \
     --capture-range=cudaProfilerApi --capture-range-end=repeat:999:async \
     --kill=none --output="$NSYS_OUTPUT" sglang "${args[@]}"
 fi
