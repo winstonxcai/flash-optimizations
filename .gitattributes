@@ -7,3 +7,6 @@ logs/node-kernel-c24-20261013_203449/nsys-kernel-20261013_203457-w4POL9/server.1
 logs/node-native-c24-20261013_202402/nsys-native-20261013_202411-iGEuWm/server.1.nsys-rep filter=lfs diff=lfs merge=lfs -text
 logs/node-triton-c24-20261013_205739/nsys-triton-20261013_205748-Y1yjNq/server.1.nsys-rep filter=lfs diff=lfs merge=lfs -text
 logs/node-kernel-c24-20261013_203449/nsys-kernel-20261013_203457-w4POL9/server.1.nsys-rep filter=lfs diff=lfs merge=lfs -text
+results/lswb-replay/c24-three-modes/native/profiled/20261013_202726/server.1.nsys-rep filter=lfs diff=lfs merge=lfs -text
+results/lswb-replay/c24-three-modes/triton/profiled/20261013_210108/server.1.nsys-rep filter=lfs diff=lfs merge=lfs -text
+results/lswb-replay/c24-three-modes/kernel/profiled/20261013_203807/server.1.nsys-rep filter=lfs diff=lfs merge=lfs -text
