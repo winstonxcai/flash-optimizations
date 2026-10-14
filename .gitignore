@@ -29,3 +29,4 @@ __pycache__/
 
 # Existing local experiment-work policy.
 /experiments/
+/data/
