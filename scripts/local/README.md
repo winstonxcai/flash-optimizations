@@ -47,6 +47,21 @@ Startup waits for model loading and graph creation. Starting another mode on
 this port replaces the server owned by these scripts. Server logs are overwritten
 on the next launch of that mode; save them with the replay results first.
 
+## Store/decode ablation
+
+`MODE` selects Packed decode; optional `STORE_IMPLEMENTATION=triton|kernel`
+selects storage independently. Unset it to retain the existing mode defaults.
+The override is ignored for Native. With updated host Python source selected:
+
+```bash
+STORE_IMPLEMENTATION=kernel bash scripts/local/serve.sh triton
+# Original store with Direct Packed decode:
+STORE_IMPLEMENTATION=triton bash scripts/local/serve.sh kernel
+```
+
+Use distinct replay tags for mixed modes. `server-info.json` records the explicit
+store override; scheduler startup logs record the resolved store and decode modes.
+
 ## LSWB replay without profiling
 
 Against the running server, run for 1,200 seconds at concurrency 24 or 28:

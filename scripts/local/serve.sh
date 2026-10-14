@@ -56,6 +56,19 @@ if [ "$ACTION" = stop ]; then
   exit 0
 fi
 
+case "${STORE_IMPLEMENTATION:-}" in
+  ""|triton|kernel) ;;
+  *) echo "STORE_IMPLEMENTATION must be triton or kernel" >&2; exit 2 ;;
+esac
+
+# Probe the actual mounted source before stopping an existing server.
+if [ -n "${STORE_IMPLEMENTATION:-}" ]; then
+  docker exec -e "PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT" "$CONTAINER" python3 -c '
+from sglang.srt.server_args import ServerArgs
+assert "dsv4_c4_cache_store_implementation" in ServerArgs.__dataclass_fields__, "active source lacks store override; select updated host Python source"
+' || exit 1
+fi
+
 # Diagnostic exports are opt-in and belong to one boot. Probe the mounted
 # Python source before replacing a healthy server; no model is loaded here.
 REQUEST_METRICS_DIR_CT=
@@ -122,7 +135,7 @@ echo "== serve $MODE on gpus=$GPUS port=$PORT master=$MASTER_PORT (log: $SERVE_L
 ct_script "$TREE" "$GPUS" "$MASTER_PORT" "$MODEL_NAME" "$TP" "$MEM_FRAC" \
   "$CTX_LEN" "$MAX_RUN" "$CHUNK" "$DECODE_CFG" "$SGLANG_PY" "$REPO_CT" \
   "$MODE" "$MODEL_CT" "$PORT" "$SERVE_LOG_CT" "$SERVER_PID_FILE_CT" "$NSYS_OUTPUT_CT" "${NSYS_GRAPH_TRACE:-node}" \
-  "${SERVER_SEED:-}" "$REQUEST_METRICS_DIR_CT" <<'BASH'
+  "${SERVER_SEED:-}" "$REQUEST_METRICS_DIR_CT" "${STORE_IMPLEMENTATION:-}" <<'BASH'
 set -u
 tree=$1
 gpus=$2
@@ -145,6 +158,7 @@ nsys_output=${18}
 nsys_graph_trace=${19}
 server_seed=${20}
 request_metrics_dir=${21}
+store_implementation=${22}
 
 cd -- "$tree"
 export CUDA_VISIBLE_DEVICES="$gpus" MASTER_PORT="$master_port"
@@ -153,6 +167,7 @@ export MAX_RUN="$max_run" CHUNK="$chunk" DECODE_CFG="$decode_cfg"
 export SERVER_PID_FILE="$pid_file" NSYS_OUTPUT="$nsys_output"
 export NSYS_GRAPH_TRACE="$nsys_graph_trace"
 export SERVER_SEED="$server_seed" REQUEST_METRICS_DIR="$request_metrics_dir"
+export STORE_IMPLEMENTATION="$store_implementation"
 export PYTHONPATH="/opt/sglang-runtime-fixes:$sglang_py:$repo_ct"
 export NCCL_IB_DISABLE=1 NCCL_SOCKET_IFNAME=lo NCCL_P2P_LEVEL=NVL NCCL_PROTO=Simple NCCL_ALGO=Ring
 # All TP workers are local; keep Gloo off hostname-selected external interfaces.

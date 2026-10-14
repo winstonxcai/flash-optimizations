@@ -113,3 +113,12 @@ git -C third_party/sglang diff --name-status \
 
 If either fork receives new Remnant commits, update the branch head and the
 corresponding lists here in the same parent-repository change.
+
+### Independent Packed store override
+
+- `python/sglang/srt/server_args.py`, `runtime_context.py`, and `remnant/config.py` — optional store override, defaults, validation and worker publication.
+- `python/sglang/srt/remnant/__init__.py` — resolved store accessor.
+- `python/sglang/srt/layers/attention/dsv4/compressor_v2.py` — storage dispatch independent of decode.
+- `test/registered/unit/test_dsv4_c4_cache_format.py` — all four combinations in spawned workers and reset/validation contracts.
+
+Decode and numerical kernels are unchanged.

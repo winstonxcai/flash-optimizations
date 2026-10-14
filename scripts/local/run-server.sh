@@ -18,6 +18,10 @@ case "$MODE" in
   packed) CACHE_FORMAT=remnant; CACHE_IMPLEMENTATION=kernel ;;
   *) echo "usage: $0 <native|triton|kernel> <model> <host> <port> (packed aliases kernel)" >&2; exit 2 ;;
 esac
+case "${STORE_IMPLEMENTATION:-}" in
+  ""|triton|kernel) ;;
+  *) echo "STORE_IMPLEMENTATION must be triton or kernel" >&2; exit 2 ;;
+esac
 [ -n "$MODEL" ] || { echo "missing model path" >&2; exit 2; }
 [ -n "$PORT_VALUE" ] || { echo "missing port" >&2; exit 2; }
 if [ -n "${SERVER_SEED:-}" ]; then
@@ -67,6 +71,10 @@ args=(
   --skip-server-warmup
   --watchdog-timeout 1800
 )
+
+if [ -n "${STORE_IMPLEMENTATION:-}" ]; then
+  args+=(--dsv4-c4-cache-store-implementation "$STORE_IMPLEMENTATION")
+fi
 
 if [ -n "${SERVER_SEED:-}" ]; then
   args+=(--random-seed "$SERVER_SEED")
