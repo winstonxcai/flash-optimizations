@@ -1,5 +1,9 @@
 <!-- Author: Winston Cai. -->
 
+Raw outputs stay in Git-ignored `results/`. Selected evidence lives in
+`benchmarks/`; use [the transfer guide](../../transfer/README.md) to copy
+selected VDI folders through GitHub without changing the serving scripts.
+
 # Remnant serving benchmark
 
 One Bash script: `scripts/local/bench-serving.sh`. It starts SGLang and

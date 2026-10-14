@@ -1,0 +1,92 @@
+{
+  "status": "passed",
+  "timing_run_id": "representative-20261014T023127Z",
+  "suites": [
+    {
+      "name": "pytest",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0",
+      "tests": "114",
+      "time": "116.799",
+      "timestamp": "2026-10-14T02:36:00.679671+00:00",
+      "hostname": "modal"
+    }
+  ],
+  "original_xml_sha256": "b2fbcdce85318c267631ae65800939b2cafba7003b97d54faaebf850e714b191",
+  "archive_path": "remnant-stage2a-results:/microbench/representative-20261014T023127Z/timing/validation.xml",
+  "profile_validity": [
+    {
+      "case": "h64_b16_k512",
+      "mode": "native",
+      "valid": true,
+      "common_inputs_sha256": "d0204e1eb6e824e3f97e218f44e09784e22ccd6cadb59f542c15e806b8dc2d46"
+    },
+    {
+      "case": "h64_b16_k512",
+      "mode": "triton",
+      "valid": true,
+      "common_inputs_sha256": "d0204e1eb6e824e3f97e218f44e09784e22ccd6cadb59f542c15e806b8dc2d46"
+    },
+    {
+      "case": "h64_b16_k512",
+      "mode": "kernel",
+      "valid": true,
+      "common_inputs_sha256": "d0204e1eb6e824e3f97e218f44e09784e22ccd6cadb59f542c15e806b8dc2d46"
+    },
+    {
+      "case": "h64_b16_k317",
+      "mode": "native",
+      "valid": true,
+      "common_inputs_sha256": "cf2add408e4acd4e7f84fc7e3329222a458a4efa6b744f987d938ad4dcb69909"
+    },
+    {
+      "case": "h64_b16_k317",
+      "mode": "triton",
+      "valid": true,
+      "common_inputs_sha256": "cf2add408e4acd4e7f84fc7e3329222a458a4efa6b744f987d938ad4dcb69909"
+    },
+    {
+      "case": "h64_b16_k317",
+      "mode": "kernel",
+      "valid": true,
+      "common_inputs_sha256": "cf2add408e4acd4e7f84fc7e3329222a458a4efa6b744f987d938ad4dcb69909"
+    },
+    {
+      "case": "decode-r24-all_valid",
+      "mode": "native",
+      "valid": true,
+      "common_inputs_sha256": "f84907f0582ad47724a71a60eef08786012b8fc1c7fdba96d66a930bde2c2e21"
+    },
+    {
+      "case": "decode-r24-all_valid",
+      "mode": "triton",
+      "valid": true,
+      "common_inputs_sha256": "f84907f0582ad47724a71a60eef08786012b8fc1c7fdba96d66a930bde2c2e21"
+    },
+    {
+      "case": "decode-r24-all_valid",
+      "mode": "kernel",
+      "valid": true,
+      "common_inputs_sha256": "f84907f0582ad47724a71a60eef08786012b8fc1c7fdba96d66a930bde2c2e21"
+    },
+    {
+      "case": "prefill-r8192-all_valid",
+      "mode": "native",
+      "valid": true,
+      "common_inputs_sha256": "32fc84b1bc25c745be100310808026ac613fa1c1a6b66d7f1bad867053a7edb0"
+    },
+    {
+      "case": "prefill-r8192-all_valid",
+      "mode": "triton",
+      "valid": true,
+      "common_inputs_sha256": "32fc84b1bc25c745be100310808026ac613fa1c1a6b66d7f1bad867053a7edb0"
+    },
+    {
+      "case": "prefill-r8192-all_valid",
+      "mode": "kernel",
+      "valid": true,
+      "common_inputs_sha256": "32fc84b1bc25c745be100310808026ac613fa1c1a6b66d7f1bad867053a7edb0"
+    }
+  ]
+}
