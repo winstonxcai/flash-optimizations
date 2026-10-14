@@ -52,11 +52,13 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 - Upstream base: `sgl-project/sglang`
 - Base commit: `71de97b264b04dcd514cf904003028aefe9775c8` (`v0.5.18`)
 - Remnant branch: `remnant/v0.5.18`
-- Current branch head: `642f8a6b89d9eecefb53ff803cc6b880bfb44527` (built-in NVTX profiling hooks)
+- Current branch head: `6120d708f1da8bc23d37bfb6bdbe612f0868d800` (request timing metadata)
 - Comparison: `71de97b264b04dcd514cf904003028aefe9775c8..origin/remnant/v0.5.18`
 
 ### Runtime and build integration
 
+- `python/sglang/srt/observability/req_time_stats.py` — expose the existing tokenizer first-output timestamp in request metadata for TTFT attribution through the stock JSON exporter.
+- `test/registered/unit/observability/test_req_time_stats.py` — first-output metadata, single-token completion, unset timestamps, and cross-process clock rebasing checks.
 - `python/sglang/srt/utils/nvtx_utils.py` — gated CPU-only scheduler batch metadata and graph-replay annotations using built-in `torch.cuda.nvtx`, with a startup probe and no external NVTX package.
 - `python/sglang/srt/managers/scheduler.py` — step/rank metadata nested inside the existing scheduler span.
 - `python/sglang/srt/model_executor/runner/decode_cuda_graph_runner.py` — exact padded-batch annotation around the graph replay launch.

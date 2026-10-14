@@ -19,7 +19,7 @@
 # implementation with --dsv4-c4-cache-implementation.
 #
 # Env overrides (all optional): PORT, GPUS, MASTER_PORT, TP, DECODE_CFG,
-# MEM_FRAC, CTX_LEN, MAX_RUN, CHUNK. Boot log:
+# MEM_FRAC, CTX_LEN, MAX_RUN, CHUNK, SERVER_SEED, REQUEST_METRICS_DIR. Boot log:
 #   <LOG_HOST>/serve_<native|triton|kernel>.log
 # Server is left RUNNING; use "serve.sh <mode> stop" to tear it down.
 # =====================================================================
@@ -54,6 +54,33 @@ if [ "$ACTION" = stop ]; then
   fi
   echo "stopped $MODE server on port $PORT"
   exit 0
+fi
+
+# Diagnostic exports are opt-in and belong to one boot. Probe the mounted
+# Python source before replacing a healthy server; no model is loaded here.
+REQUEST_METRICS_DIR_CT=
+if [ -n "${SERVER_SEED:-}" ]; then
+  [[ "$SERVER_SEED" =~ ^[0-9]{1,10}$ ]] && (( 10#$SERVER_SEED <= 2147483647 )) || {
+    echo "SERVER_SEED must be an integer in [0, 2147483647]" >&2; exit 2;
+  }
+fi
+if [ -n "${REQUEST_METRICS_DIR:-}" ]; then
+  case "$REQUEST_METRICS_DIR" in
+    "$HOST_REPO"/*) ;;
+    *) echo "REQUEST_METRICS_DIR must be an absolute directory under $HOST_REPO" >&2; exit 2 ;;
+  esac
+  [ ! -e "$REQUEST_METRICS_DIR" ] || { echo "request metrics directory already exists; choose a fresh boot directory: $REQUEST_METRICS_DIR" >&2; exit 2; }
+  docker exec -e "PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT" "$CONTAINER" python3 -c '
+import inspect
+from sglang.srt.observability.req_time_stats import APIServerReqTimeStats
+stats = APIServerReqTimeStats()
+stats.first_token_time = 1.0
+assert "first_output_ts" in stats.convert_to_output_meta_info(), "active SGLang source lacks first_output_ts; pull/select the updated Python fork"
+print("Request timing source:", inspect.getsourcefile(APIServerReqTimeStats))
+' || exit 1
+  mkdir -p -- "$(dirname -- "$REQUEST_METRICS_DIR")" || exit 1
+  mkdir -- "$REQUEST_METRICS_DIR" || exit 1
+  REQUEST_METRICS_DIR_CT=$(to_ct "$REQUEST_METRICS_DIR")
 fi
 
 # Validate profiling before replacing a running server. The output directory
@@ -94,7 +121,8 @@ echo "== serve $MODE on gpus=$GPUS port=$PORT master=$MASTER_PORT (log: $SERVE_L
 
 ct_script "$TREE" "$GPUS" "$MASTER_PORT" "$MODEL_NAME" "$TP" "$MEM_FRAC" \
   "$CTX_LEN" "$MAX_RUN" "$CHUNK" "$DECODE_CFG" "$SGLANG_PY" "$REPO_CT" \
-  "$MODE" "$MODEL_CT" "$PORT" "$SERVE_LOG_CT" "$SERVER_PID_FILE_CT" "$NSYS_OUTPUT_CT" "${NSYS_GRAPH_TRACE:-node}" <<'BASH'
+  "$MODE" "$MODEL_CT" "$PORT" "$SERVE_LOG_CT" "$SERVER_PID_FILE_CT" "$NSYS_OUTPUT_CT" "${NSYS_GRAPH_TRACE:-node}" \
+  "${SERVER_SEED:-}" "$REQUEST_METRICS_DIR_CT" <<'BASH'
 set -u
 tree=$1
 gpus=$2
@@ -115,6 +143,8 @@ serve_log_ct=${16}
 pid_file=${17}
 nsys_output=${18}
 nsys_graph_trace=${19}
+server_seed=${20}
+request_metrics_dir=${21}
 
 cd -- "$tree"
 export CUDA_VISIBLE_DEVICES="$gpus" MASTER_PORT="$master_port"
@@ -122,6 +152,7 @@ export MODEL_NAME="$model_name" TP="$tp" MEM_FRAC="$mem_frac" CTX_LEN="$ctx_len"
 export MAX_RUN="$max_run" CHUNK="$chunk" DECODE_CFG="$decode_cfg"
 export SERVER_PID_FILE="$pid_file" NSYS_OUTPUT="$nsys_output"
 export NSYS_GRAPH_TRACE="$nsys_graph_trace"
+export SERVER_SEED="$server_seed" REQUEST_METRICS_DIR="$request_metrics_dir"
 export PYTHONPATH="/opt/sglang-runtime-fixes:$sglang_py:$repo_ct"
 export NCCL_IB_DISABLE=1 NCCL_SOCKET_IFNAME=lo NCCL_P2P_LEVEL=NVL NCCL_PROTO=Simple NCCL_ALGO=Ring
 # All TP workers are local; keep Gloo off hostname-selected external interfaces.

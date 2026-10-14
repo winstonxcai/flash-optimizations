@@ -20,6 +20,11 @@ case "$MODE" in
 esac
 [ -n "$MODEL" ] || { echo "missing model path" >&2; exit 2; }
 [ -n "$PORT_VALUE" ] || { echo "missing port" >&2; exit 2; }
+if [ -n "${SERVER_SEED:-}" ]; then
+  [[ "$SERVER_SEED" =~ ^[0-9]{1,10}$ ]] && (( 10#$SERVER_SEED <= 2147483647 )) || {
+    echo "SERVER_SEED must be an integer in [0, 2147483647]" >&2; exit 2;
+  }
+fi
 
 # The local-container launcher sets this after starting us in a dedicated
 # session. Record identity before exec so cleanup can recognize this exact
@@ -62,6 +67,16 @@ args=(
   --skip-server-warmup
   --watchdog-timeout 1800
 )
+
+if [ -n "${SERVER_SEED:-}" ]; then
+  args+=(--random-seed "$SERVER_SEED")
+fi
+if [ -n "${REQUEST_METRICS_DIR:-}" ]; then
+  [ -d "$REQUEST_METRICS_DIR" ] || { echo "request metrics directory does not exist: $REQUEST_METRICS_DIR" >&2; exit 2; }
+  args+=(--enable-metrics --log-requests --log-requests-level 0
+    --export-metrics-to-file --export-metrics-to-file-dir "$REQUEST_METRICS_DIR")
+fi
+
 
 # Nsight attaches at launch but collects nothing until /start_profile asks
 # SGLang for CUDA_PROFILER. Do not enable startup profiling: loading weights

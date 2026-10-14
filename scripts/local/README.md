@@ -60,6 +60,80 @@ Each replay checks decode graph coverage, waits for idle and flushes the prefix
 cache. Results go to `results/lswb-replay/<tag>/<timestamp>/`. Replay completion
 leaves the server running.
 
+## Request-level TTFT diagnostic: Triton and Kernel C24
+
+Use the updated Python fork on the host mount; the launcher probes the
+`first_output_ts` field before replacing a server. These Python-only changes
+do not require rebuilding native extensions. Transfer the reviewed local
+changes to the VDI before using this command. Keep pulls outside the GPUQ job.
+
+One job reserves GPUs 4–7 for two sequential, unprofiled 1,200-second runs.
+Both use seed 20260919, the same replay manifest, and the existing cache flush.
+GPUQ waits for the specified GPUs; choose another block/port if needed.
+
+```bash
+cd /home/jovyan/winstonxcai/flash-optimizations
+mkdir -p logs
+gpuq run --user winstonxcai --project flash-optimizations \
+  --gpus 4 --gpu-ids 4,5,6,7 --cwd "$PWD" \
+  --env GPUS=4,5,6,7 --env PORT=30213 --env MASTER_PORT=29639 \
+  --env SERVER_SEED=20260919 \
+  --env REPLAY_DIR=/home/jovyan/wenyuhong/benchmarks \
+  --output "$PWD/logs/ttft-diagnostic-$(date +%Y%m%d_%H%M%S)" \
+  --workload-key remnant-ttft-c24 --expected-duration 50m \
+  --timeout 5400 --detach -- bash -lc '
+set -euo pipefail
+export SGLANG_ROOT_CT="/mnt/host_root$PWD/third_party/sglang"
+export SGLANG_PY="$SGLANG_ROOT_CT/python"
+export LOG_HOST="$PWD/logs/ttft-c24-$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$LOG_HOST"
+docker exec -e "PYTHONPATH=$SGLANG_PY" "${CONTAINER:-remnant}" \
+  python3 "$SGLANG_ROOT_CT/test/registered/unit/observability/test_req_time_stats.py"
+mode=
+cleanup() {
+  rc=$?
+  trap - EXIT INT TERM
+  if [ -n "$mode" ]; then
+    bash scripts/local/serve.sh "$mode" stop || rc=1
+  fi
+  exit "$rc"
+}
+trap cleanup EXIT
+trap "exit 130" INT
+trap "exit 143" TERM
+for mode in triton kernel; do
+  export REQUEST_METRICS_DIR="$LOG_HOST/request-metrics-$mode"
+  bash scripts/local/serve.sh "$mode"
+  bash scripts/local/bench-lswb.sh "$mode-timing-c24" "$PORT" 24 1200
+  bash scripts/local/serve.sh "$mode" stop
+  mode=
+done
+'
+```
+
+Each replay saves `request-timings.jsonl`, raw `request-metrics/*.log`,
+`request-timing-validation.json`, `collection-config.json`, `replay-window.json`,
+and the replay slice of `server.log`. Partial exports survive interruption.
+Collection waits up to 30 seconds for asynchronous writes and fails on bad
+timestamps, duplicate IDs, exporter errors, or insufficient record counts.
+Count coverage is a lower bound; it does not verify the client/server ID join.
+Keep the client's raw request records to match OpenAI response IDs when available.
+
+With metrics enabled, the existing exporter supplies `queue_time`,
+`forward_entry_time`, `prefill_finished_time`, `request_received_ts`,
+`request_finished_ts`, and token/cache counts. `first_output_ts` records the
+tokenizer's first output batch, before client SSE delivery. In analysis:
+
+- Initial scheduler wait: `queue_time` (seconds).
+- Prefill elapsed: `prefill_finished_time - forward_entry_time`, including
+  waits between chunks; this is not pure GPU execution time.
+- Post-prefill delay: `first_output_ts - prefill_finished_time`.
+- Server first-output latency: `first_output_ts - request_received_ts`.
+
+Client p90 TTFT remains the ≤10-second SLO. Compare components for the same
+slow requests; component p90s cannot be added. Same server seed does not fix
+closed-loop arrival times or output/request sets. No automatic retries are used.
+
 ## All five Nsight Systems runs
 
 Use the exports above. Capture is inactive during loading and graph creation.
