@@ -1,0 +1,102 @@
+{
+  "author": "Winston Cai",
+  "scope": "Organization-only promotion of accepted capture data, rank-64 training and exact Packed evaluation; historical sources retained unchanged.",
+  "historical_source_archive": "/Users/poohthewinnie/.cache/remnant/attention-pruning/organization-Zq9KpRnJ/historical-source.tar.gz",
+  "historical_source_archive_sha256": "b9cae7ada673344f22fc058053e8d63c6e262bf95dd5bed1c1b78a82284a895b",
+  "historical_source_sha256": {
+    "train_scoring": "7f85f844aa5c06e41e41f074e707115aa6c9fd2cf98c305dc064ea3590d2ef3b",
+    "train_mask": "bdde3b0fe5270f03f41a056c9b23d2191e3e868e4ae7a3be33cbe61332a3684c",
+    "metric_score": "794cadfec5817c1076bc19305044a8eec62108ff0504bfa6d9ea774b87e702e0",
+    "conditional_score": "d7e8fe608ea5d1bc457c3d82153fe4514c5046cf1e61d60ff3c7a0d8fa2cba6c",
+    "expanded_score": "420d6577347127a4ab1bdb6965fd6f3ccf2c535b4d67c4c7c590883914c81fd3",
+    "batch_loss": "220e76b290cca676a70086bed4017d9a7cd06f4fa004bddcebd0e088f6f134ab",
+    "swap_oracle": "c733b4dd49dcd9d8910a94fc6af7f0dbed19295a9ff0b7c310fa30bb208715ee",
+    "calibrate_mask": "db669d3a62edf10b9125e05a51a77cde9e67bf14ad8a22e031e3a43726ee654a",
+    "theta_fit": "a184c7d6b4e1459c8808f38350b9602cce736513ba0abb524a887d454adaa136",
+    "training_cache": "c4a0bdfb6c3f25ad56b6ef4e21d780777b17657cb04437442430166c780e3981",
+    "migrated_cache": "2f15c095e1b60a5d3f4e86b094d10e3c8e54f707d5bdb6693e8d6f1a93a93bad",
+    "capture_storage": "3a186a092890ac884f938c43205ce8ec8857940958be522c07b7dbb452b34977",
+    "test_train_mask": "b74abc68855208f99ad829591fedb4ad252c5eb9a39405c9311cf53530224230",
+    "test_training_cache": "feb7d1bb698eb485d4ba08ad8f6be72173d2759e8757837ffc4431d3c20fcbbc",
+    "test_conditional_score": "1d02a0bbc37a655598dcaf38e4ae660d503ec1f5ed7d8c84426cfc256c8cf2a7",
+    "test_batch_loss": "03a34e271161b50d5a5de9a886e8933f4e1fb03dab9568157771214ac0962eb4",
+    "test_migrated_cache": "9585b4c22bc4c0e88f91b797e336bf978f5f8777ec85eefce97b13f2ceee56da",
+    "test_metric_score": "4e805038bd1fc8bed19bdbfb9fadbe3b2999d8ea56ca1f3c7ee13ee2bf41256e",
+    "test_expanded_score": "32db8134bc087c175cabcb92fe56b3d30605deba7fb833edc34f230ebc3851d4"
+  },
+  "evidence_directory": "/Users/poohthewinnie/.cache/remnant/attention-pruning/organization-Zq9KpRnJ",
+  "verification": {
+    "status": "pass",
+    "fits": [
+      {
+        "gradient_mode": "straight_through",
+        "batch": 1,
+        "exact": true
+      },
+      {
+        "gradient_mode": "straight_through",
+        "batch": 2,
+        "exact": true
+      },
+      {
+        "gradient_mode": "relaxed",
+        "batch": 1,
+        "exact": true
+      },
+      {
+        "gradient_mode": "relaxed",
+        "batch": 2,
+        "exact": true
+      },
+      {
+        "gradient_mode": "anchored",
+        "batch": 1,
+        "exact": true
+      },
+      {
+        "gradient_mode": "anchored",
+        "batch": 2,
+        "exact": true
+      }
+    ],
+    "query_layer_states": 5460,
+    "torch": "2.10.0",
+    "threads": 2,
+    "seconds": 167.93357970903162,
+    "cache_config_sha256": "c935e78a9a85cb95a463f7b0240ebcfe5cdd462df5f6428792949de6864f4a05",
+    "cache_index_sha256": "fb0c8a1085b04f282b312876322b257a3cf7ccc9a8ee013b026494f7eb0abdd6",
+    "exact_all_layer_cache_and_replay": true,
+    "layers": 21,
+    "checkpoint_score_mask_and_codec_checks": "All 21 accepted checkpoints, including zero/tied-magnitude rows; exact scores, masks and FP8/bitmap/scale bytes.",
+    "package_cpu_tests": 33,
+    "isolated_export": "No experiments directory or study PYTHONPATH; current intended-source SGLang calibration/reference export, not pinned HEAD.",
+    "sglang_calibration_tests": {
+      "passed": 38,
+      "skipped_cuda": 1
+    },
+    "protected_before": {
+      "protected_digest": "923eec1c730b3dd948e09ad58541526c3f62bc4c3cf20423e79784f2b11c743d",
+      "files": 667
+    },
+    "protected_after": {
+      "protected_digest": "923eec1c730b3dd948e09ad58541526c3f62bc4c3cf20423e79784f2b11c743d",
+      "files": 667
+    }
+  },
+  "compatibility": {
+    "formats": "Original raw/shared capture, training-cache receipts, checkpoint parameter names and arithmetic retained.",
+    "provenance": "Historical receipts are never rewritten. New builders/runs record the new package source identity separately.",
+    "historical_commands": "Unsupported. Original ignored sources remain intact and archived; no forwarding wrappers.",
+    "source_prerequisite": "Existing SGLang capture observer/calibration/tests and hook hunks are uncommitted in that fork. A reviewed fork commit and later parent pin are prerequisites for clean-clone capture reproduction.",
+    "deferred": [
+      "Local launcher rename/simplification",
+      "Storage sharding and new deduplication",
+      "Reader-session optimization",
+      "Owner-only GPU capture audit"
+    ],
+    "no_gpu_or_modal_launch": true,
+    "no_model_load": true,
+    "no_commits_or_pushes": true,
+    "no_pin_changes": true
+  }
+}
