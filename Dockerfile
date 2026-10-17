@@ -8,12 +8,12 @@
 # third_party submodules in this repository.
 FROM lmsysorg/sglang:v0.5.18-cu130
 
-COPY third_party/sglang /sgl-workspace/sglang-remnant
+COPY third_party/sglang/python/sglang/kernels /sgl-workspace/sglang-remnant/python/sglang/kernels
 COPY third_party/flashmla /opt/flashmla-remnant
 
 # Compile the local SM90 extensions while building the image. These layers are
-# invalidated when either fork's copied source changes, so unchanged Modal runs
-# reuse the compiled artifacts without spending H100 time on a rebuild.
+# invalidated by kernel source changes, not Python capture/client changes.
+# Unchanged CUDA artifacts are reused without spending H100 time on a rebuild.
 RUN set -eux; \
     export TORCH_CUDA_ARCH_LIST=9.0; \
     build_root=/tmp/remnant-flashmla-build; \
@@ -39,6 +39,8 @@ RUN set -eux; \
     grep -q remnant_buffers "$package_dir"/flash_mla.py; \
     grep -q remnant_sparse_decode_fwd "$package_dir"/flash_mla.py; \
     rm -rf "$build_root"
+
+COPY third_party/sglang /sgl-workspace/sglang-remnant
 
 ENV SG_LOWRANK_SRC=/sgl-workspace/sglang-remnant/python
 ENV REMNANT_FLASHMLA_SOURCE_DIR=/opt/flashmla-remnant

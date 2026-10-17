@@ -16,9 +16,9 @@ kernel code live in two independent Git submodules.
 | FlashMLA direct decode kernel | `third_party/flashmla/` |
 | Fork file-change map | `third_party/changelog.md` |
 | Local serving and evaluation | `scripts/local/` |
-| Modal builds, validation, timing, and profiling | `scripts/modal/`; read `scripts/modal/readme.md` |
+| Modal workflows and local CPU checks | `scripts/modal/serve.py`, `kernels.py`, and `tests.py`; read their module docstrings |
 | Kernel experiments and decisions | `experiments/E###*/`; read the active experiment's plan/goal and record |
-| Attention-aware pruning experiment | `docs/experiment.md`; `experiments/attention-pruning/README.md` |
+| Attention-aware pruning experiment | `docs/attention-aware-latent-kv-compression.md`; `experiments/attention-pruning/README.md`; study-owned Modal runner `capture.py` |
 | Project findings and paper narrative | `docs/report.md` |
 | Paper figures | `docs/figures/` |
 
@@ -189,8 +189,8 @@ change; preserve independent references and established tolerances.
 | Low-level pack/unpack | `third_party/sglang/python/sglang/test/kernels/deepseek_v4/test_remnant_*_kernel.py` |
 | Startup cache-format validation | `third_party/sglang/test/registered/unit/test_dsv4_c4_cache_format.py` |
 | Native/Adapter/Direct decode timing | `third_party/sglang/benchmark/remnant/microbench.py` and its README |
-| Store plus read integration timing | `scripts/modal/remnant_integration.py` and its documented runner |
-| Cached builds and kernel profiles | `scripts/modal/dev.py` and the active experiment's runner |
+| Historical store/read integration timing | `experiments/E010/archive/modal/remnant_integration.py` (archived) |
+| Cached builds, validation, timing and kernel profiles | `scripts/modal/kernels.py` and the active experiment's runner |
 
 - Direct reads Packed records inside FlashMLA. Adapter reconstructs Native
   cache records before stock FlashMLA. Report their complete measured paths
