@@ -74,6 +74,11 @@ its servers. Host script changes need only a pull. To start an existing image:
 bash scripts/local/container.sh up
 ```
 
+The `typing_extensions` overlay installs offline from the small Git-tracked
+wheel in `third_party/wheels/`, with its upstream SHA-256 enforced. This build
+step needs no PyPI or mirror access; a normal Git pull supplies the wheel.
+The base image must still be available locally or through its registry.
+
 ## Start, check and stop a server
 
 Choose available GPUs and distinct ports. These examples use GPUs 4–7;

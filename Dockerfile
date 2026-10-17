@@ -46,11 +46,13 @@ COPY third_party/sglang /sgl-workspace/sglang-remnant
 ENV SG_LOWRANK_SRC=/sgl-workspace/sglang-remnant/python
 ENV REMNANT_FLASHMLA_SOURCE_DIR=/opt/flashmla-remnant
 
-# Fetch the pinned universal wheel from Tsinghua for VDI networks with restricted
-# PyPI access. Its digest matches the official 4.16.0 release.
+# Keep this small build dependency in Git: VDI build workers cannot reliably
+# reach PyPI or mirrors. Install offline and enforce the upstream wheel digest.
+COPY third_party/wheels /opt/remnant-wheels
 RUN python3 -m pip install --disable-pip-version-check --no-cache-dir --no-deps \
-    --retries 2 --timeout 30 --target /opt/sglang-runtime-fixes \
-    "https://pypi.tuna.tsinghua.edu.cn/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl#sha256=481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8"
+    --no-index --find-links /opt/remnant-wheels --require-hashes \
+    --target /opt/sglang-runtime-fixes \
+    --requirement /opt/remnant-wheels/requirements.txt
 
 ENV NCCL_IB_DISABLE=1 \
     NCCL_SOCKET_IFNAME=lo \
