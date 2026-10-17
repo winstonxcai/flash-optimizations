@@ -1,0 +1,46 @@
+{
+  "concurrency": 28,
+  "transfer_commit": "ec24a7592a1d390585c63fff472d247bd3139b6f",
+  "runs": {
+    "kernel-store-kernel-decode": {
+      "client_error_counts": {
+        "missing_output_event": 19
+      },
+      "server_finish_reason_types": {
+        "length": 1798,
+        "stop": 382
+      },
+      "gpu_average_utilization_percent": 92.96721311475409
+    },
+    "kernel-store-triton-decode": {
+      "client_error_counts": {
+        "missing_output_event": 20
+      },
+      "server_finish_reason_types": {
+        "length": 1851,
+        "stop": 389
+      },
+      "gpu_average_utilization_percent": 94.02049180327869
+    },
+    "triton-store-kernel-decode": {
+      "client_error_counts": {
+        "missing_output_event": 19
+      },
+      "server_finish_reason_types": {
+        "length": 1834,
+        "stop": 376
+      },
+      "gpu_average_utilization_percent": 91.8155737704918
+    },
+    "triton-store-triton-decode": {
+      "client_error_counts": {
+        "missing_output_event": 17
+      },
+      "server_finish_reason_types": {
+        "length": 1849,
+        "stop": 374
+      },
+      "gpu_average_utilization_percent": 91.5
+    }
+  }
+}

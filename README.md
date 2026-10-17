@@ -23,7 +23,7 @@ Native is the default. The two Packed paths use the same 328-byte format.
 2. [Fork change map](third_party/changelog.md): where Remnant modifies SGLang and FlashMLA.
 3. Follow your research track:
    - **Kernel optimization:** [E010 decisions](experiments/E010/record.md).
-   - **Attention-aware latent KV compression:** [method and findings](docs/attention-aware-latent-kv-compression.md) and [protocols/decisions](experiments/attention-pruning/README.md).
+   - **Attention-aware latent KV compression:** [method and findings](docs/attention-aware-latent-kv-compression.md) and the [maintained training pipeline](training/README.md). Historical study protocols remain under the ignored `experiments/attention-pruning/` workspace.
 
 Use the maintained runners below; historical experiment commands may be archived.
 

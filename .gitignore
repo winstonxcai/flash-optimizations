@@ -28,8 +28,5 @@ __pycache__/
 /scripts/local/config/config_swe_sangfor.json
 
 # Existing local experiment-work policy.
-/experiments/*
-!/experiments/attention-pruning/
-/experiments/attention-pruning/*
-# Canonical study launcher is source; captures, weights and other local work stay ignored.
-!/experiments/attention-pruning/capture.py
+/experiments/
+/data/
