@@ -162,10 +162,14 @@ of existing files without a scoped request.
 - Call the configurations **Native** and **Packed**. Native is the default;
   Packed is selected by `--dsv4-c4-cache-format remnant`. Do not revive the
   historical TopMag environment-variable bundle or stage-1 terminology.
-- The production Packed record retains 256 of 512 coordinates and stores
-  256 FP8 value bytes, a 64-byte bitmap, and eight scale bytes: **328 bytes**.
-  The native C4 record is 584 logical bytes. Changing survivor count does not
-  automatically change the record size; format changes need their own plan.
+- Default Packed retains 256 of 512 coordinates: 256 FP8 value bytes, a
+  64-byte bitmap and eight scale bytes (**328 bytes**). Triton supports startup
+  per-C4-layer counts 64..448 in steps of 64, using `count + 72` logical bytes
+  in separate value/bitmap/scale planes; 512 survivors are invalid. Non-256
+  profiles require Triton store/reconstruction and no HiCache. Optimized CUDA
+  store/Direct and HiCache remain 256-only. Native C4 remains 584 logical bytes.
+  Configurable counts are not adaptive runtime budgets; new GPU profiles need
+  H100 validation before production use.
 - Match the current producer's dtype and arithmetic. Its raw compressor
   output and norm weights are FP32. Selection uses raw magnitudes, followed by
   masking, RMSNorm, the prescribed BF16 rounding, and FP8 packing. Historical
