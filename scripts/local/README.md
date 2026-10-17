@@ -6,6 +6,56 @@ Run from the repository root on the GPU node. Modes: `native` = Native;
 `triton` = Packed with Triton packing/reconstruction; `kernel` = Packed with
 optimized kernels. All three use the same Docker image.
 
+## Isolated latent-KV capture
+
+Capture uses a **prepared capture-only image and separate container**, never the
+running production container. Image setup is a prerequisite, not part of capture.
+The shell entry point owns all Docker operations: local image/label checks,
+mounts, GPU selection/availability, container launch, timeouts and exact-container
+cleanup. It does not source production environment defaults. It requires Docker,
+`nvidia-smi` and GNU `timeout`. These examples are commands for an explicitly
+allocated GPU-server session, not automatic launch steps:
+
+```bash
+CAPTURE_GPUS=0,1,2,3 bash scripts/local/capture-latent.sh run \
+  remnant-capture:local /data/models/DeepSeek-V4-Flash-0731 \
+  /data/capture/scratch /data/capture/published 3600 30312
+```
+
+Provision `capture-config.json` and `replay.jsonl` in scratch beforehand. Schema 2,
+an explicit `audit_shared` policy, and concurrency two are required; shared-only
+capture also requires the existing matching `shared-audit-proof.json`. Scratch
+and publication destinations must be distinct and writable. Scratch must retain
+50 GiB free; existing client staging/publication limits and resume checks remain.
+Do not use a read-only mount such as the server's `/mnt/public_data` as output.
+
+The prepared image must already contain the capture observer, runtime hooks,
+calibration client and compiled extensions. The shell verifies these components
+once in a GPU-free preflight container, then calls Python's data preflight against
+the actual mounts. Missing prerequisites fail;
+capture never builds, pulls, patches or updates an image. Container launches use
+`--pull never`; no kernel build or production image/configuration change occurs.
+Capture stays Native, TP4/concurrency two, seed 42, with prefix reuse, overlap
+scheduling and CUDA graphs disabled through the existing capture-only settings.
+
+`3600` is the **total container budget**, including model startup, readiness,
+replay and writer drain—not an additional hour after loading. The client gets
+only the remaining time. Timeout/interruption stops the owned server process
+group and exact capture container, with bounded cleanup; it never stops another
+server. Logs and completed publication/progress artifacts remain available after
+failure. Selected GPUs must already be allocated to you and unoccupied; the
+launcher does not acquire GPUQ resources or terminate competing processes.
+
+`bash scripts/local/capture-latent.sh --help` is safe locally and launches
+nothing. `training/capture.py` runs inside the prepared environment and has no
+Docker/image/GPU-selection logic. Its `preflight` action validates configuration,
+audit proof, writable storage, free space and the server port. Its `run` action
+rechecks those data conditions, starts Native and the existing calibration client,
+and cleans up only its server process group. The shell supplies an absolute
+deadline; Python converts it once to monotonic time for startup and replay.
+The old `build` action is removed; provision images through your separate
+image-setup workflow.
+
 ## Update the image
 
 Pull outside `foo.txt` and outside GPUQ jobs:
@@ -323,3 +373,49 @@ git push origin remnant
 
 Keep raw prompts and large profiles outside ordinary Git. Transfer traces
 separately using the established artifact storage or Git LFS workflow.
+
+## Per-layer Packed Triton survivor counts
+
+Packed defaults to 256 survivors and 328 logical bytes per C4 row. Triton mode
+also accepts 64, 128, 192, 320, 384 and 448 survivors; 512 is rejected. Counts
+are selected once at startup, not changed between requests or cache blocks.
+
+```bash
+# Uniform 192 survivors: 192 FP8 values + 64 bitmap bytes + 8 scale bytes.
+C4_KEEP_COUNT=192 bash scripts/local/serve.sh triton
+
+# Defaults apply to all C4 layers; keys are absolute, zero-based model layer IDs.
+C4_KEEP_COUNT=192 C4_LAYER_KEEP_COUNTS='{"2":128,"4":320}' \
+  bash scripts/local/serve.sh triton
+```
+
+Direct server equivalents are `--dsv4-c4-cache-keep-count` and
+`--dsv4-c4-cache-layer-keep-counts`. Overrides must identify C4 layers in the
+loaded model; their order is independent of pipeline-stage/C4-pool indexing.
+The launcher checks mounted-source support and resolves the profile before
+stopping an existing server. Values are passed as separate quoted arguments.
+
+Every count retains the largest raw magnitudes across all 512 coordinates.
+It does not retain entire groups of 64. Bitmap/scales remain eight entries
+per row, with separate physical planes and `count + 72` logical bytes.
+The allocator sums the actual C4-layer sizes; smaller layers are not padded
+back to 256 values. Native, SWA and C128 layouts remain unchanged.
+
+Any effective non-256 count requires Triton storage **and** reconstruction,
+with HiCache disabled. The optimized CUDA store/Direct reader and HiCache
+retain their existing 256-only ABI. Learned scoring is not integrated here.
+
+CPU references/configuration and allocation accounting have local coverage.
+Non-256 Triton execution, graph replay and memory safety require model-free
+H100/SM90 qualification before production use. No serving throughput or task
+quality gain follows from allocation size alone.
+
+After separate resource authorization, qualify the existing model-free workflow:
+
+```bash
+modal run scripts/modal/kernels.py::validate_kernels --run-id <unique-id> --sanitizer
+```
+
+This runs the extended existing tests and sanitizer selections, including mixed
+layer graph replay and every supported store/reconstruction count. It is a
+validation gate; the unchanged timing matrix remains a 256-survivor comparison.

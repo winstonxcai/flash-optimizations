@@ -15,11 +15,12 @@
 # They use the fp4-native MoE runner (flashinfer_mxfp4), mem-frac 0.88,
 # 1M ctx cap, fp8 KV, and DeepSeek reasoning/tool parsers (needed by the
 # agentic evals; harmless for benches). Native uses the fork's default cache
-# format; triton/kernel use the same 328-byte Remnant format and select their
-# implementation with --dsv4-c4-cache-implementation.
+# format; triton/kernel default to 328-byte Packed records. Triton also supports
+# startup per-layer survivor counts with smaller/larger value planes.
 #
 # Env overrides (all optional): PORT, GPUS, MASTER_PORT, TP, DECODE_CFG,
-# MEM_FRAC, CTX_LEN, MAX_RUN, CHUNK, SERVER_SEED, REQUEST_METRICS_DIR. Boot log:
+# MEM_FRAC, CTX_LEN, MAX_RUN, CHUNK, SERVER_SEED, REQUEST_METRICS_DIR,
+# C4_KEEP_COUNT, C4_LAYER_KEEP_COUNTS. Boot log:
 #   <LOG_HOST>/serve_<native|triton|kernel>.log
 # Server is left RUNNING; use "serve.sh <mode> stop" to tear it down.
 # =====================================================================
@@ -60,6 +61,33 @@ case "${STORE_IMPLEMENTATION:-}" in
   ""|triton|kernel) ;;
   *) echo "STORE_IMPLEMENTATION must be triton or kernel" >&2; exit 2 ;;
 esac
+
+# Resolve the same model-wide profile as the server before replacing a healthy
+# process. Configuration reads only; no model weights or GPU work are loaded.
+if [ -n "${C4_KEEP_COUNT:-}" ] || [ -n "${C4_LAYER_KEEP_COUNTS:-}" ]; then
+  docker exec -e "PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT" "$CONTAINER" python3 -c '
+import sys
+from transformers import AutoConfig
+from sglang.srt.server_args import ServerArgs
+from sglang.srt.configs.model_config import is_deepseek_v4
+from sglang.srt.remnant import config
+for field in ("dsv4_c4_cache_keep_count", "dsv4_c4_cache_layer_keep_counts"):
+    assert field in ServerArgs.__dataclass_fields__, "mounted source lacks per-layer Packed counts"
+model, mode, count, overrides, store = sys.argv[1:]
+hf = AutoConfig.from_pretrained(model, trust_remote_code=True)
+if mode != "native" and not is_deepseek_v4(hf):
+    raise ValueError("Packed layer counts require a DeepSeek V4 model")
+config.configure_cache_format(
+    "native" if mode == "native" else "remnant",
+    "triton" if mode == "triton" else "kernel", store or None,
+    keep_count=int(count) if count else 256, layer_keep_counts=overrides or None,
+    compression_ratios=getattr(hf, "compress_ratios", None),
+)
+if mode != "native" and not hasattr(hf, "compress_ratios"):
+    raise ValueError("Packed layer counts require model compress_ratios")
+print("Packed C4 profile:", config.packed_profile())
+' "$MODEL_CT" "$MODE" "${C4_KEEP_COUNT:-}" "${C4_LAYER_KEEP_COUNTS:-}" "${STORE_IMPLEMENTATION:-}" || exit 1
+fi
 
 # Probe the actual mounted source before stopping an existing server.
 if [ -n "${STORE_IMPLEMENTATION:-}" ]; then
@@ -135,7 +163,7 @@ echo "== serve $MODE on gpus=$GPUS port=$PORT master=$MASTER_PORT (log: $SERVE_L
 ct_script "$TREE" "$GPUS" "$MASTER_PORT" "$MODEL_NAME" "$TP" "$MEM_FRAC" \
   "$CTX_LEN" "$MAX_RUN" "$CHUNK" "$DECODE_CFG" "$SGLANG_PY" "$REPO_CT" \
   "$MODE" "$MODEL_CT" "$PORT" "$SERVE_LOG_CT" "$SERVER_PID_FILE_CT" "$NSYS_OUTPUT_CT" "${NSYS_GRAPH_TRACE:-node}" \
-  "${SERVER_SEED:-}" "$REQUEST_METRICS_DIR_CT" "${STORE_IMPLEMENTATION:-}" <<'BASH'
+  "${SERVER_SEED:-}" "$REQUEST_METRICS_DIR_CT" "${STORE_IMPLEMENTATION:-}" "${C4_KEEP_COUNT:-}" "${C4_LAYER_KEEP_COUNTS:-}" <<'BASH'
 set -u
 tree=$1
 gpus=$2
@@ -159,6 +187,8 @@ nsys_graph_trace=${19}
 server_seed=${20}
 request_metrics_dir=${21}
 store_implementation=${22}
+c4_keep_count=${23}
+c4_layer_keep_counts=${24}
 
 cd -- "$tree"
 export CUDA_VISIBLE_DEVICES="$gpus" MASTER_PORT="$master_port"
@@ -168,6 +198,7 @@ export SERVER_PID_FILE="$pid_file" NSYS_OUTPUT="$nsys_output"
 export NSYS_GRAPH_TRACE="$nsys_graph_trace"
 export SERVER_SEED="$server_seed" REQUEST_METRICS_DIR="$request_metrics_dir"
 export STORE_IMPLEMENTATION="$store_implementation"
+export C4_KEEP_COUNT="$c4_keep_count" C4_LAYER_KEEP_COUNTS="$c4_layer_keep_counts"
 export PYTHONPATH="/opt/sglang-runtime-fixes:$sglang_py:$repo_ct"
 export NCCL_IB_DISABLE=1 NCCL_SOCKET_IFNAME=lo NCCL_P2P_LEVEL=NVL NCCL_PROTO=Simple NCCL_ALGO=Ring
 # All TP workers are local; keep Gloo off hostname-selected external interfaces.

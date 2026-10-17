@@ -75,6 +75,13 @@ args=(
 if [ -n "${STORE_IMPLEMENTATION:-}" ]; then
   args+=(--dsv4-c4-cache-store-implementation "$STORE_IMPLEMENTATION")
 fi
+if [ -n "${C4_KEEP_COUNT:-}" ]; then
+  args+=(--dsv4-c4-cache-keep-count "$C4_KEEP_COUNT")
+fi
+if [ -n "${C4_LAYER_KEEP_COUNTS:-}" ]; then
+  args+=(--dsv4-c4-cache-layer-keep-counts "$C4_LAYER_KEEP_COUNTS")
+fi
+
 
 if [ -n "${SERVER_SEED:-}" ]; then
   args+=(--random-seed "$SERVER_SEED")
@@ -85,6 +92,12 @@ if [ -n "${REQUEST_METRICS_DIR:-}" ]; then
     --export-metrics-to-file --export-metrics-to-file-dir "$REQUEST_METRICS_DIR")
 fi
 
+if [ -n "${REMNANT_CAPTURE_DIR:-}" ]; then
+  [ "$MODE" = native ] || { echo "capture requires native mode" >&2; exit 2; }
+  [ -z "${SERVER_SEED:-}" ] || [ "$SERVER_SEED" = 42 ] || { echo "native fixture capture requires SERVER_SEED=42" >&2; exit 2; }
+  args+=(--disable-radix-cache --disable-overlap-schedule)
+  [ -n "${SERVER_SEED:-}" ] || args+=(--random-seed 42)
+fi
 
 # Nsight attaches at launch but collects nothing until /start_profile asks
 # SGLang for CUDA_PROFILER. Do not enable startup profiling: loading weights
