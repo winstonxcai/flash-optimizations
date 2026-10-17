@@ -52,8 +52,8 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 - Upstream base: `sgl-project/sglang`
 - Base commit: `71de97b264b04dcd514cf904003028aefe9775c8` (`v0.5.18`)
 - Remnant branch: `remnant/v0.5.18`
-- Current branch head: `1961f1383db3f95fc40699bac7c6823ac09c87ac`
-- Comparison: `71de97b264b04dcd514cf904003028aefe9775c8..origin/remnant/v0.5.18`
+- Current branch head: `1b41d2679fa5b276341973190a94d588f4695b62`
+- Comparison: `71de97b264b04dcd514cf904003028aefe9775c8..1b41d2679fa5b276341973190a94d588f4695b62`
 
 ### Runtime and build integration
 
@@ -66,8 +66,11 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 - `python/sglang/srt/mem_cache/deepseek_v4_memory_pool.py` — packed pool.
 - `python/sglang/srt/layers/attention/deepseek_v4_backend.py` — decode dispatch.
 - `python/sglang/srt/layers/attention/dsv4/compressor_v2.py` — packed writes.
+- `python/sglang/srt/models/deepseek_v4.py` — opt-in capture of the attention output after inverse RoPE.
 - `python/sglang/srt/layers/attention/dsv4/indexer.py` — raw-index plumbing.
 - `python/sglang/srt/model_executor/pool_configurator.py` — packed capacity accounting.
+- `python/sglang/srt/mem_cache/hybrid_cache/hybrid_pool_assembler.py` — Packed L2 HiCache routing and unsupported-layout checks.
+- `python/sglang/srt/mem_cache/memory_pool_host.py` — coordinated host transfers for Packed values, bitmaps and scales.
 - `python/sglang/srt/remnant/__init__.py` — internal package exports.
 - `python/sglang/srt/remnant/bitmap.py` — bitmap helpers.
 - `python/sglang/srt/remnant/config.py` — startup format/implementation configuration and validation.
@@ -79,12 +82,18 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 - `python/sglang/kernels/aot/cmake/flashmla.cmake` — FlashMLA fork build pinning.
 - `python/sglang/kernels/aot/csrc/flashmla_extension.cc` — extension bindings.
 - `python/sglang/kernels/aot/python/sgl_kernel/flash_mla.py` — Python dispatch wrapper.
+- `python/sglang/kernels/aot/CMakeLists.txt` — Packed-to-Native adapter source and standalone build target.
+- `python/sglang/kernels/aot/csrc/common_extension.cc` — adapter operator registration.
+- `python/sglang/kernels/aot/csrc/remnant/packed_to_native.cu` — fused Packed-to-Native CUDA reconstruction.
+- `python/sglang/kernels/aot/csrc/remnant_extension.cc` — standalone adapter extension registration.
+- `python/sglang/kernels/aot/include/sgl_kernel_ops.h` — adapter declaration.
 
 ### SGLang validation and benchmarks
 
 - `test/registered/unit/utils/test_nvtx_utils.py` — CPU annotation contracts, disabled-path behavior and exception cleanup.
 - `test/registered/unit/test_dsv4_c4_cache_format.py` — startup argument validation.
 - `test/registered/attention/unittests/dsv4/test_remnant_pool.py` — pool layout/capacity.
+- `test/registered/attention/unittests/dsv4/test_remnant_hicache.py` — Packed host-cache transfer tests.
 - `test/registered/attention/unittests/dsv4/test_remnant_pack.py` — pack correctness.
 - `test/registered/attention/unittests/dsv4/test_remnant_fused_store.py` — fused-store bytes, fallback, destinations and graph replay.
 - `test/registered/attention/unittests/dsv4/test_remnant_compressor_store.py` — serving compressor routing.
@@ -120,12 +129,13 @@ corresponding lists here in the same parent-repository change.
 - `benchmark/remnant/test_microbench.py` — CLI/schema/matrix contracts and H100 numerical/graph coverage.
 - `benchmark/remnant/README.md` — new baseline/protocol and maintained commands.
 - `python/sglang/benchmark/remnant/cases.py` — shared production store/decode matrix, deterministic seeds, statistics, result serialization, timing coverage checks and Nsight Compute export validation. Modal uses this contract rather than duplicating it.
+- `python/sglang/benchmark/remnant/__init__.py` — benchmark package marker.
 - `test/registered/attention/unittests/dsv4/test_remnant_fused_store.py` — consumes the shared production store case definitions.
 
 Historical Adapter/Direct benchmarking and its Native gate are preserved in the
 parent experiment archive; this rewrite changes no production runtime dispatch.
 
-### Opt-in capture storage (working-tree implementation)
+### Opt-in capture storage
 
 - `python/sglang/srt/remnant/capture.py` — schema-2 owner-only shared copies,
   audited TP payloads and per-layer constants; inactive without capture settings.
@@ -135,9 +145,10 @@ parent experiment archive; this rewrite changes no production runtime dispatch.
   round trips, partial/duplicate selections, audit/hash failures, publication and
   disabled/non-owner copy contracts.
 
-No FlashMLA changes or normal Native/Triton/Kernel configuration changes belong
-to this milestone. GPU audit and capture-only image execution remain separate
-approval/validation gates; these working-tree files are not promoted pins.
+The capture hooks are opt-in and inactive during normal serving. The recorded
+pin includes their source; it does not establish live GPU validation. This
+publication passed 65 focused CPU checks with 36 CUDA-dependent cases skipped;
+no GPU, model-load, or image-build run was performed for this push.
 
 - `python/sglang/benchmark/remnant/quantization.py` — independent FP64 normalization and FP32-to-BF16/FP8 quantization-cell validity; exact scale/value interval checks.
 - `python/sglang/srt/remnant/triton/fused_store.py` — explicit pairwise FMA operand order matches unchanged Triton packing at nonuniform-FP32-weight quantization boundaries.
@@ -145,7 +156,8 @@ approval/validation gates; these working-tree files are not promoted pins.
 
 ### Independent Packed store override
 
-- `python/sglang/srt/server_args.py`, `runtime_context.py`, and `remnant/config.py` — optional store override, defaults, validation and worker publication.
+- `python/sglang/srt/server_args.py` and `python/sglang/srt/remnant/config.py` — optional store override, defaults and validation.
+- `python/sglang/srt/runtime_context.py` — resolved cache/store-mode publication in spawned workers.
 - `python/sglang/srt/remnant/__init__.py` — resolved store accessor.
 - `python/sglang/srt/layers/attention/dsv4/compressor_v2.py` — storage dispatch independent of decode.
 - `test/registered/unit/test_dsv4_c4_cache_format.py` — all four combinations in spawned workers and reset/validation contracts.
