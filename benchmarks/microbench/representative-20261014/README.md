@@ -39,11 +39,17 @@ memory traffic alone does not prove compiler spills. No viewer screenshots yet.
 
 ## Reproduce / archive
 
+Original invocation (preserved for source provenance):
+
 ```bash
 MODAL_PROFILE=poohthewinniechurchill modal run scripts/modal/dev.py::profile \
   --run-id <unique-id> --measure-first --max-seconds 1500 \
   --cases h64_b16_k512,h64_b16_k317,decode-r24-all_valid,prefill-r8192-all_valid
 ```
+
+The current profiling launcher is `scripts/modal/kernels.py::profile_kernels`;
+reuse `--cases` and `--max-seconds` with a fresh run ID after budget approval.
+Run `benchmark_kernels` separately for unprofiled timing; `--measure-first` was retired.
 
 Timing: `representative-20261014T023127Z`; completed profiles:
 `representative-20261014T024200Z`. The first attempt stopped after one valid

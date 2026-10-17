@@ -1,0 +1,22 @@
+{
+  "transfer_commit": "ec24a7592a1d390585c63fff472d247bd3139b6f",
+  "verified_git_blob_count": 56,
+  "gpuq_job": "job-20261014-152423-abb88b0e",
+  "host": "10.72.1.171",
+  "run_order": [
+    "triton-store-triton-decode-timing-c28",
+    "triton-store-kernel-decode-timing-c28",
+    "kernel-store-kernel-decode-timing-c28",
+    "kernel-store-triton-decode-timing-c28"
+  ],
+  "source_pins": "160000 commit 9f9a2e5da6e82d5f7730e1515d21fa313fb34604\tthird_party/flashmla\n160000 commit 530b9b0974aed2b7cb3a76b2d148d5398e32ff77\tthird_party/sglang\n",
+  "source_investigation": {
+    "sglang_commit": "530b9b0974aed2b7cb3a76b2d148d5398e32ff77",
+    "files_sha256": {
+      "python/sglang/srt/entrypoints/openai/serving_base.py": "3d0613b92abae51e8566a11ae80a2369a46422b49bd63c4cd6aa593d8a4bdbc2",
+      "python/sglang/srt/entrypoints/openai/serving_chat.py": "ac0bbdf37a86b49c9df0d513ba44b0c06feb23a28ffcde0b730500e560604ab1",
+      "python/sglang/srt/managers/tokenizer_manager.py": "8102242c5094f8d444ac47232d3ae6113a70133a016791d9157864dada2fdad5",
+      "python/sglang/srt/managers/scheduler_components/batch_result_processor.py": "702ecd7d908fb15b9c079e837ce72982492fd0cb1bf9436dcf0cdcd0d6c03873"
+    }
+  }
+}
