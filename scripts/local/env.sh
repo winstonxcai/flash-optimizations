@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # =====================================================================
 # env.sh -- shared runtime configuration and helpers for local driver scripts
+# Author: Winston Cai.
 #
 # TO PORT TO A NEW MACHINE/GPU NODE: override the MACHINE CONFIG values below
 # (or export them before invoking a script). All drivers source this file:
@@ -59,7 +60,7 @@ to_ct () { echo "$REPO_CT${1#$HOST_REPO}"; }
 
 # Run a script on stdin, passing values as positional arguments. Use this for
 # container commands so paths and JSON values are not interpolated into bash -c.
-ct_script () { docker exec "$CONTAINER" bash -s -- "$@"; }
+ct_script () { docker exec -i "$CONTAINER" bash -s -- "$@"; }
 
 # ------------------------------ server helpers ------------------------------
 # These manage a server that serve.sh brought up inside $CONTAINER. The launch
@@ -86,15 +87,22 @@ pid_file=$1
 port=$2
 status=0
 remove_pid_file=1
+# Container PID 1 may leave exited children unreaped. kill -0 also sees
+# zombies, which cannot execute or retain GPU allocations.
+group_exited() {
+  local rows
+  rows=$(ps -eo pgid=,stat=) || return 1
+  awk -v group="$pgid" '$1 == group && $2 !~ /^[ZX]/ {live=1} END {exit live}' <<< "$rows"
+}
 terminate_group() {
   kill -TERM -- "-$pgid" 2>/dev/null || true
   for _ in $(seq 1 20); do
-    kill -0 -- "-$pgid" 2>/dev/null || break
+    group_exited && return 0
     sleep 0.25
   done
   kill -KILL -- "-$pgid" 2>/dev/null || true
   for _ in $(seq 1 4); do
-    kill -0 -- "-$pgid" 2>/dev/null || return 0
+    group_exited && return 0
     sleep 0.25
   done
   return 1
