@@ -37,7 +37,7 @@ parent repository so it is visible without opening either fork.
 
 - `tests/lib.py` — shared upstream test generators plus the 328-byte Packed fixtures.
 - `tests/test_flash_mla_remnant_decoding.py` — direct-vs-Native and independent-reference validity tests.
-- `benchmark/remnant/microbench.py` (SGLang fork) — production-facing Native/Adapter/Direct decode microbenchmark.
+- `benchmark/remnant/microbench.py` (SGLang fork) — production-function Native/Packed Triton/Packed Kernel decode and store microbenchmark (protocol remnant-three-modes-v1).
 
 The former `tests/remnant_fixture.py` was removed after its consumers migrated
 to `tests/lib.py`; the separate FlashMLA `benchmark/bench_remnant_decode.py`
@@ -52,8 +52,8 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 - Upstream base: `sgl-project/sglang`
 - Base commit: `71de97b264b04dcd514cf904003028aefe9775c8` (`v0.5.18`)
 - Remnant branch: `remnant/v0.5.18`
-- Current branch head: `6120d708f1da8bc23d37bfb6bdbe612f0868d800` (request timing metadata)
-- Comparison: `71de97b264b04dcd514cf904003028aefe9775c8..origin/remnant/v0.5.18`
+- Current branch head: `1b41d2679fa5b276341973190a94d588f4695b62`
+- Comparison: `71de97b264b04dcd514cf904003028aefe9775c8..1b41d2679fa5b276341973190a94d588f4695b62`
 
 ### Runtime and build integration
 
@@ -63,12 +63,14 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 - `python/sglang/srt/managers/scheduler.py` — step/rank metadata nested inside the existing scheduler span.
 - `python/sglang/srt/model_executor/runner/decode_cuda_graph_runner.py` — exact padded-batch annotation around the graph replay launch.
 - `python/sglang/srt/server_args.py` — cache-format and Triton/Kernel implementation flags.
-- `python/sglang/srt/runtime_context.py` — restore cache format/implementation when each spawned worker publishes resolved arguments, before pool sizing and graph capture; log effective scheduler mode.
 - `python/sglang/srt/mem_cache/deepseek_v4_memory_pool.py` — packed pool.
 - `python/sglang/srt/layers/attention/deepseek_v4_backend.py` — decode dispatch.
 - `python/sglang/srt/layers/attention/dsv4/compressor_v2.py` — packed writes.
+- `python/sglang/srt/models/deepseek_v4.py` — opt-in capture of the attention output after inverse RoPE.
 - `python/sglang/srt/layers/attention/dsv4/indexer.py` — raw-index plumbing.
 - `python/sglang/srt/model_executor/pool_configurator.py` — packed capacity accounting.
+- `python/sglang/srt/mem_cache/hybrid_cache/hybrid_pool_assembler.py` — Packed L2 HiCache routing and unsupported-layout checks.
+- `python/sglang/srt/mem_cache/memory_pool_host.py` — coordinated host transfers for Packed values, bitmaps and scales.
 - `python/sglang/srt/remnant/__init__.py` — internal package exports.
 - `python/sglang/srt/remnant/bitmap.py` — bitmap helpers.
 - `python/sglang/srt/remnant/config.py` — startup format/implementation configuration and validation.
@@ -80,12 +82,18 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 - `python/sglang/kernels/aot/cmake/flashmla.cmake` — FlashMLA fork build pinning.
 - `python/sglang/kernels/aot/csrc/flashmla_extension.cc` — extension bindings.
 - `python/sglang/kernels/aot/python/sgl_kernel/flash_mla.py` — Python dispatch wrapper.
+- `python/sglang/kernels/aot/CMakeLists.txt` — Packed-to-Native adapter source and standalone build target.
+- `python/sglang/kernels/aot/csrc/common_extension.cc` — adapter operator registration.
+- `python/sglang/kernels/aot/csrc/remnant/packed_to_native.cu` — fused Packed-to-Native CUDA reconstruction.
+- `python/sglang/kernels/aot/csrc/remnant_extension.cc` — standalone adapter extension registration.
+- `python/sglang/kernels/aot/include/sgl_kernel_ops.h` — adapter declaration.
 
 ### SGLang validation and benchmarks
 
 - `test/registered/unit/utils/test_nvtx_utils.py` — CPU annotation contracts, disabled-path behavior and exception cleanup.
-- `test/registered/unit/test_dsv4_c4_cache_format.py` — startup argument validation, all three modes in spawned workers, republication, Native defaults and invalid-publication handling.
+- `test/registered/unit/test_dsv4_c4_cache_format.py` — startup argument validation.
 - `test/registered/attention/unittests/dsv4/test_remnant_pool.py` — pool layout/capacity.
+- `test/registered/attention/unittests/dsv4/test_remnant_hicache.py` — Packed host-cache transfer tests.
 - `test/registered/attention/unittests/dsv4/test_remnant_pack.py` — pack correctness.
 - `test/registered/attention/unittests/dsv4/test_remnant_fused_store.py` — fused-store bytes, fallback, destinations and graph replay.
 - `test/registered/attention/unittests/dsv4/test_remnant_compressor_store.py` — serving compressor routing.
@@ -93,7 +101,8 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 - `test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py` — graph replay.
 - `test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py` — direct FlashMLA parity.
 - `python/sglang/test/kernels/deepseek_v4/test_remnant_pack_kernel.py` — pack kernel checks.
-- `python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py` — unpack kernel checks.
+- `python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py` — unpack correctness, compilation reuse, and exact historical Packed parity.
+- `python/sglang/test/kernels/deepseek_v4/fixtures/main_packed/` — immutable historical Packed source, hashes, and parity contract; test-only, never used by production.
 - `benchmark/remnant/README.md` — benchmark documentation.
 - `benchmark/remnant/microbench.py` — explicit Native/Adapter/Direct decode matrix with JSON/CSV output.
 
@@ -114,9 +123,41 @@ git -C third_party/sglang diff --name-status \
 If either fork receives new Remnant commits, update the branch head and the
 corresponding lists here in the same parent-repository change.
 
+### Three-mode measurement ownership
+
+- `benchmark/remnant/microbench.py` — independent references, mode-owned decode/store execution, graph timing and warmed eager capture.
+- `benchmark/remnant/test_microbench.py` — CLI/schema/matrix contracts and H100 numerical/graph coverage.
+- `benchmark/remnant/README.md` — new baseline/protocol and maintained commands.
+- `python/sglang/benchmark/remnant/cases.py` — shared production store/decode matrix, deterministic seeds, statistics, result serialization, timing coverage checks and Nsight Compute export validation. Modal uses this contract rather than duplicating it.
+- `python/sglang/benchmark/remnant/__init__.py` — benchmark package marker.
+- `test/registered/attention/unittests/dsv4/test_remnant_fused_store.py` — consumes the shared production store case definitions.
+
+Historical Adapter/Direct benchmarking and its Native gate are preserved in the
+parent experiment archive; this rewrite changes no production runtime dispatch.
+
+### Opt-in capture storage
+
+- `python/sglang/srt/remnant/capture.py` — schema-2 owner-only shared copies,
+  audited TP payloads and per-layer constants; inactive without capture settings.
+- `python/sglang/benchmark/remnant/calibrate.py` — legacy/shared snapshot reader,
+  exact conversion, dependency hashes, per-issue bundles and bounded extraction.
+- `test/registered/attention/unittests/dsv4/test_remnant_calibration.py` — schema
+  round trips, partial/duplicate selections, audit/hash failures, publication and
+  disabled/non-owner copy contracts.
+
+The capture hooks are opt-in and inactive during normal serving. The recorded
+pin includes their source; it does not establish live GPU validation. This
+publication passed 65 focused CPU checks with 36 CUDA-dependent cases skipped;
+no GPU, model-load, or image-build run was performed for this push.
+
+- `python/sglang/benchmark/remnant/quantization.py` — independent FP64 normalization and FP32-to-BF16/FP8 quantization-cell validity; exact scale/value interval checks.
+- `python/sglang/srt/remnant/triton/fused_store.py` — explicit pairwise FMA operand order matches unchanged Triton packing at nonuniform-FP32-weight quantization boundaries.
+- `test/registered/attention/unittests/dsv4/test_remnant_fused_store.py` — regression coverage for the three production-sized cases exposing FMA-order byte differences.
+
 ### Independent Packed store override
 
-- `python/sglang/srt/server_args.py`, `runtime_context.py`, and `remnant/config.py` — optional store override, defaults, validation and worker publication.
+- `python/sglang/srt/server_args.py` and `python/sglang/srt/remnant/config.py` — optional store override, defaults and validation.
+- `python/sglang/srt/runtime_context.py` — resolved cache/store-mode publication in spawned workers.
 - `python/sglang/srt/remnant/__init__.py` — resolved store accessor.
 - `python/sglang/srt/layers/attention/dsv4/compressor_v2.py` — storage dispatch independent of decode.
 - `test/registered/unit/test_dsv4_c4_cache_format.py` — all four combinations in spawned workers and reset/validation contracts.
