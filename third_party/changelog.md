@@ -52,10 +52,20 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 - Upstream base: `sgl-project/sglang`
 - Base commit: `71de97b264b04dcd514cf904003028aefe9775c8` (`v0.5.18`)
 - Remnant branch: `remnant/v0.5.18`
-- Current branch head: `1b41d2679fa5b276341973190a94d588f4695b62`
-- Comparison: `71de97b264b04dcd514cf904003028aefe9775c8..1b41d2679fa5b276341973190a94d588f4695b62`
+- Current branch head: `6a728bf95c08e4e4bb984509c1ce25ba822b7914`
+- Comparison: `71de97b264b04dcd514cf904003028aefe9775c8..6a728bf95c08e4e4bb984509c1ce25ba822b7914`
 
 ### Runtime and build integration
+
+Per-layer Packed Triton extension (GPU qualification pending): startup count
+and model-layer overrides resolve to immutable layouts. Values allocate at the
+configured width, and local-stage pool accounting sums C4 record sizes. Triton
+store/gather/Native materialization derive geometry from their layer buffers.
+Non-256 counts require Triton throughout and reject HiCache; optimized ABIs
+remain at 256. Parent `scripts/local/run-server.sh` and `serve.sh` forward the
+options and preflight the mounted model/source before replacing a server.
+The existing parent `scripts/modal/kernels.py` sanitizer selection includes
+all-count packing and mixed-layer graph replay; no remote run is implied.
 
 - `python/sglang/srt/observability/req_time_stats.py` — expose the existing tokenizer first-output timestamp in request metadata for TTFT attribution through the stock JSON exporter.
 - `test/registered/unit/observability/test_req_time_stats.py` — first-output metadata, single-token completion, unset timestamps, and cross-process clock rebasing checks.
@@ -63,12 +73,12 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 - `python/sglang/srt/managers/scheduler.py` — step/rank metadata nested inside the existing scheduler span.
 - `python/sglang/srt/model_executor/runner/decode_cuda_graph_runner.py` — exact padded-batch annotation around the graph replay launch.
 - `python/sglang/srt/server_args.py` — cache-format and Triton/Kernel implementation flags.
-- `python/sglang/srt/mem_cache/deepseek_v4_memory_pool.py` — packed pool.
+- `python/sglang/srt/mem_cache/deepseek_v4_memory_pool.py` — per-layer Packed allocation, geometry and model-to-C4 mapping.
 - `python/sglang/srt/layers/attention/deepseek_v4_backend.py` — decode dispatch.
 - `python/sglang/srt/layers/attention/dsv4/compressor_v2.py` — packed writes.
 - `python/sglang/srt/models/deepseek_v4.py` — opt-in capture of the attention output after inverse RoPE.
 - `python/sglang/srt/layers/attention/dsv4/indexer.py` — raw-index plumbing.
-- `python/sglang/srt/model_executor/pool_configurator.py` — packed capacity accounting.
+- `python/sglang/srt/model_executor/pool_configurator.py` — stage-local sum of Packed C4 record sizes.
 - `python/sglang/srt/mem_cache/hybrid_cache/hybrid_pool_assembler.py` — Packed L2 HiCache routing and unsupported-layout checks.
 - `python/sglang/srt/mem_cache/memory_pool_host.py` — coordinated host transfers for Packed values, bitmaps and scales.
 - `python/sglang/srt/remnant/__init__.py` — internal package exports.

@@ -67,6 +67,8 @@ BENCHMARK_TESTS = ("benchmark/remnant/test_microbench.py", TEST_MODULES["fused_s
 SANITIZER_TESTS = (
     TEST_MODULES["unpack_kernel"] + "::test_triton_native_pages_match_independent_reference",
     TEST_MODULES["cuda_graph"] + "::TestRemnantCudaGraph::test_store_and_native_reconstruction_replays_changed_inputs",
+    TEST_MODULES["pack_kernel"] + "::test_remnant_triton_pack_matches_reference",
+    TEST_MODULES["cuda_graph"] + "::TestRemnantCudaGraph::test_consecutive_mixed_layers_replay_with_stable_buffers",
 )
 NCU_SECTIONS = [
     "SpeedOfLight",
