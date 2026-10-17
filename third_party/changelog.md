@@ -37,7 +37,7 @@ parent repository so it is visible without opening either fork.
 
 - `tests/lib.py` — shared upstream test generators plus the 328-byte Packed fixtures.
 - `tests/test_flash_mla_remnant_decoding.py` — direct-vs-Native and independent-reference validity tests.
-- `benchmark/remnant/microbench.py` (SGLang fork) — production-facing Native/Adapter/Direct decode microbenchmark.
+- `benchmark/remnant/microbench.py` (SGLang fork) — production-function Native/Packed Triton/Packed Kernel decode and store microbenchmark (protocol remnant-three-modes-v1).
 
 The former `tests/remnant_fixture.py` was removed after its consumers migrated
 to `tests/lib.py`; the separate FlashMLA `benchmark/bench_remnant_decode.py`
@@ -57,6 +57,11 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 
 ### Runtime and build integration
 
+- `python/sglang/srt/observability/req_time_stats.py` — expose the existing tokenizer first-output timestamp in request metadata for TTFT attribution through the stock JSON exporter.
+- `test/registered/unit/observability/test_req_time_stats.py` — first-output metadata, single-token completion, unset timestamps, and cross-process clock rebasing checks.
+- `python/sglang/srt/utils/nvtx_utils.py` — gated CPU-only scheduler batch metadata and graph-replay annotations using built-in `torch.cuda.nvtx`, with a startup probe and no external NVTX package.
+- `python/sglang/srt/managers/scheduler.py` — step/rank metadata nested inside the existing scheduler span.
+- `python/sglang/srt/model_executor/runner/decode_cuda_graph_runner.py` — exact padded-batch annotation around the graph replay launch.
 - `python/sglang/srt/server_args.py` — cache-format and Triton/Kernel implementation flags.
 - `python/sglang/srt/mem_cache/deepseek_v4_memory_pool.py` — packed pool.
 - `python/sglang/srt/layers/attention/deepseek_v4_backend.py` — decode dispatch.
@@ -77,6 +82,7 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 
 ### SGLang validation and benchmarks
 
+- `test/registered/unit/utils/test_nvtx_utils.py` — CPU annotation contracts, disabled-path behavior and exception cleanup.
 - `test/registered/unit/test_dsv4_c4_cache_format.py` — startup argument validation.
 - `test/registered/attention/unittests/dsv4/test_remnant_pool.py` — pool layout/capacity.
 - `test/registered/attention/unittests/dsv4/test_remnant_pack.py` — pack correctness.
@@ -86,7 +92,8 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 - `test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py` — graph replay.
 - `test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py` — direct FlashMLA parity.
 - `python/sglang/test/kernels/deepseek_v4/test_remnant_pack_kernel.py` — pack kernel checks.
-- `python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py` — unpack kernel checks.
+- `python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py` — unpack correctness, compilation reuse, and exact historical Packed parity.
+- `python/sglang/test/kernels/deepseek_v4/fixtures/main_packed/` — immutable historical Packed source, hashes, and parity contract; test-only, never used by production.
 - `benchmark/remnant/README.md` — benchmark documentation.
 - `benchmark/remnant/microbench.py` — explicit Native/Adapter/Direct decode matrix with JSON/CSV output.
 
@@ -106,3 +113,41 @@ git -C third_party/sglang diff --name-status \
 
 If either fork receives new Remnant commits, update the branch head and the
 corresponding lists here in the same parent-repository change.
+
+### Three-mode measurement ownership
+
+- `benchmark/remnant/microbench.py` — independent references, mode-owned decode/store execution, graph timing and warmed eager capture.
+- `benchmark/remnant/test_microbench.py` — CLI/schema/matrix contracts and H100 numerical/graph coverage.
+- `benchmark/remnant/README.md` — new baseline/protocol and maintained commands.
+- `python/sglang/benchmark/remnant/cases.py` — shared production store/decode matrix, deterministic seeds, statistics, result serialization, timing coverage checks and Nsight Compute export validation. Modal uses this contract rather than duplicating it.
+- `test/registered/attention/unittests/dsv4/test_remnant_fused_store.py` — consumes the shared production store case definitions.
+
+Historical Adapter/Direct benchmarking and its Native gate are preserved in the
+parent experiment archive; this rewrite changes no production runtime dispatch.
+
+### Opt-in capture storage (working-tree implementation)
+
+- `python/sglang/srt/remnant/capture.py` — schema-2 owner-only shared copies,
+  audited TP payloads and per-layer constants; inactive without capture settings.
+- `python/sglang/benchmark/remnant/calibrate.py` — legacy/shared snapshot reader,
+  exact conversion, dependency hashes, per-issue bundles and bounded extraction.
+- `test/registered/attention/unittests/dsv4/test_remnant_calibration.py` — schema
+  round trips, partial/duplicate selections, audit/hash failures, publication and
+  disabled/non-owner copy contracts.
+
+No FlashMLA changes or normal Native/Triton/Kernel configuration changes belong
+to this milestone. GPU audit and capture-only image execution remain separate
+approval/validation gates; these working-tree files are not promoted pins.
+
+- `python/sglang/benchmark/remnant/quantization.py` — independent FP64 normalization and FP32-to-BF16/FP8 quantization-cell validity; exact scale/value interval checks.
+- `python/sglang/srt/remnant/triton/fused_store.py` — explicit pairwise FMA operand order matches unchanged Triton packing at nonuniform-FP32-weight quantization boundaries.
+- `test/registered/attention/unittests/dsv4/test_remnant_fused_store.py` — regression coverage for the three production-sized cases exposing FMA-order byte differences.
+
+### Independent Packed store override
+
+- `python/sglang/srt/server_args.py`, `runtime_context.py`, and `remnant/config.py` — optional store override, defaults, validation and worker publication.
+- `python/sglang/srt/remnant/__init__.py` — resolved store accessor.
+- `python/sglang/srt/layers/attention/dsv4/compressor_v2.py` — storage dispatch independent of decode.
+- `test/registered/unit/test_dsv4_c4_cache_format.py` — all four combinations in spawned workers and reset/validation contracts.
+
+Decode and numerical kernels are unchanged.
