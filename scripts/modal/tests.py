@@ -259,12 +259,18 @@ class LauncherTests(unittest.TestCase):
             directory.mkdir(parents=True)
         (aot / "python/sgl_kernel/flash_mla.py").write_text("# fork binding")
         native, manifest = self.root / "native.so", self.root / "manifest.json"
+        cuda_home = self.root / "cuda"
+        stub = cuda_home / "lib64/stubs/libcuda.so"
+        stub.parent.mkdir(parents=True)
+        stub.write_bytes(b"CPU-only driver stub")
         calls = []
 
-        def command(argv, output, deadline):
+        def command(argv, output, deadline, *, environment=None):
             calls.append(argv)
             if argv == ["ncu", "--list-sections"]:
                 return " ".join(kernels.NCU_SECTIONS)
+            if "--query-metrics-mode" in argv:
+                return kernels.PREFILL_METRICS
             if argv[:2] == ["cmake", "--build"]:
                 for target in ("remnant_ops", "flashmla_ops"):
                     binary = self.root / "build/cmake" / (target + ".so")
@@ -272,7 +278,14 @@ class LauncherTests(unittest.TestCase):
                     binary.write_bytes(target.encode())
             if "--check-imports" in argv:
                 self.assertTrue(native.is_file())
-                self.assertEqual((package / "flash_mla.py").read_text(), "# fork binding")
+                self.assertEqual(
+                    (package / "flash_mla.py").read_text(), "# fork binding"
+                )
+                self.assertTrue(
+                    Path(
+                        environment["LD_LIBRARY_PATH"].split(":")[0], "libcuda.so.1"
+                    ).samefile(stub)
+                )
             return "test toolchain"
 
         def native_factory(*args):
@@ -286,8 +299,12 @@ class LauncherTests(unittest.TestCase):
                 version=SimpleNamespace(cuda="13.0"),
                 utils=SimpleNamespace(cmake_prefix_path="/torch"),
             ),
-            "sglang.kernels.jit.utils": SimpleNamespace(override_jit_cuda_arch=lambda *a: nullcontext()),
-            "sglang.kernels.jit.utils.compile.cache": SimpleNamespace(find_prebuilt=lambda **kw: library),
+            "sglang.kernels.jit.utils": SimpleNamespace(
+                override_jit_cuda_arch=lambda *a: nullcontext()
+            ),
+            "sglang.kernels.jit.utils.compile.cache": SimpleNamespace(
+                find_prebuilt=lambda **kw: library
+            ),
             "sglang.kernels.ops.attention.dsv4.compress": SimpleNamespace(
                 _jit_compress_norm_rope_module=native_factory
             ),
@@ -299,15 +316,30 @@ class LauncherTests(unittest.TestCase):
             patch.object(kernels, "MANIFEST", manifest),
             patch.object(kernels, "NATIVE_LIBRARY", native),
             patch.object(kernels, "BUILD_ROOT", self.root / "build"),
-            patch.object(kernels.sysconfig, "get_paths", return_value={"purelib": str(package.parent)}),
-            patch.dict(kernels.os.environ, {"SGLANG_JIT_CACHE_DIR": str(cache)}),
+            patch.object(
+                kernels.sysconfig,
+                "get_paths",
+                return_value={"purelib": str(package.parent)},
+            ),
+            patch.dict(
+                kernels.os.environ,
+                {"SGLANG_JIT_CACHE_DIR": str(cache), "CUDA_HOME": str(cuda_home)},
+            ),
             patch.object(kernels, "_run_command", side_effect=command),
             patch.object(kernels, "_run_pytest") as tests,
         ):
             kernels._build_image()
-        self.assertIn("-DSGL_KERNEL_ENABLE_FLASHMLA_SM100=OFF", calls[0])
-        self.assertIn("-DENABLE_BELOW_SM90=OFF", calls[0])
+        configure = next(c for c in calls if c[:2] == ["cmake", "-S"])
+        self.assertIn("-DSGL_KERNEL_ENABLE_FLASHMLA_SM100=OFF", configure)
+        self.assertIn("-DENABLE_BELOW_SM90=OFF", configure)
+        self.assertEqual(calls[0][:2], [sys.executable, "-c"])
         self.assertEqual(tests.call_count, 3)
+        self.assertTrue(
+            all(
+                "cpu-driver-stubs" in c.kwargs["environment"]["LD_LIBRARY_PATH"]
+                for c in tests.call_args_list
+            )
+        )
         receipt = json.loads(manifest.read_text())
         self.assertEqual(receipt["arch"], "sm_90a")
         self.assertEqual(len(receipt["binaries"]), 3)
@@ -315,13 +347,22 @@ class LauncherTests(unittest.TestCase):
     def test_cpu_and_sanitizer_selection_use_names_not_list_positions(self):
         self.assertEqual(
             kernels.CPU_TESTS,
-            tuple(kernels.TEST_MODULES[n] for n in ("cache_format", "pack", "backend", "compressor_store")),
+            tuple(
+                kernels.TEST_MODULES[n]
+                for n in ("cache_format", "pack", "backend", "compressor_store")
+            ),
         )
         expected = {
-            kernels.TEST_MODULES["unpack_kernel"] + "::test_triton_native_pages_match_independent_reference",
-            kernels.TEST_MODULES["cuda_graph"] + "::TestRemnantCudaGraph::test_store_and_native_reconstruction_replays_changed_inputs",
-            kernels.TEST_MODULES["pack_kernel"] + "::test_remnant_triton_pack_matches_reference",
-            kernels.TEST_MODULES["cuda_graph"] + "::TestRemnantCudaGraph::test_consecutive_mixed_layers_replay_with_stable_buffers",
+            kernels.TEST_MODULES["unpack_kernel"]
+            + "::test_triton_native_pages_match_independent_reference",
+            kernels.TEST_MODULES["cuda_graph"]
+            + "::TestRemnantCudaGraph::test_store_and_native_reconstruction_replays_changed_inputs",
+            kernels.TEST_MODULES["pack_kernel"]
+            + "::test_remnant_triton_pack_matches_reference",
+            kernels.TEST_MODULES["cuda_graph"]
+            + "::TestRemnantCudaGraph::test_consecutive_mixed_layers_replay_with_stable_buffers",
+            kernels.TEST_MODULES["cuda_graph"]
+            + "::TestRemnantCudaGraph::test_fused_read_replays_changed_planes_indices_lengths_and_frequencies",
         }
         self.assertEqual(set(kernels.SANITIZER_TESTS), expected)
         self.assertEqual(len(kernels.SANITIZER_TESTS), len(expected))
@@ -330,7 +371,9 @@ class LauncherTests(unittest.TestCase):
             path, *names = selector.split("::")
             node = ast.parse((kernels.SGLANG_SOURCE / path).read_text())
             for name in names:
-                matches = [child for child in node.body if getattr(child, "name", None) == name]
+                matches = [
+                    child for child in node.body if getattr(child, "name", None) == name
+                ]
                 self.assertEqual(len(matches), 1, selector)
                 node = matches[0]
 
@@ -769,6 +812,388 @@ if kind == 'duplicate' and measured:
                 result = self.run_client()
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(self.records("bench"), [])
+
+
+class SurvivorBudgetLauncherTests(unittest.TestCase):
+    """Survivor budgets reach the existing runner without substituting modes."""
+
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix="remnant-survivors-")
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+
+    def test_invalid_budgets_and_kernel_combinations_fail_before_run_context(self):
+        for function in (kernels.benchmark_kernels, kernels.profile_kernels):
+            for count, modes in ((0, ""), (63, ""), (512, ""), (192, "kernel")):
+                with (
+                    self.subTest(function=function, count=count, modes=modes),
+                    patch.object(kernels, "_run_context") as allocation,
+                ):
+                    with self.assertRaises(ValueError):
+                        function.local("invalid", keep_count=count, modes=modes)
+                    allocation.assert_not_called()
+
+    def test_timing_passes_budget_modes_and_validates_the_requested_contract(self):
+        contract = kernels._benchmark_cases()
+        record = {}
+        payload = {"fixture": "canonical timing output"}
+        (self.root / "timing.json").write_text(json.dumps(payload))
+        with (
+            patch.object(kernels, "_benchmark_cases", return_value=contract),
+            patch.object(kernels, "_run_context", return_value=nullcontext((self.root, record, float("inf")))),
+            patch.object(kernels, "_run_pytest") as validity,
+            patch.object(kernels, "_run_command") as command,
+            patch.object(contract, "validate_timing") as check,
+        ):
+            self.assertEqual(kernels.benchmark_kernels.local("count192", keep_count=192), str(self.root))
+        argv = command.call_args.args[0]
+        self.assertEqual(argv[argv.index("--keep-count") + 1], "192")
+        self.assertEqual(argv[argv.index("--modes") + 1], "native,triton")
+        self.assertEqual(record["keep_count"], 192)
+        self.assertEqual(record["modes"], ("native", "triton"))
+        validity.assert_called_once()
+        check.assert_called_once_with(payload, keep_count=192, modes="native,triton")
+
+    def test_profiles_cover_only_supported_requested_modes_and_match_inputs(self):
+        contract = kernels._benchmark_cases()
+        record = {}
+        calls = []
+
+        def profile_command(argv, output, deadline):
+            calls.append(argv)
+            if "--export" in argv:
+                base = Path(argv[argv.index("--export") + 1])
+                base.with_suffix(".ncu-rep").write_bytes(b"nonempty profile")
+                base.with_suffix(".json").write_text(
+                    json.dumps(
+                        {
+                            "status": "passed",
+                            "config": {"keep_count": 192},
+                            "cases": [
+                                {
+                                    "name": "h64_b8_k512",
+                                    "valid": True,
+                                    "mode": argv[argv.index("--profile-mode") + 1],
+                                    "common_inputs_sha256": "identical raw inputs",
+                                    "expected_kernels": ["splitkv", "combine"],
+                                }
+                            ],
+                        }
+                    )
+                )
+            return "exported metrics"
+
+        with (
+            patch.object(kernels, "_benchmark_cases", return_value=contract),
+            patch.object(
+                kernels,
+                "_run_context",
+                return_value=nullcontext((self.root, record, float("inf"))),
+            ),
+            patch.object(kernels, "_run_command", side_effect=profile_command),
+            patch.object(contract, "profile_summary", return_value={}) as metrics,
+            patch.object(kernels.results_volume, "commit"),
+        ):
+            result = kernels.profile_kernels.local(
+                "count192", cases="h64_b8_k512", keep_count=192
+            )
+        self.assertEqual(result, str(self.root))
+        captures = [argv for argv in calls if "--export" in argv]
+        self.assertEqual(len(captures), 2)
+        self.assertEqual({r["mode"] for r in record["runs"]}, {"native", "triton"})
+        self.assertEqual(metrics.call_count, 2)
+        for argv in captures:
+            self.assertEqual(argv[argv.index("--keep-count") + 1], "192")
+            self.assertEqual(argv[argv.index("--modes") + 1], "native,triton")
+        self.assertTrue((self.root / "result.json").is_file())
+
+    def test_profile_rejects_another_survivor_budget_or_implementation(self):
+        contract = kernels._benchmark_cases()
+        base = self.root / "decode-h64_b8_k512-native"
+        base.with_suffix(".ncu-rep").write_bytes(b"nonempty profile")
+        for count, mode in ((256, "native"), (192, "triton")):
+            base.with_suffix(".json").write_text(json.dumps({
+                "status": "passed", "config": {"keep_count": count},
+                "cases": [{"valid": True, "mode": mode}],
+            }))
+            with (
+                self.subTest(count=count, mode=mode),
+                patch.object(kernels, "_benchmark_cases", return_value=contract),
+                patch.object(kernels, "_run_context", return_value=nullcontext((self.root, {}, float("inf")))),
+                patch.object(kernels, "_run_command"),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "Invalid capture"):
+                    kernels.profile_kernels.local("count192", cases="h64_b8_k512", keep_count=192)
+
+
+class PrefillReadLauncherTests(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix="remnant-prefill-")
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+
+    def test_cpu_driver_stub_is_scoped_to_child_import_environment(self):
+        cuda_home = self.root / "cuda"
+        stub = cuda_home / "targets/x86_64-linux/lib/stubs/libcuda.so"
+        stub.parent.mkdir(parents=True)
+        stub.write_bytes(b"driver stub")
+        with patch.dict(
+            os.environ, {"CUDA_HOME": str(cuda_home), "LD_LIBRARY_PATH": "/real-driver"}
+        ):
+            environment = kernels._cpu_preflight_environment(self.root)
+            self.assertEqual(os.environ["LD_LIBRARY_PATH"], "/real-driver")
+            directory, original = environment["LD_LIBRARY_PATH"].split(":")
+            self.assertEqual(original, "/real-driver")
+            self.assertTrue(Path(directory, "libcuda.so.1").samefile(stub))
+            with patch.object(kernels.subprocess, "run") as process:
+                deadline = kernels.time.monotonic() + 30
+                kernels._run_command(
+                    ["cpu-check"],
+                    self.root / "cpu.log",
+                    deadline,
+                    environment=environment,
+                )
+                self.assertEqual(
+                    process.call_args.kwargs["env"]["LD_LIBRARY_PATH"],
+                    environment["LD_LIBRARY_PATH"],
+                )
+                kernels._run_command(["gpu-check"], self.root / "gpu.log", deadline)
+                self.assertEqual(
+                    process.call_args.kwargs["env"]["LD_LIBRARY_PATH"], "/real-driver"
+                )
+
+    def test_worker_pythonpath_excludes_serialized_launcher_shadow(self):
+        shadow = self.root / "modal-bootstrap"
+        shadow.mkdir()
+        (shadow / "kernels.py").write_text(
+            "raise RuntimeError('serialized launcher was imported')\n"
+        )
+        source = self.root / "python"
+        source.mkdir()
+        (source / "kernels.py").write_text("IDENTITY = 'intended dependency'\n")
+        with (
+            patch.dict(os.environ, {"PYTHONPATH": str(shadow)}),
+            patch.object(kernels, "SGLANG_ROOT", self.root),
+        ):
+            result = kernels._run_command(
+                [sys.executable, "-c", "import kernels; print(kernels.IDENTITY)"],
+                self.root / "imports.log",
+                kernels.time.monotonic() + 30,
+            )
+            self.assertEqual(result.strip(), "intended dependency")
+            self.assertEqual(os.environ["PYTHONPATH"], str(shadow))
+
+    def test_missing_cpu_driver_stub_fails_before_import(self):
+        with patch.dict(os.environ, {"CUDA_HOME": str(self.root / "missing")}):
+            with self.assertRaisesRegex(RuntimeError, "requires CUDA's libcuda stub"):
+                kernels._cpu_preflight_environment(self.root)
+
+    def test_prefill_timing_uses_fixed_variants_and_coverage_judge(self):
+        contract = kernels._benchmark_cases()
+        payload = {"prefill": "fixture"}
+        (self.root / "timing.json").write_text(json.dumps(payload))
+        with (
+            patch.object(kernels, "_benchmark_cases", return_value=contract),
+            patch.object(
+                kernels,
+                "_run_context",
+                return_value=nullcontext((self.root, {}, float("inf"))),
+            ),
+            patch.object(kernels, "_run_pytest"),
+            patch.object(kernels, "_run_command") as command,
+            patch.object(contract, "validate_timing") as validate,
+        ):
+            kernels.benchmark_kernels.local("prefill", suite="prefill-read")
+        argv = command.call_args.args[0]
+        self.assertEqual(argv[argv.index("--suite") + 1], "prefill-read")
+        self.assertNotIn("--modes", argv)
+        self.assertNotIn("--keep-count", argv)
+        validate.assert_called_once_with(payload, suite="prefill-read")
+
+    def test_prefill_invalid_options_fail_before_context(self):
+        for function in (kernels.benchmark_kernels, kernels.profile_kernels):
+            with patch.object(kernels, "_run_context") as allocation:
+                with self.assertRaises(ValueError):
+                    function.local("prefill", suite="prefill-read", keep_count=192)
+                allocation.assert_not_called()
+
+    def test_fused_prefill_timing_is_forwarded_and_validated_explicitly(self):
+        contract = kernels._benchmark_cases()
+        payload = {"candidate": "fused"}
+        (self.root / "timing.json").write_text(json.dumps(payload))
+        record = {}
+        with (
+            patch.object(kernels, "_benchmark_cases", return_value=contract),
+            patch.object(
+                kernels,
+                "_run_context",
+                return_value=nullcontext((self.root, record, float("inf"))),
+            ),
+            patch.object(kernels, "_run_pytest"),
+            patch.object(kernels, "_run_command") as command,
+            patch.object(contract, "validate_timing") as validate,
+        ):
+            kernels.benchmark_kernels.local(
+                "fused-reader", suite="prefill-read", prefill_reader="fused"
+            )
+        argv = command.call_args.args[0]
+        self.assertEqual(argv[argv.index("--prefill-reader") + 1], "fused")
+        self.assertEqual(record["prefill_reader"], "fused")
+        validate.assert_called_once_with(
+            payload, suite="prefill-read", prefill_reader="fused"
+        )
+        for function in (kernels.benchmark_kernels, kernels.profile_kernels):
+            for suite, reader in (("all", "fused"), ("prefill-read", "typo")):
+                with patch.object(kernels, "_run_context") as context:
+                    with self.assertRaisesRegex(ValueError, "prefill_reader"):
+                        function.local("bad", suite=suite, prefill_reader=reader)
+                    context.assert_not_called()
+
+    def test_fused_prefill_profile_rejects_a_split_capture(self):
+        contract = kernels._benchmark_cases()
+        case = contract.prefill_read_cases()[0].name
+        base = self.root / "prefill-read-native"
+        base.with_suffix(".ncu-rep").write_bytes(b"report")
+        base.with_suffix(".json").write_text(
+            json.dumps(
+                {
+                    "status": "passed",
+                    "protocol": contract.PREFILL_PROTOCOL,
+                    "config": {"keep_count": 256, "prefill_reader": "split"},
+                    "cases": [
+                        {
+                            "valid": True,
+                            "name": case,
+                            "capture_range": f"remnant_{case}_native",
+                            "path": "native",
+                            "mode": "native",
+                            "keep_count": 256,
+                            "path_layouts": contract.prefill_path_layouts(),
+                            "prefill_reader": "split",
+                        }
+                    ],
+                }
+            )
+        )
+        with (
+            patch.object(kernels, "_benchmark_cases", return_value=contract),
+            patch.object(
+                kernels,
+                "_run_context",
+                return_value=nullcontext((self.root, {}, float("inf"))),
+            ),
+            patch.object(kernels, "_run_command") as command,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "Prefill capture"):
+                kernels.profile_kernels.local(
+                    "fused-reader",
+                    cases=case,
+                    suite="prefill-read",
+                    prefill_reader="fused",
+                )
+        argv = command.call_args.args[0]
+        self.assertEqual(argv[argv.index("--prefill-reader") + 1], "fused")
+
+    def test_prefill_profile_application_replay_and_three_variant_coverage(self):
+        for reader in ("split", "fused"):
+            with self.subTest(prefill_reader=reader):
+                self._check_prefill_profile_coverage(reader)
+
+    def _check_prefill_profile_coverage(self, reader):
+        contract = kernels._benchmark_cases()
+        record = {}
+        captures = []
+        names = [
+            c.name for c in contract.prefill_read_cases(heads=(64,), queries=(512,))[:2]
+        ]
+        case = ",".join(names)
+        exports = []
+
+        def run(argv, output, deadline):
+            if "--export" in argv:
+                captures.append(argv)
+                base = Path(argv[argv.index("--export") + 1])
+                base.with_suffix(".ncu-rep").write_bytes(b"nonempty")
+                path = argv[argv.index("--profile-path") + 1]
+                base.with_suffix(".json").write_text(
+                    json.dumps(
+                        {
+                            "status": "passed",
+                            "protocol": contract.PREFILL_PROTOCOL,
+                            "config": {"keep_count": 256, "prefill_reader": reader},
+                            "cases": [
+                                {
+                                    "name": case_name,
+                                    "capture_range": f"remnant_{case_name}_{path}",
+                                    "valid": True,
+                                    "prefill_reader": reader,
+                                    "path": path,
+                                    "mode": contract.prefill_path_layouts()[path][
+                                        "implementation"
+                                    ],
+                                    "keep_count": contract.prefill_path_layouts()[path][
+                                        "packed_keep_count"
+                                    ]
+                                    or 256,
+                                    "path_layouts": contract.prefill_path_layouts(),
+                                    "common_inputs_sha256": "same-" + case_name,
+                                    "expected_kernels": ["dequantize"],
+                                    "minimum_launches": {"dequantize": 1},
+                                }
+                                for case_name in argv[argv.index("--case") + 1].split(
+                                    ","
+                                )
+                            ],
+                        }
+                    )
+                )
+            else:
+                exports.append(argv)
+            return "traffic"
+
+        with (
+            patch.object(kernels, "_benchmark_cases", return_value=contract),
+            patch.object(
+                kernels,
+                "_run_context",
+                return_value=nullcontext((self.root, record, float("inf"))),
+            ),
+            patch.object(kernels, "_run_command", side_effect=run),
+            patch.object(
+                contract, "profile_summary", return_value={"kernels": ["dequantize"]}
+            ) as summary,
+            patch.object(kernels.results_volume, "commit"),
+        ):
+            kernels.profile_kernels.local(
+                "prefill", suite="prefill-read", cases=case, prefill_reader=reader
+            )
+        # The saved candidate runner batches operations per variant, retaining
+        # every one of the two cases x three variants with separate exports.
+        self.assertEqual(len(captures), 3)
+        self.assertEqual(len(exports), 6)
+        self.assertEqual(len(record["runs"]), 6)
+        for argv in exports:
+            self.assertEqual(argv[argv.index("--print-units") + 1], "base")
+            self.assertEqual(argv[argv.index("--rename-kernels") + 1], "off")
+            self.assertTrue(argv[argv.index("--nvtx-include") + 1].endswith("/"))
+        self.assertEqual(
+            {r["mode"] for r in record["runs"]}, set(contract.PREFILL_VARIANTS)
+        )
+        for argv in captures:
+            self.assertEqual(argv[argv.index("--replay-mode") + 1], "application")
+            self.assertIn("--profile-replay-id", argv)
+            self.assertEqual(argv[argv.index("--case") + 1], case)
+            self.assertIn("--nvtx", argv)
+            if reader == "fused":
+                self.assertEqual(argv[argv.index("--prefill-reader") + 1], reader)
+            self.assertEqual(argv[argv.index("--metrics") + 1], kernels.PREFILL_METRICS)
+            self.assertNotIn("--section", argv)
+        self.assertTrue(all(c.kwargs["traffic_only"] for c in summary.call_args_list))
+        self.assertEqual(
+            {(r["case"], r["mode"]) for r in record["runs"]},
+            {(name, mode) for name in names for mode in contract.PREFILL_VARIANTS},
+        )
+
 
 
 if __name__ == "__main__":

@@ -1,0 +1,169 @@
+{
+  "status": "passed",
+  "protocol": "remnant-prefill-read-v1",
+  "schema_version": 2,
+  "question": "Compare Native, Packed192 and Packed256 production prefill-read on identical inputs",
+  "run_id": "prefill-read-20261018-113435-r6",
+  "timing_app": "ap-R7uIdraEfZwsvt30aAvgRU",
+  "profile_app": "ap-UUUtmnjrqM296Vl3oCJLtN",
+  "profile": "poohthewinniechurchill",
+  "model_load": false,
+  "automatic_retries": 0,
+  "gpu": "H100/SM90",
+  "seed": 20260919,
+  "matrix_sha256": "a06c6d39ed4fa7a26fdb78033a7cada472721a34a759b05ad1e25ae2e63821e9",
+  "environment": {
+    "device": "NVIDIA H100 80GB HBM3",
+    "capability": [
+      9,
+      0
+    ],
+    "python": "3.12.3 (main, Jun 19 2026, 12:46:00) [GCC 13.3.0]",
+    "torch": "2.13.0+cu130",
+    "cuda": "13.0",
+    "triton": "3.7.1",
+    "tvm_ffi": "0.1.11"
+  },
+  "source_heads_at_launch": {
+    ".": "ee0f13c5afa201854120af77932a8f0a77ec1865",
+    "third_party/sglang": "0098b4277fbd1d9be6a6761683014869e13fba06",
+    "third_party/flashmla": "57e95603ff504f8f626505d82b07c55d606b947b"
+  },
+  "submitted_sources": {
+    "scripts/modal/kernels.py": "ddee3cc86b079b36b8d2abe8473fc27bb12801768c498b19a430efb5bef28fd5",
+    "scripts/modal/tests.py": "caf5222b540cbefd005557b6a0e9878d2e63f60a03c63863f0c9e8c4ea266f6b",
+    "third_party/changelog.md": "452478a47a371a3b329dd5a0d33fcdfbe38a6c40693187199a185b2cfa4b1292",
+    "third_party/sglang/benchmark/remnant/README.md": "a4a56fa2d363202a62d61680846af16f725e9157840226cec2cdff642f10c8a1",
+    "third_party/sglang/benchmark/remnant/microbench.py": "0ea2b05ee5ce2566a30faa3d26df4325546280a5f1fd1599324305d8cb299eae",
+    "third_party/sglang/benchmark/remnant/test_microbench.py": "5c536c60cbc0dc038311ac77fbdbdbd086f518f7a67359ff726606370af67db3",
+    "third_party/sglang/python/sglang/benchmark/remnant/calibrate.py": "844155e9802ebca1be081d0153469e536a38bce5cf8d6146ac945f556b363c97",
+    "third_party/sglang/python/sglang/benchmark/remnant/cases.py": "4e392049a6437288d710630fc72ce324dc3067c54eebf0756c824fd6834cd10e"
+  },
+  "source_archive": {
+    "path": "raw/modal/prefill-read-20261018-113435/attempt-6/submitted-sources.tar.gz",
+    "sha256": "31053b3520bf2ac23693a697ebcf8444bfe29453fded42576253f46ebdb661fc",
+    "verified": true
+  },
+  "pinned_execution": {
+    "base_archive": "attempt-6/submitted-sources.tar.gz",
+    "base_archive_sha256": "31053b3520bf2ac23693a697ebcf8444bfe29453fded42576253f46ebdb661fc",
+    "base_launcher_sha256": "ddee3cc86b079b36b8d2abe8473fc27bb12801768c498b19a430efb5bef28fd5",
+    "overlay_launcher_sha256": "523120581ef6f32f6aa610aaf0de35bd94ef2aede6c6b4024069692a9624bb24",
+    "image": "im-TOIm82uTJPtRtXc17pxChK",
+    "function_ASTs_unchanged": true,
+    "function_count": 12,
+    "patch": "attempt-6/pinned-image.patch",
+    "user_authorization": "Continue from saved snapshot; preserve current workspace edits",
+    "local_tests_passed": 15,
+    "network_preflight": "Resolved after user-authorized retry; spend and zero competing allocations checked before launch",
+    "study_completed": true
+  },
+  "build": {
+    "sources": {
+      "sglang": "d3ef9e1ed0a410852322df378545ede4e198e25f45d532462522557b2a30a1cd",
+      "flashmla": "2a08ab536010993b8b4d67d8f3a205dd085c4bffda0182cd7d653b204325490b"
+    },
+    "torch": "2.13.0+cu130",
+    "cuda": "13.0",
+    "arch": "sm_90a",
+    "native_dtype": "float32",
+    "cpu_import_driver_stub_sha256": "67f959d1ab945005774464fcbf5a10722f97d0781b5800dd8636dc56747c2735",
+    "binaries": {
+      "/usr/local/lib/python3.12/dist-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so": "eba9f9d784866eb8204d8d68f9074d4fa9cd91d7253c3c9e0bfe5a33edeed9b1",
+      "/usr/local/lib/python3.12/dist-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so": "a9d024b9d49600d4ef1ccd5c8936da7bb4df2b4cf21e3ea2c86d1ce4296ffd5d",
+      "/opt/remnant-native-store.so": "134e2ab28e0d1e868734479b2a418b069d8051eff3dbcf2ef3796b048dab6e56"
+    },
+    "nvcc": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:58:59_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0\n",
+    "ncu": "NVIDIA (R) Nsight Compute Command Line Profiler\nCopyright (c) 2018-2025 NVIDIA Corporation\nVersion 2025.3.1.0 (build 36398880) (public-release)\n"
+  },
+  "budget": {
+    "authorized_cap_usd": 8,
+    "verified_spend_before_profile_usd": 2.719837769999998,
+    "compute_baseline_usd": 24.57410945,
+    "profile_pending_fresh_spend_check": false,
+    "fresh_reported_compute_spend_usd": 2.653820149999998,
+    "final_reported_compute_spend_usd": 3.904256529999998,
+    "final_reported_ephemeral_compute_usd": 28.47836598,
+    "all_study_allocations_stopped": true
+  },
+  "raw_timing_location": "raw/modal/prefill-read-20261018-113435/attempt-6/artifacts/timing",
+  "modal_volume": "remnant-stage2a-results",
+  "modal_timing_path": "microbench/prefill-read-20261018-113435-r6/timing",
+  "files": {
+    "timing.json": "de16fde9acee28361902cadcabf392f62ada72136ddaec4bd06b3b6272b078e3",
+    "traffic.json": "497b7a5f0b89cc6580ccfb3433e124abd63d6706e0e8a4ae590e09005e60a429",
+    "kernel-traffic.csv": "8d54f9e7913f952ea8c89d292c0287f674e46261232d69c0c117b9bb5cbca794",
+    "traffic.csv": "e1f60be5192d854243016ba4f2f10fdced7b4615a64a7cc2b9daae165892c0f6",
+    "README.md": "3397e564463e37443788ce782bd8278737b53e1d379f1976f6d75c1bd778b320",
+    "validation.json": "ff970adc9438c2fe24a779940110d88e74aed29686ae341da572c7038c48dbe9",
+    "timing.csv": "0a9ea55ad097c12ee12a01d5d75a4458a2bc629d50ab9bc0d6318f271eb970b6"
+  },
+  "profile_execution": {
+    "status": "passed and independently verified",
+    "user_authorization": "Continue from saved snapshot; retry Modal access approved",
+    "saved_snapshot": "attempt-6/submitted-sources.tar.gz",
+    "pinned_image": "im-TOIm82uTJPtRtXc17pxChK",
+    "source_overlay": "attempt-6/source/scripts/modal/kernels.py",
+    "overlay_patch": "attempt-6/pinned-image.patch",
+    "preflight_tests_passed": 15,
+    "local_draft_report": "benchmarks/microbench/prefill-read-20261018/README.md",
+    "previous_read_only_permission_timeouts": 2,
+    "spend_check_utc": "2026-10-18T13:42:56.293290+00:00",
+    "reported_compute_total_usd": 27.2279296,
+    "study_compute_spend_usd": 3.904256529999998,
+    "conservative_spend_usd": 2.71983777,
+    "no_competing_allocations_verified": true,
+    "run_id": "prefill-read-20261018-113435-r6",
+    "max_seconds": 3500,
+    "hard_timeout_seconds": 3600,
+    "maximum_hourly_compute_usd": 4.8404,
+    "maximum_cost_with_180s_startup_usd": 5.08242,
+    "command": [
+      "modal",
+      "run",
+      "--detach",
+      "raw/modal/prefill-read-20261018-113435/attempt-6/source/scripts/modal/kernels.py::profile_kernels",
+      "--run-id",
+      "prefill-read-20261018-113435-r6",
+      "--suite",
+      "prefill-read",
+      "--max-seconds",
+      "3500"
+    ],
+    "app": "ap-UUUtmnjrqM296Vl3oCJLtN",
+    "container": "ta-01M57M13W1D60DT2P2K5BMTQMR",
+    "cached_image_reused_no_CPU_build": true,
+    "allocation_cleanup": "App stopped, zero tasks verified",
+    "reported_compute_after_usd": 28.47836598,
+    "local_verification": "attempt-6/profile-verification.json",
+    "remote_integrity": "attempt-6/remote-artifact-verification.json",
+    "operations": 108,
+    "launches": 408,
+    "reports": 3
+  },
+  "profile_reports": {
+    "prefill-read-native.ncu-rep": {
+      "bytes": 12411882,
+      "sha256": "5a8b0c1b5ee4771444586a83c9f1771c8e9308bbf360f69b212e9053cf8e02fe"
+    },
+    "prefill-read-packed192.ncu-rep": {
+      "bytes": 13395612,
+      "sha256": "20628826b536e3758f2fdb6d535c3275c2d99678c6705993ea52ba4e3859a10d"
+    },
+    "prefill-read-packed256.ncu-rep": {
+      "bytes": 13394754,
+      "sha256": "54ae6fd8ed76958e3733aa957bcc6ecc25900f085cd4610bab284219834b1a0a"
+    }
+  },
+  "modal_profile_path": "microbench/prefill-read-20261018-113435-r6/profile",
+  "raw_profile_location": "raw/modal/prefill-read-20261018-113435/attempt-6/artifacts/profile",
+  "coverage": {
+    "timing_cases": 36,
+    "variant_operations": 108,
+    "raw_samples": 3240,
+    "profile_reports": 3,
+    "profile_launches": 408,
+    "metrics_per_launch": 6
+  },
+  "decision": "Keep verified measurements/benchmark; current Packed prefill reader is slower than Native; no runtime candidate promoted"
+}

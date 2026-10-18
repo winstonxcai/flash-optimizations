@@ -8,7 +8,12 @@ Author: Winston Cai.
 
 Defaults: ten validation modules (skips fail); Native/Triton/Kernel timing on eight
 decode + 25 store cases, 30 rounds; ten profile cases x three modes = 30 captures.
+--keep-count accepts 64..448 in steps of 64; non-256 defaults to Native/Triton.
+--modes selects supported implementations explicitly; Kernel remains 256-only.
 --cases chooses comma-separated fork cases. Profiles are not acceptance timing.
+--suite prefill-read compares Native/Packed192/Packed256 on identical fixtures,
+with separate reconstruction/attention/complete stages and warm/rotating caches.
+--prefill-reader fused selects the opt-in unpack/RoPE candidate for that suite.
 CPU build/preflight precedes H100; Modal caches source/binaries. Authorization required.
 Limits are caps, not ETAs; no weights/retries. Results: remnant-stage2a-results/microbench/<run-id>/<action>.
 Download: modal volume get remnant-stage2a-results microbench/<run-id> <local-dir>
@@ -65,10 +70,15 @@ VALIDATION_TESTS = tuple(TEST_MODULES.values())
 CPU_TESTS = tuple(TEST_MODULES[name] for name in ("cache_format", "pack", "backend", "compressor_store"))
 BENCHMARK_TESTS = ("benchmark/remnant/test_microbench.py", TEST_MODULES["fused_store"])
 SANITIZER_TESTS = (
-    TEST_MODULES["unpack_kernel"] + "::test_triton_native_pages_match_independent_reference",
-    TEST_MODULES["cuda_graph"] + "::TestRemnantCudaGraph::test_store_and_native_reconstruction_replays_changed_inputs",
+    TEST_MODULES["unpack_kernel"]
+    + "::test_triton_native_pages_match_independent_reference",
+    TEST_MODULES["cuda_graph"]
+    + "::TestRemnantCudaGraph::test_store_and_native_reconstruction_replays_changed_inputs",
     TEST_MODULES["pack_kernel"] + "::test_remnant_triton_pack_matches_reference",
-    TEST_MODULES["cuda_graph"] + "::TestRemnantCudaGraph::test_consecutive_mixed_layers_replay_with_stable_buffers",
+    TEST_MODULES["cuda_graph"]
+    + "::TestRemnantCudaGraph::test_consecutive_mixed_layers_replay_with_stable_buffers",
+    TEST_MODULES["cuda_graph"]
+    + "::TestRemnantCudaGraph::test_fused_read_replays_changed_planes_indices_lengths_and_frequencies",
 )
 NCU_SECTIONS = [
     "SpeedOfLight",
@@ -79,6 +89,10 @@ NCU_SECTIONS = [
     "SourceCounters",
     "InstructionStats",
 ]
+PREFILL_METRICS = (
+    "gpu__time_duration.sum,dram__bytes_read.sum,dram__bytes_write.sum,"
+    "lts__t_sectors_op_read.sum,lts__t_sectors_op_write.sum,lts__t_sector_hit_rate.pct"
+)
 
 
 # CPU image preparation; the recipe must be defined before Modal uses it.
@@ -107,6 +121,18 @@ def _build_image() -> None:
     deadline = time.monotonic() + CPU_BUILD_BUDGET_S
     build = BUILD_ROOT
     build.mkdir()
+    cpu_environment = _cpu_preflight_environment(build)
+    # Fail on a broken base-image driver linkage before paying for compilation.
+    _run_command(
+        [
+            sys.executable,
+            "-c",
+            "import sglang, sgl_kernel; print(sgl_kernel.common_ops.__file__)",
+        ],
+        build / "base-imports.log",
+        deadline,
+        environment=cpu_environment,
+    )
     aot = SGLANG_ROOT / "python/sglang/kernels/aot"
     # Content identity includes dirty submitted sources, not just Git commits.
     sources = {}
@@ -164,13 +190,46 @@ def _build_image() -> None:
     shutil.copy2(libraries.pop(), NATIVE_LIBRARY)
     binaries.append(NATIVE_LIBRARY)
     # 4. Preflight imports, coverage and profiler availability on CPU.
-    _run_command(_benchmark_command("--check-imports"), build / "imports.log", deadline)
-    _run_pytest(VALIDATION_TESTS, build, "collection", deadline, collect=True)
-    _run_pytest(CPU_TESTS, build, "cpu-tests", deadline)
-    _run_pytest(BENCHMARK_TESTS, build, "benchmark-collection", deadline, collect=True)
+    _run_command(
+        _benchmark_command("--check-imports"),
+        build / "imports.log",
+        deadline,
+        environment=cpu_environment,
+    )
+    _run_command(
+        _benchmark_command("--suite", "prefill-read", "--check-imports"),
+        build / "prefill-imports.log",
+        deadline,
+        environment=cpu_environment,
+    )
+    _run_pytest(
+        VALIDATION_TESTS,
+        build,
+        "collection",
+        deadline,
+        collect=True,
+        environment=cpu_environment,
+    )
+    _run_pytest(CPU_TESTS, build, "cpu-tests", deadline, environment=cpu_environment)
+    _run_pytest(
+        BENCHMARK_TESTS,
+        build,
+        "benchmark-collection",
+        deadline,
+        collect=True,
+        environment=cpu_environment,
+    )
     sections = _run_command(["ncu", "--list-sections"], build / "sections.log", deadline)
     if any(section not in sections for section in NCU_SECTIONS):
         raise RuntimeError("CPU preflight: Nsight Compute lacks required sections; see sections.log")
+    metrics = _run_command(
+        ["ncu", "--query-metrics-mode", "all", "--chips", "gh100"],
+        build / "prefill-metrics.log",
+        deadline,
+    )
+    missing = [name for name in PREFILL_METRICS.split(",")[1:] if name not in metrics]
+    if missing:
+        raise RuntimeError(f"CPU preflight: missing H100 traffic metrics {missing}")
     # 5. Save exact source/binary provenance for every GPU run.
     manifest = {
         "sources": sources,
@@ -178,7 +237,12 @@ def _build_image() -> None:
         "cuda": torch.version.cuda,
         "arch": "sm_90a",
         "native_dtype": "float32",
-        "binaries": {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in binaries},
+        "cpu_import_driver_stub_sha256": hashlib.sha256(
+            (build / "cpu-driver-stubs/libcuda.so.1").read_bytes()
+        ).hexdigest(),
+        "binaries": {
+            str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in binaries
+        },
         "nvcc": _run_command(["nvcc", "--version"], build / "nvcc.log", deadline),
         "ncu": _run_command(["ncu", "--version"], build / "ncu.log", deadline),
     }
@@ -213,6 +277,7 @@ kernel_image = (
             "SGLANG_JIT_CACHE_DIR": "/opt/remnant-jit",
             "REMNANT_FLASHMLA_SOURCE_DIR": str(FLASHMLA_ROOT),
             "REMNANT_NATIVE_STORE_LIBRARY": str(NATIVE_LIBRARY),
+            "REMNANT_BUILD_MANIFEST_PATH": str(MANIFEST),
             "TRITON_CACHE_DIR": "/triton-cache",
         }
     )
@@ -238,16 +303,79 @@ _GPU = {
 # Public workflows.
 
 
-@app.function(**_GPU)
-def benchmark_kernels(run_id: str) -> str:
-    """Validate and time the existing complete three-mode matrix; no profiling."""
-    with _run_context(run_id, "timing", RUN_BUDGETS_S["timing"]) as (root, record, deadline):
-        _run_pytest(BENCHMARK_TESTS, root, "validation", deadline)
-        argv = _benchmark_command("--suite", "all", "--output", str(root / "timing"))
-        record["command"] = argv
+@app.function(**{**_GPU, "timeout": 900})
+def benchmark_kernels(
+    run_id: str,
+    keep_count: int = 256,
+    modes: str = "",
+    suite: str = "all",
+    prefill_reader: str = "split",
+) -> str:
+    """Validate and time the complete matrix for the selected survivor budget."""
+    contract = _benchmark_cases()
+    is_prefill = suite == "prefill-read"
+    if prefill_reader not in ("split", "fused") or (
+        not is_prefill and prefill_reader != "split"
+    ):
+        raise ValueError(
+            "prefill_reader must be split, or fused with suite prefill-read"
+        )
+    if suite not in ("all", "prefill-read") or (
+        is_prefill and (modes or keep_count != 256)
+    ):
+        raise ValueError(
+            "suite must be all or prefill-read; prefill compares all three fixed variants"
+        )
+    selected_modes = (
+        contract.PREFILL_VARIANTS
+        if is_prefill
+        else contract.benchmark_modes(keep_count, modes or None)
+    )
+    with _run_context(run_id, "timing", RUN_BUDGETS_S["timing"]) as (
+        root,
+        record,
+        deadline,
+    ):
+        tests = BENCHMARK_TESTS
+        if prefill_reader == "fused":
+            tests += (TEST_MODULES["unpack_kernel"], TEST_MODULES["cuda_graph"])
+        _run_pytest(tests, root, "validation", deadline)
+        if prefill_reader == "fused":
+            for tool in ("memcheck", "racecheck", "synccheck"):
+                prefix = ("compute-sanitizer", "--tool", tool, "--error-exitcode", "1")
+                _run_pytest(SANITIZER_TESTS, root, tool, deadline, prefix=prefix)
+            record["sanitizers"] = ["memcheck", "racecheck", "synccheck"]
+        options = (
+            []
+            if is_prefill
+            else ["--keep-count", str(keep_count), "--modes", ",".join(selected_modes)]
+        )
+        if prefill_reader == "fused":
+            options += ["--prefill-reader", prefill_reader]
+        argv = _benchmark_command(
+            "--suite", suite, *options, "--output", str(root / "timing")
+        )
+        record.update(
+            command=argv, keep_count=keep_count, modes=selected_modes, suite=suite
+        )
+        if is_prefill:
+            record["prefill_reader"] = prefill_reader
         _run_command(argv, root / "timing.log", deadline)
         timing = json.loads((root / "timing.json").read_text())
-        _benchmark_cases().validate_timing(timing)
+        if is_prefill:
+            contract.validate_timing(
+                timing,
+                suite=suite,
+                **(
+                    {"prefill_reader": prefill_reader}
+                    if prefill_reader == "fused"
+                    else {}
+                ),
+            )
+        else:
+            contract.validate_timing(
+                timing, keep_count=keep_count, modes=",".join(selected_modes)
+            )
     return str(root)
 
 
@@ -265,58 +393,203 @@ def validate_kernels(run_id: str, sanitizer: bool = False) -> str:
 
 
 @app.function(**_GPU)
-def profile_kernels(run_id: str, cases: str = "", max_seconds: int = RUN_BUDGETS_S["profile"]) -> str:
-    """Profile selected existing cases in all three modes, separately from timing."""
+def profile_kernels(
+    run_id: str,
+    cases: str = "",
+    max_seconds: int = RUN_BUDGETS_S["profile"],
+    keep_count: int = 256,
+    modes: str = "",
+    suite: str = "all",
+    prefill_reader: str = "split",
+) -> str:
+    """Profile selected cases and supported modes, separately from timing."""
     if not 300 <= max_seconds <= PROFILE_MAX_BUDGET_S:
         raise ValueError(f"max_seconds must be between 300 and {PROFILE_MAX_BUDGET_S}")
     contract = _benchmark_cases()
-    matrix = contract.selected_profile_matrix(cases)
+    is_prefill = suite == "prefill-read"
+    if prefill_reader not in ("split", "fused") or (
+        not is_prefill and prefill_reader != "split"
+    ):
+        raise ValueError(
+            "prefill_reader must be split, or fused with suite prefill-read"
+        )
+    if suite not in ("all", "prefill-read") or (
+        is_prefill and (modes or keep_count != 256)
+    ):
+        raise ValueError(
+            "suite must be all or prefill-read; prefill compares all three fixed variants"
+        )
+    selected_modes = (
+        contract.PREFILL_VARIANTS
+        if is_prefill
+        else contract.benchmark_modes(keep_count, modes or None)
+    )
+    matrix = contract.selected_profile_matrix(
+        cases,
+        keep_count=keep_count,
+        modes=None if is_prefill else ",".join(selected_modes),
+        suite=suite,
+    )
     with _run_context(run_id, "profile", max_seconds) as (root, record, deadline):
-        record.update(matrix=matrix, runs=[])
-        for suite, case, mode in matrix:
-            name = f"{suite}-{case}-{mode}"
+        record.update(
+            matrix=matrix, runs=[], keep_count=keep_count, modes=selected_modes
+        )
+        # Batch cases per variant so NCU application replay pays Python/CUDA
+        # startup three times per report, rather than three times per case.
+        # NVTX-filtered exports retain separate per-case kernel attribution.
+        jobs = (
+            [
+                ("prefill-read", ",".join(c for s, c, m in matrix if m == mode), mode)
+                for mode in selected_modes
+            ]
+            if is_prefill
+            else matrix
+        )
+        for suite, case, mode in jobs:
+            name = f"{suite}-{mode}" if is_prefill else f"{suite}-{case}-{mode}"
             output = root / name
+            options = (
+                ["--profile-path", mode, "--profile-replay-id", f"{run_id}:{name}"]
+                if is_prefill
+                else [
+                    "--profile-mode",
+                    mode,
+                    "--keep-count",
+                    str(keep_count),
+                    "--modes",
+                    ",".join(selected_modes),
+                ]
+            )
+            if prefill_reader == "fused":
+                options += ["--prefill-reader", prefill_reader]
             target = _benchmark_command(
-                "--suite", suite, "--case", case, "--profile-mode", mode, "--output", str(output)
+                "--suite", suite, "--case", case, *options, "--output", str(output)
             )
             options = {
                 "--profile-from-start": "off",
-                "--replay-mode": "kernel",
+                "--replay-mode": "application" if is_prefill else "kernel",
                 "--cache-control": "none",
                 "--clock-control": "none",
                 "--import-source": "yes",
             }
             argv = ["ncu", *[arg for pair in options.items() for arg in pair]]
-            for section in NCU_SECTIONS:
+            if is_prefill:
+                argv += ["--nvtx"]
+            for section in ([] if is_prefill else NCU_SECTIONS):
                 argv += ["--section", section]
             argv += [
                 "--metrics",
-                "gpu__time_duration.sum,l1tex__t_sectors_pipe_lsu_mem_local_op_ld.sum,l1tex__t_sectors_pipe_lsu_mem_local_op_st.sum",
+                (
+                    PREFILL_METRICS
+                    if is_prefill
+                    else "gpu__time_duration.sum,l1tex__t_sectors_pipe_lsu_mem_local_op_ld.sum,l1tex__t_sectors_pipe_lsu_mem_local_op_st.sum"
+                ),
                 "--export",
                 str(output),
                 "--",
                 *target,
             ]
-            _run_command(argv, root / f"{name}.log", min(deadline, time.monotonic() + PROFILE_CAPTURE_TIMEOUT_S))
+            capture_seconds = 900 if is_prefill else PROFILE_CAPTURE_TIMEOUT_S
+            _run_command(
+                argv,
+                root / f"{name}.log",
+                min(deadline, time.monotonic() + capture_seconds),
+            )
             report = output.with_suffix(".ncu-rep")
             if not report.is_file() or not report.stat().st_size:
                 raise RuntimeError(f"Missing profile: {report}")
             capture = json.loads(output.with_suffix(".json").read_text())
-            if capture["status"] != "passed" or len(capture["cases"]) != 1 or not capture["cases"][0]["valid"]:
+            expected_cases = case.split(",")
+            if (
+                capture["status"] != "passed"
+                or len(capture["cases"]) != len(expected_cases)
+                or {item.get("name") for item in capture["cases"]}
+                != set(expected_cases)
+                or capture.get("config", {}).get("keep_count") != keep_count
+            ):
                 raise RuntimeError(f"Invalid capture: {name}")
-            raw = _run_command(
-                ["ncu", "--import", str(report), "--page", "raw", "--csv"],
-                output.with_suffix(".metrics.csv"),
-                min(deadline, time.monotonic() + PROFILE_EXPORT_TIMEOUT_S),
-            )
-            entry = {"suite": suite, "case": case, "mode": mode, "command": argv, "capture": capture}
-            entry["summary"] = contract.profile_summary(raw, capture["cases"][0]["expected_kernels"])
-            record["runs"].append(entry)
-            (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
-            results_volume.commit()
+            for item in capture["cases"]:
+                case_name = item["name"]
+                if (
+                    not item.get("valid")
+                    or (item.get("path") if is_prefill else item.get("mode")) != mode
+                ):
+                    raise RuntimeError(f"Invalid profile operation: {name}/{case_name}")
+                if is_prefill:
+                    expected = contract.prefill_path_layouts()[mode]
+                    if (
+                        capture.get("protocol") != contract.PREFILL_PROTOCOL
+                        or item.get("mode") != expected["implementation"]
+                        or item.get("keep_count")
+                        != (expected["packed_keep_count"] or 256)
+                        or item.get("path_layouts") != contract.prefill_path_layouts()
+                        or item.get("capture_range") != f"remnant_{case_name}_{mode}"
+                        or capture.get("config", {}).get("prefill_reader", "split")
+                        != prefill_reader
+                        or item.get("prefill_reader", "split") != prefill_reader
+                    ):
+                        raise RuntimeError(
+                            f"Prefill capture identity mismatch: {name}/{case_name}"
+                        )
+                export = ["ncu", "--import", str(report)]
+                if is_prefill:
+                    # NVTX is already recorded; import uses the saved context.
+                    export += ["--nvtx-include", item["capture_range"] + "/"]
+                export += [
+                    "--page",
+                    "raw",
+                    "--csv",
+                    "--print-units",
+                    "base",
+                    "--print-kernel-base",
+                    "demangled",
+                    "--rename-kernels",
+                    "off",
+                ]
+                metrics_path = root / f"{suite}-{case_name}-{mode}.metrics.csv"
+                raw = _run_command(
+                    export,
+                    metrics_path,
+                    min(deadline, time.monotonic() + PROFILE_EXPORT_TIMEOUT_S),
+                )
+                summary_options = (
+                    {"traffic_only": True, "minimum_launches": item["minimum_launches"]}
+                    if is_prefill
+                    else {}
+                )
+                entry = {
+                    "suite": suite,
+                    "case": case_name,
+                    "mode": mode,
+                    "command": argv,
+                    "export_command": export,
+                    "report": str(report),
+                    "capture": {**capture, "cases": [item]},
+                    "summary": contract.profile_summary(
+                        raw, item["expected_kernels"], **summary_options
+                    ),
+                }
+                if prefill_reader == "fused" and any(
+                    "rope_tail_complex" in name for name in entry["summary"]["kernels"]
+                ):
+                    raise RuntimeError(
+                        f"Fused reader still launches separate RoPE: {case_name}/{mode}"
+                    )
+                record["runs"].append(entry)
+                (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
+                results_volume.commit()
         for suite, case in {(s, c) for s, c, _ in matrix}:
-            group = [r for r in record["runs"] if (r["suite"], r["case"]) == (suite, case)]
-            if len(group) != 3 or len({r["capture"]["cases"][0]["common_inputs_sha256"] for r in group}) != 1:
+            group = [
+                r for r in record["runs"] if (r["suite"], r["case"]) == (suite, case)
+            ]
+            if (
+                {r["mode"] for r in group} != set(selected_modes)
+                or len(group) != len(selected_modes)
+                or len(
+                    {r["capture"]["cases"][0]["common_inputs_sha256"] for r in group}
+                )
+                != 1
+            ):
                 raise RuntimeError(f"Profile inputs differ: {suite}/{case}")
     return str(root)
 
@@ -324,15 +597,62 @@ def profile_kernels(run_id: str, cases: str = "", max_seconds: int = RUN_BUDGETS
 # Shared command execution, validation and result handling.
 
 
-def _run_command(argv: Sequence[str], output: Path, deadline: float) -> str:
+def _cpu_preflight_environment(build: Path) -> dict[str, str]:
+    """Resolve driver symbols for CPU imports without changing GPU loader paths.
+
+    The prebuilt sgl_kernel package links libcuda even for import/collection.
+    CUDA supplies a linker stub on CPU builders, but its filename lacks the
+    libcuda.so.1 SONAME needed by the dynamic loader. Only CPU child processes
+    receive this private alias; the image and GPU environment remain untouched.
+    """
+    cuda_home = Path(os.environ.get("CUDA_HOME", "/usr/local/cuda"))
+    candidates = (
+        cuda_home / "lib64/stubs/libcuda.so",
+        cuda_home / "targets/x86_64-linux/lib/stubs/libcuda.so",
+    )
+    library = next((p for p in candidates if p.is_file()), None)
+    if library is None:
+        raise RuntimeError(
+            f"CPU import preflight requires CUDA's libcuda stub: {candidates}"
+        )
+    directory = build / "cpu-driver-stubs"
+    directory.mkdir()
+    (directory / "libcuda.so.1").symlink_to(library.resolve())
+    environment = dict(os.environ)
+    environment["LD_LIBRARY_PATH"] = str(directory) + (
+        ":" + environment["LD_LIBRARY_PATH"]
+        if environment.get("LD_LIBRARY_PATH")
+        else ""
+    )
+    return environment
+
+
+def _run_command(
+    argv: Sequence[str],
+    output: Path,
+    deadline: float,
+    *,
+    environment: dict[str, str] | None = None,
+) -> str:
     """Bound the child by the allocation budget; retain its output on failure."""
     remaining = int(deadline - time.monotonic())
     if remaining <= 0:
         raise TimeoutError(f"Deadline reached before {list(argv)}")
+    child_environment = dict(os.environ if environment is None else environment)
+    # Modal adds its serialized /root/kernels.py to PYTHONPATH. It shadows
+    # Transformers' optional Hugging Face `kernels` dependency in fresh children.
+    # Keep the two declared source roots; installed site packages remain visible.
+    child_environment["PYTHONPATH"] = f"{SGLANG_ROOT / 'python'}:{REMOTE_REPO}"
     try:
         with output.open("w") as log:
             subprocess.run(
-                list(argv), stdout=log, stderr=subprocess.STDOUT, check=True, timeout=remaining, cwd=SGLANG_ROOT
+                list(argv),
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                check=True,
+                timeout=remaining,
+                cwd=SGLANG_ROOT,
+                env=child_environment,
             )
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as error:
         tail = output.read_text(errors="replace")[-4000:] if output.is_file() else ""
@@ -353,12 +673,13 @@ def _run_pytest(
     *,
     collect: bool = False,
     prefix: Sequence[str] = (),
+    environment: dict[str, str] | None = None,
 ) -> None:
     report = root / f"{name}.xml"
     argv = [*prefix, sys.executable, *["-m", "pytest", "-q"]]
     argv += [str(SGLANG_ROOT / path) for path in tests]
     argv += ["--collect-only"] if collect else [f"--junitxml={report}"]
-    _run_command(argv, root / f"{name}.log", deadline)
+    _run_command(argv, root / f"{name}.log", deadline, environment=environment)
     if not collect:
         counts = {
             key: sum(int(s.get(key, 0)) for s in ET.parse(report).getroot().iter("testsuite"))

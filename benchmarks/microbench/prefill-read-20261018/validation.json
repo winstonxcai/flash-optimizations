@@ -1,0 +1,98 @@
+{
+  "status": "passed",
+  "gpu_tests": {
+    "tests": 208,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "cases": 36,
+  "variants": 3,
+  "timing_rows": 108,
+  "raw_samples": 3240,
+  "timed_calls": 64800,
+  "fixture_shapes": 6,
+  "source_archive_verified": true,
+  "GPU_loaded_sources_match_workspace": true,
+  "source_binary_CPU_manifests_match": true,
+  "statistics_and_paired_ratios_recomputed": true,
+  "source_archive": "attempt-6/submitted-sources.tar.gz",
+  "current_parent_launcher_excluded": "Concurrent workspace changes; user requested saved snapshot",
+  "csv_matches_json": true,
+  "snapshot_launcher_tests_passed": 15,
+  "profiling": {
+    "status": "passed",
+    "operations": 108,
+    "unique_capture_ranges": 108,
+    "nonempty_reports": 3,
+    "launches": 408,
+    "metrics_per_launch": 6,
+    "variants": {
+      "native": 36,
+      "packed192": 36,
+      "packed256": 36
+    },
+    "all_NVTX_filters_disjoint": true,
+    "complete_report_launch_ID_unions": true,
+    "all_sources_binaries_inputs_match_timing": true,
+    "all_exports_reparsed": true,
+    "units_checked": "ns, byte, sector, percent",
+    "allocation_cleanup": "App stopped, zero tasks verified",
+    "reports": {
+      "prefill-read-native.ncu-rep": {
+        "bytes": 12411882,
+        "sha256": "5a8b0c1b5ee4771444586a83c9f1771c8e9308bbf360f69b212e9053cf8e02fe"
+      },
+      "prefill-read-packed192.ncu-rep": {
+        "bytes": 13395612,
+        "sha256": "20628826b536e3758f2fdb6d535c3275c2d99678c6705993ea52ba4e3859a10d"
+      },
+      "prefill-read-packed256.ncu-rep": {
+        "bytes": 13394754,
+        "sha256": "54ae6fd8ed76958e3733aa957bcc6ecc25900f085cd4610bab284219834b1a0a"
+      }
+    }
+  },
+  "cpu_preflight": {
+    "passed": true,
+    "source_identity_verified": true,
+    "launcher_identity_verified": true,
+    "cpu_counts": {
+      "tests": 139,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "real_gpu_driver": "NVIDIA H100 80GB HBM3, GPU-08f9f128-b8b9-5be9-c170-4918cddaf0b9, 610.57.04, 81559 MiB\n",
+    "cpu_stub_absent_from_gpu_loader": true,
+    "binary_hashes": {
+      "/usr/local/lib/python3.12/dist-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so": "eba9f9d784866eb8204d8d68f9074d4fa9cd91d7253c3c9e0bfe5a33edeed9b1",
+      "/usr/local/lib/python3.12/dist-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so": "a9d024b9d49600d4ef1ccd5c8936da7bb4df2b4cf21e3ea2c86d1ce4296ffd5d",
+      "/opt/remnant-native-store.so": "134e2ab28e0d1e868734479b2a418b069d8051eff3dbcf2ef3796b048dab6e56"
+    }
+  },
+  "remote_artifact_integrity": {
+    "passed": true,
+    "all_file_sizes_match": 122,
+    "critical_remote_API_stream_hashes_match": {
+      "result.json": "47eaa4473809359eeab95a75fd4fde1b1520dab2daaaab3c590ecf7aceef5b9c",
+      "build-manifest.json": "24547e27265cb151b5696c8ecf7988fd2d3dd7a6e99d6ffb49ce505300d6f903",
+      "prefill-read-native.ncu-rep": "5a8b0c1b5ee4771444586a83c9f1771c8e9308bbf360f69b212e9053cf8e02fe",
+      "prefill-read-native.json": "861a1e180dcb4c9fe8a6d8b0f9e3e490539053a836077350d9127476ba793a7c",
+      "prefill-read-packed192.ncu-rep": "20628826b536e3758f2fdb6d535c3275c2d99678c6705993ea52ba4e3859a10d",
+      "prefill-read-packed192.json": "8fdb6177f86dc6b6fd6f9f155a2d6ff5ebb137bed23f86ad22ed4f427349d569",
+      "prefill-read-packed256.ncu-rep": "54ae6fd8ed76958e3733aa957bcc6ecc25900f085cd4610bab284219834b1a0a",
+      "prefill-read-packed256.json": "3ca94c0f83aac31ae3631140527e8b1ed5dedd3e6b749f74f888d0a84282040f"
+    },
+    "no_compute_allocation": true
+  },
+  "H100_test_module_counts": {
+    "benchmark/remnant/test_microbench.py": 146,
+    "test/registered/attention/unittests/dsv4/test_remnant_fused_store.py": 62
+  },
+  "curated_csv_consistency_verified": {
+    "operation_rows": 108,
+    "kernel_rows": 408,
+    "all_numeric_values_match_traffic_json": true
+  }
+}

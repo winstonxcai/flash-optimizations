@@ -70,3 +70,14 @@ Full logs, prompts, tensors, builds, copied sources and retired attempts remain
 outside the curated tree. VDI retains the complete archive; local pre-curation
 snapshot and `raw/retired-results-20261014/` preserve this reorganization.
 Nothing was deleted. No `logs/` artifacts belong in the clean PR.
+
+## Prefill-read studies
+
+| Study | Evidence |
+|---|---|
+| [Native / Packed192 / Packed256](microbench/prefill-read-20261018/README.md) | Split reader; 36 timing cases and 108 profiled operations on H100. |
+| [Fused unpack/RoPE](microbench/prefill-read-fused-rope-20261018/README.md) | Opt-in candidate; 36 timing cases, 108 profiled operations, numerical and sanitizer validation. |
+
+Sources, commands, raw samples, counter summaries and limitations are recorded
+with each study. Large reports and exact source archives remain in the documented
+Modal volume. These measurements do not establish serving throughput.
