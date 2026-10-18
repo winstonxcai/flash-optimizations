@@ -67,14 +67,16 @@ esac
 if [ -n "${C4_KEEP_COUNT:-}" ] || [ -n "${C4_LAYER_KEEP_COUNTS:-}" ]; then
   docker exec -e "PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT" "$CONTAINER" python3 -c '
 import sys
-from transformers import AutoConfig
 from sglang.srt.server_args import ServerArgs
 from sglang.srt.configs.model_config import is_deepseek_v4
+from sglang.srt.utils.hf_transformers_utils import get_config
 from sglang.srt.remnant import config
 for field in ("dsv4_c4_cache_keep_count", "dsv4_c4_cache_layer_keep_counts"):
     assert field in ServerArgs.__dataclass_fields__, "mounted source lacks per-layer Packed counts"
 model, mode, count, overrides, store = sys.argv[1:]
-hf = AutoConfig.from_pretrained(model, trust_remote_code=True)
+# Match ModelConfig: its loader applies the registered SGLang model schema.
+# Transformers AutoConfig alone can omit the V4 compression metadata.
+hf = get_config(model, trust_remote_code=True)
 if mode != "native" and not is_deepseek_v4(hf):
     raise ValueError("Packed layer counts require a DeepSeek V4 model")
 config.configure_cache_format(
