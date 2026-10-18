@@ -1,7 +1,8 @@
-"""CPU training workflows using real cache readers, losses and Packed replay.
+"""Training workflows using real cache readers, losses and Packed replay.
 
 Synthetic full-shape states keep this independent of private captures. Only the
 epoch count is shortened; these are pipeline checks, not quality experiments.
+CUDA and real-publication checks require explicit opt-in environment settings.
 Author: Winston Cai.
 """
 
@@ -24,7 +25,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 import torch
 
-from training import artifacts, capture, evaluate, losses, train
+from training import artifacts, evaluate, losses, train
 from training.data.batches import StateBatches
 from training.data.dataset import (
     CaptureReader,
@@ -33,7 +34,7 @@ from training.data.dataset import (
     preload_layer,
     validate_states,
 )
-from training.data.storage import audit, benchmark_batch_view
+from training.data.storage import audit, benchmark_batch_view, benchmark_readers
 from training.losses import (
     forward_error,
     packed_rows,
@@ -237,6 +238,11 @@ class TrainingIntegrationTests(unittest.TestCase):
         # Execute the real optimizer and all preflights; bound only duration.
         return fit(*args, **{**kwargs, "epochs": 2})
 
+    @staticmethod
+    def _policy_record(policy: Path, layer: int) -> tuple[dict, dict]:
+        entry = artifacts.read_policy(policy)[layer]
+        return artifacts.read_checkpoint(entry), entry
+
     def _assert_run_identity(self, identity: dict, cache: Path, policy: Path) -> None:
         self.assertEqual(
             identity["cache_sha256"],
@@ -297,7 +303,7 @@ class TrainingIntegrationTests(unittest.TestCase):
         else:
             self.assertIsNotNone(result["batch_preflight"])
         self.assertTrue(result["optimizer_reinitialized"])
-        warm, _ = artifacts.policy_record(policy, layer)
+        warm, _ = self._policy_record(policy, layer)
         self.assertNotEqual(
             result["current_parameters"]["theta"], warm["selected_parameters"]["theta"]
         )
@@ -324,8 +330,8 @@ class TrainingIntegrationTests(unittest.TestCase):
                 self.assertEqual(entry["sha256"], artifacts.sha256(checkpoint))
                 self.assertNotIn("source", entry)
             else:
-                old_record, old_entry = artifacts.policy_record(policy, entry["layer"])
-                new_record, new_entry = artifacts.policy_record(
+                old_record, old_entry = self._policy_record(policy, entry["layer"])
+                new_record, new_entry = self._policy_record(
                     selected_policy, entry["layer"]
                 )
                 self.assertEqual(new_record, old_record)
@@ -454,6 +460,75 @@ class TrainingIntegrationTests(unittest.TestCase):
             continued["warm_theta"], expanded["selected_parameters"]["theta"]
         )
         self.assertEqual(continued["gradient_mode"], "straight_through")
+        # Reuse the real fit above to isolate final handoff failure handling.
+        atomic_json, link = self.math.atomic_json, os.link
+        temporary_directory = tempfile.TemporaryDirectory
+        for failure in (
+            "stage", "progress", "link", "interrupt", "competitor", "hard-link", "cleanup"
+        ):
+            output = self.root / f"policy-{failure}"
+            competing_bytes = []
+
+            @contextmanager
+            def staging_directory(*args, **kwargs):
+                with temporary_directory(*args, **kwargs) as temporary:
+                    yield temporary
+                if failure == "cleanup":
+                    raise OSError("policy scratch cleanup failed")
+
+            def publish(path, value):
+                if failure == "stage" and path.name == "policy.json":
+                    raise OSError("policy staging failed")
+                if (
+                    failure == "progress"
+                    and path == output / "progress.json"
+                    and value["complete"]
+                ):
+                    raise OSError("complete progress write failed")
+                return atomic_json(path, value)
+
+            def publish_link(source, target):
+                if failure == "link":
+                    raise OSError("policy link failed")
+                if failure == "competitor":
+                    Path(target).write_text("another writer owns this")
+                elif failure == "hard-link":
+                    competing_bytes.append(Path(source).read_bytes())
+                    link(source, target)
+                link(source, target)
+                if failure == "interrupt":
+                    raise KeyboardInterrupt()
+
+            with self.subTest(publication_failure=failure):
+                with patch(
+                    "training.train.artifacts.load_runner", return_value=self.math
+                ), patch.object(
+                    self.math, "atomic_json", side_effect=publish
+                ), patch("training.train.fit", return_value=dict(continued)), patch(
+                    "training.train.os.link", side_effect=publish_link
+                ), patch(
+                    "training.train.tempfile.TemporaryDirectory", side_effect=staging_directory
+                ):
+                    with self.assertRaises(
+                        KeyboardInterrupt if failure == "interrupt" else OSError
+                    ):
+                        train.main(
+                            self._train_arguments(
+                                cache, policy, "continuation", "8", output
+                            )
+                        )
+                if failure == "competitor":
+                    self.assertEqual(
+                        (output / "policy.json").read_text(), "another writer owns this"
+                    )
+                elif failure == "hard-link":
+                    self.assertEqual((output / "policy.json").read_bytes(), competing_bytes[0])
+                else:
+                    self.assertFalse((output / "policy.json").exists())
+                self.assertFalse(
+                    json.loads((output / "progress.json").read_text())["complete"]
+                )
+                self.assertEqual(list(output.glob(".policy-*")), [])
         # Both layers have bound receipts, but the second payload is missing.
         # Keep completed work if a later layer fails to load; binding receipts
         # must not require deserializing all layers before the first fit.
@@ -525,7 +600,7 @@ class TrainingIntegrationTests(unittest.TestCase):
         with (policy.parent / "selected-layer-08.json").open("a") as stream:
             stream.write("\n")
         with self.assertRaisesRegex(ValueError, "checkpoint changed"):
-            artifacts.policy_record(policy, 8)
+            self._policy_record(policy, 8)
 
     def test_layer8_relaxed_training(self):
         _, _, result = self._workflow("relaxed", 8)
@@ -551,6 +626,7 @@ class TrainingIntegrationTests(unittest.TestCase):
                 cache,
                 policy,
                 self.runner,
+                executed_runner=self.math,
                 device="cpu",
                 threads=2,
                 torch_version=str(torch.__version__),
@@ -561,6 +637,33 @@ class TrainingIntegrationTests(unittest.TestCase):
             bound = identity()
             artifacts.assert_run_inputs(bound, cache, policy, self.runner)
         self._assert_run_identity(bound, cache, policy)
+        # Replacement after a read closes must not swap the parsed parameters
+        # under the original digest. Hash and parse one owned byte snapshot.
+        entry = artifacts.read_policy(policy)[8]
+        checkpoint = Path(entry["path"])
+        original_checkpoint = checkpoint.read_bytes()
+        replacement = b'{"layer": 8, "selected_parameters": {"replacement": true}}'
+        path_open = Path.open
+        reads = []
+
+        @contextmanager
+        def replaced_after_read(path, *args, **kwargs):
+            with path_open(path, *args, **kwargs) as stream:
+                yield stream
+            if path == checkpoint:
+                reads.append(path)
+                with path_open(path, "wb") as stream:
+                    stream.write(replacement)
+
+        try:
+            with patch.object(Path, "open", replaced_after_read):
+                record = artifacts.read_checkpoint(entry)
+            self.assertEqual(record, json.loads(original_checkpoint))
+            self.assertEqual(len(reads), 1)
+            with self.assertRaisesRegex(ValueError, "checkpoint changed"):
+                artifacts.read_checkpoint(entry)
+        finally:
+            checkpoint.write_bytes(original_checkpoint)
         original = {
             name: (cache / name).read_bytes()
             for name in ("config.json", "index.json", "progress.json", "layer-08.json")
@@ -661,6 +764,43 @@ class TrainingIntegrationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "frozen numerical source changed"):
             artifacts.validate_runner(cache, alternate)
         dependency.write_bytes(original)
+        # Replacing the runner after import must fail before fitting/replay;
+        # provenance must describe the bytes actually executed, not a later file.
+        loader = artifacts.load_runner
+        runner_bytes = alternate.read_bytes()
+        for command in (train.main, evaluate.main):
+            output = self.root / (
+                "runner-race-fit" if command is train.main else "runner-race-eval.json"
+            )
+
+            def changed_after_import(path, **kwargs):
+                module = loader(path, **kwargs)
+                path.write_bytes(runner_bytes + b"\n")
+                return module
+
+            try:
+                with self.subTest(runner_race=command.__module__), patch(
+                    "training.artifacts.load_runner", side_effect=changed_after_import
+                ), patch("training.train.fit", side_effect=AssertionError("must not fit")), patch(
+                    "training.evaluate.load_cached_layer",
+                    side_effect=AssertionError("must not replay"),
+                ):
+                    with self.assertRaisesRegex(ValueError, "runner.*changed|executed.*runner"):
+                        if command is train.main:
+                            command(
+                                self._train_arguments(
+                                    cache, policy, "continuation", "8", output
+                                )
+                            )
+                        else:
+                            command([
+                                "--cache", str(cache), "--policy", str(policy),
+                                "--runner", str(alternate), "--output", str(output),
+                                "--layers", "8", "--threads", "2",
+                            ])
+                self.assertFalse(output.exists())
+            finally:
+                alternate.write_bytes(runner_bytes)
         del config["numerical_source"]["benchmark/remnant/calibrate.py"]
         self.math.atomic_json(config_path, config)
         with self.assertRaisesRegex(ValueError, "missing frozen runner"):
@@ -858,6 +998,63 @@ for action in (lambda: artifacts.load_reference(runner, sources),
         with self.assertRaisesRegex(ValueError, "issue-b.*corrupt"):
             benchmark_batch_view(legacy, self.runner, output)
         self.assertEqual(report_path.read_bytes(), previous_report)
+
+    def test_storage_rejects_changed_input_provenance(self):
+        legacy, converted, config = self._published_capture()
+        source_config = json.loads((legacy / "capture-config.json").read_text())
+        for rid in source_config["requests"]:
+            self.math.checkpoint_issue(legacy, source_config, {
+                "rid": rid, "response_id": rid, "finish_reason": "stop",
+                "usage": {"prompt_tokens": 100, "completion_tokens": 1},
+            })
+        runner = self.root / "runner.py"
+        runner.write_bytes(self.runner.read_bytes())
+        loader = artifacts.load_runner
+        config_path = legacy / "capture-config.json"
+        for operation in (audit, benchmark_readers, benchmark_batch_view):
+            for changed in (config_path, runner):
+                output = self.root / f"drift-{operation.__name__}-{changed.stem}"
+                if operation is benchmark_readers:
+                    shutil.copytree(converted, output / "converted")
+                elif operation is benchmark_batch_view:
+                    for rid in config["requests"]:
+                        self.math.publish_issue(converted, output / "published", rid)
+                original = changed.read_bytes()
+                mutations = []
+
+                def observed_runner(path, **kwargs):
+                    # Keep the actual numerical source layout; only the supplied
+                    # runner's identity is redirected to the test-owned copy.
+                    module = loader(self.runner, **kwargs)
+                    load = module.load_state
+
+                    def changed_after_read(*args, **kw):
+                        state = load(*args, **kw)
+                        if not mutations:
+                            changed.write_bytes(original + b"\n")
+                            mutations.append(changed)
+                        return state
+
+                    module.load_state = changed_after_read
+                    return module
+
+                try:
+                    with self.subTest(operation=operation.__name__, changed=changed.name), patch(
+                        "training.artifacts.load_runner", side_effect=observed_runner
+                    ):
+                        with self.assertRaisesRegex(
+                            ValueError, "storage.*changed|runner.*changed"
+                        ):
+                            operation(legacy, runner, output)
+                    self.assertEqual(mutations, [changed])
+                    if operation is audit:
+                        report = json.loads((output / "storage.json").read_text())
+                        self.assertEqual(report["status"], "failed")
+                    else:
+                        self.assertFalse((output / "training-reader.json").exists())
+                        self.assertFalse((output / "training-reader-batched.json").exists())
+                finally:
+                    changed.write_bytes(original)
 
     def test_storage_accounts_for_shared_files_and_bounded_reading(self):
         legacy, converted, config = self._published_capture()
@@ -1199,6 +1396,63 @@ for action in (lambda: artifacts.load_reference(runner, sources),
                 )
         self.assertEqual(list(self.root.glob("remnant-anchors-*")), [])
 
+        # A real loss failure retains its anchor argument in the traceback.
+        # Such tensors must own their bytes before the mmap is closed.
+        failure_traceback = None
+        try:
+            with StateBatches(states[:1], "cpu", 1, self.root) as batches:
+                batches.prepare_anchors(lambda s: {
+                    "state": s, "rows": s["raw"] * 0.25, "output": s["target"] * 0.5
+                })
+                bank_start = batches._bank.ctypes.data
+                bank_end = bank_start + batches.anchor_bytes
+                with batches.stage([0]) as batch:
+                    losses.anchored_relaxed_forward_error(
+                        self.math, batch.states[0],
+                        Mock(side_effect=RuntimeError("anchor forward failure")),
+                        0.02, batch.anchors[0],
+                    )
+        except RuntimeError as error:
+            self.assertEqual(str(error), "anchor forward failure")
+            failure_traceback = error.__traceback__
+        self.assertIsNotNone(failure_traceback)
+        while failure_traceback.tb_frame.f_code.co_name != "anchored_relaxed_forward_error":
+            failure_traceback = failure_traceback.tb_next
+        anchor = failure_traceback.tb_frame.f_locals["anchor"]
+        for key in ("rows", "output"):
+            self.assertFalse(bank_start <= anchor[key].data_ptr() < bank_end)
+        # Do not dereference a closed mapping until the ownership check passes.
+        self.assertTrue(torch.equal(anchor["rows"], states[0]["raw"] * 0.25))
+        self.assertTrue(torch.equal(anchor["output"], states[0]["target"] * 0.5))
+        self.assertEqual(list(self.root.glob("remnant-anchors-*")), [])
+
+        # Allocation failure before yield must also release the borrowed view
+        # from the retained stage frame, not just clear successfully staged data.
+        tensor_to = torch.Tensor.to
+
+        def fail_anchor_copy(tensor, *args, **kwargs):
+            if kwargs.get("copy"):
+                raise RuntimeError("anchor copy failed")
+            return tensor_to(tensor, *args, **kwargs)
+
+        failure_traceback = None
+        try:
+            with StateBatches(states[:1], "cpu", 1, self.root) as batches:
+                batches.prepare_anchors(lambda s: {
+                    "state": s, "rows": s["raw"] * 0.25, "output": s["target"] * 0.5
+                })
+                with patch.object(torch.Tensor, "to", fail_anchor_copy):
+                    with batches.stage([0]):
+                        self.fail("failed copy admitted a batch")
+        except RuntimeError as error:
+            self.assertEqual(str(error), "anchor copy failed")
+            failure_traceback = error.__traceback__
+        self.assertIsNotNone(failure_traceback)
+        while failure_traceback.tb_frame.f_code.co_name != "stage":
+            failure_traceback = failure_traceback.tb_next
+        self.assertNotIn("values", failure_traceback.tb_frame.f_locals)
+        self.assertEqual(list(self.root.glob("remnant-anchors-*")), [])
+
     # Capture orchestration: external programs are mocked, never launched.
     def test_capture_host_lifecycle_without_external_processes(self):
         model, scratch, published = (
@@ -1322,13 +1576,8 @@ else:
                     continue
                 cpu = runs[0]
                 self.assertNotIn("--gpus", cpu)
-                setup = cpu[cpu.index("-ceu") + 1]
-                self.assertIn(
-                    "exec python3 /capture-repo/training/capture.py preflight", setup
-                )
-                subprocess.run(
-                    ["sh", "-n"], input=setup, text=True, check=True, timeout=5
-                )
+                self.assertIn("_preflight", cpu)
+                self.assertIn("/capture-repo/scripts/local/capture-latent.sh", cpu)
                 if scenario in ("preflight", "occupied"):
                     self.assertEqual(gpu, [])
                     self.assertEqual(stops, ["c" * 64])
@@ -1337,7 +1586,8 @@ else:
                     self.assertEqual(
                         gpu[0][gpu[0].index("--gpus") + 1], '"device=4,5,6,7"'
                     )
-                    self.assertIn("--deadline-epoch", gpu[0])
+                    self.assertIn("_capture", gpu[0])
+                    self.assertTrue(gpu[0][-2].isdigit())  # Absolute startup/replay deadline.
                     self.assertIn("sha256:" + "1" * 64, gpu[0])
                 for args in runs:
                     self.assertEqual(args[args.index("--pull") + 1], "never")
@@ -1364,6 +1614,8 @@ else:
             self.assertFalse(log.exists())
 
     def test_capture_preflight_and_server_lifecycle(self):
+        import socket
+
         model, published = self.root / "model", self.root / "published"
         model.mkdir()
         (self.root / "replay.jsonl").write_text("")
@@ -1376,22 +1628,27 @@ else:
         }
         config_path = self.root / "capture-config.json"
         self.math.atomic_json(config_path, config)
-        with patch.object(capture, "RUNNER", self.runner), patch.object(
-            capture.shutil,
+        preflight = self.math.capture_preflight
+        with patch.object(
+            self.math.shutil,
             "disk_usage",
             return_value=SimpleNamespace(free=100 * 1024**3),
-        ), patch.object(capture.socket, "socket"):
-            capture.main(
+        ), patch.object(socket, "socket"):
+            with patch.object(
+                sys,
+                "argv",
                 [
-                    "preflight",
+                    str(self.runner),
+                    "capture-preflight",
                     "--root",
                     str(self.root),
                     "--publish-root",
                     str(published),
                     "--model",
                     str(model),
-                ]
-            )
+                ],
+            ):
+                self.math.main()
             config["audit_shared"] = False
             self.math.atomic_json(config_path, config)
             proof = {
@@ -1406,140 +1663,202 @@ else:
                 "runner_sha256": artifacts.sha256(self.runner),
             }
             self.math.atomic_json(self.root / "shared-audit-proof.json", proof)
-            capture.preflight(self.root, published, model, 30312)
+            preflight(self.root, published, model, 30312)
             proof["kind"] = "conversion-only"
             self.math.atomic_json(self.root / "shared-audit-proof.json", proof)
             with self.assertRaisesRegex(ValueError, "audited live-capture proof"):
-                capture.preflight(self.root, published, model, 30312)
-            config["audit_shared"] = True
-            config["concurrency"] = 3
+                preflight(self.root, published, model, 30312)
+            config["audit_shared"], config["concurrency"] = True, 3
             self.math.atomic_json(config_path, config)
             with self.assertRaisesRegex(ValueError, "concurrency two"):
-                capture.preflight(self.root, published, model, 30312)
+                preflight(self.root, published, model, 30312)
             config["concurrency"] = 2
             self.math.atomic_json(config_path, config)
             with patch.object(
-                capture.shutil, "disk_usage", return_value=SimpleNamespace(free=0)
+                self.math.shutil, "disk_usage", return_value=SimpleNamespace(free=0)
             ):
                 with self.assertRaisesRegex(ValueError, "50 GiB"):
-                    capture.preflight(self.root, published, model, 30312)
-            with patch.object(
-                capture.tempfile,
-                "TemporaryFile",
-                side_effect=OSError("Read-only file system"),
+                    preflight(self.root, published, model, 30312)
+            with patch(
+                "tempfile.TemporaryFile", side_effect=OSError("Read-only file system")
             ):
                 with self.assertRaisesRegex(OSError, "Read-only"):
-                    capture.preflight(self.root, published, model, 30312)
+                    preflight(self.root, published, model, 30312)
             with self.assertRaisesRegex(ValueError, "destinations must differ"):
-                capture.preflight(self.root, self.root, model, 30312)
-            for outcome in (
-                "success",
-                "startup",
-                "timeout",
-                "interrupt",
-                "publication",
-            ):
-                with self.subTest(outcome=outcome):
-                    server = Mock(pid=12345, returncode=7)
-                    server.wait.return_value = 0
-                    clock = Mock(return_value=100.0)
-                    health_error = {
-                        "startup": RuntimeError("server exited"),
-                        "timeout": TimeoutError(),
-                        "interrupt": SystemExit(130),
-                    }.get(outcome)
-                    client_error = (
-                        subprocess.CalledProcessError(1, ["capture-client"])
-                        if outcome == "publication"
-                        else None
+                preflight(self.root, self.root, model, 30312)
+
+        # Exercise the actual shell lifecycle with fake external tools. setsid
+        # creates real, test-owned groups, but never executes the model launcher.
+        import time
+
+        tools = self.root / "lifecycle-tools"
+        tools.mkdir()
+        log = self.root / "lifecycle.jsonl"
+        helper = tools / "fake-command"
+        helper.write_text(f"#!{sys.executable}\n" + r"""
+import json, os, signal, sys, time
+from pathlib import Path
+name, args = Path(sys.argv[0]).name, sys.argv[1:]
+scenario = os.environ["SCENARIO"]
+with Path(os.environ["COMMAND_LOG"]).open("a") as stream:
+    stream.write(json.dumps({"tool": name, "args": args, "pid": os.getpid(),
+                            "environment": {k: os.environ.get(k) for k in (
+                                "TP", "MAX_RUN", "SERVER_SEED", "DECODE_CFG",
+                                "NSYS_OUTPUT", "REQUEST_METRICS_DIR", "STORE_IMPLEMENTATION")}}) + "\n")
+if name == "setsid":
+    os.setsid()
+    if args[0] == "bash":
+        if scenario == "startup":
+            sys.exit(7)
+        signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+        while True:
+            time.sleep(.1)
+    os.execvpe(args[0], args, os.environ)
+elif name == "timeout":
+    while args[0].startswith("--"):
+        args.pop(0)
+    args.pop(0)
+    if args[0] != "python3":
+        raise SystemExit("unexpected timeout command")
+    os.execvpe(args[0], args, os.environ)
+elif name == "python3":
+    if "capture-preflight" in args:
+        sys.exit(1 if scenario == "preflight" else 0)
+    if "capture-client" not in args:
+        raise SystemExit("unexpected Python invocation")
+    if scenario == "publication":
+        sys.exit(1)
+    if scenario == "client-timeout":
+        sys.exit(124)
+    if scenario in ("interrupt", "repeat-interrupt"):
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        os.kill(os.getppid(), signal.SIGINT)
+        if scenario == "repeat-interrupt":
+            time.sleep(.05)
+            os.kill(os.getppid(), signal.SIGTERM)
+        sys.exit(130)
+elif name == "curl":
+    if scenario in ("timeout", "startup"):
+        sys.exit(7)
+    time.sleep(1.1)  # Startup must reduce the client's remaining budget.
+elif name == "sleep":
+    time.sleep(min(.1, float(args[0])))
+else:
+    raise SystemExit("unexpected external tool")
+""")
+        helper.chmod(0o755)
+        for tool in ("setsid", "timeout", "python3", "curl", "sleep"):
+            (tools / tool).symlink_to(helper.name)
+        launcher = (
+            Path(__file__).resolve().parents[2] / "scripts/local/capture-latent.sh"
+        )
+        environment = {
+            **os.environ,
+            "PATH": str(tools) + os.pathsep + os.defpath,
+            "COMMAND_LOG": str(log),
+            "NSYS_OUTPUT": "must-not-profile",
+            "REQUEST_METRICS_DIR": "must-not-record",
+            "STORE_IMPLEMENTATION": "must-not-pack",
+        }
+        for scenario in (
+            "success",
+            "preflight",
+            "startup",
+            "timeout",
+            "client-timeout",
+            "interrupt",
+            "repeat-interrupt",
+            "publication",
+            "expired",
+        ):
+            with self.subTest(scenario=scenario):
+                log.unlink(missing_ok=True)
+                deadline = int(time.time()) + (1 if scenario == "timeout" else 6)
+                if scenario == "expired":
+                    deadline = 0
+                try:
+                    result = subprocess.run(
+                        [
+                            "bash",
+                            str(launcher),
+                            "_capture",
+                            str(self.root),
+                            str(published),
+                            str(model),
+                            str(self.runner),
+                            str(deadline),
+                            "30312",
+                        ],
+                        env={**environment, "SCENARIO": scenario},
+                        capture_output=True,
+                        text=True,
+                        timeout=12,
                     )
-
-                    def ready(*_):
-                        clock.return_value = 135.0
-                        if health_error is not None:
-                            raise health_error
-
-                    with patch.object(
-                        capture.subprocess, "Popen", return_value=server
-                    ) as start, patch.object(
-                        capture, "_wait_healthy", side_effect=ready
-                    ), patch.object(
-                        capture.subprocess, "run", side_effect=client_error
-                    ) as client, patch.object(
-                        capture.os, "killpg"
-                    ) as kill, patch.object(
-                        capture.time, "monotonic", clock
-                    ), patch.object(
-                        capture.time, "time", return_value=100.0
-                    ):
-                        if outcome == "success":
-                            capture.run(
-                                30312,
-                                deadline_epoch=200,
-                                root=self.root,
-                                published=published,
-                                model=model,
-                            )
-                        else:
-                            with self.assertRaises(type(health_error or client_error)):
-                                capture.run(
-                                    30312,
-                                    deadline_epoch=200,
-                                    root=self.root,
-                                    published=published,
-                                    model=model,
-                                )
+                    self.assertEqual(
+                        result.returncode == 0, scenario == "success", result.stderr
+                    )
+                    events = (
+                        [json.loads(line) for line in log.read_text().splitlines()]
+                        if log.exists()
+                        else []
+                    )
+                    groups = [e for e in events if e["tool"] == "setsid"]
+                    for event in groups:
+                        with self.assertRaises(ProcessLookupError):
+                            os.killpg(event["pid"], 0)
+                    servers = [e for e in groups if e["args"][0] == "bash"]
+                    clients = [
+                        e
+                        for e in events
+                        if e["tool"] == "python3" and "capture-client" in e["args"]
+                    ]
+                    self.assertEqual(
+                        bool(servers), scenario not in ("preflight", "expired")
+                    )
+                    self.assertEqual(
+                        bool(clients),
+                        scenario
+                        in (
+                            "success",
+                            "publication",
+                            "client-timeout",
+                            "interrupt",
+                            "repeat-interrupt",
+                        ),
+                    )
+                    if scenario == "client-timeout":
+                        self.assertEqual(result.returncode, 124)
+                    if clients:
+                        args, env = clients[0]["args"], clients[0]["environment"]
+                        self.assertLess(int(args[args.index("--seconds") + 1]), 6)
                         self.assertEqual(
-                            kill.call_args_list[0].args, (12345, signal.SIGTERM)
+                            args[args.index("--publish-root") + 1], str(published)
                         )
+                        self.assertEqual(env["TP"], "4")
+                        self.assertEqual(env["MAX_RUN"], "2")
+                        self.assertEqual(env["SERVER_SEED"], "42")
                         self.assertEqual(
-                            kill.call_args_list[-1].args, (12345, signal.SIGKILL)
-                        )
-                        self.assertTrue(start.call_args.kwargs["start_new_session"])
-                        self.assertIn("native", start.call_args.args[0])
-                        environment = start.call_args.kwargs["env"]
-                        self.assertEqual(environment["TP"], "4")
-                        self.assertEqual(environment["MAX_RUN"], "2")
-                        self.assertEqual(environment["SERVER_SEED"], "42")
-                        self.assertEqual(
-                            json.loads(environment["DECODE_CFG"])["decode"]["backend"],
+                            json.loads(env["DECODE_CFG"])["decode"]["backend"],
                             "disabled",
                         )
-                        if outcome in ("success", "publication"):
-                            argv = client.call_args.args[0]
-                            self.assertEqual(argv[argv.index("--seconds") + 1], "65")
-                            self.assertEqual(
-                                argv[argv.index("--publish-root") + 1], str(published)
-                            )
-                            self.assertEqual(client.call_args.kwargs["timeout"], 65.0)
-                        else:
-                            client.assert_not_called()
-                    self.assertTrue((self.root / "server.log").exists())
-            with patch.object(capture.subprocess, "Popen") as start, patch.object(
-                capture.time, "monotonic", return_value=100.0
-            ), patch.object(capture.time, "time", return_value=100.0):
-                with self.assertRaises(TimeoutError):
-                    capture.run(
-                        30312,
-                        deadline_epoch=50,
-                        root=self.root,
-                        published=published,
-                        model=model,
-                    )
-                start.assert_not_called()
-        dead = Mock(returncode=7)
-        dead.poll.return_value = 7
-        with patch.object(capture, "urlopen") as request:
-            with self.assertRaisesRegex(RuntimeError, "server exited: 7"):
-                capture._wait_healthy(
-                    dead, "http://127.0.0.1:30312", capture.time.monotonic() + 1
-                )
-            request.assert_not_called()
-        stalled = Mock(pid=12345)
-        stalled.wait.side_effect = [subprocess.TimeoutExpired(["server"], 15), 0]
-        with patch.object(capture.os, "killpg") as kill:
-            capture._stop_server(stalled)
-        self.assertEqual(kill.call_args_list[-1].args, (12345, signal.SIGKILL))
+                        for name in (
+                            "NSYS_OUTPUT",
+                            "REQUEST_METRICS_DIR",
+                            "STORE_IMPLEMENTATION",
+                        ):
+                            self.assertIsNone(env[name])
+                    if servers:
+                        self.assertIn("native", servers[0]["args"])
+                        self.assertTrue((self.root / "server.log").exists())
+                finally:
+                    # A regression must not leave test-owned workers behind.
+                    for line in log.read_text().splitlines() if log.exists() else []:
+                        event = json.loads(line)
+                        if event["tool"] == "setsid":
+                            try:
+                                os.killpg(event["pid"], signal.SIGKILL)
+                            except ProcessLookupError:
+                                pass
 
     # Exact evaluation, reports, and publication failure handling.
     def test_comparison_masks_counts_groups_and_ties(self):
@@ -1974,6 +2293,11 @@ else:
                                 (output / "selected-layer-08.json").exists()
                             )
                             self.assertFalse((output / "policy.json").exists())
+                            self.assertFalse(
+                                json.loads((output / "progress.json").read_text())[
+                                    "complete"
+                                ]
+                            )
                         else:
                             self.assertFalse(output.exists())
                             if mode == "compare":
@@ -2012,6 +2336,111 @@ else:
             [*arguments, "--output", str(self.root / "reference.json")]
         )
         link = os.link
+        temporary_directory = tempfile.TemporaryDirectory
+
+        @contextmanager
+        def cleanup_failure(*args, **kwargs):
+            with temporary_directory(*args, **kwargs) as scratch:
+                yield scratch
+            raise OSError("evaluation scratch cleanup failed")
+
+        output = self.root / "comparison-cleanup.json"
+        with patch("training.evaluate.tempfile.TemporaryDirectory", side_effect=cleanup_failure):
+            with self.assertRaisesRegex(OSError, "scratch cleanup failed"):
+                evaluate._publish_comparison(self.math, output, dict(result), None)
+        self.assertTrue(all(not output.with_suffix(s).exists() for s in (".json", ".csv", ".md")))
+
+        # Ordinary evaluation must have the same interruption/cleanup ownership
+        # guarantees as the multi-file comparison publisher.
+        for failure in ("interrupt", "competitor", "hard-link", "cleanup"):
+            output = self.root / f"ordinary-{failure}.json"
+            competing_bytes = []
+
+            def ordinary_link(source, target):
+                if failure == "competitor":
+                    Path(target).write_text("another writer owns this")
+                elif failure == "hard-link":
+                    competing_bytes.append(Path(source).read_bytes())
+                    link(source, target)
+                link(source, target)
+                if failure == "interrupt":
+                    raise KeyboardInterrupt()
+
+            with self.subTest(ordinary_publication=failure), patch(
+                "training.evaluate.os.link", side_effect=ordinary_link
+            ), patch(
+                "training.evaluate.tempfile.TemporaryDirectory",
+                side_effect=cleanup_failure if failure == "cleanup" else temporary_directory,
+            ):
+                with self.assertRaises(KeyboardInterrupt if failure == "interrupt" else OSError):
+                    evaluate.main([*arguments[1:], "--output", str(output)])
+            if failure == "competitor":
+                self.assertEqual(output.read_text(), "another writer owns this")
+            elif failure == "hard-link":
+                self.assertEqual(output.read_bytes(), competing_bytes[0])
+            else:
+                self.assertFalse(output.exists())
+
+        # A progress path acquired after freshness preflight is still unowned.
+        output = self.root / "competing-progress.json"
+        partial = output.with_suffix(".partial.json")
+        load = evaluate.load_cached_layer
+
+        def competing_progress(*args, **kwargs):
+            states = load(*args, **kwargs)
+            partial.write_text("another writer owns this")
+            return states
+
+        with patch("training.evaluate.load_cached_layer", side_effect=competing_progress):
+            with self.assertRaises(FileExistsError):
+                evaluate.main([*arguments, "--output", str(output)])
+        self.assertEqual(partial.read_text(), "another writer owns this")
+        self.assertFalse(output.exists())
+
+        # A replacement between an ownership check and the next update must
+        # survive too; a check followed by rename is not an atomic claim.
+        partial = self.root / "replaced-progress.partial.json"
+        progress = evaluate._PartialReport(partial)
+        progress.write(self.math, {"status": "partial"})
+        path_lstat = Path.lstat
+        replacements = []
+
+        def replaced_after_stat(path, *args, **kwargs):
+            identity = path_lstat(path, *args, **kwargs)
+            if path == partial and not replacements:
+                other = self.root / "other-progress.json"
+                other.write_text("replacement belongs to another writer")
+                other.replace(partial)
+                replacements.append(partial)
+            return identity
+
+        with patch.object(Path, "lstat", replaced_after_stat):
+            progress.write(self.math, {"status": "failed"})
+        self.assertEqual(replacements, [partial])
+        self.assertEqual(partial.read_text(), "replacement belongs to another writer")
+
+        # Also replace the name after the opened descriptor is verified but
+        # before writing; the write must stay on our old, now-unlinked inode.
+        partial = self.root / "replaced-after-open.partial.json"
+        progress = evaluate._PartialReport(partial)
+        progress.write(self.math, {"status": "partial"})
+        file_stat = os.fstat
+        replacements.clear()
+
+        def replaced_after_open(descriptor):
+            identity = file_stat(descriptor)
+            if not replacements:
+                other = self.root / "other-open-progress.json"
+                other.write_text("replacement after descriptor verification")
+                other.replace(partial)
+                replacements.append(partial)
+            return identity
+
+        with patch("training.evaluate.os.fstat", side_effect=replaced_after_open):
+            with self.assertRaisesRegex(FileExistsError, "ownership lost"):
+                progress.write(self.math, {"status": "failed"})
+        self.assertEqual(replacements, [partial])
+        self.assertEqual(partial.read_text(), "replacement after descriptor verification")
         for suffix in (".csv", ".md", ".json"):
             output = self.root / f"failed-{suffix[1:]}.json"
 
@@ -2221,6 +2650,257 @@ else:
                 for s in (".json", ".csv", ".md")
             )
         )
+
+
+class TrainingCudaTests(unittest.TestCase):
+    """Opt-in SM90 execution of the existing cache, scorer and loss workflows.
+
+    REMNANT_RUN_TRAINING_CUDA_TESTS=1 is required even on GPU hosts. Modal
+    rejects any skipped case; ordinary CPU test commands never allocate GPUs.
+    """
+
+    def setUp(self):
+        if os.environ.get("REMNANT_RUN_TRAINING_CUDA_TESTS") != "1":
+            self.skipTest("explicit training CUDA validation opt-in required")
+        if not torch.cuda.is_available():
+            self.fail("CUDA validation requested but CUDA is unavailable")
+        self.assertEqual(torch.cuda.get_device_capability(), (9, 0), "SM90 only")
+        self.fixture = TrainingIntegrationTests()
+        self.addCleanup(self.fixture.doCleanups)
+        self.fixture.setUp()
+        self.root, self.math = self.fixture.root, self.fixture.math
+        torch.backends.cuda.matmul.allow_tf32 = False
+        torch.backends.cudnn.allow_tf32 = False
+        torch.set_float32_matmul_precision("highest")
+
+    def _record(self, name: str, result: dict) -> None:
+        output = os.environ.get("REMNANT_TRAINING_VALIDATION_OUTPUT")
+        if output:
+            self.math.atomic_json(Path(output) / f"{name}.json", result)
+
+    def _recipe(self, recipe: str, layer: int) -> None:
+        cache = self.fixture._cache(layer)
+        policy = self.fixture._warm_policy(layer, rank16=recipe == "rank64")
+        for batch_size in (1, 8):
+            output = self.root / f"{recipe}-{batch_size}"
+            fitted = []
+
+            def smoke_fit(*args, **kwargs):
+                torch.cuda.reset_peak_memory_stats()
+                result = fit(
+                    *args, **{**kwargs, "epochs": 2, "train_batch_size": batch_size}
+                )
+                torch.cuda.synchronize()
+                fitted.append((result, torch.cuda.max_memory_allocated()))
+                return result
+
+            with self.subTest(recipe=recipe, batch_size=batch_size), patch(
+                "training.train.fit", side_effect=smoke_fit
+            ):
+                run = train.main(
+                    [
+                        *self.fixture._train_arguments(
+                            cache, policy, recipe, str(layer), output
+                        ),
+                        "--device",
+                        "cuda",
+                    ]
+                )
+                result, peak = fitted[0]
+                self.assertEqual(len(result["candidate_preflight"]), 2)
+                self.assertEqual(result["train_batch_size"], batch_size)
+                self.assertEqual(result["batch_preflight"] is None, batch_size == 1)
+                selected = artifacts.read_policy(Path(run["policy"]))
+                for entry in selected.values():
+                    artifacts.read_checkpoint(entry)
+                self.assertTrue(
+                    json.loads((output / "progress.json").read_text())["complete"]
+                )
+                report = evaluate.main(
+                    [
+                        "--cache",
+                        str(cache),
+                        "--policy",
+                        run["policy"],
+                        "--runner",
+                        str(self.fixture.runner),
+                        "--output",
+                        str(self.root / f"{recipe}-{batch_size}-evaluation.json"),
+                        "--layers",
+                        str(layer),
+                        "--threads",
+                        "2",
+                    ]
+                )
+                replay = report["layers"][0]["roles"]["development"]["selected"]
+                for metric in ("mean", "p95"):
+                    torch.testing.assert_close(
+                        torch.tensor(replay[metric], dtype=torch.float64),
+                        torch.tensor(
+                            result["development_selected"][metric], dtype=torch.float64
+                        ),
+                        atol=2e-6,
+                        rtol=2e-5,
+                    )
+                self._record(
+                    f"{recipe}-b{batch_size}",
+                    {
+                        "recipe": recipe,
+                        "batch_size": batch_size,
+                        "device": "cuda",
+                        "peak_allocated_bytes": peak,
+                        "history": result["history"],
+                        "candidate_preflight": result["candidate_preflight"],
+                        "batch_preflight": result["batch_preflight"],
+                        "selected": result["development_selected"],
+                        "cpu_replay": replay,
+                        "policy_sha256": artifacts.sha256(Path(run["policy"])),
+                    },
+                )
+
+    def test_rank64(self):
+        self._recipe("rank64", 8)
+
+    def test_continuation(self):
+        self._recipe("continuation", 8)
+
+    def test_relaxed(self):
+        self._recipe("relaxed", 8)
+
+    def test_anchored(self):
+        self._recipe("anchored", 12)
+
+    def test_singleton_tails_and_failure_cleanup(self):
+        cache = self.fixture._cache(12)
+        states = evaluate.load_cached_layer(cache, 12)
+        rows = [dict(states["train"][i % 4], ordinal=i) for i in range(9)]
+        for mode in ("straight_through", "relaxed", "anchored"):
+            counts = []
+            name = (
+                "forward_errors"
+                if mode == "straight_through"
+                else "relaxed_forward_errors"
+            )
+            vector = getattr(losses, name)
+
+            def observed(math, ref_or_batch, *args, **kwargs):
+                batch = args[0] if mode == "straight_through" else ref_or_batch
+                counts.append(batch["raw"].shape[0])
+                return vector(math, ref_or_batch, *args, **kwargs)
+
+            with self.subTest(mode=mode), patch.object(
+                losses, name, side_effect=observed
+            ):
+                result = fit(
+                    self.math,
+                    self.math.reference(),
+                    rows,
+                    states["development"],
+                    torch.zeros(512),
+                    mode="conditional_expanded",
+                    epochs=2,
+                    gradient_mode=mode,
+                    train_batch_size=8,
+                    device="cuda",
+                    scratch_root=self.root,
+                )
+            self.assertEqual(counts[-4:], [8, 1, 8, 1])
+            self.assertEqual(list(self.root.glob("remnant-anchors-*")), [])
+            self._record(
+                f"tail-{mode}", {"batch_counts": counts, "history": result["history"]}
+            )
+        with self.assertRaisesRegex(RuntimeError, "checkpoint failure"):
+            fit(
+                self.math,
+                self.math.reference(),
+                rows[:2],
+                states["development"],
+                torch.zeros(512),
+                mode="conditional_expanded",
+                epochs=2,
+                gradient_mode="anchored",
+                device="cuda",
+                scratch_root=self.root,
+                checkpoint=Mock(side_effect=RuntimeError("checkpoint failure")),
+            )
+        self.assertEqual(list(self.root.glob("remnant-anchors-*")), [])
+
+    def test_staging_memory_is_batch_bounded(self):
+        state = self.fixture._state("train", 0)
+        peaks = []
+        for count in (2, 64):
+            rows = [dict(state, ordinal=i) for i in range(count)]
+            with StateBatches(rows, "cuda", 2, self.root) as batches:
+                batches.prepare_anchors(
+                    lambda s: {
+                        "state": s,
+                        "rows": s["raw"] * 0.25,
+                        "output": s["target"] * 0.5,
+                    }
+                )
+                torch.cuda.synchronize()
+                baseline = torch.cuda.memory_allocated()
+                torch.cuda.reset_peak_memory_stats()
+                for start in range(0, count, 2):
+                    with batches.stage([start, start + 1]) as batch:
+                        self.assertEqual(batches.active_count, 2)
+                        self.assertTrue(all(s["raw"].is_cuda for s in batch.states))
+                        self.assertTrue(all(a["rows"].is_cuda for a in batch.anchors))
+                        self.assertTrue(
+                            all(s["raw"].device.type == "cpu" for s in rows)
+                        )
+                    self.assertEqual(batches.active_count, 0)
+                torch.cuda.synchronize()
+                peaks.append(torch.cuda.max_memory_allocated() - baseline)
+            self.assertEqual(list(self.root.glob("remnant-anchors-*")), [])
+        # This checks live tensor allocations, not allocator-reserved bytes/RSS.
+        self.assertLessEqual(peaks[1], peaks[0] + 2 * 1024**2)
+        self._record("memory", {"state_counts": [2, 64], "peak_batch_bytes": peaks})
+
+
+class PublishedCaptureTests(unittest.TestCase):
+    """Opt-in checks on real publications, never synthetic capture substitutes."""
+
+    def test_native_publication_round_trip(self):
+        root = os.environ.get("REMNANT_CAPTURE_VALIDATION_ROOT")
+        if not root:
+            self.skipTest("real capture publication root required")
+        root = Path(root)
+        runner = Path(os.environ["REMNANT_CAPTURE_VALIDATION_RUNNER"])
+        config = json.loads((root / "capture-config.json").read_text())
+        self.assertEqual(config["storage_schema_version"], 2)
+        self.assertFalse(
+            config.get("conversion_only", False), "live collection required"
+        )
+        layers = artifacts.parse_layers(",".join(map(str, config["layers"])))
+        issues = sorted(config["requests"])
+        reader = CaptureReader(runner, root, issues)
+        records = []
+        with tempfile.TemporaryDirectory(prefix="remnant-capture-check-") as scratch:
+            for rid in issues:
+                views = reader.load_views(Path(scratch), rid, layers)
+                self.assertEqual(set(views), set(layers))
+                for layer, states in views.items():
+                    self.assertEqual(len(states), config["requests"][rid]["quota"])
+                    self.assertTrue(all(s["q"].shape == (64, 512) for s in states))
+                    records.append(
+                        {"issue": rid, "layer": layer, "queries": len(states)}
+                    )
+            proof = None
+            if config["audit_shared"]:
+                proof = artifacts.load_runner(runner).audit_published_capture(
+                    root, Path(scratch)
+                )
+        output = os.environ.get("REMNANT_TRAINING_VALIDATION_OUTPUT")
+        if output:
+            artifacts.load_runner(runner).atomic_json(
+                Path(output) / "capture.json",
+                {
+                    "audit_shared": config["audit_shared"],
+                    "records": records,
+                    "audit_proof": proof,
+                },
+            )
 
 
 if __name__ == "__main__":

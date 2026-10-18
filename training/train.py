@@ -6,6 +6,8 @@ Author: Winston Cai.
 import argparse
 import copy
 import json
+import os
+import tempfile
 from collections import Counter
 from pathlib import Path
 
@@ -422,6 +424,7 @@ def run(
         cache,
         policy,
         runner,
+        executed_runner=math,
         device=device,
         threads=threads,
         torch_version=str(torch.__version__),
@@ -476,7 +479,7 @@ def run(
         completed.append(layer)
         math.atomic_json(
             output / "progress.json",
-            {"layers": completed, "complete": len(completed) == len(layers)},
+            {"layers": completed, "complete": False},
         )
     artifacts.assert_run_inputs(identity, cache, policy, runner)
     published = []
@@ -486,15 +489,45 @@ def run(
             {**entry, "path": Path(entry["path"]).name} if layer in layers else entry
         )
     policy_path = output / "policy.json"
-    math.atomic_json(
-        policy_path,
-        {
-            "selected": published,
-            "parent_policy_sha256": parent_policy_digest,
-            "trained_layers": list(layers),
-            "fresh_test_completed": False,
-        },
-    )
+    # The policy is the final handoff marker, not merely the last completed fit.
+    # A failed integrity check or publication must not advertise a complete run.
+    owned_policy = None
+    try:
+        with tempfile.TemporaryDirectory(prefix=".policy-", dir=output) as temporary:
+            staged = Path(temporary) / "policy.json"
+            math.atomic_json(
+                staged,
+                {
+                    "selected": published,
+                    "parent_policy_sha256": parent_policy_digest,
+                    "trained_layers": list(layers),
+                    "fresh_test_completed": False,
+                },
+            )
+            owned_policy = staged.stat()
+            math.atomic_json(
+                output / "progress.json", {"layers": completed, "complete": True}
+            )
+            try:
+                os.link(staged, policy_path)
+            except FileExistsError:
+                # Even a hard link to our staged inode is an unowned collision.
+                owned_policy = None
+                raise
+    except BaseException:
+        # Cover signals after link() and scratch cleanup failures after success.
+        # The staged file may already be gone; retain its inode identity above.
+        try:
+            if owned_policy is not None and os.path.samestat(
+                owned_policy, policy_path.lstat()
+            ):
+                policy_path.unlink()
+        except FileNotFoundError:
+            pass
+        math.atomic_json(
+            output / "progress.json", {"layers": completed, "complete": False}
+        )
+        raise
     return {"layers": completed, "output": str(output), "policy": str(policy_path)}
 
 

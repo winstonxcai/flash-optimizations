@@ -143,21 +143,29 @@ class StateBatches:
                     }
                 )
             if self._bank is not None and with_anchors:
+                # CPU .to() otherwise aliases the mmap. Tracebacks can retain
+                # anchors after __exit__ closes it, so every staged tensor owns
+                # its bytes, just as a CPU-to-CUDA transfer already does.
                 batch.anchors = []
                 for index, state in zip(indices, batch.states):
                     split = state["raw"].numel()
                     values = self._bank[index]
-                    batch.anchors.append(
-                        {
-                            "state": state,
-                            "rows": torch.from_numpy(
-                                values[:split].reshape(state["raw"].shape)
-                            ).to(self.device, non_blocking=False),
-                            "output": torch.from_numpy(
-                                values[split:].reshape(state["target"].shape)
-                            ).to(self.device, non_blocking=False),
-                        }
-                    )
+                    try:
+                        batch.anchors.append(
+                            {
+                                "state": state,
+                                "rows": torch.from_numpy(
+                                    values[:split].reshape(state["raw"].shape)
+                                ).to(self.device, non_blocking=False, copy=True),
+                                "output": torch.from_numpy(
+                                    values[split:].reshape(state["target"].shape)
+                                ).to(self.device, non_blocking=False, copy=True),
+                            }
+                        )
+                    finally:
+                        # Failed allocations must not leave a borrowed mmap
+                        # view in a traceback after the owner closes its bank.
+                        del values
             yield batch
         finally:
             batch.states.clear()

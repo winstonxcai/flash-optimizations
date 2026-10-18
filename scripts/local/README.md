@@ -17,8 +17,9 @@ cleanup. It does not source production environment defaults. It requires Docker,
 allocated GPU-server session, not automatic launch steps:
 
 ```bash
+CAPTURE_IMAGE=$(docker image inspect --format '{{.Id}}' remnant-capture:local)
 CAPTURE_GPUS=0,1,2,3 bash scripts/local/capture-latent.sh run \
-  remnant-capture:local /data/models/DeepSeek-V4-Flash-0731 \
+  "$CAPTURE_IMAGE" /data/models/DeepSeek-V4-Flash-0731 \
   /data/capture/scratch /data/capture/published 3600 30312
 ```
 
@@ -30,9 +31,9 @@ and publication destinations must be distinct and writable. Scratch must retain
 Do not use a read-only mount such as the server's `/mnt/public_data` as output.
 
 The prepared image must already contain the capture observer, runtime hooks,
-calibration client and compiled extensions. The shell verifies these components
-once in a GPU-free preflight container, then calls Python's data preflight against
-the actual mounts. Missing prerequisites fail;
+calibration client (including `capture-preflight`) and compiled extensions. The
+shell verifies these components in a GPU-free container, then calls the client's
+data preflight against the actual mounts. Missing prerequisites fail;
 capture never builds, pulls, patches or updates an image. Container launches use
 `--pull never`; no kernel build or production image/configuration change occurs.
 Capture stays Native, TP4/concurrency two, seed 42, with prefix reuse, overlap
@@ -47,14 +48,37 @@ failure. Selected GPUs must already be allocated to you and unoccupied; the
 launcher does not acquire GPUQ resources or terminate competing processes.
 
 `bash scripts/local/capture-latent.sh --help` is safe locally and launches
-nothing. `training/capture.py` runs inside the prepared environment and has no
-Docker/image/GPU-selection logic. Its `preflight` action validates configuration,
-audit proof, writable storage, free space and the server port. Its `run` action
-rechecks those data conditions, starts Native and the existing calibration client,
-and cleans up only its server process group. The shell supplies an absolute
-deadline; Python converts it once to monotonic time for startup and replay.
-The old `build` action is removed; provision images through your separate
-image-setup workflow.
+nothing. The same shell script runs inside the container: it rechecks mounted
+data, starts Native, polls readiness, and gives `calibrate.py capture-client`
+only the remaining budget. It owns and cleans up the server and client process
+groups. Configuration, audit proof, writable storage, free-space and port checks
+live in `calibrate.py capture-preflight`; tensor collection and publication are
+unchanged. No separate Python orchestration module is required.
+
+Use an updated capture-only image; compiled kernels need no source changes.
+Shared-only rollout proofs are source-bound and must match its calibration
+client and collector. A stale proof fails rather than being bypassed.
+
+After successful capture, check the real publications with the existing integration
+test in a **GPU-free** container using the same image. The prepared image must also
+include the training test dependencies (Torch, NumPy and Matplotlib). This verifies
+every configured issue/layer, quotas, all TP heads and Native output/LSE; audited
+captures additionally verify exact cross-rank sharing. A missing or corrupt
+publication fails. Audited capture requires at least two issues for the existing
+shared-audit proof, which this check writes into the publication directory.
+No model is loaded by this check:
+
+```bash
+docker run --rm --pull never --network none \
+  --mount "type=bind,src=$PWD,dst=/capture-repo,readonly" \
+  --mount type=bind,src=/data/capture/published,dst=/published \
+  -e PYTHONPATH=/opt/sglang-runtime-fixes:/sgl-workspace/sglang-remnant/python:/capture-repo \
+  -e PYTHONDONTWRITEBYTECODE=1 \
+  -e REMNANT_CAPTURE_VALIDATION_ROOT=/published \
+  -e REMNANT_CAPTURE_VALIDATION_RUNNER=/sgl-workspace/sglang-remnant/python/sglang/benchmark/remnant/calibrate.py \
+  --entrypoint python3 "$CAPTURE_IMAGE" \
+  -m unittest training.tests.test_integration.PublishedCaptureTests -v
+```
 
 ## Update the image
 

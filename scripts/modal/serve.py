@@ -11,7 +11,7 @@ Default benchmark: TP4/4xH100, Native, 32k input, 2048 output, concurrency 8;
 60-minute work limit (not an ETA). Uses the same Bash launcher as local H100s.
 The default image builds from Dockerfile. REMNANT_COMPILED_IMAGE reuses a known
 image only after CPU source verification, before overlaying Python updates.
-Model-free work: kernels.py. Capture: training/capture.py.
+Model-free work: kernels.py. Capture: scripts/local/capture-latent.sh.
 """
 
 from __future__ import annotations

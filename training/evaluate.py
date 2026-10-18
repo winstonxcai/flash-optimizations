@@ -13,6 +13,7 @@ import sys
 import tempfile
 import time
 from collections import defaultdict
+from contextlib import ExitStack
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -318,6 +319,72 @@ def plot_retention_sweep(result: dict, destination: Path) -> dict:
     }
 
 
+def _rollback_publication(
+    owned: dict[Path, os.stat_result], collisions: set[Path]
+) -> None:
+    """Remove our marker first, even when scratch cleanup removed its source."""
+    for target, identity in reversed(owned.items()):
+        if target in collisions:
+            continue
+        try:
+            if os.path.samestat(target.lstat(), identity):
+                target.unlink()
+        except FileNotFoundError:
+            pass  # Never follow symlinks or remove another writer's replacement.
+
+
+@dataclass
+class _PartialReport:
+    """Own one progress path; later updates may replace only our last inode."""
+
+    path: Path
+    identity: os.stat_result | None = None
+
+    def write(self, math, result: dict) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(
+            prefix=".evaluation-", dir=self.path.parent
+        ) as scratch:
+            staged = Path(scratch) / self.path.name
+            math.atomic_json(staged, result)
+            identity = staged.stat()
+            if self.identity is None:
+                # Record ownership before link: an interruption can follow the
+                # actual syscall without letting Python observe its return.
+                self.identity = identity
+                try:
+                    os.link(staged, self.path)
+                except FileExistsError:
+                    self.identity = None  # A known collision is never ours.
+                    raise
+            else:
+                try:
+                    descriptor = os.open(self.path, os.O_RDWR | os.O_NOFOLLOW)
+                except FileNotFoundError as error:
+                    raise FileExistsError(
+                        f"partial report ownership lost: {self.path}"
+                    ) from error
+                # Update the verified open inode, never rename over a checked
+                # filename: another writer can replace that name after a stat.
+                # Partial diagnostics may be interrupted mid-write; only the
+                # separately, atomically published final JSON marks success.
+                with os.fdopen(descriptor, "r+b") as current:
+                    if not os.path.samestat(os.fstat(current.fileno()), self.identity):
+                        raise FileExistsError(f"partial report ownership lost: {self.path}")
+                    with staged.open("rb") as incoming:
+                        shutil.copyfileobj(incoming, current)
+                    current.truncate()
+                    current.flush()
+                    os.fsync(current.fileno())
+                try:
+                    if not os.path.samestat(self.path.lstat(), self.identity):
+                        raise FileExistsError(f"partial report ownership lost: {self.path}")
+                except FileNotFoundError as error:
+                    raise FileExistsError(
+                        f"partial report ownership lost: {self.path}"
+                    ) from error
+
+
 def _publish_comparison(
     math, output: Path, result: dict, figure_dir: Path | None
 ) -> None:
@@ -328,18 +395,18 @@ def _publish_comparison(
     files also support a figure directory on a different filesystem.
     """
     output.parent.mkdir(parents=True, exist_ok=True)
-    owned: dict[Path, Path] = {}
+    owned: dict[Path, os.stat_result] = {}
     collisions: set[Path] = set()
-    with tempfile.TemporaryDirectory(
-        prefix=".evaluation-", dir=output.parent
-    ) as scratch:
-        stage = Path(scratch)
-        staged_output = stage / output.name
-        pairs = [
-            (staged_output.with_suffix(suffix), output.with_suffix(suffix))
-            for suffix in (".csv", ".md")
-        ]
-        try:
+    try:
+        with tempfile.TemporaryDirectory(
+            prefix=".evaluation-", dir=output.parent
+        ) as scratch, ExitStack() as cleanup:
+            stage = Path(scratch)
+            staged_output = stage / output.name
+            pairs = [
+                (staged_output.with_suffix(suffix), output.with_suffix(suffix))
+                for suffix in (".csv", ".md")
+            ]
             if result.get("retention_sweep"):
                 figures = plot_retention_sweep(result, stage / "figures")
                 files = {}
@@ -358,7 +425,8 @@ def _publish_comparison(
                     prefix=f".{target.name}.", dir=target.parent
                 )
                 temporary = Path(name)
-                owned[target] = temporary
+                cleanup.callback(temporary.unlink, missing_ok=True)
+                owned[target] = os.fstat(fd)
                 with os.fdopen(fd, "wb") as stream, source.open("rb") as incoming:
                     shutil.copyfileobj(incoming, stream)
                     stream.flush()
@@ -370,21 +438,9 @@ def _publish_comparison(
                     # by somebody else, not by this failed publication call.
                     collisions.add(target)
                     raise
-        except BaseException:
-            for target, temporary in owned.items():
-                if target in collisions:
-                    continue
-                try:
-                    current = target.lstat()  # Never follow another writer's symlink.
-                    ours = temporary.stat()
-                    if (current.st_dev, current.st_ino) == (ours.st_dev, ours.st_ino):
-                        target.unlink()
-                except FileNotFoundError:
-                    pass  # A competing deletion is already safe; preserve other entries.
-            raise
-        finally:
-            for temporary in owned.values():
-                temporary.unlink(missing_ok=True)
+    except BaseException:
+        _rollback_publication(owned, collisions)
+        raise
 
 
 # Replay orchestration and public command.
@@ -434,19 +490,20 @@ def compare_masks(
             "complete, unchanged cache metadata and requested layer coverage required"
         )
     index = json.loads((cache / "index.json").read_text())
+    math = artifacts.load_runner(runner, sources=config["numerical_source"])
+    ref = artifacts.load_reference(math, config["numerical_source"])
     # Check every requested checkpoint before doing attention work. Do not tune
     # checkpoints or inherit historical aggregate metrics from their manifests.
     provenance = artifacts.run_provenance(
         cache,
         policy,
         runner,
+        executed_runner=math,
         device="cpu",
         threads=threads,
         torch_version=str(torch.__version__),
         layers=layers,
     )
-    math = artifacts.load_runner(runner, sources=config["numerical_source"])
-    ref = artifacts.load_reference(math, config["numerical_source"])
     records = {m.key: [] for m in methods}
     expected, completed = set(), []
     issues = set(config["split"]["development"])
@@ -524,6 +581,7 @@ def compare_masks(
             "learned_budget_transfer"
         ] = "Same 256-trained scorer at every budget; no retraining"
     started = time.monotonic()
+    partial = _PartialReport(output.with_suffix(".partial.json"))
     try:
         with torch.no_grad():
             for layer in layers:
@@ -601,7 +659,7 @@ def compare_masks(
                         )
                 completed.append(layer)
                 result["elapsed_seconds"] = time.monotonic() - started
-                math.atomic_json(output.with_suffix(".partial.json"), result)
+                partial.write(math, result)
                 print(
                     f"Mask comparison layer {layer}: {len(completed)}/{len(layers)}, "
                     f'{len(rows)} paired samples; {result["elapsed_seconds"]:.1f}s',
@@ -632,7 +690,10 @@ def compare_masks(
             failure=repr(error),
             elapsed_seconds=time.monotonic() - started,
         )
-        math.atomic_json(output.with_suffix(".partial.json"), result)
+        try:
+            partial.write(math, result)
+        except FileExistsError:
+            pass  # Preserve an unowned partial and the original run failure.
         raise
     return result
 
@@ -690,6 +751,7 @@ def main(arguments=None):
         args.cache,
         args.policy,
         args.runner,
+        executed_runner=math,
         device="cpu",
         threads=args.threads,
         torch_version=str(torch.__version__),
@@ -716,12 +778,23 @@ def main(arguments=None):
     }
     artifacts.assert_run_inputs(provenance, args.cache, args.policy, args.runner)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(
-        prefix=".evaluation-", dir=args.output.parent
-    ) as owned:
-        staged = Path(owned) / args.output.name
-        math.atomic_json(staged, result)
-        os.link(staged, args.output)
+    owned: dict[Path, os.stat_result] = {}
+    collisions: set[Path] = set()
+    try:
+        with tempfile.TemporaryDirectory(
+            prefix=".evaluation-", dir=args.output.parent
+        ) as scratch:
+            staged = Path(scratch) / args.output.name
+            math.atomic_json(staged, result)
+            owned[args.output] = staged.stat()
+            try:
+                os.link(staged, args.output)
+            except FileExistsError:
+                collisions.add(args.output)
+                raise
+    except BaseException:
+        _rollback_publication(owned, collisions)
+        raise
     return result
 
 

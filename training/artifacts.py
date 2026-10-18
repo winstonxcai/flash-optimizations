@@ -172,6 +172,7 @@ def run_provenance(
     policy: Path,
     runner: Path,
     *,
+    executed_runner: ModuleType,
     device: str,
     threads: int,
     torch_version: str,
@@ -189,11 +190,15 @@ def run_provenance(
     if sha256(policy) != policy_digest:
         raise ValueError(f"policy changed during validation: {policy}")
     cache_hashes, cache_layers = _cache_provenance(cache, layers)
+    validate_runner(cache, runner)
+    runner_digest = sha256(runner)
+    if runner_digest != executed_runner._source_sha256:
+        raise ValueError(f"executed runner source changed before provenance: {runner}")
     return {
         "cache_sha256": cache_hashes,
         "cache_layers_sha256": cache_layers,
         "policy_sha256": policy_digest,
-        "runner_sha256": sha256(runner),
+        "runner_sha256": runner_digest,
         "checkpoints": checkpoints,
         "torch": torch_version,
         "device": device,
@@ -306,17 +311,19 @@ def read_checkpoint(entry: dict) -> dict:
     layer = entry["layer"]
     path = Path(entry["path"])
     try:
-        actual = sha256(path)
+        source = path.read_bytes()
     except OSError as error:
         raise ValueError(
             f"cannot read policy checkpoint: layer {layer}: {path}"
         ) from error
+    actual = hashlib.sha256(source).hexdigest()
     if actual != entry["sha256"]:
         raise ValueError(
             f"policy checkpoint changed: layer {layer}: {path}; "
             f'expected {entry["sha256"]}, actual {actual}'
         )
-    record = json.loads(path.read_text())
+    # Parse exactly the snapshot whose digest was verified, not a second read.
+    record = json.loads(source)
     if (
         not isinstance(record, dict)
         or record.get("layer") != layer
@@ -324,17 +331,6 @@ def read_checkpoint(entry: dict) -> dict:
     ):
         raise ValueError(f"complete selected checkpoint required: layer {layer}")
     return record
-
-
-def policy_record(policy_path: Path, layer: int) -> tuple[dict, dict]:
-    """Read one hash-bound checkpoint; the input manifest remains unchanged."""
-    entries = read_policy(policy_path)
-    if layer not in entries:
-        raise ValueError(
-            f"policy must contain exactly one checkpoint for layer {layer}"
-        )
-    entry = entries[layer]
-    return read_checkpoint(entry), entry
 
 
 def parse_layers(value: str) -> tuple[int, ...]:

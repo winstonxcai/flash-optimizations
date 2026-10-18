@@ -52,8 +52,8 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 - Upstream base: `sgl-project/sglang`
 - Base commit: `71de97b264b04dcd514cf904003028aefe9775c8` (`v0.5.18`)
 - Remnant branch: `remnant/v0.5.18`
-- Current branch head: `0e94e2b32b4c1329cf8cad8aa5f5c5e48ec39278`
-- Comparison: `71de97b264b04dcd514cf904003028aefe9775c8..0e94e2b32b4c1329cf8cad8aa5f5c5e48ec39278`
+- Current branch head: `0098b4277fbd1d9be6a6761683014869e13fba06`
+- Comparison: `71de97b264b04dcd514cf904003028aefe9775c8..0098b4277fbd1d9be6a6761683014869e13fba06`
 
 ### Runtime and build integration
 
@@ -160,7 +160,8 @@ parent experiment archive; this rewrite changes no production runtime dispatch.
 - `python/sglang/srt/remnant/capture.py` — schema-2 owner-only shared copies,
   audited TP payloads and per-layer constants; inactive without capture settings.
 - `python/sglang/benchmark/remnant/calibrate.py` — legacy/shared snapshot reader,
-  exact conversion, dependency hashes, per-issue bundles and bounded extraction.
+  exact conversion, dependency hashes, per-issue bundles, bounded extraction and
+  prepared-capture data preflight for the shell launcher.
 - `test/registered/attention/unittests/dsv4/test_remnant_calibration.py` — schema
   round trips, partial/duplicate selections, audit/hash failures, publication and
   disabled/non-owner copy contracts.
