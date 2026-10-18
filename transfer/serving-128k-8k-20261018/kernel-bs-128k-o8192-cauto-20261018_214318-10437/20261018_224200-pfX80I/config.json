@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "input_tokens": 131072,
+  "output_tokens": 8192,
+  "concurrency": 32,
+  "requested_concurrency": "auto",
+  "seed": 42,
+  "warmup_requests": 32,
+  "measured_requests": 96,
+  "script_sha256": "07c8424b0e85b3090f2b763c3d6a79fb35c95a9bd3c9bfea1071a7b33609e557",
+  "dataset": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/data/ShareGPT_V3_unfiltered_cleaned_split.json",
+    "sha256": "35f0e213ce091ed9b9af2a1f0755e9d39f9ccec34ab281cd4ca60d70f6479ba4"
+  }
+}
