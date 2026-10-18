@@ -13,6 +13,9 @@ Start the server separately with serve.sh. This client never starts/stops it.
 Use the same concurrency for fair comparisons; auto uses the running pool's
 capacity. BENCH_EXECUTION=docker (VDI, default) or direct (inside the image).
 BENCH_TIMEOUT_S bounds each client wave (default 3600 seconds).
+BENCH_DATASET_PATH selects a local ShareGPT JSON file for random-text sampling;
+in Docker mode, use an absolute host path under HOST_REPO. Otherwise SGLang
+uses its default Hugging Face download/cache behavior.
 EOF
 }
 die () { echo "bench-serving.sh: $*" >&2; exit 1; }
@@ -36,6 +39,18 @@ esac
 for tool in "$python" curl timeout; do
   command -v "$tool" >/dev/null 2>&1 || die "missing required tool: $tool"
 done
+dataset_path=${BENCH_DATASET_PATH:-}
+if [ -n "$dataset_path" ]; then
+  [[ "$dataset_path" = /* ]] || die "BENCH_DATASET_PATH must be an absolute host path"
+  [ -r "$dataset_path" ] && [ -f "$dataset_path" ] || die "cannot read dataset: $dataset_path"
+  dataset_client_path=$dataset_path
+  if [ "$execution" = docker ]; then
+    case "$dataset_path" in
+      "$HOST_REPO"/*) dataset_client_path=$(to_ct "$dataset_path") ;;
+      *) die "Docker dataset must be under HOST_REPO: $dataset_path" ;;
+    esac
+  fi
+fi
 health || die "no server on port $PORT; start it with serve.sh first"
 
 base="$RESULTS_HOST/serving/$TAG"
@@ -45,13 +60,13 @@ echo "Results: $RUN_ROOT"
 curl -fsS --max-time 30 "http://127.0.0.1:$PORT/server_info" > "$RUN_ROOT/server-info.json"
 
 # Resolve against the actual server, not a second copy of its launch settings.
-"$python" - "$RUN_ROOT" "$C" "$INPUT" "$OUTPUT" "$SEED" "$0" <<'PY_PREFLIGHT'
+"$python" - "$RUN_ROOT" "$C" "$INPUT" "$OUTPUT" "$SEED" "$0" "$dataset_path" <<'PY_PREFLIGHT'
 import hashlib
 import json
 import sys
 from pathlib import Path
 
-root, requested, input_len, output_len, seed, script = sys.argv[1:]
+root, requested, input_len, output_len, seed, script, dataset_path = sys.argv[1:]
 root = Path(root)
 info = json.loads((root / "server-info.json").read_text())
 input_len, output_len, seed = int(input_len), int(output_len), int(seed)
@@ -75,6 +90,19 @@ config = {
     "warmup_requests": concurrency, "measured_requests": 3 * concurrency,
     "script_sha256": hashlib.sha256(Path(script).read_bytes()).hexdigest(),
 }
+if dataset_path:
+    path = Path(dataset_path)
+    try:
+        document = json.loads(path.read_bytes())
+    except (OSError, ValueError) as exc:
+        raise SystemExit(f"cannot load ShareGPT dataset {path}: {exc}") from exc
+    if not isinstance(document, list) or not document:
+        raise SystemExit(f"ShareGPT dataset must be a nonempty JSON list: {path}")
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    config["dataset"] = {"path": str(path), "sha256": digest.hexdigest()}
 (root / "config.json").write_text(json.dumps(config, indent=2) + "\n")
 (root / "client-args.txt").write_text("\n".join([
     str(concurrency), info["model_path"], info.get("tokenizer_path") or info["model_path"],
@@ -133,6 +161,9 @@ bench_wave () {
     --random-range-ratio 1.0 --num-prompts "$count" --max-concurrency "$C"
     --request-rate inf --warmup-requests 0 --flush-cache --tokenize-prompt
     --output-file "$destination" --output-details --seed "$SEED")
+  if [ -n "$dataset_path" ]; then
+    command+=(--dataset-path "$dataset_client_path")
+  fi
   timeout --signal=TERM --kill-after=5s "$((BENCH_TIMEOUT_S + 10))s" \
     "${runtime[@]}" "${command[@]}" > "$RUN_ROOT/$name.log" 2>&1 \
     || die "$name failed; see $RUN_ROOT/$name.log"

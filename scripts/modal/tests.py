@@ -730,5 +730,46 @@ if kind == 'duplicate' and measured:
         self.assertIn("measured failed", result.stderr)
 
 
+    def test_local_dataset_is_forwarded_and_hashed_in_both_execution_modes(self):
+        import hashlib
+
+        dataset = self.root / "dataset with spaces.json"
+        dataset.write_text(json.dumps([
+            {"conversations": [{"value": "question"}, {"value": "answer"}]}
+        ]))
+        self.env["BENCH_DATASET_PATH"] = str(dataset)
+        expected_paths = []
+        for execution in ("direct", "docker"):
+            with self.subTest(execution=execution):
+                if execution == "docker":
+                    mount = self.root.parent / "container mount"
+                    mount.symlink_to(self.root, target_is_directory=True)
+                    self.env["REPO_CT"] = str(mount)
+                    expected_paths.extend([str(mount / dataset.name)] * 2)
+                else:
+                    expected_paths.extend([str(dataset)] * 2)
+                result = self.run_client(execution=execution, tag=execution)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                root, = (self.root / "results/serving" / execution).iterdir()
+                config = json.loads((root / "config.json").read_text())
+                self.assertEqual(config["dataset"], {
+                    "path": str(dataset),
+                    "sha256": hashlib.sha256(dataset.read_bytes()).hexdigest(),
+                })
+        for args, expected in zip(self.records("bench"), expected_paths):
+            self.assertEqual(args[args.index("--dataset-path") + 1], expected)
+
+    def test_invalid_local_datasets_fail_before_client_execution(self):
+        path = self.root / "dataset.json"
+        self.env["BENCH_DATASET_PATH"] = str(path)
+        for payload in (None, "not JSON", "{}", "[]"):
+            with self.subTest(payload=payload):
+                if payload is not None:
+                    path.write_text(payload)
+                result = self.run_client()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(self.records("bench"), [])
+
+
 if __name__ == "__main__":
     unittest.main()

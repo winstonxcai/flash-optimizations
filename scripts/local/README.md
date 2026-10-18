@@ -171,6 +171,22 @@ Both waves must complete with the requested output lengths and no errors.
 The 3C requests are one measurement, not three independent runs. Decode graph
 coverage, context length and request limits are checked before client execution.
 
+The `random` workload samples ShareGPT text, so SGLang may download its backing
+dataset even though prompt lengths are synthetic. On restricted-network hosts,
+prepare the real ShareGPT JSON before reserving GPUs and pass its local path:
+
+```bash
+export BENCH_DATASET_PATH="$PWD/results/datasets/ShareGPT_V3_unfiltered_cleaned_split.json"
+bash scripts/local/bench-serving.sh native-smoke "$PORT" 32768 256 2
+```
+
+In Docker mode this is an absolute **host** path under `HOST_REPO`; the client
+maps it into the existing container mount. The script checks the JSON and records
+its SHA-256 in `config.json`, and both waves receive `--dataset-path`. Pass
+`BENCH_DATASET_PATH` explicitly through GPUQ `--env` when submitting jobs. Keep
+the file outside Git and identical across modes. Without this option, SGLang's
+default Hugging Face download/cache behavior is preserved.
+
 The VDI default (`BENCH_EXECUTION=docker`) runs the official SGLang client in
 the existing container. Inside a prepared environment, including Modal, use:
 
