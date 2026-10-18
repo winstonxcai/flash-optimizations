@@ -4,8 +4,10 @@ Run: python -m unittest scripts.modal.tests
 No image builds, remote calls, weights or GPUs. Build/execution boundaries are mocked.
 """
 
+import ast
 import copy
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -315,8 +317,22 @@ class LauncherTests(unittest.TestCase):
             kernels.CPU_TESTS,
             tuple(kernels.TEST_MODULES[n] for n in ("cache_format", "pack", "backend", "compressor_store")),
         )
-        self.assertTrue(kernels.SANITIZER_TESTS[0].startswith(kernels.TEST_MODULES["unpack_kernel"] + "::"))
-        self.assertTrue(kernels.SANITIZER_TESTS[1].startswith(kernels.TEST_MODULES["cuda_graph"] + "::"))
+        expected = {
+            kernels.TEST_MODULES["unpack_kernel"] + "::test_triton_native_pages_match_independent_reference",
+            kernels.TEST_MODULES["cuda_graph"] + "::TestRemnantCudaGraph::test_store_and_native_reconstruction_replays_changed_inputs",
+            kernels.TEST_MODULES["pack_kernel"] + "::test_remnant_triton_pack_matches_reference",
+            kernels.TEST_MODULES["cuda_graph"] + "::TestRemnantCudaGraph::test_consecutive_mixed_layers_replay_with_stable_buffers",
+        }
+        self.assertEqual(set(kernels.SANITIZER_TESTS), expected)
+        self.assertEqual(len(kernels.SANITIZER_TESTS), len(expected))
+        # Check actual node identities without importing CUDA-dependent modules.
+        for selector in kernels.SANITIZER_TESTS:
+            path, *names = selector.split("::")
+            node = ast.parse((kernels.SGLANG_SOURCE / path).read_text())
+            for name in names:
+                matches = [child for child in node.body if getattr(child, "name", None) == name]
+                self.assertEqual(len(matches), 1, selector)
+                node = matches[0]
 
     def test_cached_serving_image_rejects_mismatched_sources(self):
         from scripts.modal import serve
@@ -344,9 +360,33 @@ class LauncherTests(unittest.TestCase):
                 serve.benchmark_serving.local()
             process.assert_not_called()
 
-    def test_model_free_jobs_mount_no_model_volume(self):
-        for function in kernels.app.registered_functions.values():
-            self.assertNotIn("/models", function.spec.volumes)
+    def test_model_cache_requires_nonempty_pinned_receipts(self):
+        from scripts.modal import serve
+
+        model = self.root / "model"
+        receipts = model / ".cache/huggingface/download"
+        receipts.mkdir(parents=True)
+        names = [f"model-{index:05}.safetensors" for index in range(48)]
+        (model / "config.json").write_text(json.dumps({"num_attention_heads": 64, "compress_ratios": [4] * 61}))
+        (model / "model.safetensors.index.json").write_text(
+            json.dumps({"weight_map": {f"weight-{index}": name for index, name in enumerate(names)}})
+        )
+        for name in names + ["config.json", "model.safetensors.index.json"]:
+            if name in names:
+                (model / name).write_bytes(b"shard")
+            (receipts / (name + ".metadata")).write_text(serve.MODEL_REVISION + "\netag\n0\n")
+        receipt = receipts / (names[0] + ".metadata")
+        with patch.object(serve, "MODEL_DIR", model):
+            with patch("builtins.print"):
+                result = serve.inspect_model_cache.local()
+            self.assertEqual(result["shards"], 48)
+            self.assertEqual(result["bytes"], 48 * len(b"shard"))
+            for value in ("", "another-revision\netag\n0\n"):
+                receipt.write_text(value)
+                with self.subTest(receipt=value), self.assertRaisesRegex(
+                    RuntimeError, "missing or unpinned checkpoint file: " + names[0]
+                ):
+                    serve.inspect_model_cache.local()
 
     def test_public_commands_import_without_launching_jobs(self):
         code = """
@@ -378,6 +418,48 @@ with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')
                 text=True,
                 timeout=30,
             )
+
+
+class LocalScriptTests(unittest.TestCase):
+    def test_lswb_summary_resolves_only_the_requested_run(self):
+        with tempfile.TemporaryDirectory(prefix="remnant-row-") as directory:
+            results = Path(directory) / "results' with spaces"
+            base = results / "lswb-replay"
+            old = base / "native-c24/20261017_120000"
+            new = base / "kernel-c24/20261018_120000"
+            for index, run in enumerate((old, new), 1):
+                summary = run / "client/summary.json"
+                summary.parent.mkdir(parents=True)
+                summary.write_text(json.dumps({
+                    "valid": True, "ttft_ms": {"p90": 1000},
+                    "latency_ms": {"p90": 2000}, "counts": {"successful": index},
+                    "success_rate": 1,
+                }))
+                os.utime(summary, (index, index))
+            script = kernels.REPO_ROOT / "scripts/local/lswb-row.sh"
+
+            def row(argument):
+                return subprocess.run(
+                    ["bash", str(script), str(argument)],
+                    env={**os.environ, "RESULTS_HOST": str(results), "PYTHON": sys.executable},
+                    cwd=kernels.REPO_ROOT, capture_output=True, text=True, timeout=10,
+                )
+
+            for argument in (old, old.parent, "native-c24"):
+                with self.subTest(argument=str(argument)):
+                    result = row(argument)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertIn("dir=20261017_120000", result.stdout)
+                    self.assertIn("done=1 ", result.stdout)
+            latest = row(base)
+            self.assertEqual(latest.returncode, 0, latest.stdout + latest.stderr)
+            self.assertIn("dir=20261018_120000", latest.stdout)
+            for argument in ("missing-tag", base / "missing-tag"):
+                with self.subTest(argument=str(argument)):
+                    result = row(argument)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("cannot resolve", result.stdout)
+                    self.assertNotIn("slo=", result.stdout)
 
 
 if __name__ == "__main__":

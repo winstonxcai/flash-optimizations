@@ -52,8 +52,8 @@ FlashMLA benchmark inherited unchanged for FlashInfer/FlashMLA comparison.
 - Upstream base: `sgl-project/sglang`
 - Base commit: `71de97b264b04dcd514cf904003028aefe9775c8` (`v0.5.18`)
 - Remnant branch: `remnant/v0.5.18`
-- Current branch head: `6a728bf95c08e4e4bb984509c1ce25ba822b7914`
-- Comparison: `71de97b264b04dcd514cf904003028aefe9775c8..6a728bf95c08e4e4bb984509c1ce25ba822b7914`
+- Current branch head: `0e94e2b32b4c1329cf8cad8aa5f5c5e48ec39278`
+- Comparison: `71de97b264b04dcd514cf904003028aefe9775c8..0e94e2b32b4c1329cf8cad8aa5f5c5e48ec39278`
 
 ### Runtime and build integration
 
@@ -146,6 +146,16 @@ Historical Adapter/Direct benchmarking and its Native gate are preserved in the
 parent experiment archive; this rewrite changes no production runtime dispatch.
 
 ### Opt-in capture storage
+
+- Test audit (2026-10-18; `0e94e2b32b`): remove the unreachable
+  dense-pruning branch and its unused runtime flags/helper; retain the active
+  keep-mask reference and frozen compatibility fixtures. Compressor/startup
+  checks retain Native dispatch and raw-FP32 preservation coverage.
+- Capture/replay regressions: empty CSA positions use integer indices; replay
+  validates and decodes already-compacted Native rows without masking twice.
+  Both storage schemas cover padding, duplicates and empty CSA/SWA selections;
+  matching empty-domain LSE values report zero error. Numerical tolerances are
+  unchanged. Live H100 validation remains outstanding.
 
 - `python/sglang/srt/remnant/capture.py` — schema-2 owner-only shared copies,
   audited TP payloads and per-layer constants; inactive without capture settings.

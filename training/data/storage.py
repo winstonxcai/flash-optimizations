@@ -47,8 +47,11 @@ def audit(root: Path, runner: Path, output: Path, *, convert: bool = False) -> d
     runner_hash = hashlib.sha256(runner.read_bytes()).hexdigest()
     torch.set_num_threads(4)
     config = json.loads((root / "capture-config.json").read_text())
+    if not config["requests"] or not config["layers"]:
+        raise ValueError(f"nonempty capture requests and layers required: {root}")
     fields = Counter()
     rows = []
+    missing_groups = []
     groups = snapshots = serialized = occurrences = unique = 0
     counted_files = set()
     first_seconds = warm_seconds = 0.0
@@ -61,6 +64,7 @@ def audit(root: Path, runner: Path, output: Path, *, convert: bool = False) -> d
     for rid in sorted(config["requests"]):
         for layer in config["layers"]:
             seen = set()
+            before_groups = groups
             for group_index, paths in enumerate(
                 math.state_paths(root, config, rid, layer)
             ):
@@ -126,6 +130,8 @@ def audit(root: Path, runner: Path, output: Path, *, convert: bool = False) -> d
                     max_native_error = max(max_native_error, check["max_output_error"])
                     native_checks += 1
                     converted_groups += 1
+            if groups == before_groups:
+                missing_groups.append({"rid": rid, "layer": layer})
             unique += len(seen)
             rows.append({"rid": rid, "layer": layer, "unique_c4_rows": len(seen)})
         print(f"Verified {rid}: {groups} groups", flush=True)
@@ -133,7 +139,8 @@ def audit(root: Path, runner: Path, output: Path, *, convert: bool = False) -> d
     head_bytes = sum(v for k, v in fields.items() if k in head_keys)
     other_bytes = sum(fields.values()) - head_bytes
     result = {
-        "status": "pass",
+        "status": "failed" if missing_groups else "pass",
+        "missing_groups": missing_groups,
         "groups": groups,
         "snapshots": snapshots,
         "payload_files": len(counted_files),
@@ -173,6 +180,13 @@ def audit(root: Path, runner: Path, output: Path, *, convert: bool = False) -> d
         writer = csv.DictWriter(stream, fieldnames=["rid", "layer", "unique_c4_rows"])
         writer.writeheader()
         writer.writerows(rows)
+    if missing_groups:
+        missing = ", ".join(
+            f'{row["rid"]}/layer-{row["layer"]:02d}' for row in missing_groups
+        )
+        raise ValueError(
+            f"missing capture groups: {missing}; partial diagnostics: {output}"
+        )
     return result
 
 

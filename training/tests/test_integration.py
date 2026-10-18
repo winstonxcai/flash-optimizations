@@ -253,6 +253,16 @@ class TrainingIntegrationTests(unittest.TestCase):
         entries = artifacts.read_policy(policy)
         for layer, entry in identity["checkpoints"].items():
             self.assertEqual(entry, entries[int(layer)])
+        self.assertEqual(
+            identity["cache_layers_sha256"],
+            {
+                f"layer-{int(layer):02d}{suffix}": artifacts.sha256(
+                    cache / f"layer-{int(layer):02d}{suffix}"
+                )
+                for layer in identity["checkpoints"]
+                for suffix in (".json", ".pt")
+            },
+        )
 
     def _train_and_evaluate(
         self,
@@ -444,11 +454,34 @@ class TrainingIntegrationTests(unittest.TestCase):
             continued["warm_theta"], expanded["selected_parameters"]["theta"]
         )
         self.assertEqual(continued["gradient_mode"], "straight_through")
-        # The second layer has no cached data: keep completed work, but do not
-        # publish a usable policy for an incomplete two-layer run.
+        # Both layers have bound receipts, but the second payload is missing.
+        # Keep completed work if a later layer fails to load; binding receipts
+        # must not require deserializing all layers before the first fit.
+        config = json.loads((cache / "config.json").read_text())
+        config["layers"] = [8, 12]
+        self.math.atomic_json(cache / "config.json", config)
+        digest = artifacts.sha256(cache / "config.json")
+        record = json.loads((cache / "layer-08.json").read_text())
+        index = {}
+        for layer in (8, 12):
+            receipt = cache / f"layer-{layer:02d}.json"
+            self.math.atomic_json(
+                receipt, {**record, "layer": layer, "config_sha256": digest}
+            )
+            index[str(layer)] = {"record_sha256": artifacts.sha256(receipt)}
+        self.math.atomic_json(cache / "index.json", index)
+        self.math.atomic_json(
+            cache / "progress.json",
+            {
+                "status": "complete",
+                "layers": [8, 12],
+                "config_sha256": digest,
+                "index_sha256": artifacts.sha256(cache / "index.json"),
+            },
+        )
         incomplete = self.root / "incomplete"
         with patch("training.train.fit", side_effect=self._short_fit):
-            with self.assertRaisesRegex(KeyError, "12"):
+            with self.assertRaisesRegex(FileNotFoundError, "layer-12.pt"):
                 train.main(
                     self._train_arguments(
                         cache, policy, "continuation", "8,12", incomplete
@@ -506,6 +539,69 @@ class TrainingIntegrationTests(unittest.TestCase):
         self.assertFalse(result["codec_anchor_uses_development"])
 
     # Source identity and process lifetime.
+    def test_cache_provenance_binds_receipts_without_loading_tensors(self):
+        cache = self._cache(8)
+        policy = self._warm_policy(8)
+        # An unrelated layer must not be read or mapped for a one-layer run.
+        (cache / "layer-12.json").write_text("not a requested receipt")
+        (cache / "layer-12.pt").write_bytes(b"not a requested tensor")
+
+        def identity():
+            return artifacts.run_provenance(
+                cache,
+                policy,
+                self.runner,
+                device="cpu",
+                threads=2,
+                torch_version=str(torch.__version__),
+                layers=(8,),
+            )
+
+        with patch("torch.load", side_effect=AssertionError("must not load tensors")):
+            bound = identity()
+            artifacts.assert_run_inputs(bound, cache, policy, self.runner)
+        self._assert_run_identity(bound, cache, policy)
+        original = {
+            name: (cache / name).read_bytes()
+            for name in ("config.json", "index.json", "progress.json", "layer-08.json")
+        }
+        for problem in (
+            "config_hash", "index_hash", "receipt_layer", "receipt_config",
+            "payload_index", "coverage",
+        ):
+            try:
+                progress = json.loads(original["progress.json"])
+                index = json.loads(original["index.json"])
+                record = json.loads(original["layer-08.json"])
+                if problem == "config_hash":
+                    progress["config_sha256"] = "0" * 64
+                elif problem == "index_hash":
+                    progress["index_sha256"] = "0" * 64
+                elif problem == "coverage":
+                    progress["layers"] = []
+                else:
+                    if problem == "receipt_layer":
+                        record["layer"] = 12
+                    elif problem == "receipt_config":
+                        record["config_sha256"] = "0" * 64
+                    else:
+                        index["8"]["states_sha256"] = "0" * 64
+                    self.math.atomic_json(cache / "layer-08.json", record)
+                    index["8"]["record_sha256"] = artifacts.sha256(
+                        cache / "layer-08.json"
+                    )
+                    self.math.atomic_json(cache / "index.json", index)
+                    progress["index_sha256"] = artifacts.sha256(cache / "index.json")
+                self.math.atomic_json(cache / "progress.json", progress)
+                with self.subTest(problem=problem), patch(
+                    "torch.load", side_effect=AssertionError("must not load tensors")
+                ):
+                    with self.assertRaisesRegex(ValueError, "cache|cached"):
+                        identity()
+            finally:
+                for name, payload in original.items():
+                    (cache / name).write_bytes(payload)
+
     def test_changed_runner_is_rejected_before_training_or_evaluation(self):
         cache = self._cache(8)
         policy = self._warm_policy(8)
@@ -584,8 +680,16 @@ class TrainingIntegrationTests(unittest.TestCase):
         }
         self.math.atomic_json(config_path, config)
         artifacts.validate_runner(cache, alternate)
+        receipt_path = cache / "layer-08.json"
+        receipt = json.loads(receipt_path.read_text())
+        receipt["config_sha256"] = artifacts.sha256(config_path)
+        self.math.atomic_json(receipt_path, receipt)
+        index = json.loads((cache / "index.json").read_text())
+        index["8"]["record_sha256"] = artifacts.sha256(receipt_path)
+        self.math.atomic_json(cache / "index.json", index)
         progress = json.loads((cache / "progress.json").read_text())
         progress["config_sha256"] = artifacts.sha256(config_path)
+        progress["index_sha256"] = artifacts.sha256(cache / "index.json")
         self.math.atomic_json(cache / "progress.json", progress)
         for command, options in (
             (train.main, ["--recipe", "continuation"]),
@@ -671,6 +775,66 @@ for action in (lambda: artifacts.load_reference(runner, sources),
         )
 
     # Capture storage, coverage, and bounded transfer ownership.
+    def test_storage_rejects_empty_cohort_and_layers(self):
+        legacy, _, config = self._published_capture()
+        for field, empty in (("requests", {}), ("layers", [])):
+            self.math.atomic_json(
+                legacy / "capture-config.json", {**config, field: empty}
+            )
+            for convert in (False, True):
+                output = self.root / f"empty-{field}-{convert}"
+                with self.subTest(field=field, convert=convert):
+                    with self.assertRaisesRegex(
+                        ValueError, "nonempty.*requests.*layers"
+                    ):
+                        audit(legacy, self.runner, output, convert=convert)
+                    self.assertFalse((output / "storage.json").exists())
+
+    def test_storage_missing_groups_retain_failed_diagnostics(self):
+        legacy, _, config = self._published_capture()
+        for rank in range(4):
+            self.math.atomic_json(legacy / f"rank-{rank}/issue-b/reservoir.json", {})
+        for convert in (False, True):
+            output = self.root / f"missing-groups-{convert}"
+            with self.subTest(convert=convert):
+                with self.assertRaisesRegex(
+                    ValueError, "missing capture groups.*issue-b"
+                ):
+                    audit(legacy, self.runner, output, convert=convert)
+                partial = json.loads((output / "storage.json").read_text())
+                self.assertEqual(partial["status"], "failed")
+                self.assertEqual(partial["groups"], 3)
+                self.assertEqual(partial["converted_groups"], 3 if convert else 0)
+                self.assertEqual(partial["native_checks"], 3 if convert else 0)
+                self.assertEqual(
+                    partial["missing_groups"],
+                    [{"rid": "issue-b", "layer": layer} for layer in config["layers"]],
+                )
+                with (output / "storage.csv").open() as stream:
+                    self.assertEqual(len(list(csv.DictReader(stream))), 6)
+
+        # A missing layer must fail even when the same issue has other groups.
+        paths = self.math.state_paths
+
+        def omit_layer(root, config, rid, layer):
+            if (rid, layer) == ("issue-a", 4):
+                return []
+            return paths(root, config, rid, layer)
+
+        for rank in range(4):
+            self.math.atomic_json(
+                legacy / f"rank-{rank}/issue-b/reservoir.json", {"0": 0}
+            )
+        output = self.root / "missing-one-layer"
+        with patch.object(self.math, "state_paths", side_effect=omit_layer), patch(
+            "training.data.storage.artifacts.load_runner", return_value=self.math
+        ):
+            with self.assertRaisesRegex(ValueError, "missing capture groups.*issue-a"):
+                audit(legacy, self.runner, output)
+        partial = json.loads((output / "storage.json").read_text())
+        self.assertEqual(partial["groups"], 5)
+        self.assertEqual(partial["missing_groups"], [{"rid": "issue-a", "layer": 4}])
+
     def test_reader_requires_complete_uncorrupted_publication(self):
         legacy, converted, config = self._published_capture()
         output = self.root / "reader-check"
@@ -1757,6 +1921,77 @@ else:
             evaluate.main([str(occupied) if a == str(output) else a for a in args])
         self.assertEqual(occupied.with_suffix(".csv").read_text(), "keep")
 
+    def test_cache_leaf_mutations_block_all_publication_paths(self):
+        cache = self._cache(8)
+        policy = self._warm_policy(8)
+        load = evaluate.load_cached_layer
+        for mode in ("compare", "ordinary", "train"):
+            for suffix in (".json", ".pt"):
+                path = cache / f"layer-08{suffix}"
+                original_size = path.stat().st_size
+                calls = []
+
+                def changed_after_load(*args, **kwargs):
+                    states = load(*args, **kwargs)
+                    calls.append(args[1])
+                    with path.open("ab") as stream:
+                        stream.write(b"\n")
+                    return states
+
+                output = self.root / f"changed-{mode}-{suffix[1:]}.json"
+                try:
+                    with self.subTest(mode=mode, suffix=suffix):
+                        module = train if mode == "train" else evaluate
+                        with patch.object(
+                            module, "load_cached_layer", side_effect=changed_after_load
+                        ), patch(
+                            "training.train.fit", side_effect=self._short_fit
+                        ):
+                            with self.assertRaisesRegex(
+                                ValueError,
+                                "run input changed before publication.*layer-08",
+                            ):
+                                if mode == "train":
+                                    train.main(
+                                        self._train_arguments(
+                                            cache, policy, "continuation", "8", output
+                                        )
+                                    )
+                                else:
+                                    arguments = [
+                                        "--cache", str(cache),
+                                        "--policy", str(policy),
+                                        "--runner", str(self.runner),
+                                        "--output", str(output),
+                                        "--layers", "8", "--threads", "2",
+                                    ]
+                                    if mode == "compare":
+                                        arguments.append("--compare-masks")
+                                    evaluate.main(arguments)
+                        self.assertEqual(calls, [8])
+                        if mode == "train":
+                            self.assertTrue(
+                                (output / "selected-layer-08.json").exists()
+                            )
+                            self.assertFalse((output / "policy.json").exists())
+                        else:
+                            self.assertFalse(output.exists())
+                            if mode == "compare":
+                                partial = json.loads(
+                                    output.with_suffix(".partial.json").read_text()
+                                )
+                                self.assertEqual(partial["status"], "failed")
+                                self.assertEqual(partial["completed_layers"], [8])
+                                self.assertTrue(
+                                    all(
+                                        not output.with_suffix(s).exists()
+                                        for s in (".csv", ".md")
+                                    )
+                                )
+                finally:
+                    with path.open("r+b") as stream:
+                        stream.truncate(original_size)
+
     def test_report_publication_rolls_back_only_owned_artifacts(self):
         cache = self._cache(8)
         policy = self._warm_policy(8)
@@ -1971,10 +2206,8 @@ else:
         receipt.write_bytes(original + b"\n")
         with self.assertRaisesRegex(ValueError, "cached layer receipt changed"):
             evaluate.main(args)
-        self.assertEqual(
-            json.loads((self.root / "missing.partial.json").read_text())["status"],
-            "failed",
-        )
+        # Receipt corruption now fails at provenance preflight, before replay.
+        self.assertFalse((self.root / "missing.partial.json").exists())
         receipt.write_bytes(original)
         args[args.index("--output") + 1] = str(self.root / "denominator.json")
         states = evaluate.load_cached_layer(cache, 8)

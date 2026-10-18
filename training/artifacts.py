@@ -117,6 +117,56 @@ def load_reference(runner: ModuleType, sources: dict[str, str]) -> ModuleType:
     return reference
 
 
+def _cache_provenance(
+    cache: Path, layers: tuple[int, ...]
+) -> tuple[dict[str, str], dict[str, str]]:
+    """Bind small receipts without mapping or retaining any layer tensors.
+
+    The layer reader checks each payload before use. Publication checks those
+    same expected bytes again, including layers whose mappings were released.
+    """
+    metadata, hashes = {}, {}
+    for name in ("config.json", "index.json", "progress.json"):
+        source = (cache / name).read_bytes()
+        hashes[name] = hashlib.sha256(source).hexdigest()
+        metadata[name] = json.loads(source)
+    config, index, progress = (
+        metadata[name] for name in ("config.json", "index.json", "progress.json")
+    )
+    if (
+        progress["config_sha256"] != hashes["config.json"]
+        or progress["index_sha256"] != hashes["index.json"]
+    ):
+        raise ValueError(f"cache configuration/index changed: {cache}")
+    sources = {}
+    for layer in layers:
+        if (
+            layer not in config["layers"]
+            or layer not in progress["layers"]
+            or str(layer) not in index
+        ):
+            raise ValueError(f"cache missing requested layer {layer}: {cache}")
+        entry = index[str(layer)]
+        name = f"layer-{layer:02d}.json"
+        source = (cache / name).read_bytes()
+        digest = hashlib.sha256(source).hexdigest()
+        if digest != entry["record_sha256"]:
+            raise ValueError(f"cached layer receipt changed: {cache / name}")
+        record = json.loads(source)
+        payload_digest = record["states_sha256"]
+        if (
+            record["layer"] != layer
+            or record["config_sha256"] != hashes["config.json"]
+            or not isinstance(payload_digest, str)
+            or not payload_digest
+            or entry.get("states_sha256", payload_digest) != payload_digest
+        ):
+            raise ValueError(f"cached payload provenance changed: {cache / name}")
+        sources[name] = digest
+        sources[f"layer-{layer:02d}.pt"] = payload_digest
+    return hashes, sources
+
+
 def run_provenance(
     cache: Path,
     policy: Path,
@@ -138,11 +188,10 @@ def run_provenance(
         checkpoints[str(layer)] = selected[layer]
     if sha256(policy) != policy_digest:
         raise ValueError(f"policy changed during validation: {policy}")
+    cache_hashes, cache_layers = _cache_provenance(cache, layers)
     return {
-        "cache_sha256": {
-            name: sha256(cache / name)
-            for name in ("config.json", "index.json", "progress.json")
-        },
+        "cache_sha256": cache_hashes,
+        "cache_layers_sha256": cache_layers,
         "policy_sha256": policy_digest,
         "runner_sha256": sha256(runner),
         "checkpoints": checkpoints,
@@ -158,6 +207,12 @@ def assert_run_inputs(identity: dict, cache: Path, policy: Path, runner: Path) -
         cache / name: digest for name, digest in identity["cache_sha256"].items()
     }
     expected.update(
+        {
+            cache / name: digest
+            for name, digest in identity["cache_layers_sha256"].items()
+        }
+    )
+    expected.update(
         {policy: identity["policy_sha256"], runner: identity["runner_sha256"]}
     )
     expected.update(
@@ -167,7 +222,11 @@ def assert_run_inputs(identity: dict, cache: Path, policy: Path, runner: Path) -
         }
     )
     for path, digest in expected.items():
-        if sha256(path) != digest:
+        try:
+            actual = sha256(path)
+        except OSError as error:
+            raise ValueError(f"run input changed before publication: {path}") from error
+        if actual != digest:
             raise ValueError(f"run input changed before publication: {path}")
 
 

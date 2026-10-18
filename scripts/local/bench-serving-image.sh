@@ -9,7 +9,6 @@ DECODE_CFG_WAS_SET=${DECODE_CFG+x}
 REPO=$HOST_REPO
 [ -n "$DECODE_CFG_WAS_SET" ] || export DECODE_CFG="$DECODE_CFG_EXT"
 
-ts () { date +%Y%m%d_%H%M%S; }
 die () { echo "FATAL: $*" >&2; exit 1; }
 usage () {
   cat >&2 <<'EOF'

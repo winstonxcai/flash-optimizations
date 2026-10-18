@@ -2,6 +2,7 @@
 # =====================================================================
 # lswb-row.sh <run_dir|tag> -- print the 7 recorded SLO-run fields from a
 # business_replay summary.json.
+# Author: Winston Cai.
 #
 #   run_dir may be a <ts>/ dir directly under results/lswb-replay/<tag>/,
 #   a tag dir (newest <ts> used), or results/lswb-replay root (newest tag+ts).
@@ -21,28 +22,38 @@ if [ -f "$ARG/client/summary.json" ]; then
   S="$ARG/client/summary.json"
 elif [ -f "$BASE/$ARG/client/summary.json" ]; then
   S="$BASE/$ARG/client/summary.json"
-elif [ -d "$BASE/$ARG" ]; then
-  S=$(ls -1dt "$BASE/$ARG"/20*/client/summary.json 2>/dev/null | head -1)
-  [ -n "$S" ] || { echo "no summary under $BASE/$ARG"; exit 1; }
-elif [ -d "$BASE" ]; then
-  S=$(ls -1dt "$BASE"/*/20*/client/summary.json 2>/dev/null | head -1)
-  [ -n "$S" ] || { echo "no summary under $BASE"; exit 1; }
 else
-  echo "cannot resolve $ARG"; exit 1
+  if [ -d "$ARG" ]; then
+    RUN_DIR="$ARG"
+  elif [ -d "$BASE/$ARG" ]; then
+    RUN_DIR="$BASE/$ARG"
+  else
+    echo "cannot resolve $ARG"; exit 1
+  fi
+  # Search across tags only when the caller explicitly selects the results root.
+  # File identity also recognizes relative paths, trailing slashes and symlinks.
+  if [ "$RUN_DIR" -ef "$BASE" ]; then
+    S=$(ls -1dt "$RUN_DIR"/*/20*/client/summary.json 2>/dev/null | head -1)
+  else
+    S=$(ls -1dt "$RUN_DIR"/20*/client/summary.json 2>/dev/null | head -1)
+  fi
+  [ -n "$S" ] || { echo "no summary under $RUN_DIR"; exit 1; }
 fi
 
 "${PYTHON:-python3}" -c "
 import json, sys
-s = json.load(open('$S'))
+summary_path = sys.argv[1]
+with open(summary_path) as stream:
+    s = json.load(stream)
 c = s.get('cache', {})
 ttft = s['ttft_ms']['p90'] / 1000.0
 e2e  = s['latency_ms']['p90'] / 1000.0
 pass_ = bool(s.get('valid')) and ttft < 10.0
 uncached = c.get('prompt_tokens', 0) - c.get('total_cached_tokens', 0)
-print('dir=%s' % ('$S'.rsplit('/client',1)[0].rsplit('/',1)[-1]))
+print('dir=%s' % (summary_path.rsplit('/client',1)[0].rsplit('/',1)[-1]))
 print('slo=%s valid=%s done=%d ttft_p90=%.2fs e2e_p90=%.2fs l1=%.4f l2=%.4f uncached=%d succ=%.4f' % (
     'PASS' if pass_ else 'FAIL', bool(s.get('valid')),
     s.get('counts', {}).get('successful', 0), ttft, e2e,
     c.get('device_hit_rate', 0.0), c.get('host_hit_rate', 0.0),
     uncached, s.get('success_rate', 0.0)))
-" 2>&1 || { echo "parse failed on $S"; exit 1; }
+" "$S" 2>&1 || { echo "parse failed on $S"; exit 1; }

@@ -11,7 +11,7 @@ Default benchmark: TP4/4xH100, Native, 32k input, 2048 output, concurrency 8;
 60-minute work limit (not an ETA). Uses the same Bash launcher as local H100s.
 The default image builds from Dockerfile. REMNANT_COMPILED_IMAGE reuses a known
 image only after CPU source verification, before overlaying Python updates.
-Model-free work: kernels.py. Capture: experiments/attention-pruning/capture.py.
+Model-free work: kernels.py. Capture: training/capture.py.
 """
 
 from __future__ import annotations
@@ -191,7 +191,7 @@ def inspect_model_cache() -> dict:
             not path.is_file()
             or path.stat().st_size == 0
             or not receipt.is_file()
-            or receipt.read_text().splitlines()[0] != MODEL_REVISION
+            or receipt.read_text().splitlines()[:1] != [MODEL_REVISION]
         ):
             raise RuntimeError(f"missing or unpinned checkpoint file: {name}")
     result = {
