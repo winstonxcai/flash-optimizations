@@ -141,6 +141,55 @@ STORE_IMPLEMENTATION=triton bash scripts/local/serve.sh kernel
 Use distinct replay tags for mixed modes. `server-info.json` records the explicit
 store override; scheduler startup logs record the resolved store and decode modes.
 
+## Random-text serving benchmark
+
+Like `bench-lswb.sh`, `bench-serving.sh` is a client for an **already-running**
+server. Start and stop the server separately. The client never changes its
+cache mode, launches a server, or stops one after failure.
+
+```bash
+bash scripts/local/serve.sh native
+bash scripts/local/bench-serving.sh native-128k "$PORT" 131072 2048 28
+bash scripts/local/serve.sh native stop
+
+bash scripts/local/serve.sh triton
+bash scripts/local/bench-serving.sh packed-128k "$PORT" 131072 2048 28
+bash scripts/local/serve.sh triton stop
+```
+
+Arguments are `<tag> [port] [input_tokens] [output_tokens] [concurrency|auto]`.
+Defaults are the configured port, 32768 input tokens, 2048 output tokens and C8.
+The tag labels artifacts; the actual mode and survivor counts come from saved
+`server-info.json`. Use the same C for a fair comparison. Replace C with `auto`
+to derive it from that server's allocator pool divided by input + output
+length; this is a capacity measurement, not an SLO limit. The old `fair`/`max`
+orchestration forms are removed.
+
+One warm-up wave of C requests precedes 3C measured requests, using exact
+random lengths, `SEED` (default 42), and a cache flush before each wave.
+Both waves must complete with the requested output lengths and no errors.
+The 3C requests are one measurement, not three independent runs. Decode graph
+coverage, context length and request limits are checked before client execution.
+
+The VDI default (`BENCH_EXECUTION=docker`) runs the official SGLang client in
+the existing container. Inside a prepared environment, including Modal, use:
+
+```bash
+BENCH_EXECUTION=direct bash scripts/local/bench-serving.sh native-128k 30211 131072 2048 28
+```
+
+`BENCH_TIMEOUT_S` bounds each client wave (default 3600 s). The caller owns the
+server/allocation deadline and cleanup. Use a dedicated idle server; parallel
+clients against the same port would invalidate the comparison.
+Results use unique directories under `$RESULTS_HOST/serving/<tag>/`, including
+the resolved configuration, script/client source hashes and both wave records.
+Docker image identity is recorded **at collection time**, not asserted as boot
+identity; preserve the server boot's image/source record separately.
+
+Modal's `benchmark_serving` wrapper owns its server boot, readiness, total job
+budget and process-group cleanup, then calls this same client. The separate
+capacity and image scripts remain retired.
+
 ## LSWB replay without profiling
 
 Against the running server, run for 1,200 seconds at concurrency 24 or 28:

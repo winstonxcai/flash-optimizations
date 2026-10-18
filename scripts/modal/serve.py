@@ -21,8 +21,16 @@ import importlib.util
 import json
 import os
 import re
+import signal
+import socket
 import subprocess
 import sys
+import tempfile
+import time
+import urllib.error
+import urllib.request
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import modal
@@ -205,6 +213,69 @@ def inspect_model_cache() -> dict:
     return result
 
 
+def _stop_serving_server(process: subprocess.Popen) -> None:
+    """Stop only our session, including workers left after their leader exits."""
+    for sig, grace in ((signal.SIGTERM, 10), (signal.SIGKILL, 5)):
+        try:
+            os.killpg(process.pid, sig)
+        except ProcessLookupError:
+            process.wait(timeout=1)
+            return
+        deadline = time.monotonic() + grace
+        while time.monotonic() < deadline:
+            rows = subprocess.check_output(
+                ["ps", "-eo", "pgid=,stat="], text=True, timeout=3,
+            )
+            # Container PID 1 may leave zombies; they cannot retain GPUs.
+            live = any(
+                int(group) == process.pid and state[0] not in "ZX"
+                for group, state in (row.split() for row in rows.splitlines())
+            )
+            if not live:
+                process.wait(timeout=1)
+                return
+            time.sleep(0.2)
+    raise RuntimeError(f"serving process group {process.pid} survived SIGKILL")
+
+
+@contextmanager
+def _running_serving_server(env: dict[str, str], log: Path, deadline: float) -> Iterator[None]:
+    """The Modal caller owns server lifetime; the benchmark is only a client."""
+    # Refuse an existing listener rather than accepting its health response.
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            probe.bind(("127.0.0.1", int(env["PORT"])))
+        except OSError as exc:
+            raise RuntimeError(f"serving port {env['PORT']} is already in use") from exc
+    with log.open("w") as stream:
+        process = subprocess.Popen(
+            ["bash", str(REMOTE_REPO / "scripts/local/run-server.sh"),
+             env["SERVING_MODE"], str(MODEL_DIR), "127.0.0.1", env["PORT"]],
+            env=env, cwd=REMOTE_REPO, stdout=stream, stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+        try:
+            while True:
+                if process.poll() is not None:
+                    raise RuntimeError(f"serving process exited during startup; see {log}")
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError(f"server startup exhausted job budget; see {log}")
+                try:
+                    with urllib.request.urlopen(
+                        f"http://127.0.0.1:{env['PORT']}/health", timeout=min(3, remaining),
+                    ) as response:
+                        if response.status == 200:
+                            break
+                except (urllib.error.URLError, TimeoutError):
+                    pass  # Readiness failures are retried only within the job budget.
+                time.sleep(min(1, remaining))
+            yield
+        finally:
+            _stop_serving_server(process)
+
+
 @app.function(
     image=server_image,
     gpu="H100!:4",
@@ -221,47 +292,52 @@ def benchmark_serving(
     concurrency: int = 8,
     timeout_minutes: int = 60,
 ) -> str:
-    """One configuration per call, identical to the local shell command."""
+    """Own one server boot and call the shared client against it."""
     if mode not in {"native", "triton", "kernel", "packed"}:
         raise ValueError("mode must be native, triton, or kernel (packed aliases kernel)")
     if mode == "packed":
         mode = "kernel"
     if not 1 <= timeout_minutes <= 240:
         raise ValueError("timeout_minutes must be 1–240")
+    if min(input_tokens, output_tokens, concurrency) < 1:
+        raise ValueError("input_tokens, output_tokens and concurrency must be positive")
     if not _kernel_extensions_ready():
         raise RuntimeError(
             "Required Remnant extensions are missing. Build the serving image "
             "on CPU before launching; GPU compilation is disabled."
         )
+    RESULTS_ROOT.mkdir(parents=True, exist_ok=True)
+    run = Path(tempfile.mkdtemp(prefix=f"{mode}-", dir=RESULTS_ROOT))
+    deadline = time.monotonic() + timeout_minutes * 60
     env = {
         **os.environ,
         "PYTHON": sys.executable,
         "MODEL_PATH": str(MODEL_DIR),
         "SGLANG_ROOT": str(SGLANG_ROOT),
-        "RESULTS_DIR": str(RESULTS_ROOT),
+        "RESULTS_HOST": str(run),
+        "BENCH_EXECUTION": "direct",
+        "SERVING_MODE": mode,
+        "PORT": os.environ.get("PORT", "30211"),
+        "DECODE_CFG": os.environ.get("DECODE_CFG") or (
+            REMOTE_REPO / "scripts/local/config/decode-graphs-extended.json"
+        ).read_text(),
         **SOURCE_ENV,
     }
+    (run / "source-revisions.json").write_text(json.dumps(SOURCE_REVISIONS, indent=2) + "\n")
     try:
-        subprocess.run(
-            [
-                "timeout",
-                "--signal=TERM",
-                "--kill-after=30s",
-                f"{timeout_minutes}m",
-                "bash",
-                str(REMOTE_REPO / "scripts/local/bench-serving.sh"),
-                mode,
-                str(input_tokens),
-                str(output_tokens),
-                str(concurrency),
-            ],
-            env=env,
-            cwd=REMOTE_REPO,
-            check=True,
-        )
+        with _running_serving_server(env, run / "server.log", deadline):
+            remaining = int(deadline - time.monotonic())
+            if remaining <= 0:
+                raise TimeoutError("server startup exhausted the benchmark budget")
+            env["BENCH_TIMEOUT_S"] = str(remaining)
+            subprocess.run(
+                ["bash", str(REMOTE_REPO / "scripts/local/bench-serving.sh"),
+                 mode, env["PORT"], str(input_tokens), str(output_tokens), str(concurrency)],
+                env=env, cwd=REMOTE_REPO, check=True, timeout=remaining,
+            )
     finally:
         results_volume.commit()
-    return str(RESULTS_ROOT)
+    return str(run)
 
 
 # Installed extension checks (never compile inside a GPU function).

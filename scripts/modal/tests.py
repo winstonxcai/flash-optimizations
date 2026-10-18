@@ -15,7 +15,7 @@ import unittest
 from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, call, patch
 
 from scripts.modal import kernels
 
@@ -420,6 +420,90 @@ with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')
             )
 
 
+    def test_serving_wrapper_owns_boot_and_calls_client_with_remaining_budget(self):
+        from scripts.modal import serve
+
+        with (
+            patch.object(serve, "_kernel_extensions_ready", return_value=True),
+            patch.object(serve, "RESULTS_ROOT", self.root),
+            patch.object(serve, "REMOTE_REPO", kernels.REPO_ROOT),
+            patch.object(serve, "_running_serving_server", return_value=nullcontext()) as boot,
+            patch.object(serve.subprocess, "run") as client,
+            patch.object(serve.results_volume, "commit") as commit,
+        ):
+            result = Path(serve.benchmark_serving.local(timeout_minutes=1))
+            self.assertTrue(result.is_dir())
+            env = client.call_args.kwargs["env"]
+            self.assertEqual(env["BENCH_EXECUTION"], "direct")
+            self.assertEqual(env["SERVING_MODE"], "native")
+            self.assertEqual(env["RESULTS_HOST"], str(result))
+            self.assertEqual(client.call_args.args[0][-5:],
+                             ["native", env["PORT"], "32768", "2048", "8"])
+            self.assertGreater(client.call_args.kwargs["timeout"], 0)
+            self.assertLessEqual(client.call_args.kwargs["timeout"], 60)
+            self.assertTrue(client.call_args.kwargs["check"])
+            self.assertEqual(boot.call_args.args[1], result / "server.log")
+            self.assertTrue((result / "source-revisions.json").is_file())
+            commit.assert_called_once()
+
+    def test_serving_server_is_stopped_on_client_error_and_startup_failure(self):
+        from scripts.modal import serve
+
+        env = {"SERVING_MODE": "native", "PORT": "30211"}
+        for state, deadline, error in ((None, float("inf"), RuntimeError),
+                                       (1, float("inf"), RuntimeError),
+                                       (None, 0, TimeoutError)):
+            with (
+                self.subTest(state=state, deadline=deadline),
+                patch.object(serve.socket, "socket"),
+                patch.object(serve.subprocess, "Popen") as launch,
+                patch.object(serve.urllib.request, "urlopen") as health,
+                patch.object(serve, "_stop_serving_server") as stop,
+            ):
+                process = launch.return_value
+                process.poll.return_value = state
+                health.return_value.__enter__.return_value.status = 200
+                with self.assertRaises(error):
+                    with serve._running_serving_server(env, self.root / "server.log", deadline):
+                        raise RuntimeError("client failed")
+                self.assertTrue(launch.call_args.kwargs["start_new_session"])
+                stop.assert_called_once_with(process)
+
+    def test_serving_cleanup_ignores_zombies_and_other_process_groups(self):
+        from scripts.modal import serve
+
+        process = MagicMock(pid=12345)
+        with (
+            patch.object(serve.os, "killpg") as kill,
+            patch.object(serve.subprocess, "check_output", return_value="12345 Z\n99999 S\n"),
+        ):
+            serve._stop_serving_server(process)
+            kill.assert_called_once_with(12345, serve.signal.SIGTERM)
+            process.wait.assert_called_once_with(timeout=1)
+
+    def test_serving_cleanup_escalates_and_does_not_hide_failure(self):
+        from scripts.modal import serve
+
+        process = MagicMock(pid=12345)
+        with (
+            patch.object(serve.os, "killpg") as kill,
+            patch.object(serve.time, "monotonic", side_effect=[0, 11, 20, 21]),
+            patch.object(serve.subprocess, "check_output", return_value="12345 Z\n"),
+        ):
+            serve._stop_serving_server(process)
+            self.assertEqual(kill.call_args_list,
+                             [call(12345, serve.signal.SIGTERM), call(12345, serve.signal.SIGKILL)])
+        with (
+            patch.object(serve.os, "killpg"),
+            patch.object(serve.time, "monotonic", side_effect=[0, 11, 20, 26]),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "survived SIGKILL"):
+                serve._stop_serving_server(process)
+        with patch.object(serve.os, "killpg", side_effect=PermissionError("denied")):
+            with self.assertRaises(PermissionError):
+                serve._stop_serving_server(process)
+
+
 class LocalScriptTests(unittest.TestCase):
     def test_lswb_summary_resolves_only_the_requested_run(self):
         with tempfile.TemporaryDirectory(prefix="remnant-row-") as directory:
@@ -460,6 +544,190 @@ class LocalScriptTests(unittest.TestCase):
                     self.assertNotEqual(result.returncode, 0)
                     self.assertIn("cannot resolve", result.stdout)
                     self.assertNotIn("slo=", result.stdout)
+
+
+class ServingClientTests(unittest.TestCase):
+    """Exercise the real client script; mock only external executables/server data."""
+
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory(prefix="remnant-serving-")
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name) / "repo with spaces"
+        self.bin = self.root / "bin"
+        self.bin.mkdir(parents=True)
+        source = self.root / "source/sglang"
+        source.mkdir(parents=True)
+        (source / "__init__.py").write_text("")
+        self.info = {
+            "model_path": "/model with spaces", "tokenizer_path": "/tokenizer with spaces",
+            "context_length": 16384, "max_running_requests": 64,
+            "max_total_num_tokens": 8320, "dsv4_c4_cache_format": "native",
+            "cuda_graph_config": {"decode": {"backend": "full", "bs": [1, 2, 4, 8, 16, 32]}},
+        }
+        self.info_path = self.root / "server-info.json"
+        self.calls = self.root / "commands.jsonl"
+        self.env = {
+            **os.environ, "PATH": str(self.bin) + os.pathsep + os.environ["PATH"],
+            "HOST_REPO": str(self.root), "REPO_CT": str(self.root),
+            "RESULTS_HOST": str(self.root / "results"), "CONTAINER": "fixture",
+            "SGLANG_PY": str(source.parent), "PYTHONPATH": str(source.parent),
+            "PYTHON": str(self.bin / "python3"), "BENCH_EXECUTION": "direct",
+            "BENCH_TIMEOUT_S": "5", "SEED": "42", "MOCK_INFO": str(self.info_path),
+            "MOCK_CALLS": str(self.calls), "MOCK_KIND": "valid",
+        }
+        self.script = kernels.REPO_ROOT / "scripts/local/bench-serving.sh"
+        # Fixtures emulate command contracts, never import SGLang or start a server.
+        self.command("curl", """
+if os.environ['MOCK_KIND'] == 'down': sys.exit(22)
+if sys.argv[-1].endswith('/server_info'): print(Path(os.environ['MOCK_INFO']).read_text())
+""")
+        self.command("date", "print('20261018_123000')\n")
+        self.command("timeout", """
+import signal
+args = sys.argv[1:]
+while args[0].startswith('--'): args.pop(0)
+seconds = float(args.pop(0).removesuffix('s'))
+process = subprocess.Popen(args, start_new_session=True)
+try:
+    sys.exit(process.wait(timeout=seconds))
+except subprocess.TimeoutExpired:
+    os.killpg(process.pid, signal.SIGKILL)
+    process.wait(timeout=2)
+    sys.exit(124)
+""")
+        self.command("docker", """
+args = sys.argv[1:]
+with Path(os.environ['MOCK_CALLS']).open('a') as stream:
+    stream.write(json.dumps({'docker': args}) + '\\n')
+if args[0] == 'inspect': print('sha256:fixture'); sys.exit(0)
+assert args.pop(0) == 'exec', args
+while args[0].startswith('-'):
+    option = args.pop(0)
+    if option == '-e':
+        key, value = args.pop(0).split('=', 1); os.environ[key] = value
+    elif option == '-w': os.chdir(args.pop(0))
+    else: assert option == '-i', option
+assert args.pop(0) == 'fixture', args
+os.execvp(args[0], args)
+""")
+        self.command("python3", """
+if sys.argv[1:3] != ['-m', 'sglang.bench_serving']:
+    os.execv(REAL_PYTHON, [REAL_PYTHON, *sys.argv[1:]])
+args = sys.argv[3:]
+with Path(os.environ['MOCK_CALLS']).open('a') as stream:
+    stream.write(json.dumps({'bench': args}) + '\\n')
+def option(name): return args[args.index(name) + 1]
+destination = Path(option('--output-file'))
+kind = os.environ['MOCK_KIND']
+measured = destination.name == 'measured.jsonl'
+if kind == 'fail' and measured: sys.exit(7)
+if kind == 'timeout' and measured:
+    import time
+    time.sleep(10)
+count = int(option('--num-prompts'))
+outlen = int(option('--random-output-len'))
+if kind == 'short-warmup' and not measured: count -= 1
+record = {'completed': count, 'output_lens': [outlen] * count, 'errors': [''] * count}
+destination.write_text(json.dumps(record) + '\\n')
+if kind == 'duplicate' and measured:
+    with destination.open('a') as stream: stream.write(json.dumps(record) + '\\n')
+""")
+
+    def command(self, name, body):
+        path = self.bin / name
+        path.write_text(
+            f"#!{sys.executable}\nimport json, os, subprocess, sys\nfrom pathlib import Path\n"
+            f"REAL_PYTHON = {sys.executable!r}\n" + body
+        )
+        path.chmod(0o755)
+
+    def run_client(self, concurrency="4", execution="direct", kind="valid", tag="native"):
+        self.info_path.write_text(json.dumps(self.info))
+        return subprocess.run(
+            ["bash", str(self.script), tag, "30213", "1024", "16", concurrency],
+            env={**self.env, "BENCH_EXECUTION": execution, "MOCK_KIND": kind},
+            text=True, capture_output=True, timeout=15,
+        )
+
+    def records(self, field):
+        if not self.calls.exists():
+            return []
+        return [r[field] for line in self.calls.read_text().splitlines()
+                if field in (r := json.loads(line))]
+
+    def test_direct_and_docker_share_workload_and_leave_server_alone(self):
+        for execution in ("direct", "docker"):
+            with self.subTest(execution=execution):
+                result = self.run_client(execution=execution)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn("server left running", result.stdout)
+        waves = self.records("bench")
+        self.assertEqual(len(waves), 4)
+        for args, prompts in zip(waves, (4, 12, 4, 12)):
+            expected = {
+                "--num-prompts": str(prompts), "--max-concurrency": "4",
+                "--random-input-len": "1024", "--random-output-len": "16",
+                "--random-range-ratio": "1.0", "--seed": "42",
+                "--warmup-requests": "0", "--request-rate": "inf",
+                "--model": "/model with spaces", "--tokenizer": "/tokenizer with spaces",
+            }
+            for flag, value in expected.items():
+                self.assertEqual(args[args.index(flag) + 1], value)
+            self.assertTrue({"--flush-cache", "--tokenize-prompt", "--output-details"} <= set(args))
+        self.assertTrue(all(args[0] in {"inspect", "exec"} for args in self.records("docker")))
+        roots = sorted((self.root / "results/serving/native").iterdir())
+        self.assertEqual(len(roots), 2)  # Identical timestamps cannot overwrite a run.
+        for root in roots:
+            self.assertEqual(json.loads((root / "server-info.json").read_text()), self.info)
+            config = json.loads((root / "config.json").read_text())
+            self.assertEqual(config["concurrency"], 4)
+            self.assertEqual(config["measured_requests"], 12)
+            self.assertEqual(len(config["script_sha256"]), 64)
+            source = json.loads((root / "client-source.json").read_text())
+            self.assertEqual(len(source["sglang_python_tree_sha256"]), 64)
+
+    def test_auto_uses_actual_server_pool(self):
+        result = self.run_client(concurrency="auto")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        args = self.records("bench")[0]
+        self.assertEqual(args[args.index("--max-concurrency") + 1], "8")
+
+    def test_invalid_configuration_never_starts_a_client(self):
+        cases = (
+            ("0", {}), ("512;exit", {}), ("4", {"context_length": 1000}),
+            ("4", {"max_running_requests": 2}),
+            ("auto", {"max_total_num_tokens": 1}),
+            ("4", {"cuda_graph_config": {"decode": {"backend": "eager", "bs": [4]}}}),
+            ("3", {"disable_cuda_graph_padding": True}),
+        )
+        original = copy.deepcopy(self.info)
+        for concurrency, overrides in cases:
+            with self.subTest(concurrency=concurrency, overrides=overrides):
+                self.info = {**original, **overrides}
+                result = self.run_client(concurrency=concurrency)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(self.records("bench"), [])
+
+    def test_unhealthy_server_and_invalid_tag_fail_before_measurement(self):
+        for kwargs in ({"kind": "down"}, {"tag": "../escape"}):
+            with self.subTest(kwargs=kwargs):
+                result = self.run_client(**kwargs)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(self.records("bench"), [])
+
+    def test_failed_or_incomplete_waves_are_not_success(self):
+        for kind in ("fail", "short-warmup", "duplicate"):
+            with self.subTest(kind=kind):
+                result = self.run_client(kind=kind, tag=kind)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertNotIn("Completed:", result.stdout)
+        self.assertEqual(len(self.records("bench")), 5)
+
+    def test_client_timeout_is_a_failure(self):
+        self.env["BENCH_TIMEOUT_S"] = "1"
+        result = self.run_client(kind="timeout")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("measured failed", result.stderr)
 
 
 if __name__ == "__main__":
