@@ -1,0 +1,5 @@
+Original run: /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/kernel-k256-c27-repeat2/20261018_152145
+Checkout at transfer time; not necessarily boot-time identity:
+e390f5d2d4b1b93fad54740dc5305ff21b8972b8
+9f9a2e5da6e82d5f7730e1515d21fa313fb34604 third_party/flashmla (remotes/origin/remnant/flashmla-v0518)
+ 0098b4277fbd1d9be6a6761683014869e13fba06 third_party/sglang (remotes/origin/remnant/v0.5.18-13-g0098b427)
