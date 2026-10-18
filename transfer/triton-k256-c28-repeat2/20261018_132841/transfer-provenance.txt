@@ -1,0 +1,3 @@
+Original run: /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/triton-k256-c28-repeat2/20261018_132841
+Checkout at transfer time, not necessarily boot: b5c9154e8acffcfa508c6faf9567eb232f453bdc
+Files unavailable: ['image-id.txt']
