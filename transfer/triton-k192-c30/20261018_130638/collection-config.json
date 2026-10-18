@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "mode": "triton",
+  "server_seed": 20260919,
+  "metrics_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/triton-k192-c30-20261018_125321/request-metrics",
+  "server_log": "/home/jovyan/winstonxcai/flash-optimizations/logs/triton-k192-c30-20261018_125321/serve_triton.log"
+}
