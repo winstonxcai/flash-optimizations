@@ -1,0 +1,8 @@
+{
+  "mode": "kernel",
+  "groups": 16,
+  "valid": true,
+  "requests_per_s": 1.5329475080904407,
+  "cache_hit_pct": 96.02186365007942,
+  "uncached_prefill_tokens": 6852344
+}
