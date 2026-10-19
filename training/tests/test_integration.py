@@ -1136,9 +1136,10 @@ if name == "nvidia-smi":
     if scenario == "occupied":
         print("999")
 elif args[:2] == ["image", "inspect"]:
+    assert args[args.index("--format")+1] == "{{.Id}}", "shared image needs no capture-only label"
     if scenario == "missing":
         sys.exit(1)
-    print("sha256:" + "1"*64, "false" if scenario == "unlabeled" else "true")
+    print("invalid-image-id" if scenario == "malformed-image" else "sha256:" + "1"*64)
 elif args[0] == "run":
     gpu = "--gpus" in args
     cid = ("a" if gpu else "c") * 64
@@ -1168,7 +1169,7 @@ else:
             "bash",
             str(launcher),
             "run",
-            "prepared:tag",
+            "remnant:v0.5.18",
             str(model),
             str(scratch),
             str(published),
@@ -1182,9 +1183,9 @@ else:
             "CAPTURE_GPUS": "4,5,6,7",
         }
         for scenario in (
-            "success",
+            "shared-image",
             "missing",
-            "unlabeled",
+            "malformed-image",
             "preflight",
             "occupied",
             "publication",
@@ -1202,7 +1203,7 @@ else:
                     timeout=15,
                 )
                 self.assertEqual(
-                    outcome.returncode == 0, scenario == "success", outcome.stderr
+                    outcome.returncode == 0, scenario == "shared-image", outcome.stderr
                 )
                 if scenario == "timeout":
                     self.assertEqual(outcome.returncode, 124)
@@ -1216,7 +1217,7 @@ else:
                 self.assertFalse(
                     any(args[0] in ("build", "pull", "exec") for args in docker)
                 )
-                if scenario in ("missing", "unlabeled"):
+                if scenario in ("missing", "malformed-image"):
                     self.assertEqual(runs, [])
                     self.assertEqual(stops, [])
                     continue
@@ -1236,6 +1237,7 @@ else:
                     self.assertTrue(gpu[0][-2].isdigit())  # Absolute startup/replay deadline.
                     self.assertIn("sha256:" + "1" * 64, gpu[0])
                 for args in runs:
+                    self.assertIn("sha256:" + "1" * 64, args)
                     self.assertEqual(args[args.index("--pull") + 1], "never")
                     self.assertIn(
                         "type=bind,src="

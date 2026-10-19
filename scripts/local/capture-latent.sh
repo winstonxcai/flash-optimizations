@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Own Docker setup checks, mounts, GPU selection, deadlines and container cleanup.
-# Use an existing capture-only image; never build, pull, or replace production.
+# Reuse the serving image in a separate container; never build, pull, or replace production.
 # Author: Winston Cai.
 set -euo pipefail
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
@@ -107,7 +107,7 @@ run_capture() {
 
 usage() {
   echo "usage: $0 run <image> <model> <scratch> <published> <seconds> [port]"
-  echo "Requires a prepared local capture-only image and four allocated, idle GPUs."
+  echo "Requires the local shared serving image and four allocated, idle GPUs."
 }
 [[ $# -gt 0 ]] || { usage >&2; exit 2; }
 case "$1" in
@@ -148,12 +148,11 @@ docker_timeout() {
   local limit=$1; shift
   timeout --foreground --signal=TERM --kill-after=5s "$limit" docker "$@"
 }
-metadata=$(docker_timeout 30s image inspect --format '{{.Id}} {{index .Config.Labels "remnant.capture-only"}}' "$image") || {
+image_id=$(docker_timeout 30s image inspect --format '{{.Id}}' "$image") || {
   echo "Capture image '$image' is unavailable locally; nothing will be built or pulled." >&2; exit 1;
 }
-read -r image_id capture_only <<< "$metadata"
-[[ "$image_id" =~ ^sha256:[0-9a-f]{64}$ && "$capture_only" = true ]] || {
-  echo "Image '$image' must have remnant.capture-only=true" >&2; exit 1;
+[[ "$image_id" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+  echo "Cannot resolve a valid local image ID for '$image'" >&2; exit 1;
 }
 gpus=${CAPTURE_GPUS:-0,1,2,3}
 IFS=, read -r -a gpu_ids <<< "$gpus"
