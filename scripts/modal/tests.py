@@ -403,66 +403,6 @@ class LauncherTests(unittest.TestCase):
                 serve.benchmark_serving.local()
             process.assert_not_called()
 
-    def test_model_cache_requires_nonempty_pinned_receipts(self):
-        from scripts.modal import serve
-
-        model = self.root / "model"
-        receipts = model / ".cache/huggingface/download"
-        receipts.mkdir(parents=True)
-        names = [f"model-{index:05}.safetensors" for index in range(48)]
-        (model / "config.json").write_text(json.dumps({"num_attention_heads": 64, "compress_ratios": [4] * 61}))
-        (model / "model.safetensors.index.json").write_text(
-            json.dumps({"weight_map": {f"weight-{index}": name for index, name in enumerate(names)}})
-        )
-        for name in names + ["config.json", "model.safetensors.index.json"]:
-            if name in names:
-                (model / name).write_bytes(b"shard")
-            (receipts / (name + ".metadata")).write_text(serve.MODEL_REVISION + "\netag\n0\n")
-        receipt = receipts / (names[0] + ".metadata")
-        with patch.object(serve, "MODEL_DIR", model):
-            with patch("builtins.print"):
-                result = serve.inspect_model_cache.local()
-            self.assertEqual(result["shards"], 48)
-            self.assertEqual(result["bytes"], 48 * len(b"shard"))
-            for value in ("", "another-revision\netag\n0\n"):
-                receipt.write_text(value)
-                with self.subTest(receipt=value), self.assertRaisesRegex(
-                    RuntimeError, "missing or unpinned checkpoint file: " + names[0]
-                ):
-                    serve.inspect_model_cache.local()
-
-    def test_public_commands_import_without_launching_jobs(self):
-        code = """
-from unittest.mock import patch
-import modal
-with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')), \\
-     patch.object(modal.Function, 'spawn', side_effect=AssertionError('launch')):
-    from scripts.modal import serve, kernels
-    assert 'benchmark_serving' in serve.app.registered_functions
-    assert {'benchmark_kernels', 'profile_kernels', 'validate_kernels'} <= set(kernels.app.registered_functions)
-"""
-        subprocess.run(
-            [sys.executable, "-c", code],
-            cwd=kernels.REPO_ROOT,
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-
-    def test_launchers_import_independently(self):
-        for module, other in (("serve", "kernels"), ("kernels", "serve")):
-            code = f"import sys; from scripts.modal import {module}; assert 'scripts.modal.{other}' not in sys.modules"
-            subprocess.run(
-                [sys.executable, "-c", code],
-                cwd=kernels.REPO_ROOT,
-                check=True,
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-
-
     def test_serving_wrapper_owns_boot_and_calls_client_with_remaining_budget(self):
         from scripts.modal import serve
 
@@ -545,6 +485,65 @@ with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')
         with patch.object(serve.os, "killpg", side_effect=PermissionError("denied")):
             with self.assertRaises(PermissionError):
                 serve._stop_serving_server(process)
+
+    def test_model_cache_requires_nonempty_pinned_receipts(self):
+        from scripts.modal import serve
+
+        model = self.root / "model"
+        receipts = model / ".cache/huggingface/download"
+        receipts.mkdir(parents=True)
+        names = [f"model-{index:05}.safetensors" for index in range(48)]
+        (model / "config.json").write_text(json.dumps({"num_attention_heads": 64, "compress_ratios": [4] * 61}))
+        (model / "model.safetensors.index.json").write_text(
+            json.dumps({"weight_map": {f"weight-{index}": name for index, name in enumerate(names)}})
+        )
+        for name in names + ["config.json", "model.safetensors.index.json"]:
+            if name in names:
+                (model / name).write_bytes(b"shard")
+            (receipts / (name + ".metadata")).write_text(serve.MODEL_REVISION + "\netag\n0\n")
+        receipt = receipts / (names[0] + ".metadata")
+        with patch.object(serve, "MODEL_DIR", model):
+            with patch("builtins.print"):
+                result = serve.inspect_model_cache.local()
+            self.assertEqual(result["shards"], 48)
+            self.assertEqual(result["bytes"], 48 * len(b"shard"))
+            for value in ("", "another-revision\netag\n0\n"):
+                receipt.write_text(value)
+                with self.subTest(receipt=value), self.assertRaisesRegex(
+                    RuntimeError, "missing or unpinned checkpoint file: " + names[0]
+                ):
+                    serve.inspect_model_cache.local()
+
+    def test_public_commands_import_without_launching_jobs(self):
+        code = """
+from unittest.mock import patch
+import modal
+with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')), \\
+     patch.object(modal.Function, 'spawn', side_effect=AssertionError('launch')):
+    from scripts.modal import serve, kernels
+    assert 'benchmark_serving' in serve.app.registered_functions
+    assert {'benchmark_kernels', 'profile_kernels', 'validate_kernels'} <= set(kernels.app.registered_functions)
+"""
+        subprocess.run(
+            [sys.executable, "-c", code],
+            cwd=kernels.REPO_ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+    def test_launchers_import_independently(self):
+        for module, other in (("serve", "kernels"), ("kernels", "serve")):
+            code = f"import sys; from scripts.modal import {module}; assert 'scripts.modal.{other}' not in sys.modules"
+            subprocess.run(
+                [sys.executable, "-c", code],
+                cwd=kernels.REPO_ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
 
 
 class LocalScriptTests(unittest.TestCase):
@@ -735,44 +734,6 @@ if kind == 'duplicate' and measured:
         args = self.records("bench")[0]
         self.assertEqual(args[args.index("--max-concurrency") + 1], "8")
 
-    def test_invalid_configuration_never_starts_a_client(self):
-        cases = (
-            ("0", {}), ("512;exit", {}), ("4", {"context_length": 1000}),
-            ("4", {"max_running_requests": 2}),
-            ("auto", {"max_total_num_tokens": 1}),
-            ("4", {"cuda_graph_config": {"decode": {"backend": "eager", "bs": [4]}}}),
-            ("3", {"disable_cuda_graph_padding": True}),
-        )
-        original = copy.deepcopy(self.info)
-        for concurrency, overrides in cases:
-            with self.subTest(concurrency=concurrency, overrides=overrides):
-                self.info = {**original, **overrides}
-                result = self.run_client(concurrency=concurrency)
-                self.assertNotEqual(result.returncode, 0)
-                self.assertEqual(self.records("bench"), [])
-
-    def test_unhealthy_server_and_invalid_tag_fail_before_measurement(self):
-        for kwargs in ({"kind": "down"}, {"tag": "../escape"}):
-            with self.subTest(kwargs=kwargs):
-                result = self.run_client(**kwargs)
-                self.assertNotEqual(result.returncode, 0)
-                self.assertEqual(self.records("bench"), [])
-
-    def test_failed_or_incomplete_waves_are_not_success(self):
-        for kind in ("fail", "short-warmup", "duplicate"):
-            with self.subTest(kind=kind):
-                result = self.run_client(kind=kind, tag=kind)
-                self.assertNotEqual(result.returncode, 0)
-                self.assertNotIn("Completed:", result.stdout)
-        self.assertEqual(len(self.records("bench")), 5)
-
-    def test_client_timeout_is_a_failure(self):
-        self.env["BENCH_TIMEOUT_S"] = "1"
-        result = self.run_client(kind="timeout")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("measured failed", result.stderr)
-
-
     def test_local_dataset_is_forwarded_and_hashed_in_both_execution_modes(self):
         import hashlib
 
@@ -812,6 +773,43 @@ if kind == 'duplicate' and measured:
                 result = self.run_client()
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(self.records("bench"), [])
+
+    def test_invalid_configuration_never_starts_a_client(self):
+        cases = (
+            ("0", {}), ("512;exit", {}), ("4", {"context_length": 1000}),
+            ("4", {"max_running_requests": 2}),
+            ("auto", {"max_total_num_tokens": 1}),
+            ("4", {"cuda_graph_config": {"decode": {"backend": "eager", "bs": [4]}}}),
+            ("3", {"disable_cuda_graph_padding": True}),
+        )
+        original = copy.deepcopy(self.info)
+        for concurrency, overrides in cases:
+            with self.subTest(concurrency=concurrency, overrides=overrides):
+                self.info = {**original, **overrides}
+                result = self.run_client(concurrency=concurrency)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(self.records("bench"), [])
+
+    def test_unhealthy_server_and_invalid_tag_fail_before_measurement(self):
+        for kwargs in ({"kind": "down"}, {"tag": "../escape"}):
+            with self.subTest(kwargs=kwargs):
+                result = self.run_client(**kwargs)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(self.records("bench"), [])
+
+    def test_failed_or_incomplete_waves_are_not_success(self):
+        for kind in ("fail", "short-warmup", "duplicate"):
+            with self.subTest(kind=kind):
+                result = self.run_client(kind=kind, tag=kind)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertNotIn("Completed:", result.stdout)
+        self.assertEqual(len(self.records("bench")), 5)
+
+    def test_client_timeout_is_a_failure(self):
+        self.env["BENCH_TIMEOUT_S"] = "1"
+        result = self.run_client(kind="timeout")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("measured failed", result.stderr)
 
 
 class SurvivorBudgetLauncherTests(unittest.TestCase):
@@ -1193,7 +1191,6 @@ class PrefillReadLauncherTests(unittest.TestCase):
             {(r["case"], r["mode"]) for r in record["runs"]},
             {(name, mode) for name in names for mode in contract.PREFILL_VARIANTS},
         )
-
 
 
 if __name__ == "__main__":
