@@ -1,0 +1,70 @@
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "91ff0b3d8ff18a8053886d57299074a5e458410e"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang",
+    "expected_commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla",
+    "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "override": false,
+    "dirty": false
+  }
+}
+Results: /home/jovyan/winstonxcai/flash-optimizations/results/serving/lswb-bs-native-k256-c24-egQTYx
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "91ff0b3d8ff18a8053886d57299074a5e458410e"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang",
+    "expected_commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla",
+    "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "override": false,
+    "dirty": false
+  }
+}
+Packed C4 profile: PackedProfile(default_count=256, overrides=(), compression_ratios=(0, 0, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 0, 0, 0))
+== serve native on gpus=0,1,2,3 port=30381 master=29781 (log: /home/jovyan/winstonxcai/flash-optimizations/results/serving/lswb-bs-native-k256-c24-egQTYx/serve_native.log) ==
+launched pid 64228
+  health OK after ~165s
+  pool(max_total_num_tokens)=3745536
+  max_total_num_tokens=3745536
+  is fired up and ready
+serve native UP on port 30381 -- leave running, tear down with: scripts/local/serve.sh native stop
+Server preflight PASS: native
+Starting native smoke: 16 requests, C2
+PASS 16/16; req/s=0.2915; TTFT-p90=8.550s; mean TPOT=36.81ms
+Starting native measured: 4916 requests, C24
+PASS 4878/4916; req/s=1.8719; TTFT-p90=8.780s; mean TPOT=42.62ms
+Completed: /home/jovyan/winstonxcai/flash-optimizations/results/serving/lswb-bs-native-k256-c24-egQTYx/measured.jsonl
+stopped native server on port 30381

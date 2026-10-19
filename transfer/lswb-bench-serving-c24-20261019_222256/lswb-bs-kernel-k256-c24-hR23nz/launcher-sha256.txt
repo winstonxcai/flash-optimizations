@@ -1,0 +1,3 @@
+aec3437ca3601f838bc48fa5342dfeb3b977e79dec45a271a8546b821a821e51  scripts/local/serve.sh
+1fdade92bc1ee030abbdfdd99d68553bd4fa32de2906205615a255b9824915a2  scripts/local/run-server.sh
+c5bf325f3a357c75a5a3df26b875972afedcaf93379177ce0f640debb3b6d90d  scripts/local/env.sh

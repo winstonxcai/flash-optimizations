@@ -1,0 +1,56 @@
+[
+  {
+    "id": "job-20261019-122614-2f2c1f6e",
+    "workload_key": "lswb-bs-kernel-k256-c24-20261019_202614",
+    "status": "succeeded",
+    "exit_code": 0,
+    "allocated_gpu_ids": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "created_at": "2026-10-19T12:26:14.672200+00:00",
+    "started_at": "2026-10-19T13:14:49.990073+00:00",
+    "finished_at": "2026-10-19T14:04:32.972372+00:00",
+    "log_dir": "/var/lib/gpuq/jobs/job-20261019-122614-2f2c1f6e",
+    "output_dir": null,
+    "error": null
+  },
+  {
+    "id": "job-20261019-122606-b4839060",
+    "workload_key": "lswb-bs-triton-k256-c24-20261019_202606",
+    "status": "succeeded",
+    "exit_code": 0,
+    "allocated_gpu_ids": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "created_at": "2026-10-19T12:26:06.279984+00:00",
+    "started_at": "2026-10-19T12:26:09.750672+00:00",
+    "finished_at": "2026-10-19T13:15:34.271546+00:00",
+    "log_dir": "/var/lib/gpuq/jobs/job-20261019-122606-b4839060",
+    "output_dir": null,
+    "error": null
+  },
+  {
+    "id": "job-20261019-122601-b6d388c5",
+    "workload_key": "lswb-bs-native-k256-c24-20261019_202601",
+    "status": "succeeded",
+    "exit_code": 0,
+    "allocated_gpu_ids": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "created_at": "2026-10-19T12:26:01.249355+00:00",
+    "started_at": "2026-10-19T12:26:04.149753+00:00",
+    "finished_at": "2026-10-19T13:14:46.807598+00:00",
+    "log_dir": "/var/lib/gpuq/jobs/job-20261019-122601-b6d388c5",
+    "output_dir": null,
+    "error": null
+  }
+]

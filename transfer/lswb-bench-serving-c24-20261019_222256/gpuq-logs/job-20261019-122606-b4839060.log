@@ -1,0 +1,70 @@
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "91ff0b3d8ff18a8053886d57299074a5e458410e"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang",
+    "expected_commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla",
+    "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "override": false,
+    "dirty": false
+  }
+}
+Results: /home/jovyan/winstonxcai/flash-optimizations/results/serving/lswb-bs-triton-k256-c24-AaavLp
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "91ff0b3d8ff18a8053886d57299074a5e458410e"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang",
+    "expected_commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla",
+    "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "override": false,
+    "dirty": false
+  }
+}
+Packed C4 profile: PackedProfile(default_count=256, overrides=(), compression_ratios=(0, 0, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 0, 0, 0))
+== serve triton on gpus=4,5,6,7 port=30382 master=29782 (log: /home/jovyan/winstonxcai/flash-optimizations/results/serving/lswb-bs-triton-k256-c24-AaavLp/serve_triton.log) ==
+launched pid 64307
+  health OK after ~170s
+  pool(max_total_num_tokens)=4536832
+  max_total_num_tokens=4536832
+  is fired up and ready
+serve triton UP on port 30382 -- leave running, tear down with: scripts/local/serve.sh triton stop
+Server preflight PASS: triton
+Starting triton smoke: 16 requests, C2
+PASS 16/16; req/s=0.2839; TTFT-p90=8.649s; mean TPOT=38.43ms
+Starting triton measured: 4916 requests, C24
+PASS 4880/4916; req/s=1.8467; TTFT-p90=8.578s; mean TPOT=46.81ms
+Completed: /home/jovyan/winstonxcai/flash-optimizations/results/serving/lswb-bs-triton-k256-c24-AaavLp/measured.jsonl
+stopped triton server on port 30382

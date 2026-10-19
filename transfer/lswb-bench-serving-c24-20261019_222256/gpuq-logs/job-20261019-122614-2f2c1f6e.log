@@ -1,0 +1,70 @@
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "91ff0b3d8ff18a8053886d57299074a5e458410e"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang",
+    "expected_commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla",
+    "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "override": false,
+    "dirty": false
+  }
+}
+Results: /home/jovyan/winstonxcai/flash-optimizations/results/serving/lswb-bs-kernel-k256-c24-hR23nz
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "91ff0b3d8ff18a8053886d57299074a5e458410e"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang",
+    "expected_commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla",
+    "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "override": false,
+    "dirty": false
+  }
+}
+Packed C4 profile: PackedProfile(default_count=256, overrides=(), compression_ratios=(0, 0, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 0, 0, 0))
+== serve kernel on gpus=0,1,2,3 port=30383 master=29783 (log: /home/jovyan/winstonxcai/flash-optimizations/results/serving/lswb-bs-kernel-k256-c24-hR23nz/serve_kernel.log) ==
+launched pid 68388
+  health OK after ~170s
+  pool(max_total_num_tokens)=4536832
+  max_total_num_tokens=4536832
+  is fired up and ready
+serve kernel UP on port 30383 -- leave running, tear down with: scripts/local/serve.sh kernel stop
+Server preflight PASS: kernel
+Starting kernel smoke: 16 requests, C2
+PASS 16/16; req/s=0.2900; TTFT-p90=8.600s; mean TPOT=31.53ms
+Starting kernel measured: 4916 requests, C24
+PASS 4881/4916; req/s=1.8352; TTFT-p90=9.344s; mean TPOT=41.89ms
+Completed: /home/jovyan/winstonxcai/flash-optimizations/results/serving/lswb-bs-kernel-k256-c24-hR23nz/measured.jsonl
+stopped kernel server on port 30383

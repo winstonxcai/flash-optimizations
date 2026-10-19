@@ -1,0 +1,72 @@
+{
+  "status": "transfer only; not benchmark qualification",
+  "omitted_result_fields": [
+    "generated_texts",
+    "itls",
+    "server_info"
+  ],
+  "gpuq_log_exit_codes": {
+    "job-20261019-122614-2f2c1f6e": 0,
+    "job-20261019-122606-b4839060": 0,
+    "job-20261019-122601-b6d388c5": 0
+  },
+  "runs": [
+    {
+      "original_run": "/home/jovyan/winstonxcai/flash-optimizations/results/serving/lswb-bs-kernel-k256-c24-hR23nz",
+      "folder": "lswb-bs-kernel-k256-c24-hR23nz",
+      "original_file_sha256": {
+        "source-manifest.json": "2524f3804af5c44882ae8f6e27ad7872f1a645bc6c017ca527e23b5ef8ae18ca",
+        "server-info.json": "f5406670e7af1458ad6703ae34b4e438fc14a047942319ffea63d7f6ac089e2a",
+        "dataset-manifest.json": "3987721c0dc50264d6687a11184354ba0b1f60b21c4f44bf062ef2f490fbe4a4",
+        "image-id.txt": "16131013da4dcded6a39655d7659a767756b6a1e3628e83e1df25b27f9f41c3b",
+        "launcher-sha256.txt": "62939c1be6ce32bce675b93b4c34d970098351368f149885e9ee26c75fb8a540",
+        "gpus.txt": "3904e7e527755d40523bdf249124c8ce18027ae8a9b7dece2869936af89ebd98",
+        "smoke.log": "1bf856f1f362fe29fdaf93d1552291f339bb8c2281e5452fe33c6427e831ad24",
+        "measured.log": "6fbd09f71a872a884f57231f12a9a35f84f27aa751fa3c0838145dcabe19d7e4",
+        "serve_kernel.log": "93a7d655b8541e2df348faccf82eab2e17cf89f920ab55508ca8f0332cfe456f",
+        "job.sh": "21600d0c86990b0d3f0ab857f0d272e3e9908998cf4ce60c407061a729429d48",
+        "smoke.jsonl": "a6c5b76f421b6fc4e1775543dde7e240a211447d94a9b064634936c5b5574305",
+        "measured.jsonl": "a3c071cab6b4ddcc3cb2f28610f5e244b8018579389bc8befd92684d80d7b2e0"
+      },
+      "notes": []
+    },
+    {
+      "original_run": "/home/jovyan/winstonxcai/flash-optimizations/results/serving/lswb-bs-native-k256-c24-egQTYx",
+      "folder": "lswb-bs-native-k256-c24-egQTYx",
+      "original_file_sha256": {
+        "source-manifest.json": "2524f3804af5c44882ae8f6e27ad7872f1a645bc6c017ca527e23b5ef8ae18ca",
+        "server-info.json": "fa448dc7ae046d9d0568ab0ea6a56fbb930d8fff85014e4d761501e4c9fc7c1e",
+        "dataset-manifest.json": "3987721c0dc50264d6687a11184354ba0b1f60b21c4f44bf062ef2f490fbe4a4",
+        "image-id.txt": "16131013da4dcded6a39655d7659a767756b6a1e3628e83e1df25b27f9f41c3b",
+        "launcher-sha256.txt": "62939c1be6ce32bce675b93b4c34d970098351368f149885e9ee26c75fb8a540",
+        "gpus.txt": "3904e7e527755d40523bdf249124c8ce18027ae8a9b7dece2869936af89ebd98",
+        "smoke.log": "fba901a7dc97254b9ef0a02a01c34d656a4ce71da45e0244b9c760becad8bd66",
+        "measured.log": "07f905f99520f026010dc150083cf9f9aa3d7eaed43e2a1f72a5df08301a836b",
+        "serve_native.log": "5867367cb9c97713406569dc4e3209857899e7078adbd0ade9189c5bffd8300b",
+        "job.sh": "21600d0c86990b0d3f0ab857f0d272e3e9908998cf4ce60c407061a729429d48",
+        "smoke.jsonl": "ad8b69e0cc64f604de9b5a97d0534c968abbe494a1f711eafaab45eda04e4195",
+        "measured.jsonl": "30f75939f47dbc0bc1206be1fbfd38d2a66eff5eafc33776da827950087a881a"
+      },
+      "notes": []
+    },
+    {
+      "original_run": "/home/jovyan/winstonxcai/flash-optimizations/results/serving/lswb-bs-triton-k256-c24-AaavLp",
+      "folder": "lswb-bs-triton-k256-c24-AaavLp",
+      "original_file_sha256": {
+        "source-manifest.json": "2524f3804af5c44882ae8f6e27ad7872f1a645bc6c017ca527e23b5ef8ae18ca",
+        "server-info.json": "4ff8e7e61465a2e5e0e7b7dd8f2b1d90cf09f5ad9438d0aac628a4a7ce78ba15",
+        "dataset-manifest.json": "3987721c0dc50264d6687a11184354ba0b1f60b21c4f44bf062ef2f490fbe4a4",
+        "image-id.txt": "16131013da4dcded6a39655d7659a767756b6a1e3628e83e1df25b27f9f41c3b",
+        "launcher-sha256.txt": "62939c1be6ce32bce675b93b4c34d970098351368f149885e9ee26c75fb8a540",
+        "gpus.txt": "15af9c0762c700dca8ba006a48ae4f0ee55ec2b3c82a9f7eacfaad603f364570",
+        "smoke.log": "921f1f133685cff6be4aef69c5537348ca72ddc0deb8d1e5262bd8b76783c5af",
+        "measured.log": "efcfb65a9d6d1af5dec76ca2af74b85cb763ce1898fd3e62099fd685c8735b15",
+        "serve_triton.log": "acf10d30b6b0d96702f3d86b7b1130e965114146eef011e80195af31fd1869bc",
+        "job.sh": "21600d0c86990b0d3f0ab857f0d272e3e9908998cf4ce60c407061a729429d48",
+        "smoke.jsonl": "71ecd909037a51adeeb98c8004d5c262974c52c557f3d489bd753f419394a368",
+        "measured.jsonl": "423c643452ea04f110433d88696e377349f43faed276d2ad3a5ba0b6fcd0fb65"
+      },
+      "notes": []
+    }
+  ]
+}
