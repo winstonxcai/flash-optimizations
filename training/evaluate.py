@@ -7,9 +7,7 @@ import argparse
 import csv
 import json
 import os
-import platform
 import shutil
-import sys
 import tempfile
 import time
 from collections import defaultdict
@@ -20,7 +18,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from . import artifacts
+from . import LAYERS, load_runner, parse_layers
 from .data.dataset import load_cached_layer
 from .losses import (
     RETENTION_COUNTS,
@@ -29,7 +27,7 @@ from .losses import (
     packed_rows,
     simulated_packed_rows,
 )
-from .models import StaticScore, restored_model
+from .models import StaticScore, restored_model, read_checkpoint, read_policy
 
 
 # Comparison definitions and aggregation; independent of report presentation.
@@ -315,7 +313,7 @@ def plot_retention_sweep(result: dict, destination: Path) -> dict:
             plt.close(fig)
     return {
         "matplotlib": matplotlib.__version__,
-        "files": {str(path.resolve()): artifacts.sha256(path) for path in files},
+        "files": [str(path.resolve()) for path in files],
     }
 
 
@@ -409,11 +407,11 @@ def _publish_comparison(
             ]
             if result.get("retention_sweep"):
                 figures = plot_retention_sweep(result, stage / "figures")
-                files = {}
-                for source, digest in figures["files"].items():
+                files = []
+                for source in figures["files"]:
                     source = Path(source)
                     target = figure_dir / source.name
-                    files[str(target.resolve())] = digest
+                    files.append(str(target.resolve()))
                     pairs.append((source, target))
                 result["figures"] = {**figures, "files": files}
             _comparison_reports(staged_output, result)
@@ -477,33 +475,24 @@ def compare_masks(
         for p in outputs[:4]
     ):
         raise ValueError("comparison outputs must be outside the repository")
-    artifacts.validate_runner(cache, runner)
     config = json.loads((cache / "config.json").read_text())
     progress = json.loads((cache / "progress.json").read_text())
     if (
         progress["status"] != "complete"
-        or artifacts.sha256(cache / "config.json") != progress["config_sha256"]
-        or artifacts.sha256(cache / "index.json") != progress["index_sha256"]
         or not set(layers) <= set(config["layers"])
     ):
         raise ValueError(
-            "complete, unchanged cache metadata and requested layer coverage required"
+            "complete cache metadata and requested layer coverage required"
         )
-    index = json.loads((cache / "index.json").read_text())
-    math = artifacts.load_runner(runner, sources=config["numerical_source"])
-    ref = artifacts.load_reference(math, config["numerical_source"])
+    math = load_runner(runner)
+    ref = math.reference()
     # Check every requested checkpoint before doing attention work. Do not tune
     # checkpoints or inherit historical aggregate metrics from their manifests.
-    provenance = artifacts.run_provenance(
-        cache,
-        policy,
-        runner,
-        executed_runner=math,
-        device="cpu",
-        threads=threads,
-        torch_version=str(torch.__version__),
-        layers=layers,
-    )
+    selected = read_policy(policy)
+    for layer in layers:
+        if layer not in selected:
+            raise ValueError(f"policy missing requested layer: {layer}")
+        read_checkpoint(selected[layer])
     records = {m.key: [] for m in methods}
     expected, completed = set(), []
     issues = set(config["split"]["development"])
@@ -532,51 +521,17 @@ def compare_masks(
             "learned_192": "256-trained frozen scorer evaluated with 192 survivors",
             "scope": "Reused development data; numerical replay, not fresh-test significance or serving quality",
         },
-        "source": artifacts.package_sources(),
-        "provenance": {
-            **provenance,
+        "settings": {
             "cache": str(cache.resolve()),
             "policy": str(policy.resolve()),
             "runner": str(runner.resolve()),
-            "numerical_source_sha256": config["numerical_source"],
-            "layers": {
-                str(layer): {
-                    "receipt_sha256": index[str(layer)]["record_sha256"],
-                    "payload_sha256": json.loads(
-                        (cache / f"layer-{layer:02d}.json").read_text()
-                    )["states_sha256"],
-                }
-                for layer in layers
-            },
-            "cache_torch": config.get("torch"),
-            "platform": platform.platform(),
-            "python": platform.python_version(),
-            "command": [
-                sys.executable,
-                "-m",
-                "training.evaluate",
-                "--compare-masks",
-                "--cache",
-                str(cache.resolve()),
-                "--policy",
-                str(policy.resolve()),
-                "--runner",
-                str(runner.resolve()),
-                "--output",
-                str(output.resolve()),
-                "--layers",
-                ",".join(map(str, layers)),
-                "--threads",
-                str(threads),
-            ],
+            "torch": str(torch.__version__),
+            "device": "cpu",
+            "threads": threads,
         },
     }
     if retention_sweep:
         result.update(retention_sweep=True, retained_features=list(RETENTION_COUNTS))
-        result["provenance"]["command"][3] = "--retention-sweep"
-        result["provenance"]["command"].extend(
-            ["--figure-dir", str(figure_dir.resolve())]
-        )
         result["definitions"][
             "learned_budget_transfer"
         ] = "Same 256-trained scorer at every budget; no retraining"
@@ -585,9 +540,7 @@ def compare_masks(
     try:
         with torch.no_grad():
             for layer in layers:
-                checkpoint = artifacts.read_checkpoint(
-                    provenance["checkpoints"][str(layer)]
-                )
+                checkpoint = read_checkpoint(selected[layer])
                 model = restored_model(
                     checkpoint["selected_parameters"], "cpu", 42 + layer
                 ).eval()
@@ -669,7 +622,7 @@ def compare_masks(
         result["summary"] = summarize_comparison(records, expected, methods=methods)
         result["elapsed_seconds"] = time.monotonic() - started
         full = (
-            set(layers) == set(artifacts.LAYERS)
+            set(layers) == set(LAYERS)
             and len(issues) == 10
             and len(expected) == 2100
         )
@@ -682,7 +635,6 @@ def compare_masks(
             "methods": len(methods),
             "codec_256_equivalence_checks": 3 * len(expected),
         }
-        artifacts.assert_run_inputs(provenance, cache, policy, runner)
         _publish_comparison(math, output, result, figure_dir)
     except Exception as error:
         result.update(
@@ -703,7 +655,7 @@ def main(arguments=None):
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("cache", "policy", "runner", "output"):
         parser.add_argument("--" + name, type=Path, required=True)
-    parser.add_argument("--layers", default=",".join(map(str, artifacts.LAYERS)))
+    parser.add_argument("--layers", default=",".join(map(str, LAYERS)))
     parser.add_argument("--threads", type=int, default=4)
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument(
@@ -737,29 +689,22 @@ def main(arguments=None):
             args.policy,
             args.runner,
             args.output,
-            layers=artifacts.parse_layers(args.layers),
+            layers=parse_layers(args.layers),
             threads=args.threads,
             retention_sweep=args.retention_sweep,
             figure_dir=args.figure_dir,
         )
-    artifacts.validate_runner(args.cache, args.runner)
-    config = json.loads((args.cache / "config.json").read_text())
-    math = artifacts.load_runner(args.runner, sources=config["numerical_source"])
-    ref = artifacts.load_reference(math, config["numerical_source"])
-    layers = artifacts.parse_layers(args.layers)
-    provenance = artifacts.run_provenance(
-        args.cache,
-        args.policy,
-        args.runner,
-        executed_runner=math,
-        device="cpu",
-        threads=args.threads,
-        torch_version=str(torch.__version__),
-        layers=layers,
-    )
+    math = load_runner(args.runner)
+    ref = math.reference()
+    layers = parse_layers(args.layers)
+    selected = read_policy(args.policy)
+    for layer in layers:
+        if layer not in selected:
+            raise ValueError(f"policy missing requested layer: {layer}")
+        read_checkpoint(selected[layer])
     results = []
     for layer in layers:
-        record = artifacts.read_checkpoint(provenance["checkpoints"][str(layer)])
+        record = read_checkpoint(selected[layer])
         model = restored_model(record["selected_parameters"], "cpu", 42 + layer)
         states = load_cached_layer(args.cache, layer)
         roles = {}
@@ -770,13 +715,16 @@ def main(arguments=None):
         results.append({"layer": layer, "roles": roles})
     result = {
         "layers": results,
-        "source": artifacts.package_sources(),
-        "provenance": provenance,
-        "policy_sha256": artifacts.sha256(args.policy),
-        "runner_sha256": artifacts.sha256(args.runner),
+        "settings": {
+            "cache": str(args.cache.resolve()),
+            "policy": str(args.policy.resolve()),
+            "runner": str(args.runner.resolve()),
+            "torch": str(torch.__version__),
+            "device": "cpu",
+            "threads": args.threads,
+        },
         "fresh_test_completed": False,
     }
-    artifacts.assert_run_inputs(provenance, args.cache, args.policy, args.runner)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     owned: dict[Path, os.stat_result] = {}
     collisions: set[Path] = set()

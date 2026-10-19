@@ -14,7 +14,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from . import artifacts
+from . import LAYERS, load_runner, parse_layers
 from .data.batches import StateBatches, TrainingState
 from .data.dataset import load_cached_layer
 from .losses import (
@@ -23,7 +23,7 @@ from .losses import (
     measure,
     validation_acceptable,
 )
-from .models import ExpandedConditionalScore, StaticScore, extend_parameters
+from .models import ExpandedConditionalScore, StaticScore, extend_parameters, read_checkpoint, read_policy
 
 
 def parameter_penalty(model):
@@ -389,7 +389,7 @@ def run(
         raise ValueError(
             "known recipe, positive thread count and explicit cpu/cuda device required"
         )
-    artifacts.parse_layers(",".join(map(str, layers)))
+    parse_layers(",".join(map(str, layers)))
     if output.resolve().is_relative_to(Path(__file__).resolve().parents[1]):
         raise ValueError("training outputs must be outside the repository")
     if output.exists():
@@ -398,54 +398,35 @@ def run(
         )
     if device == "cuda" and not torch.cuda.is_available():
         raise ValueError("CUDA requested but unavailable; no silent CPU fallback")
-    artifacts.validate_runner(cache, runner)
-    cache_config = json.loads((cache / "config.json").read_text())
-    if str(torch.__version__) != cache_config["torch"]:
-        raise ValueError(
-            "matching source Torch required for training; no implicit migration"
-        )
-    math = artifacts.load_runner(runner, sources=cache_config["numerical_source"])
-    ref = artifacts.load_reference(math, cache_config["numerical_source"])
+    math = load_runner(runner)
+    ref = math.reference()
     torch.set_num_threads(threads)
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.backends.cudnn.allow_tf32 = False
     torch.set_float32_matmul_precision("highest")
-    parent_policy_digest = artifacts.sha256(policy)
-    selected = artifacts.read_policy(policy)
+    selected = read_policy(policy)
     missing_layers = sorted(set(layers) - selected.keys())
     if missing_layers:
         raise ValueError(f"policy missing requested layers: {missing_layers}")
     records = {}
     for layer, entry in selected.items():
-        record = artifacts.read_checkpoint(entry)
+        record = read_checkpoint(entry)
         if layer in layers:
             records[layer] = record
-    identity = artifacts.run_provenance(
-        cache,
-        policy,
-        runner,
-        executed_runner=math,
-        device=device,
-        threads=threads,
-        torch_version=str(torch.__version__),
-        layers=layers,
-    )
-    if identity["policy_sha256"] != parent_policy_digest:
-        raise ValueError(f"parent policy changed during validation: {policy}")
-    provenance = {
-        **identity,
+    configuration = {
         "recipe": recipe,
         "settings": recipes[recipe],
         "layers": list(layers),
-        # Retain the historical flat keys alongside the common receipt chain.
-        "cache_config_sha256": identity["cache_sha256"]["config.json"],
-        "cache_progress_sha256": identity["cache_sha256"]["progress.json"],
-        "source": artifacts.package_sources(),
-        "recipes_sha256": artifacts.sha256(recipes_path),
+        "cache": str(cache.resolve()),
+        "policy": str(policy.resolve()),
+        "runner": str(runner.resolve()),
+        "torch": str(torch.__version__),
+        "device": device,
+        "threads": threads,
         "fresh_test_completed": False,
     }
     output.mkdir(parents=True)
-    math.atomic_json(output / "config.json", provenance)
+    math.atomic_json(output / "config.json", configuration)
     completed = []
     for layer in layers:
         states = load_cached_layer(cache, layer)
@@ -474,23 +455,21 @@ def run(
         selected[layer] = {
             "layer": layer,
             "path": str(checkpoint.resolve()),
-            "sha256": artifacts.sha256(checkpoint),
         }
         completed.append(layer)
         math.atomic_json(
             output / "progress.json",
             {"layers": completed, "complete": False},
         )
-    artifacts.assert_run_inputs(identity, cache, policy, runner)
     published = []
     for layer, entry in sorted(selected.items()):
-        artifacts.read_checkpoint(entry)
+        read_checkpoint(entry)
         published.append(
             {**entry, "path": Path(entry["path"]).name} if layer in layers else entry
         )
     policy_path = output / "policy.json"
     # The policy is the final handoff marker, not merely the last completed fit.
-    # A failed integrity check or publication must not advertise a complete run.
+    # A failed fit or publication must not advertise a complete run.
     owned_policy = None
     try:
         with tempfile.TemporaryDirectory(prefix=".policy-", dir=output) as temporary:
@@ -499,7 +478,6 @@ def run(
                 staged,
                 {
                     "selected": published,
-                    "parent_policy_sha256": parent_policy_digest,
                     "trained_layers": list(layers),
                     "fresh_test_completed": False,
                 },
@@ -540,7 +518,7 @@ def main(arguments=None):
         choices=("rank64", "continuation", "relaxed", "anchored"),
         required=True,
     )
-    parser.add_argument("--layers", default=",".join(map(str, artifacts.LAYERS)))
+    parser.add_argument("--layers", default=",".join(map(str, LAYERS)))
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
     parser.add_argument("--threads", type=int, default=4)
     args = parser.parse_args(arguments)
@@ -550,7 +528,7 @@ def main(arguments=None):
         args.runner,
         args.output,
         recipe=args.recipe,
-        layers=artifacts.parse_layers(args.layers),
+        layers=parse_layers(args.layers),
         device=args.device,
         threads=args.threads,
     )

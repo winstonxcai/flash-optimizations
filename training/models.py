@@ -5,7 +5,48 @@ enter the scorer; future queries and native targets are training data only.
 Author: Winston Cai.
 """
 
+import json
+from pathlib import Path
+
 import torch
+
+from . import LAYERS
+
+
+def read_policy(path: Path) -> dict[int, dict]:
+    """Resolve layer checkpoints; old optional fingerprint fields are ignored."""
+    policy = json.loads(path.read_text())
+    entries = policy.get("selected") if isinstance(policy, dict) else None
+    if not isinstance(entries, list) or not entries:
+        raise ValueError(f"nonempty selected-policy entries required: {path}")
+    selected = {}
+    for entry in entries:
+        layer = entry.get("layer") if isinstance(entry, dict) else None
+        if type(layer) is not int or layer not in LAYERS or layer in selected:
+            raise ValueError(f"unique captured policy layers required: {path}: {layer}")
+        if not isinstance(entry.get("path"), str) or not entry["path"]:
+            raise ValueError(f"checkpoint path required: {path}: layer {layer}")
+        checkpoint = Path(entry["path"])
+        if not checkpoint.is_absolute():
+            checkpoint = path.parent / checkpoint
+        selected[layer] = {"layer": layer, "path": str(checkpoint.resolve())}
+    return selected
+
+
+def read_checkpoint(entry: dict) -> dict:
+    """Check layer/parameter structure, not a historical fingerprint."""
+    path, layer = Path(entry["path"]), entry["layer"]
+    try:
+        record = json.loads(path.read_text())
+    except OSError as error:
+        raise ValueError(f"cannot read policy checkpoint: layer {layer}: {path}") from error
+    if (
+        not isinstance(record, dict)
+        or record.get("layer") != layer
+        or not isinstance(record.get("selected_parameters"), dict)
+    ):
+        raise ValueError(f"complete selected checkpoint required: layer {layer}")
+    return record
 
 
 def restored_model(parameters: dict, device: str, seed: int) -> torch.nn.Module:

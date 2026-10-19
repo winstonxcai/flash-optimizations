@@ -17,7 +17,7 @@ from pathlib import Path
 
 import torch
 
-from .. import artifacts
+from .. import load_runner
 
 
 def tensor_bytes(value: torch.Tensor) -> bytes:
@@ -39,32 +39,14 @@ def _tensor_sizes(value, prefix="") -> Counter:
     return sizes
 
 
-def _assert_storage_inputs(
-    root: Path, runner: Path, config_sha256: str, runner_sha256: str
-) -> None:
-    """Check input paths against the configuration read and runner executed."""
-    for label, path, expected in (
-        ("runner", runner, runner_sha256),
-        ("capture configuration", root / "capture-config.json", config_sha256),
-    ):
-        try:
-            actual = artifacts.sha256(path)
-        except OSError as error:
-            raise ValueError(f"storage {label} changed: {path}") from error
-        if actual != expected:
-            raise ValueError(f"storage {label} changed: {path}")
-
-
 def audit(root: Path, runner: Path, output: Path, *, convert: bool = False) -> dict:
     """Audit every group; compression probes cover first/last layer per issue."""
-    math = artifacts.load_runner(runner)
+    math = load_runner(runner)
     if output.exists():
         raise ValueError(f"fresh storage-audit output directory required: {output}")
     torch.set_num_threads(4)
     config_bytes = (root / "capture-config.json").read_bytes()
     config_hash = hashlib.sha256(config_bytes).hexdigest()
-    runner_hash = math._source_sha256
-    _assert_storage_inputs(root, runner, config_hash, runner_hash)
     config = json.loads(config_bytes)
     if not config["requests"] or not config["layers"]:
         raise ValueError(f"nonempty capture requests and layers required: {root}")
@@ -78,7 +60,6 @@ def audit(root: Path, runner: Path, output: Path, *, convert: bool = False) -> d
     native_checks = converted_groups = 0
     converted_reader_seconds = converted_repeat_seconds = 0.0
     max_native_error = 0.0
-    source = hashlib.sha256()
     began = time.monotonic()
     for rid in sorted(config["requests"]):
         for layer in config["layers"]:
@@ -105,8 +86,6 @@ def audit(root: Path, runner: Path, output: Path, *, convert: bool = False) -> d
                         continue
                     counted_files.add(path)
                     payload = path.read_bytes()
-                    source.update(str(path.relative_to(root.resolve())).encode())
-                    source.update(hashlib.sha256(payload).digest())
                     group_bytes += len(payload)
                     shard = torch.load(
                         io.BytesIO(payload), map_location="cpu", weights_only=True
@@ -177,8 +156,6 @@ def audit(root: Path, runner: Path, output: Path, *, convert: bool = False) -> d
         "reader_first_pass_seconds": first_seconds,
         "reader_repeat_seconds": warm_seconds,
         "reader_caveat": "OS cache not dropped; first pass is not a cold-cache measurement",
-        "source_payload_digest": source.hexdigest(),
-        "runner_sha256": runner_hash,
         "converted_groups": converted_groups,
         "native_checks": native_checks,
         "converted_reader_seconds": converted_reader_seconds,
@@ -191,21 +168,12 @@ def audit(root: Path, runner: Path, output: Path, *, convert: bool = False) -> d
         result["converted_bytes"] = sum(
             p.stat().st_size for p in (output / "converted").rglob("*.pt")
         )
-    provenance_error = None
-    try:
-        _assert_storage_inputs(root, runner, config_hash, runner_hash)
-    except ValueError as error:
-        # Retain the audit diagnostics with their original identities, never a pass.
-        result["status"] = "failed"
-        provenance_error = error
     output.mkdir(parents=True, exist_ok=True)
     math.atomic_json(output / "storage.json", result)
     with (output / "storage.csv").open("w", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=["rid", "layer", "unique_c4_rows"])
         writer.writeheader()
         writer.writerows(rows)
-    if provenance_error is not None:
-        raise provenance_error
     if missing_groups:
         missing = ", ".join(
             f'{row["rid"]}/layer-{row["layer"]:02d}' for row in missing_groups
@@ -252,15 +220,13 @@ def benchmark_readers(root: Path, runner: Path, output: Path) -> dict:
     """
     from .dataset import CaptureReader, load_states
 
-    math = artifacts.load_runner(runner)
+    math = load_runner(runner)
     torch.set_num_threads(4)
     converted = output / "converted"
     if not converted.is_dir():
         raise ValueError("run the exact conversion audit first")
     config_bytes = (root / "capture-config.json").read_bytes()
     config_hash = hashlib.sha256(config_bytes).hexdigest()
-    runner_hash = math._source_sha256
-    _assert_storage_inputs(root, runner, config_hash, runner_hash)
     original_config = json.loads(config_bytes)
     config = {
         **original_config,
@@ -343,10 +309,8 @@ def benchmark_readers(root: Path, runner: Path, output: Path) -> dict:
         "shared_bundle_view_seconds": sum(row["shared"] for row in records),
         "timing_contract": "bundle preflight excluded; shared includes selected-layer extraction/member hashes/native validation; legacy uses extracted source files",
         "cache_caveat": "two reversed-order passes; no cold-cache claim",
-        "runner_sha256": runner_hash,
         "records": records,
     }
-    _assert_storage_inputs(root, runner, config_hash, runner_hash)
     math.atomic_json(output / "training-reader.json", report)
     with (output / "training-reader.csv").open("w", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=list(records[0]))
@@ -359,12 +323,10 @@ def benchmark_batch_view(root: Path, runner: Path, output: Path) -> dict:
     """Amortize bundle verification/extraction across the same three layers."""
     from .dataset import CaptureReader, load_states
 
-    math = artifacts.load_runner(runner)
+    math = load_runner(runner)
     torch.set_num_threads(4)
     config_bytes = (root / "capture-config.json").read_bytes()
     config_hash = hashlib.sha256(config_bytes).hexdigest()
-    runner_hash = math._source_sha256
-    _assert_storage_inputs(root, runner, config_hash, runner_hash)
     config = json.loads(config_bytes)
     layers = _representative_layers(config)
     requested = sorted(config["requests"])
@@ -414,9 +376,7 @@ def benchmark_batch_view(root: Path, runner: Path, output: Path) -> dict:
         "queries_compared": sum(row["queries"] for row in records),
         "cache_caveat": "warm filesystem, no cold-cache claim",
         "timing_contract": "bundle preflight excluded; extraction, member hashes and numerical replay included",
-        "runner_sha256": runner_hash,
     }
-    _assert_storage_inputs(root, runner, config_hash, runner_hash)
     math.atomic_json(output / "training-reader-batched.json", report)
     return report
 

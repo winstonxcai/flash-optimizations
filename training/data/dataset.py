@@ -17,8 +17,17 @@ from uuid import uuid4
 import numpy as np
 import torch
 
-from .. import artifacts
+from .. import LAYERS, load_runner
 from ..losses import rounded_output
+
+def file_sha256(path: Path) -> str:
+    """Checksum serialized data for corruption detection, not source provenance."""
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(8 * 1024**2), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
 
 SHAPES = {
     "raw": (512, 512),
@@ -185,7 +194,7 @@ class CaptureReader:
         if not issues or len(set(issues)) != len(issues):
             raise ValueError("nonempty unique capture issues required")
         self._root = published_root.resolve()
-        self._runner = artifacts.load_runner(runner)
+        self._runner = load_runner(runner)
         self._config_bytes = (self._root / "capture-config.json").read_bytes()
         self._config = json.loads(self._config_bytes)
         self._verified: dict[str, _Publication] = {}
@@ -250,7 +259,7 @@ class CaptureReader:
         if (
             not layers
             or len(set(layers)) != len(layers)
-            or not set(layers) <= set(artifacts.LAYERS)
+            or not set(layers) <= set(LAYERS)
         ):
             raise ValueError("unique known captured layers required")
         self._publication(self._root, rid)
@@ -394,22 +403,22 @@ def load_layer(
 ):
     """One receipt/payload reader; retain both historical norm contracts."""
     if (
-        layer not in artifacts.LAYERS
-        or artifacts.sha256(cache / "config.json") != expected_config_sha256
+        layer not in LAYERS
+        or file_sha256(cache / "config.json") != expected_config_sha256
     ):
         raise ValueError("cache layer/configuration changed")
     config = json.loads((cache / "config.json").read_text())
     record_path = cache / f"layer-{layer:02d}.json"
-    if artifacts.sha256(record_path) != expected_record_sha256:
+    if file_sha256(record_path) != expected_record_sha256:
         raise ValueError("cached layer receipt changed")
     record = json.loads(record_path.read_text())
     path = cache / f"layer-{layer:02d}.pt"
     if (
         record["config_sha256"] != expected_config_sha256
         or record["layer"] != layer
-        or artifacts.sha256(path) != record["states_sha256"]
+        or file_sha256(path) != record["states_sha256"]
     ):
-        raise ValueError("cached payload provenance changed")
+        raise ValueError("cached payload checksum changed")
     states = _mapped_states(path)
     validate = validate_migrated_states if allow_norm_roundoff else validate_states
     identities = validate(
@@ -423,7 +432,7 @@ def load_layer(
 def load_cached_layer(cache: Path, layer: int) -> dict:
     """Use existing receipts and the existing cross-platform norm check."""
     progress = json.loads((cache / "progress.json").read_text())
-    if artifacts.sha256(cache / "index.json") != progress["index_sha256"]:
+    if file_sha256(cache / "index.json") != progress["index_sha256"]:
         raise ValueError("cache index changed")
     index = json.loads((cache / "index.json").read_text())
     return load_layer(
@@ -532,7 +541,7 @@ def capture_sources(
         for rid in split[role]:
             receipt_path = root / "done" / f"{rid}.json"
             receipt = json.loads(receipt_path.read_text())
-            sources[str(receipt_path.relative_to(root))] = artifacts.sha256(
+            sources[str(receipt_path.relative_to(root))] = file_sha256(
                 receipt_path
             )
             if receipt["finish_reason"] not in {"stop", "tool_calls"}:
@@ -559,37 +568,14 @@ def build(root, fit_path, runner, seconds=2100):
     split = frozen_split(capture["requests"])
     if (
         fit["status"] != "complete"
-        or fit["provenance"]["split"] != split
         or validation["status"] != "complete"
         or validation["issues"] != 50
     ):
         raise ValueError("complete frozen 50-issue capture/fit required")
-    for path, name in (
-        (runner, "runner"),
-        (root / "capture-config.json", "capture_config"),
-    ):
-        if (
-            artifacts.sha256(path) != fit["provenance"]["capture"][name]
-            or artifacts.sha256(path) != validation["sha256"][name]
-        ):
-            raise ValueError("frozen numerical/capture provenance changed")
-    manifest = json.loads((root / "source-manifest.json").read_text())
-    for name, digest in manifest["source_sha256"].items():
-        if (
-            name.startswith(("srt/remnant/", "benchmark/remnant/"))
-            and artifacts.sha256(runner.parents[2] / name) != digest
-        ):
-            raise ValueError("frozen numerical source changed")
     config = {
         "schema": 1,
-        "fit_sha256": artifacts.sha256(fit_path),
         "split": split,
-        "capture_config_sha256": artifacts.sha256(root / "capture-config.json"),
-        "validation_sha256": artifacts.sha256(root / "validation/aggregate.json"),
-        "source_manifest_sha256": artifacts.sha256(root / "source-manifest.json"),
-        "numerical_source": manifest["source_sha256"],
-        "builder_source": artifacts.package_sources(),
-        "layers": list(artifacts.LAYERS),
+        "layers": list(LAYERS),
         "train_queries_per_issue": 4,
         "development_queries_per_issue": 10,
         "heads": 64,
@@ -599,19 +585,19 @@ def build(root, fit_path, runner, seconds=2100):
         "fresh_test_completed": False,
         "torch": torch.__version__,
     }
-    math = artifacts.load_runner(runner, sources=manifest["source_sha256"])
+    math = load_runner(runner)
     output = fit_path.parent / "training-cache-001"
     output.mkdir(exist_ok=True)
     config_path = output / "config.json"
     if config_path.exists() and json.loads(config_path.read_text()) != config:
         raise ValueError("cache source/configuration changed")
     math.atomic_json(config_path, config)
-    digest = artifacts.sha256(config_path)
+    digest = file_sha256(config_path)
     index_path = output / "index.json"
     index = json.loads(index_path.read_text()) if index_path.exists() else {}
     start = time.monotonic()
     completed = []
-    for layer in artifacts.LAYERS:
+    for layer in LAYERS:
         if (output / f"layer-{layer:02d}.json").exists():
             if str(layer) not in index:
                 raise ValueError("completed cache receipt missing from index")
@@ -631,15 +617,15 @@ def build(root, fit_path, runner, seconds=2100):
                 {
                     "layer": layer,
                     "config_sha256": digest,
-                    "states_sha256": artifacts.sha256(path),
+                    "states_sha256": file_sha256(path),
                     "bytes": path.stat().st_size,
                     "identities": identities,
                     "capture_sources": sources,
                 },
             )
             index[str(layer)] = {
-                "record_sha256": artifacts.sha256(output / f"layer-{layer:02d}.json"),
-                "states_sha256": artifacts.sha256(path),
+                "record_sha256": file_sha256(output / f"layer-{layer:02d}.json"),
+                "states_sha256": file_sha256(path),
             }
             math.atomic_json(index_path, index)
             # Verify deserialization exactly; no codec or dtype conversion on migration.
@@ -654,10 +640,10 @@ def build(root, fit_path, runner, seconds=2100):
             del states, restored
         completed.append(layer)
         progress = {
-            "status": "complete" if tuple(completed) == artifacts.LAYERS else "partial",
+            "status": "complete" if tuple(completed) == LAYERS else "partial",
             "layers": completed,
             "config_sha256": digest,
-            "index_sha256": artifacts.sha256(index_path),
+            "index_sha256": file_sha256(index_path),
             "seconds": time.monotonic() - start,
             "bytes": sum(
                 (output / f"layer-{n:02d}.pt").stat().st_size for n in completed
@@ -745,63 +731,48 @@ def verify_preserved_views(base, expanded):
     return counts
 
 
-def extend_coverage(root, runner, base_cache, progress_digest, output, layers=(8, 12)):
+def extend_coverage(root, runner, base_cache, output, layers=(8, 12)):
     """Author: Winston Cai. CPU-only extension of existing captured queries.
 
-    No new issues, model inference or replacement targets. The pinned complete
+    No new issues, model inference or replacement targets. The complete
     base receipt owns the original four training views and all development
     tensors. Newly admitted views come only from hash-bound raw captures.
     """
     if tuple(layers) != (8, 12) or output.exists():
         raise ValueError("unique CPU-only two-layer coverage extension required")
-    if artifacts.sha256(base_cache / "progress.json") != progress_digest:
-        raise ValueError("pinned complete base cache changed")
     progress = json.loads((base_cache / "progress.json").read_text())
-    if progress["status"] != "complete" or progress["layers"] != list(artifacts.LAYERS):
+    if progress["status"] != "complete" or progress["layers"] != list(LAYERS):
         raise ValueError("complete all-layer base cache required")
     for name, key in (("config.json", "config_sha256"), ("index.json", "index_sha256")):
-        if artifacts.sha256(base_cache / name) != progress[key]:
+        if file_sha256(base_cache / name) != progress[key]:
             raise ValueError("base metadata changed")
     base_config = json.loads((base_cache / "config.json").read_text())
-    if (
-        str(torch.__version__) != base_config["torch"]
-        or base_config["train_queries_per_issue"] != 4
-    ):
-        raise ValueError("source Torch and original four-query recipe required")
-    for name, key in (
-        ("capture-config.json", "capture_config_sha256"),
-        ("source-manifest.json", "source_manifest_sha256"),
-        ("validation/aggregate.json", "validation_sha256"),
-    ):
-        if artifacts.sha256(root / name) != base_config[key]:
-            raise ValueError("original capture/validation provenance changed")
+    if base_config["train_queries_per_issue"] != 4:
+        raise ValueError("original four-query recipe required")
     capture = json.loads((root / "capture-config.json").read_text())
     split = base_config["split"]
     if frozen_split(capture["requests"]) != split:
         raise ValueError("frozen issue split changed")
-    for name, digest in base_config["numerical_source"].items():
-        if (
-            name.startswith(("srt/remnant/", "benchmark/remnant/"))
-            and artifacts.sha256(runner.parents[2] / name) != digest
-        ):
-            raise ValueError("frozen numerical source changed")
     torch.set_num_threads(4)
-    math = artifacts.load_runner(runner, sources=base_config["numerical_source"])
+    math = load_runner(runner)
     index = json.loads((base_cache / "index.json").read_text())
     config = {
-        **base_config,
+        **{
+            key: base_config[key]
+            for key in (
+                "schema", "split", "heads", "survivors", "record_bytes",
+                "development_queries_per_issue", "fresh_test_completed",
+            )
+            if key in base_config
+        },
         "layers": list(layers),
         "train_queries_per_issue": 10,
-        "base_cache_progress_sha256": progress_digest,
-        "base_cache_config_sha256": progress["config_sha256"],
-        "base_cache_index_sha256": progress["index_sha256"],
-        "base_layer_receipts": {str(l): index[str(l)]["record_sha256"] for l in layers},
+        "torch": str(torch.__version__),
         "recipe": "Six additional captured training queries per issue; preserve every original training/development state and denominator",
-        "builder_source": artifacts.package_sources(),
     }
     output.mkdir(parents=True)
     math.atomic_json(output / "config.json", config)
-    digest = artifacts.sha256(output / "config.json")
+    digest = file_sha256(output / "config.json")
     extended_index, completed, started = {}, [], time.monotonic()
     for layer in layers:
         base = load_layer(
@@ -843,11 +814,10 @@ def extend_coverage(root, runner, base_cache, progress_digest, output, layers=(8
         record = {
             "layer": layer,
             "config_sha256": digest,
-            "states_sha256": artifacts.sha256(path),
+            "states_sha256": file_sha256(path),
             "bytes": path.stat().st_size,
             "identities": identities,
             "capture_sources": sources,
-            "base_receipt_sha256": index[str(layer)]["record_sha256"],
             "preserved_train_queries": preserved,
             "preserved_development_queries": len(base["development"]),
             "new_train_queries": len(regenerated) - preserved,
@@ -856,7 +826,7 @@ def extend_coverage(root, runner, base_cache, progress_digest, output, layers=(8
         receipt_path = output / f"layer-{layer:02d}.json"
         math.atomic_json(receipt_path, record)
         extended_index[str(layer)] = {
-            "record_sha256": artifacts.sha256(receipt_path),
+            "record_sha256": file_sha256(receipt_path),
             "states_sha256": record["states_sha256"],
         }
         math.atomic_json(output / "index.json", extended_index)
@@ -883,8 +853,7 @@ def extend_coverage(root, runner, base_cache, progress_digest, output, layers=(8
             "status": "complete" if completed == list(layers) else "partial",
             "layers": completed[:],
             "config_sha256": digest,
-            "index_sha256": artifacts.sha256(output / "index.json"),
-            "base_cache_progress_sha256": progress_digest,
+            "index_sha256": file_sha256(output / "index.json"),
             "seconds": time.monotonic() - started,
             "torch": str(torch.__version__),
             "gpu_requested": False,
@@ -908,7 +877,6 @@ def main(arguments=None):
     parser.add_argument("--fit", dest="fit_path", type=Path)
     parser.add_argument("--runner", type=Path, required=True)
     parser.add_argument("--extend-base", type=Path)
-    parser.add_argument("--progress-sha256")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--published-view", action="store_true")
     parser.add_argument("--issue")
@@ -933,17 +901,16 @@ def main(arguments=None):
     if args.extend_base is None:
         if (
             args.fit_path is None
-            or args.progress_sha256 is not None
             or args.output is not None
         ):
             parser.error("ordinary cache build requires --fit only")
         return build(root=args.root, fit_path=args.fit_path, runner=args.runner)
-    if args.fit_path is not None or args.progress_sha256 is None or args.output is None:
+    if args.fit_path is not None or args.output is None:
         parser.error(
-            "coverage extension requires --extend-base, --progress-sha256 and --output, not --fit"
+            "coverage extension requires --extend-base and --output, not --fit"
         )
     return extend_coverage(
-        args.root, args.runner, args.extend_base, args.progress_sha256, args.output
+        args.root, args.runner, args.extend_base, args.output
     )
 
 
