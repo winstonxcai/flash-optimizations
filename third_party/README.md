@@ -126,8 +126,8 @@ Inventory relative to [flashmla/](flashmla/).
   LSE, extreme bitmaps, partial/invalid selections and graph replay. The former
   separate Remnant fixture and benchmark were consolidated into these fixtures
   and SGLang's maintained microbenchmark.
-- **Incidental metadata:** `.DS_Store` remains tracked in the fork; it is not
-  runtime code or evidence and still needs separate PR cleanup.
+- **Workspace metadata:** `.DS_Store` is ignored and no longer tracked
+  (FlashMLA `97f3faa`). This cleanup changes no runtime or kernel code.
 
 ## Runtime contracts
 
