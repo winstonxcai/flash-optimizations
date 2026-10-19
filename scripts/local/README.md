@@ -271,6 +271,114 @@ capacity and image scripts remain retired.
 
 ## LSWB replay without profiling
 
+### One-time conversion for SGLang bench-serving
+
+Question: how does Native versus Packed throughput change when the same recorded
+LongSWE-derived requests use request-level concurrency instead of the replay's
+fixed active sessions? Convert the frozen cohort once, then reuse identical
+messages, tools, ordering and recorded output caps for all three modes at C24.
+Respect EOS and use temperature zero. This is a serving comparison, not a task
+quality evaluation or the 1,200-second replay.
+
+`convert_lswb.py` only owns the one-time CPU conversion. It hashes the
+original raw JSONL and writes `requests.jsonl` plus a provenance `manifest.json`
+under ignored `data/`. It preserves full structured messages and tools, rejects
+malformed rows and duplicate IDs, and refuses to overwrite an existing
+collection. Historical responses, usage and request/session identity
+are excluded from API payloads. Identity, hashes and recorded lengths remain in
+the provenance file. The original archive is unchanged.
+
+```bash
+python3 scripts/local/convert_lswb.py \
+  --input "$PWD/data/longswebench.jsonl" \
+  --output-dir "$PWD/data/lswb-bench-serving"
+```
+
+Rows use SGLang's `openai` loader: `messages`, optional `tools`, `max_tokens`,
+`temperature`, `ignore_eos`, streaming usage and cache-reporting options. An
+additional `prompt_len` metadata field supplies recorded `usage.prompt_tokens`
+estimates to the fork's loader because V4's tokenizer has no Hugging Face chat
+template. Missing/zero prompt counts use an explicit zero estimate, with their
+count recorded in the manifest. Output caps use `usage.completion_tokens`; an
+absent/zero value defaults to 256, matching the replay adapter. Every fallback is
+recorded. Request IDs and session IDs come from `id` and `token_name`.
+This metadata is stripped by the loader before sending the original chat to the
+server. Prompt-token throughput and client cache-hit fractions are consequently
+estimates; prefer requests/s and reported completion-token throughput.
+
+The loader compatibility fix and tool-call-only TTFT/streaming-usage fixes live
+in the SGLang benchmark client. They are independent of the converter and do not
+change model serving. Before using the setup on another host, publish the fork
+commit, update its parent pin and synchronize the checkout. An older image's
+benchmark client does not support the recorded length metadata; select the
+updated mounted fork explicitly. The existing `bench-serving.sh` remains the
+random-text client and is not used for this experiment.
+
+Before reserving GPUs, exercise the actual loader in the serving image on CPU:
+
+```bash
+export SGLANG_ROOT_CT="/mnt/host_root$PWD/third_party/sglang"
+export SGLANG_PY="$SGLANG_ROOT_CT/python"
+. scripts/local/env.sh
+docker exec -i -e CUDA_VISIBLE_DEVICES= \
+  -e HF_HUB_OFFLINE=1 -e TRANSFORMERS_OFFLINE=1 \
+  -e "PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT" \
+  "$CONTAINER" python3 - "$REPO_CT/data/lswb-bench-serving" "$MODEL_CT" <<'PY_LOADER'
+import hashlib, json, sys
+from pathlib import Path
+from sglang.benchmark.datasets.openai_dataset import sample_openai_requests
+from sglang.benchmark.utils import get_tokenizer
+root = Path(sys.argv[1])
+manifest = json.loads((root / "manifest.json").read_text())
+path = root / "requests.jsonl"
+assert hashlib.sha256(path.read_bytes()).hexdigest() == manifest["dataset_sha256"]
+rows = sample_openai_requests(str(path), manifest["requests"], get_tokenizer(sys.argv[2]))
+assert len(rows) == manifest["requests"]
+for row, record in zip(rows, manifest["records"]):
+    assert row.output_len == record["max_tokens"]
+    assert row.prompt_len == (record["recorded_prompt_tokens"] or 0)
+    assert "prompt_len" not in row.extra_request_body
+print(f"CPU loader PASS: {len(rows)} requests; no weights loaded")
+PY_LOADER
+```
+
+Invoke SGLang's CLI directly against an already-running, dedicated server:
+
+```bash
+mkdir -p "$PWD/results/serving"
+RUN_ROOT=$(mktemp -d "$PWD/results/serving/lswb-c24-XXXXXX")
+LSWB_REQUESTS=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["requests"])' \
+  "$PWD/data/lswb-bench-serving/manifest.json")
+curl -fsS --max-time 30 "http://127.0.0.1:$PORT/server_info" > "$RUN_ROOT/server-info.json"
+docker exec -i -e HF_HUB_OFFLINE=1 -e TRANSFORMERS_OFFLINE=1 \
+  -e "PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT" \
+  "$CONTAINER" timeout --signal=TERM --kill-after=5s 10800s \
+  python3 -m sglang.benchmark.serving \
+  --backend sglang-oai-chat --host 127.0.0.1 --port "$PORT" \
+  --model "$MODEL_CT" --served-model-name "$MODEL_NAME" --tokenizer "$MODEL_CT" \
+  --dataset-name openai --dataset-path "$REPO_CT/data/lswb-bench-serving/requests.jsonl" \
+  --num-prompts "$LSWB_REQUESTS" --max-concurrency 24 --request-rate inf \
+  --warmup-requests 0 --flush-cache --disable-ignore-eos --cache-report \
+  --output-file "$(to_ct "$RUN_ROOT/measured.jsonl")" --output-details --seed 42 \
+  > "$RUN_ROOT/client.log" 2>&1
+```
+
+First smoke all three modes with
+`--num-prompts 16 --max-concurrency 2` in separately labeled result folders.
+Check mode/counts, decode graph coverage, request limits and context lengths
+against the running server. Stop on loader, source or configuration failures;
+do not drop requests, flatten history or change output policy to pass. Require
+at least 99% successful requests in a full comparison; retain all failures and
+inspect reported usage, output caps and TTFT before interpreting performance.
+The CLI's exit code alone does not validate a result. CPU checks cannot establish
+GPU correctness or agent quality.
+
+For GPUQ, reserve four GPUs per mode, use its assigned IDs, and use distinct
+ports and boot/result directories. Two TP4 modes may run concurrently on eight
+GPUs. The job caller owns server startup and cleanup on every exit; neither the
+converter nor the CLI stops a server. Reuse the one converted collection for
+all subsequent comparisons. Do not rerun conversion between modes.
+
 Against the running server, run for 1,200 seconds at concurrency 24 or 28:
 
 ```bash

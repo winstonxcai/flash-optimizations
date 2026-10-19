@@ -93,6 +93,12 @@ files within them, not every upstream file in that directory.
   protocol and harness tests. `python/sglang/benchmark/remnant/` owns shared case
   definitions, seeds, statistics, JSON/CSV and profile-export checks, capture
   conversion/preflight and independent quantization-cell validation.
+- **Recorded-request serving client:** `python/sglang/benchmark/datasets/openai_dataset.py`
+  accepts recorded `prompt_len` estimates without forwarding that metadata or
+  locally rendering model-specific chat templates. Zero explicitly marks missing
+  accounting. `python/sglang/benchmark/serving.py` includes tool-call-only output
+  in first-output timing and rejects missing streaming usage when requested.
+  CPU regressions live in `test/registered/bench_fn/test_bench_serving_reasoning_stream.py`.
 - **Integration tests:** `test/registered/attention/unittests/dsv4/test_remnant_*.py`
   covers backend, calibration, compressor stores, graphs, Direct, fused stores,
   HiCache, packing and pools. Startup and observability contracts live in
