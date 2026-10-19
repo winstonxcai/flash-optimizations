@@ -774,6 +774,7 @@ class TrainingIntegrationTests(unittest.TestCase):
             )
 
             def changed_after_import(path, **kwargs):
+                self.assertEqual(path, alternate, "mutate only the test-owned source")
                 module = loader(path, **kwargs)
                 path.write_bytes(runner_bytes + b"\n")
                 return module
@@ -787,11 +788,11 @@ class TrainingIntegrationTests(unittest.TestCase):
                 ):
                     with self.assertRaisesRegex(ValueError, "runner.*changed|executed.*runner"):
                         if command is train.main:
-                            command(
-                                self._train_arguments(
-                                    cache, policy, "continuation", "8", output
-                                )
+                            arguments = self._train_arguments(
+                                cache, policy, "continuation", "8", output
                             )
+                            arguments[arguments.index("--runner") + 1] = str(alternate)
+                            command(arguments)
                         else:
                             command([
                                 "--cache", str(cache), "--policy", str(policy),
@@ -801,6 +802,7 @@ class TrainingIntegrationTests(unittest.TestCase):
                 self.assertFalse(output.exists())
             finally:
                 alternate.write_bytes(runner_bytes)
+            self.assertEqual(self.runner.read_bytes(), runner_bytes)
         del config["numerical_source"]["benchmark/remnant/calibrate.py"]
         self.math.atomic_json(config_path, config)
         with self.assertRaisesRegex(ValueError, "missing frozen runner"):
@@ -898,6 +900,19 @@ sources = {name: artifacts.sha256(root / name) for name in names}
 reference = artifacts.load_reference(runner, sources)
 bitmap = sys.modules[reference.__package__ + ".bitmap"]
 assert bitmap.SOURCE_MARKER == "new", "stale pyc executed"
+package = sys.modules[reference.__package__]
+package.bitmap = type(bitmap)(bitmap.__name__)
+try:
+    for action in (lambda: artifacts.load_reference(runner, sources),
+                   lambda: artifacts.load_runner(path)):
+        try:
+            action()
+        except ValueError as error:
+            assert "loaded numerical dependency differs" in str(error), error
+        else:
+            raise AssertionError("replaced package export admitted")
+finally:
+    package.bitmap = bitmap
 file = root / "srt/remnant/bitmap.py"
 file.write_text(file.read_text().replace('SOURCE_MARKER = "new"', 'SOURCE_MARKER = "alt"'))
 sources = {name: artifacts.sha256(root / name) for name in names}
@@ -913,6 +928,39 @@ for action in (lambda: artifacts.load_reference(runner, sources),
         subprocess.run(
             [sys.executable, "-c", program, str(source)], check=True, timeout=30
         )
+
+    def test_foreign_reference_is_rejected_before_training_or_evaluation(self):
+        cache, policy = self._cache(8), self._warm_policy(8)
+        reference = self.math.reference()
+        foreign = type(reference)(reference.__name__)
+        # Same name, package, path and apparent source; different executable API.
+        foreign.__dict__.update(reference.__dict__)
+        foreign.pack_rows_ref = Mock(side_effect=AssertionError("foreign codec executed"))
+        loader = artifacts.load_runner
+
+        def foreign_runner(path, **kwargs):
+            module = loader(path, **kwargs)
+            module.reference = lambda: foreign
+            return module
+
+        for command, options in (
+            (train.main, ["--recipe", "continuation"]),
+            (evaluate.main, []),
+            (evaluate.main, ["--compare-masks"]),
+        ):
+            output = self.root / f"foreign-{command.__module__}-{len(options)}.json"
+            with self.subTest(command=command.__module__, options=options), patch(
+                "training.artifacts.load_runner", side_effect=foreign_runner
+            ), patch("training.train.fit", side_effect=AssertionError("must not fit")), patch(
+                "training.evaluate.load_cached_layer",
+                side_effect=AssertionError("must not replay"),
+            ), self.assertRaisesRegex(ValueError, "loaded numerical dependency differs"):
+                command([
+                    "--cache", str(cache), "--policy", str(policy),
+                    "--runner", str(self.runner), "--output", str(output),
+                    "--layers", "8", "--threads", "2", *options,
+                ])
+            self.assertFalse(output.exists())
 
     # Capture storage, coverage, and bounded transfer ownership.
     def test_storage_rejects_empty_cohort_and_layers(self):
@@ -1773,7 +1821,9 @@ else:
         ):
             with self.subTest(scenario=scenario):
                 log.unlink(missing_ok=True)
-                deadline = int(time.time()) + (1 if scenario == "timeout" else 6)
+                # Let preflight launch the fake server before its unhealthy
+                # health checks exhaust the budget; one second can expire first.
+                deadline = int(time.time()) + 6
                 if scenario == "expired":
                     deadline = 0
                 try:

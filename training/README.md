@@ -27,6 +27,11 @@ differ. When relocating, rebase checkpoint paths in a **copy** of the policy
 (relative paths resolve beside it), retaining checkpoint bytes and SHA-256s.
 Never rewrite cache receipts or historical evidence to bypass validation.
 
+`artifacts.py` owns shared cache/checkpoint integrity checks and frozen-source
+loading. One numerical revision is allowed per Python process. Loading and replay
+use the same dependency checks, compile verified source bytes rather than cached
+bytecode, and require the owned reference modules and package exports.
+
 **Current compatibility blocker:** the historical cache above omits the numerical
 `bitmap.py` hash now required by `training.artifacts`; replay preflight rejects
 it. Obtain a reviewed version-compatible bundle before running the commands below.

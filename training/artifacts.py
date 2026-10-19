@@ -41,30 +41,32 @@ def load_runner(path: Path, *, sources: dict[str, str] | None = None) -> ModuleT
 
 
 def _bind_numerical_sources(root: Path, expected: dict[str, str] | None) -> None:
-    """Load checked source bytes once, without trusting timestamp-based pyc files."""
-    sources = {
-        name: (root / f"{name}.py").read_bytes()
-        for name in ("config", "bitmap", "reference")
-    }
-    if expected is not None:
-        for name, source in sources.items():
-            if hashlib.sha256(source).hexdigest() != expected.get(
-                f"srt/remnant/{name}.py"
-            ):
-                raise ValueError(
-                    f'frozen numerical source changed before execution: {root / (name + ".py")}'
-                )
-    if _REFERENCE_MODULES:
-        for name, source in sources.items():
-            module, digest = _REFERENCE_MODULES[name]
+    """Validate new or cached dependencies through one exact-byte path.
+
+    Package exports and sys.modules must both retain the owned modules: relative
+    imports can use either. Never execute a dependency before all hashes pass.
+    """
+    sources = {}
+    package = sys.modules.get(_REFERENCE_PACKAGE)
+    for name in ("config", "bitmap", "reference"):
+        path = root / f"{name}.py"
+        source = path.read_bytes()
+        digest = hashlib.sha256(source).hexdigest()
+        if expected is not None and digest != expected.get(f"srt/remnant/{name}.py"):
+            raise ValueError(f"frozen numerical source changed before execution: {path}")
+        if _REFERENCE_MODULES:
+            module, loaded_digest = _REFERENCE_MODULES[name]
             if (
-                hashlib.sha256(source).hexdigest() != digest
+                digest != loaded_digest
                 or sys.modules.get(module.__name__) is not module
+                or getattr(package, name, None) is not module
             ):
                 raise ValueError(
-                    f'loaded numerical dependency differs from frozen source: {root / (name + ".py")}; '
+                    f"loaded numerical dependency differs from frozen source: {path}; "
                     "use a fresh Python process for a different numerical revision"
                 )
+        sources[name] = (source, digest)
+    if _REFERENCE_MODULES:
         return
     if any(
         name == _REFERENCE_PACKAGE or name.startswith(_REFERENCE_PACKAGE + ".")
@@ -77,7 +79,7 @@ def _bind_numerical_sources(root: Path, expected: dict[str, str] | None) -> None
     package.__path__ = [str(root)]
     sys.modules[_REFERENCE_PACKAGE] = package
     try:
-        for name, source in sources.items():
+        for name, (source, digest) in sources.items():
             fullname = f"{_REFERENCE_PACKAGE}.{name}"
             path = root / f"{name}.py"
             spec = importlib.util.spec_from_file_location(fullname, path)
@@ -85,7 +87,7 @@ def _bind_numerical_sources(root: Path, expected: dict[str, str] | None) -> None
             sys.modules[fullname] = module
             exec(compile(source, str(path), "exec"), module.__dict__)
             setattr(package, name, module)
-            _REFERENCE_MODULES[name] = (module, hashlib.sha256(source).hexdigest())
+            _REFERENCE_MODULES[name] = (module, digest)
     except BaseException:
         for name in tuple(sys.modules):
             if name == _REFERENCE_PACKAGE or name.startswith(_REFERENCE_PACKAGE + "."):
@@ -95,25 +97,17 @@ def _bind_numerical_sources(root: Path, expected: dict[str, str] | None) -> None
 
 
 def load_reference(runner: ModuleType, sources: dict[str, str]) -> ModuleType:
-    """Check executed-source digests and current files against the frozen map."""
+    """Require the owned reference, then recheck dependencies before replay."""
     if runner._source_sha256 != sources.get("benchmark/remnant/calibrate.py"):
         raise ValueError("executed runner differs from frozen source")
     reference = runner.reference()
-    package = reference.__package__
-    for name in ("reference", "config", "bitmap"):
-        key = f"srt/remnant/{name}.py"
-        module = sys.modules.get(f"{package}.{name}")
-        expected = sources.get(key)
-        path = getattr(module, "__file__", None)
-        if not expected or path is None:
-            raise ValueError(f"missing frozen or loaded numerical dependency: {key}")
-        owned, actual = _REFERENCE_MODULES[name]
-        if owned is not module or actual != expected or sha256(Path(path)) != actual:
-            raise ValueError(
-                f"loaded numerical dependency differs from frozen source: {path}; "
-                f"expected SHA-256 {expected}, actual {actual}; "
-                "run this source revision in a fresh Python process"
-            )
+    owned = _REFERENCE_MODULES.get("reference")
+    if owned is None or reference is not owned[0]:
+        raise ValueError(
+            f"loaded numerical dependency differs from frozen source: {runner.__file__}; "
+            "reference() must return the owned frozen reference module"
+        )
+    _bind_numerical_sources(Path(reference.__file__).parent, sources)
     return reference
 
 
