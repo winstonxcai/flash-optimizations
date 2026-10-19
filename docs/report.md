@@ -28,6 +28,12 @@ Throughput and request-level TPOT describe the complete serving workload, not is
 
 Separate model-free prefill-read studies (`prefill-read-20261018` and `prefill-read-fused-rope-20261018`) measured additional Packed preparation cost. Fusing unpack and RoPE reduced that cost but did not beat Native. This demonstrates an operation-level penalty, not its share of serving latency or proof that prefill dominates the replay workload.
 
+### Dataset attribution and replay protocol
+
+The recorded coding-agent replay used in this report is derived from a subset of **LongSWE-Bench**, the code-repair component of **LongCodeBench (LCB)** ([Rando et al., 2025](https://arxiv.org/abs/2505.07897)). The replay cohort contains **4,916 model requests from 92 task/user sessions**; requests are individual model calls, not independent benchmark tasks. The frozen [dataset manifest](../benchmarks/lswb-replay/c24-packed256-store-decode-ablation-n1-20261014/kernel-store-kernel-decode/20261014_123504/client/dataset_manifest.json) records the selected request IDs, session IDs, source hashes and dataset identity.
+
+LCB is the source benchmark; the fixed-active-user, time-limited replay is our serving evaluation protocol, not the paper's original task-quality evaluation. Its requests/s, TTFT and TPOT results measure serving behavior and do not establish coding-task success. The separate agentic evaluations below report task outcomes.
+
 ### LongSWE-Bench: matched C24, three runs per mode — 2026-10-18
 
 Three fresh-server, unprofiled runs per mode replay the same **4,916 recorded requests from 92 users**. Each run starts with a flushed prefix cache, admits work for **1,200 seconds**, then drains in-flight requests; throughput includes the recorded drain time. C24 means 24 active replay users, not a fixed GPU batch size. There is no replay warm-up.
@@ -258,3 +264,7 @@ A task **passes** only on a full verifier pass (reward 1); fail includes test fa
 ## Conclusion
 
 Remnant provides **43.84% smaller C4 records and approximately 1.21× server KV capacity**. Direct Packed Kernel is close to Native at matched load: **+0.77% mean TPOT** in the three-run C24 replay and **+0.27%** in the single-run 128k/8k study, versus Triton's +7.20% / +8.09%. No meaningful same-load throughput gain is established. At its larger allocator ceiling, Kernel observed **+5.74% output tokens/s**, at **+16.40% mean E2E latency**, requiring repeats before claiming a stable gain. Historical C28 SLO results do not establish the current Kernel's ceiling; the agentic evaluations remain limited by sample size, run variation and time caps.
+
+## References
+
+- Stefano Rando, Luca Romani, Alessio Sampieri, Luca Franco, John Yang, Yuta Kyuragi, Fabio Galasso, and Tatsunori Hashimoto. **LongCodeBench: Evaluating Coding LLMs at 1M Context Windows.** 2025. [arXiv:2505.07897](https://arxiv.org/abs/2505.07897). [Official code](https://github.com/Zteefano/long-code-bench) and [dataset](https://huggingface.co/datasets/Steefano/LCB).
