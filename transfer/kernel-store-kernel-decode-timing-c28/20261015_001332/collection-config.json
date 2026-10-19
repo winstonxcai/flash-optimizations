@@ -1,7 +1,0 @@
-{
-  "schema_version": 1,
-  "mode": "kernel",
-  "server_seed": 20260919,
-  "metrics_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/request-metrics-kernel-store-kernel-decode-timing-c28-20261015_001047",
-  "server_log": "/home/jovyan/winstonxcai/flash-optimizations/logs/serve_kernel.log"
-}

@@ -1,7 +1,0 @@
-{
-  "schema_version": 1,
-  "mode": "kernel",
-  "server_seed": 20260919,
-  "metrics_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/ttft-c24-20261014_115909/request-metrics-kernel",
-  "server_log": "/home/jovyan/winstonxcai/flash-optimizations/logs/ttft-c24-20261014_115909/serve_kernel.log"
-}

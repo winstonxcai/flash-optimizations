@@ -1,7 +1,0 @@
-{
-  "schema_version": 1,
-  "mode": "triton",
-  "server_seed": 20260919,
-  "metrics_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/request-metrics-triton-store-triton-decode-timing-c28-20261014_232425",
-  "server_log": "/home/jovyan/winstonxcai/flash-optimizations/logs/serve_triton.log"
-}

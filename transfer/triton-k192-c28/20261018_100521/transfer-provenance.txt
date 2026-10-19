@@ -1,7 +1,0 @@
-Original run: /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/triton-k192-c28/20261018_100521
-GPUQ job: job-20261018-015237-c50884cc
-Checkout at transfer time; not necessarily boot-time identity:
-3df64b7d3176098e629bd71223640332da224aee
- 9f9a2e5da6e82d5f7730e1515d21fa313fb34604 third_party/flashmla (remotes/origin/remnant/flashmla-v0518)
- 0e94e2b32b4c1329cf8cad8aa5f5c5e48ec39278 third_party/sglang (remotes/origin/remnant/v0.5.18-12-g0e94e2b3)
-?? transfer/triton-k192-c28/

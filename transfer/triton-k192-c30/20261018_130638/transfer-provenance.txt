@@ -1,5 +1,0 @@
-Original run: /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/triton-k192-c30/20261018_130638
-Checkout at transfer time; not necessarily boot-time identity:
-6cc5c2d10c3116a9291646ee6c37780a94086df9
- 9f9a2e5da6e82d5f7730e1515d21fa313fb34604 third_party/flashmla (remotes/origin/remnant/flashmla-v0518)
- 0e94e2b32b4c1329cf8cad8aa5f5c5e48ec39278 third_party/sglang (remotes/origin/remnant/v0.5.18-12-g0e94e2b3)
