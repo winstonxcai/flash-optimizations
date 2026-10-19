@@ -1,27 +1,79 @@
 # Remnant: Residual Feature Sparsity Survives Latent Compression
 
+Author: Winston Cai.
+
 ## Overview
 
-DeepSeek-V4-Flash already compresses its KV cache: the 21 compressed sparse-attention (CSA) layers cache each token's keys and values as a single learned latent — the 584-byte C4 state. Remnant prunes that latent a second time, keeping only the largest-magnitude ~50% of coordinates per token (TopMag50) and storing the survivors packed — **584 → 328 bytes per record (43.84% smaller)**. On a TP4 H100 server (fp4-native MoE runner, mem-frac 0.88, fp8 KV cache) this grew the measured KV pool from **3,730,944 to 4,519,168 full-token slots (1.2112×; allocator-reported, see Serving results)**, raising the allocator-derived maximum resident concurrency at 2048-token decode at every measured context (32k → 256k; per-context values in Serving results).
+DeepSeek-V4-Flash already compresses its KV cache: the 21 compressed sparse-attention (CSA) layers cache each token's keys and values as a single learned latent — the 584-byte C4 state. Remnant prunes that latent a second time, keeping the largest-magnitude 256 of 512 coordinates per token (TopMag50) and storing the survivors packed — **584 → 328 bytes per record (43.84% smaller)**. In the latest TP4 H100 serving study, the allocator-reported KV pool grew from **3,745,536 to 4,536,832 full-token slots (1.2113×)**. At 128k input plus 8k output, that raises allocator-derived concurrency from **26 to 32**; this is not a latency-SLO ceiling.
 
-This is a KV-capacity optimization, not a decode speedup. At Native's own concurrency the modes are throughput-neutral (**−3.2% to +0.2%** tokens/s); even at Packed's higher ceiling they stay near-neutral (**−0.7% to +3.4%**), because this input-heavy workload is prefill-bound. Where prefixes are reused the payoff is now small: on the current SGLang v0.5.18 stack (LongSWE-Bench, below) both modes retain ~97% of the shared prefix in L1, so Packed's larger pool buys **+4 concurrent users** under the TTFT-p90 < 10 s SLO (Native C24 vs Packed C28), at a TPOT penalty that widens with occupancy. Those seats do not convert to rate — the throughput plateau is reached well below either ceiling — so the capacity is real but lands entirely above the throughput knee.
+The implementation matters. Across three LongSWE-Bench runs per mode at C24, **Packed Kernel mean TPOT is 0.77% above Native**, versus **7.20% for Packed Triton**; Kernel request throughput is 0.38% lower. The separate 128k/8k study likewise observes near-Native Kernel performance at matched C24. At each mode's allocator ceiling, Kernel produces **5.74% more output tokens/s**, with **16.40% higher mean end-to-end latency**. That capacity-load result is one run per configuration, not a repeatable speedup claim. Historical C24/C28 SLO observations remain below and do not establish the current Kernel's SLO ceiling.
 
-On agentic coding the measured gap sits inside run-to-run noise: across two matched run-pairs per suite, Packed is net-neutral on both Sangfor-Bench and SWE-bench, while a third, cap-dominated suite tilts Packed the other way (all three in the tables below).
+On agentic coding, Packed averages **0.5 more solved tasks on Sangfor-Bench and 2 fewer on SWE-bench**, over two runs per mode. On DeepSWE-Bench it solves **7 versus 5** tasks in one run per mode, with most tasks reaching the time cap. These are observed differences, not demonstrated quality equivalence or improvement.
 
 ## Scope and configurations
 
-Two legs on the same serving fork — re-based mid-study from SGLang **v0.5.15** @ f63458b to **v0.5.18**; the LongSWE-Bench section runs on v0.5.18 and supersedes the v0.5.15 runs there — on identical hardware with the fp4-native `flashinfer_mxfp4` MoE runner:
+The latest serving studies use **SGLang v0.5.18**, DeepSeek-V4-Flash-0731 and TP4 on **4× H100 80 GB**, with the fp4-native `flashinfer_mxfp4` MoE runner. Both Packed implementations use the same pruning policy and 328-byte record:
 
-1. **Native** — TopMag/packing off, stock 584-byte C4.
-2. **Packed** — TopMag50 pruning on, 328-byte packed C4.
+| Configuration | Persistent C4 | Store / decode path |
+|---|---:|---|
+| Native | 584 bytes | Unpruned Native storage; stock FlashMLA |
+| Packed Triton | 328 bytes | Triton store; reconstruct Native records before stock FlashMLA |
+| Packed Kernel | 328 bytes | Fused CUDA store; FlashMLA reads Packed records directly |
+
+Recorded settings: mem-fraction-static **0.88**, FP8 E4M3 KV cache, **1,048,576** context cap, 8,192-token prefill chunks, full decode CUDA graphs through batch 136, prefill graphs disabled, and server seed **20260919**. An unset store override follows the selected Packed decode implementation. The older study rebased from v0.5.15 to v0.5.18; its original two-mode labels and measurements are retained as historical evidence, not reassigned to the current Kernel.
 
 ## Serving results
 
-### Random SGLang Bench serving
+Throughput and request-level TPOT describe the complete serving workload, not isolated decode kernels. High prefix-cache hit rates do not by themselves identify the bottleneck: uncached suffix length, prefill work, GPU batch sizes and scheduling can still differ. Kernel-time or prefill-bound explanations require a matched profile, not these aggregate metrics alone.
 
-TP4 on 4× H100 80 GB serving DeepSeek-V4-Flash-0731 with mem-frac 0.88, 1,048,576 context cap, fp8 KV cache, and full decode CUDA graphs to `max_bs 136` (prefill graphs off). Each point ran official `bench_serving` at exact 32k/64k/128k/256k inputs with 2048 outputs: one warm-up wave of C, then three measured waves (3C). Native ran at its allocator ceiling at each context; Packed at that same Native ceiling (fair) and at its own (max).
+Separate model-free prefill-read studies (`prefill-read-20261018` and `prefill-read-fused-rope-20261018`) measured additional Packed preparation cost. Fusing unpack and RoPE reduced that cost but did not beat Native. This demonstrates an operation-level penalty, not its share of serving latency or proof that prefill dominates the replay workload.
 
-#### Fair serving — same concurrency
+### LongSWE-Bench: matched C24, three runs per mode — 2026-10-18
+
+Three fresh-server, unprofiled runs per mode replay the same **4,916 recorded requests from 92 users**. Each run starts with a flushed prefix cache, admits work for **1,200 seconds**, then drains in-flight requests; throughput includes the recorded drain time. C24 means 24 active replay users, not a fixed GPU batch size. There is no replay warm-up.
+
+Mean ± sample standard deviation across the three runs:
+
+| Mode | Requests/s | Output tokens/s | TTFT p90 (s) | Mean TPOT (ms) |
+|---|---:|---:|---:|---:|
+| Native | 1.8125 ± 0.0507 | 278.20 ± 6.66 | 9.339 ± 0.356 | 50.97 ± 1.44 |
+| Packed Triton | 1.8037 ± 0.0378 | 274.55 ± 6.27 | 8.999 ± 0.468 | 54.64 ± 0.69 |
+| Packed Kernel | 1.8056 ± 0.0165 | 275.00 ± 3.90 | 9.338 ± 0.185 | 51.37 ± 0.37 |
+
+Kernel is **−0.38% requests/s and +0.77% mean TPOT** versus Native; Triton is **−0.48% and +7.20%**, respectively. Kernel output-token throughput is 1.15% lower. These observations show near-Native Kernel performance at C24, not statistical equivalence or a decode speedup. All nine runs meet TTFT p90 < 10 s; that establishes passing observations at C24, not a maximum concurrency. Mean device-hit rates are **97.30% / 97.38% / 97.38%** for Native/Triton/Kernel, leaving little measured cache-retention advantage at this load.
+
+TTFT p90 is the **mean of run-level percentiles**, not a pooled percentile; TPOT averages successful-request TPOT within each run. All nine runs meet the harness's 99% success threshold but retain **15–21 failed requests per run**, excluded from latency summaries. The harness classifies these as candidate comparisons. Recorded dataset, client/launcher hashes, image and static settings match within the collection; full loaded-runtime/extension hashes and client/server request-ID joins were not captured.
+
+Canonical aggregate and run records: `benchmarks/lswb-replay/c24-native-packed256-n3-20261018/{analysis.json,summary.csv,manifest.json}`.
+
+### Random serving: 128k input / 8k output — 2026-10-18
+
+Official **SGLang `bench_serving`**, random workload backed by the same local ShareGPT dataset, exact **131,072 input and 8,192 output tokens**, client seed 42 and unlimited offered request rate. Each cell uses a C-request warm-up, a cache flush, then a **3C-request measured phase**. This is **one independent run per cell**, not three repeats. The C24 and allocator-ceiling comparisons are separate load policies.
+
+| Load policy | Mode | C | Output tokens/s | TTFT p90 (s) | Mean TPOT (ms) | Mean E2E (s) |
+|---|---|---:|---:|---:|---:|---:|
+| Matched | Native | 24 | 589.9 | 186.00 | 27.71 | 333.12 |
+| Matched | Packed Triton | 24 | 558.1 | 187.25 | 29.96 | 352.13 |
+| Matched | Packed Kernel | 24 | 588.7 | 186.17 | 27.79 | 333.84 |
+| Allocator ceiling | Native | 26 | 597.4 | 202.58 | 29.48 | 356.35 |
+| Allocator ceiling | Packed Triton | 32 | 600.7 | 246.78 | 36.06 | 436.23 |
+| Allocator ceiling | Packed Kernel | 32 | 631.7 | 245.41 | 33.56 | 414.80 |
+
+At C24, Kernel is **−0.21% output tokens/s and +0.27% mean TPOT** versus Native; Triton is **−5.39% and +8.09%**. At their own allocator ceilings, Kernel is **+5.74% output tokens/s**, with **+13.82% mean TPOT and +16.40% mean E2E**. This is an observed capacity/latency tradeoff at different loads, not a same-concurrency speedup.
+
+Allocator concurrency is `floor(pool_slots / (131072 + 8192))`: **3,745,536 Native slots → C26; 4,536,832 Packed slots → C32**. It is not an SLO limit. All warm-up/measured phases completed without errors and with exact output lengths. Recorded dataset/client/launcher identities and server settings match within this collection, but exact loaded-runtime/binary and checkpoint-content identities are incomplete. This study used a different image from the LongSWE repeats; do not combine them as one identical-build experiment. No run-to-run uncertainty is available.
+
+Canonical records: `benchmarks/serving/random-128k-8k-c24-capacity-n1-20261018/{analysis.json,summary.csv,manifest.json}`.
+
+### Historical serving measurements
+
+The following tables preserve older measurements and their original Native/Packed labels. They are not three-mode comparisons or measurements of the current Kernel's capacity. Prefer the 2026-10-18 studies above for matched-load implementation comparisons.
+
+#### Historical random SGLang serving — 2,048 output tokens
+
+TP4 on 4× H100 80 GB serving DeepSeek-V4-Flash-0731 with mem-frac 0.88, 1,048,576 context cap, fp8 KV cache, and full decode CUDA graphs to `max_bs 136` (prefill graphs off). Each point ran official `bench_serving` at exact 32k/64k/128k/256k inputs with 2048 outputs: one warm-up wave of C, then 3C measured requests in one run. Native ran at its allocator ceiling at each context; Packed at that same Native ceiling (fair) and at its own (max). The historical pools were **3,730,944 / 4,519,168 slots (1.2112×)**; these are distinct from the latest collection's pool counts.
+
+##### Fair serving — same concurrency
 
 | Context | Concurrency | Mode | Requests/s | Total tokens/s | Median TTFT (ms) | Median TPOT (ms) | Median e2e (ms) | Δ tokens/s vs Native |
 |---:|---:|---|---:|---:|---:|---:|---:|---:|
@@ -34,11 +86,11 @@ TP4 on 4× H100 80 GB serving DeepSeek-V4-Flash-0731 with mem-frac 0.88, 1,048,5
 | 256k | 14 | Native | 0.0473 | 12,490 | 143,886 | 74.2 | 296,208 | — |
 | 256k | 14 | Packed | 0.0466 | 12,318 | 144,542 | 76.0 | 300,412 | −1.4% |
 
-Packed is throughput-neutral at every context (deltas −3.2% to +0.2%). Latency signs mix per context (three measured waves each).
+Observed Packed throughput differs by −3.2% to +0.2% across these contexts. Latency signs mix; each 3C-request measurement is one run, not three independent repeats.
 
-#### Maximum-concurrency serving
+##### Allocator-ceiling serving
 
-| Context | Mode | Max concurrency | Requests/s | Total tokens/s | Δ tokens/s vs Native | Median TTFT (ms) | Median TPOT (ms) | Median e2e (ms) |
+| Context | Mode | Allocator concurrency | Requests/s | Total tokens/s | Δ tokens/s vs Native | Median TTFT (ms) | Median TPOT (ms) | Median e2e (ms) |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|
 | 32k | Native | 107 | 0.3401 | 11,840 | — | 122,674 | 79.3 | 283,198 |
 | 32k | Packed | 129 | 0.3401 | 11,841 | +0.0% | 152,028 | 93.7 | 328,838 |
@@ -49,17 +101,19 @@ Packed is throughput-neutral at every context (deltas −3.2% to +0.2%). Latency
 | 256k | Native | 14 | 0.0473 | 12,490 | — | 143,886 | 74.2 | 296,208 |
 | 256k | Packed | 17 | 0.0470 | 12,426 | −0.5% | 173,528 | 91.8 | 361,531 |
 
-Packed's +21% pool deepens the queue but barely moves throughput (−0.7% to +3.4%): these workloads are 32–256k-prompt cold prefills, which Native and Packed do identically and which already saturate the TP4 pipeline. Median TTFT rose 18–37% and TPOT up to 24% at the deeper packed loads. Capacity pays off where prefixes are reused, not where every request is a cold prefill — measured under prefix reuse in the LongSWE-Bench section below (re-based to SGLang v0.5.18).
+Packed's +21% pool increases offered concurrency, with observed throughput differences of −0.7% to +3.4%. Median TTFT rose 18–37% and TPOT up to 24% at the deeper Packed loads. These cold, long-input results do not isolate the bottleneck or establish identical prefill cost; they should not substitute for the newer three-mode 8k-output study.
 
-### LongSWE-Bench (SGLang v0.5.18)
+#### Historical LongSWE-Bench (SGLang v0.5.18)
 
-Replays **4,916 recorded Claude-agent business requests** (~144k prompt tokens/request, short decodes) over OpenAI SSE in fixed 1200-s windows. The corpus is **92 tasks replayed as nested turns**: ordered by `planned_offset_s`, prompt length is non-decreasing in 4,823/4,823 consecutive pairs, so each request's prompt contains the previous one's. That nesting, not the server, is what sets the ~97% device-hit rate (perfect nesting implies a **98.06%** ceiling: 14.4 M uncached of 743.5 M prompt tokens). *Version note:* LongSWE-Bench was re-measured after the fork re-based to **v0.5.18** (Native = stock v0.5.18, Packed = the 328-byte fork). These v0.5.18 numbers **supersede** the earlier v0.5.15 LongSWE runs (SLO ceilings native c12 / packed c15 and the same-concurrency +77.7% reads). The v0.5.15 → v0.5.18 jump roughly doubled the concurrency either mode can hold, and on v0.5.18 both modes retain ~97% of the shared prefix in L1 — the capacity-driven retention gap of the old runs largely disappears. Two lenses follow: **same concurrency** at a shared concurrency both modes hold under the SLO, and **SLO-limited concurrency** at each mode's own ceiling under a TTFT-p90 < 10 s budget.
+Replays **4,916 recorded Claude-agent business requests** (~144k prompt tokens/request, short decodes) from **92 tasks** over OpenAI SSE. Ordered by `planned_offset_s`, prompt length is non-decreasing in 4,823/4,823 consecutive within-task pairs. This is consistent with growing transcripts but does not prove exact token-prefix nesting. Under an idealized exact-nesting/no-eviction assumption, the recorded lengths imply **98.06%** reusable prompt tokens (14.4 M uncached of 743.5 M); that is a conditional estimate, not a measured cache-hit ceiling.
 
-Every leg below is one **fresh server boot (empty radix** — no leftover prefix cache) serving the same 4,916-request replay for a fixed 1200-s window on the same TP4 H100 servers and the same serving config as above (decode graphs: small at C≤15, extended above that; prefill graphs off). The SLO-limited lens climbs +1 C per config and stops at the first window with TTFT p90 ≥ 10 s; the ceiling is the last passing C. That stop rule is only trustworthy down to the ~0.4 s single-window noise floor, and it misfired here: it recorded Packed's ceiling as 25, but probing past that point found c26 (9.97 s), c27 (9.44 s) and c28 (9.90 s) all pass, so Packed's ceiling is **at least 28**.
+The v0.5.18 runs replace the earlier v0.5.15 measurements as this report's historical reference. The earlier study reported Native C12 / Packed C15 and a same-concurrency +77.7% throughput difference; those results are not current Kernel measurements. Version, workload execution and source differences prevent attributing their contrast with v0.5.18 solely to the upgrade. In the v0.5.18 observations, both modes achieve approximately 97% token-weighted device-cache hits.
 
-#### Same concurrency
+Each historical window starts a **fresh server with an empty radix cache**, dispatches the same replay corpus for 1,200 seconds and uses TP4 H100 hardware (small decode graphs at C≤15, extended above; prefill graphs off). Fixed active-user concurrency does not fix arrival times, completed-request sets or actual GPU batches. The sweep initially stopped at the first TTFT-p90 crossing, but later C26–C28 windows passed. Treat the ladder as observed passes/crossings, not a repeatably established maximum concurrency.
 
-Both modes at **concurrency 21**, a shared C from the SLO sweep chosen so the two legs compare at identical offered load while still inside the TTFT-p90 < 10 s budget — and, unlike C22–24, clear of the near-ceiling legs that the SLO-limited lens below uses. Each mode contributes one fresh-boot 1200-s window; the other shared C16–24 legs read the same (ladder below):
+##### Same concurrency — historical C21
+
+Both modes run at **21 active users**, with one fresh-boot 1,200-second dispatch window per mode. Both observed TTFT p90 values are below 10 seconds. This controls configured concurrency and the replay corpus, not the exact executed workload; it does not supply an independent estimate of run-to-run uncertainty.
 
 | Metric | Native (584-byte C4) | Packed (328-byte C4) | Change |
 |---|---:|---:|---:|
@@ -69,7 +123,7 @@ Both modes at **concurrency 21**, a shared C from the SLO sweep chosen so the tw
 | Real (uncached) prefill (M tok) | 8.43 | 8.13 | −3.6% |
 | Device cache-hit rate | 97.36% | 97.39% | +0.03 pp |
 
-With both modes retaining the shared prefix at the same ~97% rate, Packed's larger pool has nothing left to buy at equal load: completions and uncached prefill sit within one-window noise of Native's (~1.8 req/s either way), and its only consistent cost is decode. On the **2,184 requests both legs completed (matched by request_id)**, token-weighted device hit is **97.39% vs 97.40%**, mean TTFT/e2e are **5.96 s/11.21 s vs 5.94 s/11.49 s**, and median decode TPOT is **23 vs 25 ms** (+2 ms).
+These windows show a **0.03-percentage-point** device-hit difference, **2.7% fewer completed requests** and **4.2% fewer completion tokens** for Packed. They do not establish equivalence or isolate a decode bottleneck. On the **2,184 requests both legs completed (matched by request_id)**, token-weighted device hit is **97.39% vs 97.40%**, mean TTFT/e2e are **5.96 s/11.21 s vs 5.94 s/11.49 s**, and median request TPOT is **23 vs 25 ms** (+2 ms). That conditional matched subset excludes requests completed by only one mode.
 
 Latency distributions — whole completed set per leg (Native n=2,248, Packed n=2,187):
 
@@ -82,23 +136,27 @@ Latency distributions — whole completed set per leg (Native n=2,248, Packed n=
 | e2e latency | Native | 1.16 s | 7.99 s | **18.66 s** | 23.87 s | 74.43 s | 11.21 s | 163.59 s |
 | e2e latency | Packed | 1.27 s | 8.01 s | **19.20 s** | 25.62 s | 84.67 s | 11.49 s | 162.82 s |
 
-#### SLO-limited concurrency
+##### SLO-limited concurrency — historical ladder
 
-Under the **TTFT-p90 < 10 s** budget Native's last passing concurrency is **24** (p90 **9.36 s**) and Packed's is **28** (**9.90 s**), crossing at **c29** (**10.63 s**). That is **+4 concurrent users over Native (+17%)** — not the +1 (+4%) the original first-crossing sweep recorded, and the largest capacity payoff measured on this stack. The two walls have very different shape: Native c25 blows past at **12.10 s** (+2.1 s over budget, completions fall 2,194 → 2,007 — the 584-byte C4 pool thrashing), while Packed holds every rung through c28 and crosses at c29 only 0.63 s over budget, with throughput and device hit unchanged.
+Under the **TTFT-p90 < 10 s** criterion, the historical Native C24 aggregate contains **three passing runs**, with mean run-level p90 **9.27 s**; Native C25 has a single crossing at **12.10 s**. The historical Packed sweep recorded C28 passing (**9.90 s**) and C29 crossing (**10.63 s**). The difference between these observed passing points is **4 active users (+17%)**; it is not a replicated capacity gain or the current Kernel's measured SLO ceiling.
 
-Each mode at its own SLO ceiling:
+Native C24 aggregates the original report run `native-slo-c24/20260909_081547` (archived under `raw/lswb-replay/`), [repeat 2](https://github.com/winstonxcai/flash-optimizations/blob/ba4efd854067325dd0288408e43dffd7ea22a5f2/transfer/native-c24-repeat2/20261018_134533/client/summary.json), and [repeat 3](https://github.com/winstonxcai/flash-optimizations/blob/ba4efd854067325dd0288408e43dffd7ea22a5f2/transfer/native-c24-repeat3/20261018_134534/client/summary.json). The repeat links preserve the transferred summaries at their historical commit. Every Native C24 value in the aggregate table is an arithmetic mean of the three run summaries; **TTFT p90 is the mean of run-level p90s, not a pooled-request percentile**. Dataset and runner hashes match across these runs, but adapter hashes differ between the original and new runs, so this is a historical-plus-repeat aggregate rather than a verified identical-build triplicate.
 
-| Metric | Native @ 24 ★ | Packed @ 28 ★ | Δ P28 vs N24 |
+Comparison at the historical passing points. Deltas use unrounded values; Packed remains n=1 and is not paired with the three Native runs. This Native aggregate is separate from the newer matched-build C24 triplicate:
+
+| Metric | Native @ 24 ★ (n=3 mean) | Packed @ 28 ★ (historical n=1) | Δ P28 vs N24 |
 |---|---:|---:|---:|
-| Completed in window | 2,194 | 2,259 | +3.0% |
-| Requests/s | 1.810 | 1.871 | +3.4% |
-| Prompt-token throughput (k tok/s) | 258.4 | 264.0 | +2.1% |
-| Completion tokens (k) | 337.0 | 329.5 | −2.2% |
-| Real (uncached) prefill (M tok) | 8.44 | 9.15 | +8.4% |
-| Device cache-hit rate | 97.30% | 97.13% | −0.17 pp |
-| TTFT p90 | **9.36 s** | **9.90 s** | +0.54 s |
+| Completed requests per run | 2,190.67 | 2,259 | +3.1% |
+| Requests/s | 1.8023 | 1.8710 | +3.8% |
+| Prompt-token throughput (k tok/s) | 257.24 | 263.98 | +2.6% |
+| Completion tokens (k) | 336.70 | 329.49 | −2.1% |
+| Real (uncached) prefill (M tok) | 8.429 | 9.155 | +8.6% |
+| Device cache-hit rate | 97.3037% | 97.1276% | −0.18 pp |
+| TTFT p90 | **9.2654 s** | **9.9022 s** | +0.64 s |
+| Mean TPOT | 51.01 ms | 65.91 ms | +29.2% |
+| Mean e2e latency | 13.06 s | 14.70 s | +12.6% |
 
-Latency distributions — whole completed set per leg (Native n=2,194; Packed n=2,259):
+Historical single-run latency distributions — the original completed sets (Native 2,194 requests; Packed 2,259 requests). These distributions are retained as recorded; they are not the n=3 aggregate above:
 
 | Metric | Leg | min | p50 | p90 | p95 | p99 | mean | max |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
@@ -109,7 +167,7 @@ Latency distributions — whole completed set per leg (Native n=2,194; Packed n=
 | e2e latency | Native @ 24 | 2.20 s | 9.19 s | **20.09 s** | 29.38 s | 134.36 s | 12.97 s | 174.57 s |
 | e2e latency | Packed @ 28 | 1.95 s | 10.14 s | **22.39 s** | 30.81 s | 167.56 s | 14.70 s | 226.65 s |
 
-Ladder (TTFT p90 / mean TPOT per fresh-boot 1200-s window; ★ = SLO ceiling, ✗ = crossing observed in that window):
+Ladder (TTFT p90 / mean TPOT; individual fresh-boot 1,200-second dispatch windows except Native C24 †, which uses the historical three-run means above; ★ = highest observed passing C, ✗ = crossing in that window):
 
 | C | Native TTFT p90 | Native TPOT | Packed TTFT p90 | Packed TPOT |
 |---|---:|---:|---:|---:|
@@ -122,7 +180,7 @@ Ladder (TTFT p90 / mean TPOT per fresh-boot 1200-s window; ★ = SLO ceiling, �
 | 21 | 9.03 s | 45.0 ms | 8.74 s | 47.2 ms |
 | 22 | 9.26 s | 45.9 ms | 8.97 s | 51.1 ms |
 | 23 | 9.85 s | 47.7 ms | 8.85 s | 52.9 ms |
-| 24 | 9.36 s ★ | 51.6 ms | 9.14 s | 54.8 ms |
+| 24 | 9.27 s ★ † | 51.0 ms † | 9.14 s | 54.8 ms |
 | 25 | 12.10 s ✗ | 59.6 ms | 9.40 s | 56.6 ms |
 | 26 | — | — | 9.97 s | 57.2 ms |
 | 27 | — | — | 9.44 s | 61.1 ms |
@@ -131,16 +189,16 @@ Ladder (TTFT p90 / mean TPOT per fresh-boot 1200-s window; ★ = SLO ceiling, �
 
 Readings:
 
-- **The Packed ceiling of 25 was a stop-rule artifact.** Re-measuring c26 gave **9.97 s (PASS)** — passing even while sharing the host with a second TP4 server, which can only inflate latency — and c27 (9.44 s) and c28 (9.90 s) pass too, so Packed's first genuine crossing is **c29 = 10.63 s**, not c26. On v0.5.18 both modes already hold ~97% of the shared prefix (device-hit rows above), so the extra seats above are decode headroom, not cache retention — the old retention-gap story is gone, but the headroom is larger than credited.
-- **Single-window TTFT p90 repeats to ~0.4 s, not better.** Re-running the same config at the same concurrency on a fresh boot moves TTFT p90 by ~0.4 s — enough by itself to move a leg across the 10 s line. Adjacent-rung comparisons on the ladder, and any ✗ within ~1 s of the budget, should be read as ties rather than orderings.
-- **The ~97% hit rate is structural, not a pool effect.** The corpus nests (see above): reuse distance is one turn, so the resident working set is one transcript per active sequence, which the 3.73 M-token native pool already holds at the SLO-saturating concurrency. At matched concurrency the pool's measured effect on hit is **+0.03 pp** (97.36 → 97.39). The extra 21% therefore buys seats, not retention.
-- The p90 at the wall is set by the ~95% of requests served almost entirely from radix (~143k-token prompts, ≥95% device hit): their TTFT p90 is **8.97 s (Native @ 24) vs 9.51 s (Packed @ 28)**. The ~5% cold-start / low-hit requests sit far above the SLO in both modes (p90 52 s and 76 s) and drive the p99/max tails without reaching p90 mass.
-- **TPOT penalty at the ceiling widens with occupancy**: Packed mean 56.6 ms vs Native 51.6 ms at C25 vs C24 (+10%); at its true ceiling C28 it is 65.9 ms vs Native's 51.6 ms (**+28%**). At matched C24 the p50 gap is 24.0 vs 22.3 ms (+8%). The packed c4 store/load cost is modest at low occupancy and grows with the batch.
-- **Throughput is a plateau**: both modes complete ~2,150–2,270 requests per 1200-s window across C≈20–28 (~1.8 req/s, ~250–270k prompt-tok/s). The rate wall is reached by C≈20 and every user above it adds latency, not completions — so the pool's four extra seats convert to nothing on this axis; they only lift TTFT, and past the ceiling, over the SLO.
+- **The Packed ceiling of 25 was a stop-rule artifact.** Later windows at c26 (9.97 s), c27 (9.44 s) and c28 (9.90 s) passed; c29 recorded 10.63 s. C26 shared the host with a second TP4 server, an uncontrolled condition rather than a guaranteed one-direction latency effect. These are historical passing/crossing observations, not a validated ceiling for the current Kernel.
+- **Run variation:** historical repeats moved TTFT p90 by approximately 0.4 s. This is observed variation, not a confidence interval, a universal noise floor or a rule that adjacent rungs are statistically tied. Near-threshold windows require repeats before ranking configurations.
+- **Cache behavior:** historical C21 device-hit rates differ by **+0.03 pp** (97.36 → 97.39). Growing transcripts are a plausible explanation for high reuse; these rates alone do not prove exact nesting, explain the full throughput plateau or rule out capacity benefits at other loads.
+- **Latency strata:** in the original single-run analysis, requests with ≥95% device hits have TTFT p90 **8.97 s (Native C24) vs 9.51 s (Packed C28)**. Low-hit requests have much larger p90s (**52 s / 76 s**). These are descriptive subsets at different loads, not a causal attribution of queueing, prefill or decode time; subgroup percentiles do not add to the overall p90.
+- **TPOT at different occupancy levels:** historical Packed mean 56.6 ms at C25 vs the updated Native C24 mean 51.0 ms is about +11%; historical Packed C28 at 65.9 ms is **+29.2%** over the Native three-run mean. These compare different loads and measurement dates, not an isolated store/load overhead. The original matched-C24 single-run p50 gap remains 24.0 vs 22.3 ms (+8%).
+- **Observed throughput plateau:** historical windows across C≈20–28 complete approximately **2,150–2,270 requests** (~1.8 req/s, ~250–270k prompt tokens/s). The extra configured users did not produce a clear rate gain in these windows. Longer decode steps, prefill interference and scheduling are candidate explanations; aggregate throughput does not establish compute saturation or identify the dominant cost.
 
 ## Agentic Benchmark results
 
-Across the two 50-task agentic suites that ran twice per leg, Packed is net-neutral on average, with both deltas inside run-to-run noise (table below). Those suites are controlled Native (untouched 0731) vs Packed (Remnant, 328-byte C4) pairs on the same checkpoint through the identical Claude Code harness, two runs per leg — Sangfor both at TP4; SWE-bench one TP8 run and one TP4 run. A third suite, DeepSWE-Bench, ran once per leg on the same TP4 hardware; its 60-task pool is cap-dominated (tasks exceeding a 5400 s agent budget score 0 by construction), and on the under-cap subset Packed passes at a higher rate — a weak, single-run Packed tilt.
+Sangfor-Bench and SWE-bench each contain **50 tasks, two runs per mode**, comparing untouched Native 0731 with Packed through the same Claude Code harness. Sangfor runs use TP4; SWE-bench has one TP8 pair and one TP4 pair. The table reports mean solved-task counts, not percentages. These small samples and heterogeneous SWE-bench repeats do not establish statistical equivalence. DeepSWE-Bench has one TP4 run per mode over 60 tasks; timeouts score zero under its 5,400-second agent budget.
 
 | Evaluation | Native | Packed | Difference |
 |---|---:|---:|---:|
@@ -166,7 +224,7 @@ Across the two 50-task agentic suites that ran twice per leg, Packed is net-neut
 
 One instance is adjudicated: Native-run-2's `apex_gpt-train-data-collector_1dbcd396` is counted as a pass — its patch passed all 109 runnable tests with 0 failures (2 uncollectable, pass_rate 98.2). The same instance failed tests in the other three runs.
 
-Run 1 swings to Packed (Packed-only 4 vs Native-only 2) and run 2 to Native (Native-only 3 vs Packed-only 2), so the runs bracket each other — the between-leg gap is smaller than each leg's own two-run spread, and the reading is parity.
+Packed leads by two tasks in run 1 and trails by one in run 2, averaging **+0.5 solved tasks**. The direction changes across runs; two repeats do not establish a reproducible improvement or quality equivalence.
 
 ### SWE-bench
 
@@ -184,284 +242,19 @@ Run 1 swings to Packed (Packed-only 4 vs Native-only 2) and run 2 to Native (Nat
 | Native pass | 29 | 4 |
 | Native fail | 2 | 15 |
 
-Native leads both runs by the same 2 tasks. All four runs share the same 3 error instances (sphinx-7985/8269/8475), grouped as fail.
+Native leads both runs by **2 tasks**. All four runs share the same 3 error instances (sphinx-7985/8269/8475), grouped as fail. This is an observed Packed deficit, not a result that can be dismissed as within measured run-to-run noise; neither a degradation significance test nor an equivalence test is established here.
 
 ### DeepSWE-Bench
 
-60 DeepSWE-Bench tasks, one matched run per leg on the same TP4 servers against the same 60-task pool. Each task caps at a 5400 s agent budget; a cap-hit (`AgentTimeoutError`) yields no patch and reward 0 by construction — a budget artifact, not a resolved fail — and it dominates the pool: **Native 35/60, Packed 36/60**. Only the under-cap **natural completions** carry a quality signal. Confusion matrix over the shared 60 tasks, rows = Native, columns = Packed (pass = full verifier pass, reward 1):
+60 DeepSWE-Bench tasks, one matched run per mode on TP4. A cap-hit (`AgentTimeoutError`) scores zero under the 5,400-second budget: **Native 35/60, Packed 36/60** tasks reach it. The primary result includes those failures, measuring task success under that time budget rather than model capability independent of runtime. Confusion matrix over all 60 tasks, rows = Native, columns = Packed (pass = full verifier pass, reward 1):
 
 | Baseline result | Packed pass | Packed fail |
 |---|---:|---:|
 | Native pass | 1 | 4 |
 | Native fail | 6 | 49 |
 
-A task **passes** only on a full verifier pass (reward 1); fail groups under-cap test failures with cap-hits (both reward 0). One run per leg, a ~60%-capped pool, and single-digit passes make this the weakest of the three suites: on natural completions the pass rate is **Native 5/25 = 20.0% vs Packed 7/24 = 29.2%**, a Packed lead that is directional and consistent with Sangfor-Bench, but unlike the matched-pair suites it is not tested against run-to-run spread.
+A task **passes** only on a full verifier pass (reward 1); fail includes test failures and cap-hits. Packed solves **7/60 versus Native 5/60**, an observed two-task lead in one run. Among under-cap completions, the descriptive rates are **5/25 = 20.0% vs 7/24 = 29.2%**; those are differently selected subsets, not a matched estimate of quality improvement. Heavy censoring and single-digit solves limit interpretation, and no run-to-run uncertainty is available.
 
 ## Conclusion
 
-Remnant buys capacity, not decode speed: fair-load serving is throughput-neutral, the prefill-bound workload turns the extra pool into little at max concurrency, and the agentic evals show no consistent quality signal — the two matched-pair suites read as parity within noise, and the single-run, cap-dominated DeepSWE-Bench suite's Packed tilt rests on single-digit solves. The one axis where the modes differ materially is decode cost — the TPOT penalty at Packed's ceiling — which the capacity gain does not offset.
-
-┌─────────────────────────────────────────────────────────────────────┐
-│                         ONE CTA / THREAD BLOCK                      │
-│                                                                     │
-│  Contains:                                                          │
-│                                                                     │
-│   Producer warp(s)                 Consumer warpgroup                │
-│   - issue TMA                      - 4 warps = 128 threads           │
-│   - manage pipeline                - WGMMA / softmax / PV            │
-│                                                                     │
-│   Shared CTA resources:                                             │
-│   - SMEM tiles                                                    │
-│   - mbarriers / pipeline state                                      │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 1. SELECT QUERY + KV TILE                                           │
-│                                                                     │
-│   Fixed query tile:                                                 │
-│      Q_i ∈ R^[Bq × d]                                               │
-│                                                                     │
-│   Current KV tile:                                                  │
-│      K_j ∈ R^[Bk × d]                                               │
-│      V_j ∈ R^[Bk × dv]                                              │
-│                                                                     │
-│   Goal:                                                             │
-│      S_ij = Q_i K_j^T                                               │
-│      then update softmax + output                                   │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 2. PRODUCER WARP(S): ISSUE TMA LOADS                                │
-│                                                                     │
-│             HBM / L2                                                │
-│          Q_i   K_j   V_j                                            │
-│           │     │     │                                             │
-│           └─────┴─────┘                                             │
-│                 │                                                   │
-│                 ▼                                                   │
-│                TMA                                                  │
-│                 │                                                   │
-│                 ▼                                                   │
-│               SMEM                                                  │
-│                                                                     │
-│   Example staged buffers:                                           │
-│                                                                     │
-│      Q buffer         K/V buffer A        K/V buffer B              │
-│      [Q_i]            [K_j,V_j]           [K_j+1,V_j+1]             │
-│                                                                     │
-│   Q_i can stay resident while KV buffers ping-pong.                 │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 3. TMA COMPLETION + MBARRIER                                        │
-│                                                                     │
-│   Producer records: "tile is ready"                                 │
-│                                                                     │
-│   Consumer warpgroup waits until:                                   │
-│      Q_i ready                                                       │
-│      K_j ready                                                       │
-│      V_j ready                                                       │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 4. CONSUMER WARPGROUP                                               │
-│                                                                     │
-│   Warp 0 : threads   0–31                                           │
-│   Warp 1 : threads  32–63                                           │
-│   Warp 2 : threads  64–95                                           │
-│   Warp 3 : threads  96–127                                          │
-│                                                                     │
-│   128 threads cooperate on WGMMA.                                   │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 5. SCORE GEMM: SS-WGMMA                                             │
-│                                                                     │
-│   S_ij = Q_i K_j^T                                                  │
-│                                                                     │
-│   "SS" means both matrix operands come from shared memory.           │
-│                                                                     │
-│      Q_i in SMEM ─────┐                                             │
-│                       ├──> SS-WGMMA ───> Tensor Cores               │
-│      K_j in SMEM ─────┘                                             │
-│                                                                     │
-│   If d > native WGMMA K-width, iterate across d:                    │
-│                                                                     │
-│      q[:,0:k]    × k[:,0:k]^T      -> accumulator                   │
-│      q[:,k:2k]   × k[:,k:2k]^T     -> same accumulator              │
-│      ...                                                            │
-│                                                                     │
-│   Partial scores accumulate IN REGISTERS.                           │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 6. SCORE FRAGMENTS IN PER-THREAD REGISTERS                          │
-│                                                                     │
-│   The logical S_ij tile is distributed across 128 threads.          │
-│                                                                     │
-│   Example m64n128 accumulator:                                      │
-│      64 × 128 = 8192 score values                                   │
-│      8192 / 128 = 64 FP32 accumulator elements/thread               │
-│                                                                     │
-│   Per-thread registers conceptually contain:                        │
-│                                                                     │
-│      Sreg0                                                          │
-│      Sreg1                                                          │
-│      ...                                                            │
-│      Sreg63                                                         │
-│                                                                     │
-│   Together all thread registers represent the complete S_ij tile.   │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 7. ROW-WISE SOFTMAX: LOCAL REDUCTION                                │
-│                                                                     │
-│   Each thread examines the score elements it owns.                  │
-│                                                                     │
-│      local_max = max(thread's S fragments for each owned row)       │
-│                                                                     │
-│   local_max lives in thread-private register(s).                    │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 8. ROW MAX REDUCTION ACROSS ROW OWNERS                              │
-│                                                                     │
-│   Depending on accumulator layout:                                  │
-│      - warp shuffle reduction if row ownership is within one warp   │
-│      - cross-warp/shared-memory cooperation if necessary            │
-│                                                                     │
-│   Produces:                                                         │
-│                                                                     │
-│      m_block = rowmax(S_ij)                                         │
-│                                                                     │
-│   Then update persistent running max:                               │
-│                                                                     │
-│      m_new = max(m_old, m_block)                                    │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 9. RESCALE OLD RUNNING STATE                                        │
-│                                                                     │
-│      alpha = exp(m_old - m_new)                                     │
-│                                                                     │
-│      l_old      <- alpha * l_old                                    │
-│      O_tilde    <- alpha * O_tilde                                  │
-│                                                                     │
-│   O_tilde fragments are long-lived registers.                       │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 10. SCORE REGISTERS BECOME PROBABILITY REGISTERS                    │
-│                                                                     │
-│   In-place conceptual transform:                                    │
-│                                                                     │
-│      Sreg[x] = score                                                │
-│            |                                                        │
-│            v                                                        │
-│      Sreg[x] <- exp(Sreg[x] - m_new)                                │
-│            |                                                        │
-│            v                                                        │
-│      same register slot now logically stores P fragment             │
-│                                                                     │
-│   This is the important register recycling step.                    │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 11. ROW-SUM REDUCTION                                                │
-│                                                                     │
-│   Each thread computes local sums of its P values.                  │
-│                                                                     │
-│      local_sum = Σ P_owned                                          │
-│                                                                     │
-│   Reduce across row owners:                                         │
-│                                                                     │
-│      block_sum = rowsum(P_ij)                                       │
-│                                                                     │
-│   Update persistent denominator:                                    │
-│                                                                     │
-│      l_new = alpha*l_old + block_sum                                │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 12. VALUE GEMM: RS-WGMMA                                            │
-│                                                                     │
-│   Compute:                                                          │
-│                                                                     │
-│      ΔO = P_ij V_j                                                  │
-│                                                                     │
-│   Hopper can use an RS form:                                        │
-│                                                                     │
-│      P fragments in REGISTERS ───┐                                 │
-│                                  ├──> RS-WGMMA -> Tensor Cores      │
-│      V_j in SMEM ────────────────┘                                 │
-│                                                                     │
-│   "R" = register operand                                            │
-│   "S" = shared-memory operand                                       │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 13. UPDATE LONG-LIVED OUTPUT ACCUMULATORS                           │
-│                                                                     │
-│      O_tilde_new                                                    │
-│         = alpha*O_tilde_old + ΔO                                    │
-│                                                                     │
-│   O_tilde fragments remain distributed across thread registers.     │
-│                                                                     │
-│   These registers survive across j.                                 │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 14. CURRENT SCORE/PROBABILITY WORKSPACE DIES                         │
-│                                                                     │
-│   S/P temporary registers are now free.                             │
-│                                                                     │
-│   Persistent state that remains:                                    │
-│                                                                     │
-│      m_i                                                            │
-│      l_i                                                            │
-│      O_tilde_i                                                      │
-│                                                                     │
-│   Temporary S/P register slots can be reused for next K/V tile.     │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 15. PIPELINE TO NEXT KV TILE                                        │
-│                                                                     │
-│   While consumer processed tile j:                                  │
-│                                                                     │
-│      Producer already TMA-loaded K_{j+1},V_{j+1}                    │
-│      into alternate SMEM buffer.                                    │
-│                                                                     │
-│   Ping-pong:                                                        │
-│                                                                     │
-│      SMEM A consumed  <---->  SMEM B filled                         │
-│                                                                     │
-│   Swap buffers.                                                     │
-│   Repeat steps 5–14 for j+1.                                       │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 16. AFTER FINAL KV TILE                                              │
-│                                                                     │
-│      O_i = O_tilde_i / l_i                                          │
-│                                                                     │
-│   Normalize row-wise.                                               │
-│                                                                     │
-│   Final O_i written from registers back to HBM.                     │
-└─────────────────────────────────────────────────────────────────────┘
+Remnant provides **43.84% smaller C4 records and approximately 1.21× server KV capacity**. Direct Packed Kernel is close to Native at matched load: **+0.77% mean TPOT** in the three-run C24 replay and **+0.27%** in the single-run 128k/8k study, versus Triton's +7.20% / +8.09%. No meaningful same-load throughput gain is established. At its larger allocator ceiling, Kernel observed **+5.74% output tokens/s**, at **+16.40% mean E2E latency**, requiring repeats before claiming a stable gain. Historical C28 SLO results do not establish the current Kernel's ceiling; the agentic evaluations remain limited by sample size, run variation and time caps.
