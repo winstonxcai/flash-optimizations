@@ -3,9 +3,11 @@
 # Remnant
 
 Training-free sparsification and packed storage of compressed attention states
-for **DeepSeek-V4-Flash-0731**. Packed retains 256 of 512 coordinates:
-**584 → 328 bytes per C4 record (43.8% smaller)**. Capacity savings are established;
-throughput benefits depend on the workload. Current target: H100/SM90, TP4 serving.
+for **DeepSeek-V4-Flash-0731**, using **SGLang v0.5.18 on TP4 / 4× H100 80 GB**.
+Default Packed retains 256 of 512 coordinates: **584 → 328 bytes per C4 record
+(43.84% smaller)** and **1.2113× measured KV capacity**. C4 compresses four original
+token positions into one record; record compression is not total GPU-memory savings.
+Throughput benefits depend on workload, and task-quality equivalence is not established.
 
 ## Understand the modes
 
@@ -16,6 +18,10 @@ Native is the default. The two Packed paths use the same default 328-byte format
 | `native` | Native | Stock FlashMLA |
 | `triton` | Packed | Reconstruct Native records, then stock FlashMLA |
 | `kernel` | Packed | Direct Packed attention |
+
+These are implementations, not different default pruning policies. Kernel remains
+256-only. Triton also supports fixed per-layer retention of 64–448 coordinates in
+steps of 64, without HiCache; these profiles need separate serving validation.
 
 ## Read first
 
@@ -35,10 +41,15 @@ image build is needed.
 
 ```bash
 git lfs install --local
-git submodule update --init --recursive
+git submodule update --init --recursive --checkout
+python3 scripts/sources.py .
 python -m pip install modal
 python -m unittest scripts.modal.tests
 ```
+
+The checkout command is for a clean clone and may detach fork HEADs. Preserve any
+existing fork work first. Preflights require clean forks at the exact parent pins,
+including nested dependencies; they report mismatches rather than repairing them.
 
 Training's local CPU checks may use the closest available CPU Torch version to
 the shared image; see [training environments](training/README.md#environment).
@@ -65,9 +76,14 @@ bash scripts/local/serve.sh "$MODE" stop  # also stop after a failed benchmark
 ```
 
 The benchmark client uses the running server; it never starts or stops one.
-It may download ShareGPT text; restricted-network hosts should prepare
-`BENCH_DATASET_PATH` first. See [local workflows](scripts/local/README.md#random-text-serving-benchmark)
-for dataset setup, GPUQ, profiling and the separate LongSWE replay harness.
+Random-text serving uses C warm-up requests and 3C measured requests, flushing the
+prefix cache before each phase. C limits simultaneous requests, not total work;
+3C requests are one run, not three independent runs. It may download ShareGPT
+text; restricted-network hosts should prepare `BENCH_DATASET_PATH` first.
+See [local workflows](scripts/local/README.md#random-text-serving-benchmark) for
+dataset setup and [recorded-request workflows](scripts/local/README.md#lswb-replay-without-profiling)
+for the distinction between request-concurrency benchmarks and fixed-active-user
+LongSWE replay. GPUQ is only needed on shared GPU servers.
 
 Latent-KV capture also uses this image, in an isolated short-lived container with
 capture-specific Native settings—not a separate image or the live serving process.
@@ -112,13 +128,21 @@ this recreates the container and stops its servers. Host script changes need no 
 Run focused correctness tests before timing; CPU launcher checks do not validate CUDA.
 Commit/push changed forks first, then commit/push the parent submodule pins.
 
+For learned pruning, use [training/README.md](training/README.md) for fitting,
+six-method comparisons and retention sweeps. Cache/checkpoints are not in a clone;
+obtain them from Winston. The cache belongs in ignored `data/training-cache-001/`.
+Current results reuse ten development issues for evaluation and checkpoint
+selection; they are not a fresh held-out test or a deployed learned policy.
+
 ## Find results
 
 Start with the [benchmark index](benchmarks/README.md):
 
 - [LongSWE C24, three runs per mode](benchmarks/lswb-replay/c24-native-packed256-n3-20261018/README.md): repeated Native/Triton/Kernel serving comparison.
 - [128k input / 8k output](benchmarks/serving/random-128k-8k-c24-capacity-n1-20261018/README.md): matched C24 and allocator-ceiling loads; one run per cell.
+- [Shared-prefix C16](benchmarks/serving/shared-prefix-c16-n1-20261019/README.md): G16/G32/G40 working sets; observed cache-retention gains in a single-run synthetic screen, not replicated production gains.
 - [H100 decode/store microbench](benchmarks/microbench/decode-store-h100-three-mode-20261014/README.md): operation timing and Nsight Compute reports, not serving latency.
+- [Prefill-read studies](benchmarks/microbench/prefill-read-20261018/README.md) and [fused-reader experiment](benchmarks/microbench/prefill-read-fused-rope-20261018/README.md): reconstruction cost and profiling; not end-to-end serving gains.
 
 JSON is canonical; each collection records provenance and limits. Git LFS stores
 large reports; download curated artifacts with `git lfs pull --include="benchmarks/**" --exclude=""`.

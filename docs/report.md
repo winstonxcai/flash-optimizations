@@ -1,19 +1,23 @@
-# Remnant: Residual Feature Sparsity Survives Latent Compression
+# Feature Sparsity Survives Latent Compression
 
 Author: Winston Cai.
 
+Unless otherwise noted, experiments use **DeepSeek-V4-Flash-0731, SGLang v0.5.18, and TP4 on 4× H100 80 GB**.
+
 ## Overview
 
-Remnant applies magnitude pruning to DeepSeek-V4-Flash's compressed attention latents, retaining 256 of 512 coordinates. Persistent C4 records shrink **584 → 328 bytes (43.84%)**, increasing the measured TP4 H100 KV pool **1.2113×**.
+Magnitude pruning retains 256 of 512 coordinates in the model's compressed attention latents. Persistent C4 records shrink **584 → 328 bytes (43.84%)**, increasing the measured KV pool **1.2113×**.
 
-- **Recorded coding-agent replay:** Packed Kernel stays near Native throughput and TPOT at matched C24; Triton adds more decode overhead.
-- **Cold random serving:** Kernel observes **+5.74% output throughput** at its larger allocator ceiling, with **+16.40% mean E2E latency** (n=1).
-- **Shared-prefix serving:** Kernel observes **2.60× / 1.48× Native throughput at G32/G40**, with higher cache-hit rates (n=1). G16 is near-neutral.
+- **Recorded coding-agent replay:** at matched C24, Kernel observes **−0.38% requests/s / +0.77% mean TPOT** versus Native; Triton's TPOT penalty is **7.20%**. These differences do not establish statistical equivalence.
+- **Prefix-cache-cold random serving:** Kernel observes **+5.74% output throughput** at its larger allocator ceiling, with **+16.40% mean E2E latency** (n=1).
+- **Synthetic shared-prefix serving:** Kernel observes **2.60× / 1.48× Native throughput at G32/G40**, with higher cache-hit rates (one run per cell). G16 is near-neutral.
 - **Agentic quality:** small evaluations show mixed task-success differences; quality equivalence is not established.
 
 ## Method and configurations
 
-The model's 21 compressed sparse-attention (CSA) layers store keys and values in a shared 512-dimensional latent. Packed keeps its 256 largest-magnitude coordinates per token and stores FP8 values, a bitmap and scales in 328 bytes. The studies below evaluate this 256-feature policy.
+Each of the model's 21 compressed sparse-attention (CSA) layers uses a 512-dimensional shared key/value latent. C4 denotes four-token compression: each compressed record represents four original token positions. Packed retains the 256 largest-magnitude coordinates per record, storing FP8 values, a bitmap and scales in 328 bytes. Sparsity is imposed by pruning, not assumed to exist as zeros beforehand. All studies below use this policy.
+
+Triton and Kernel implement the same pruning policy and intended numerical computation. Kernel changes execution, not the method. Store checks require matching selections and packed bytes; attention checks use numerical tolerances (output/LSE `atol=0.02, rtol=0.02`), not bitwise identity or identical generated trajectories. These checks compare implementations of Packed, not Packed quality against unpruned Native.
 
 | Configuration | Persistent C4 | Store / decode path |
 |---|---:|---|
@@ -21,24 +25,25 @@ The model's 21 compressed sparse-attention (CSA) layers store keys and values in
 | Packed Triton | 328 bytes | Triton store; reconstruct Native records before stock FlashMLA |
 | Packed Kernel | 328 bytes | Fused CUDA store; FlashMLA reads Packed records directly |
 
-Current serving studies use SGLang v0.5.18, DeepSeek-V4-Flash-0731, TP4 on **4× H100 80 GB**, and the `flashinfer_mxfp4` MoE runner. Recorded settings: static memory fraction 0.88, FP8 E4M3 KV, context cap 1,048,576, prefill chunks 8,192, full decode graphs through batch 136, prefill graphs disabled, server seed 20260919. An unset store override follows the Packed decode implementation.
+Current serving settings: `flashinfer_mxfp4` MoE runner, static memory fraction 0.88, FP8 E4M3 KV, context cap 1,048,576, prefill chunks 8,192, full decode graphs through batch 136, prefill graphs disabled, server seed 20260919. An unset store override follows the Packed decode implementation.
 
-Measured pools are **3,745,536 Native / 4,536,832 Packed full-token slots**. For fixed prompt/output lengths, allocator concurrency is `floor(pool_slots / (input_tokens + output_tokens))`; this is distinct from a latency-SLO limit.
+Measured pools are **3,745,536 Native / 4,536,832 Packed full-token slots**, expressed in original-token units rather than C4 records. C4 records compress **1.78×**, but other cache costs remain: total KV capacity rises **1.2113× (21.13%)**, not 1.78×. Neither ratio describes total GPU-memory reduction. For fixed prompt/output lengths, `floor(pool_slots / (input_tokens + output_tokens))` estimates storage-limited concurrency. Successful runs at those loads verify admission, not the maximum sustainable concurrency or a latency-SLO limit.
 
 ## Evaluation protocol
 
 ### Dataset attribution
 
-The recorded coding-agent replay is derived from a subset of **LongSWE-Bench**, the code-repair component of **LongCodeBench (LCB)** ([Rando et al., 2025](https://arxiv.org/abs/2505.07897)). It contains **4,916 model requests from 92 task/user sessions**, not 4,916 independent tasks. The frozen [dataset manifest](../benchmarks/lswb-replay/c24-packed256-store-decode-ablation-n1-20261014/kernel-store-kernel-decode/20261014_123504/client/dataset_manifest.json) retains request/session IDs and source hashes.
+The recorded coding-agent replay uses the full **LongSWE-Bench** dataset, the code-repair component of **LongCodeBench (LCB)** ([Rando et al., 2025](https://arxiv.org/abs/2505.07897)). It contains **4,916 model requests from 92 task/user sessions**, not 4,916 independent tasks. The frozen [dataset manifest](../benchmarks/lswb-replay/c24-packed256-store-decode-ablation-n1-20261014/kernel-store-kernel-decode/20261014_123504/client/dataset_manifest.json) retains request/session IDs and source hashes.
 
-Our `business-user-replay-v2` serving adaptation uses a fixed active-user pool, sequential requests within each user, and a 1,200-second dispatch window followed by drain. Each run starts a fresh server with a flushed radix cache and no replay warm-up. Throughput includes drain time. C24 means 24 active users; it does not fix actual GPU batches, arrival times or completed request sets. This replay differs from LCB's original task-quality evaluation.
+Our `business-user-replay-v2` adaptation uses a fixed active-user pool, sequential requests within each user, and a 1,200-second dispatch window followed by drain. The full corpus is available, but each window starts and completes only part of it. Runs start fresh servers with flushed radix caches and no replay warm-up; throughput includes drain time. C24 means 24 active users, not a fixed GPU batch or identical completed request sets. This is serving replay, not LCB's original task-quality evaluation.
 
 ### Measurement conventions
 
-- Compare matched concurrency for implementation overhead, allocator ceilings for capacity/latency tradeoffs, and **TTFT p90 <10 s** for observed replay SLO passes.
+- **TTFT:** request-to-first-token latency, including waiting and prefill. **TPOT:** mean time per subsequent output token within a request, not isolated GPU decode time. **E2E:** per-request completion latency, not the whole benchmark's wall time. Throughput measures aggregate completed work per second.
+- Matched client concurrency compares behavior under the same concurrency limit, not necessarily identical GPU batches or completed work. Allocator ceilings below are calculated storage limits, not independently established runtime maxima. Use **TTFT p90 <10 s** for observed replay SLO passes.
 - For serving studies, `n` counts independent runs, not request waves. Repeated results use mean ± sample SD; aggregated TTFT p90 is the mean of run-level percentiles, not a pooled percentile.
 - Latencies summarize successful requests; failures remain recorded. Serving results do not establish coding-task success, and aggregate metrics alone do not identify a bottleneck.
-- Source and configuration identities are documented per collection. Different images or historical implementations are separate experiments. Current records lack complete loaded-runtime/binary identity; specific gaps are linked below.
+- Source and configuration identities are documented per collection. Current records lack complete loaded-runtime/binary identity; different images and historical implementations remain separate experiments.
 
 ## Current serving results
 
@@ -50,26 +55,26 @@ Our `business-user-replay-v2` serving adaptation uses a fixed active-user pool, 
 | Packed Triton | 1.8037 ± 0.0378 | 274.55 ± 6.27 | 8.999 ± 0.468 | 54.64 ± 0.69 |
 | Packed Kernel | 1.8056 ± 0.0165 | 275.00 ± 3.90 | 9.338 ± 0.185 | 51.37 ± 0.37 |
 
-Kernel differs from Native by **−0.38% requests/s and +0.77% mean TPOT**; Triton's TPOT penalty is **7.20%**. Mean device-hit rates are **97.30% / 97.38% / 97.38%**, leaving little measured retention advantage at this load. All nine runs pass the TTFT criterion; this does not locate their maximum passing concurrency.
+Kernel differs from Native by **−0.38% requests/s and +0.77% mean TPOT**; Triton's TPOT penalty is **7.20%**. Mean device-hit rates are **97.30% / 97.38% / 97.38%**: little difference in observed hit rate, not a direct measure of the value of retained prefixes. All nine runs pass the TTFT criterion; this does not locate their maximum passing concurrency or establish performance equivalence.
 
 The runs satisfy the harness's 99% success threshold with **15–21 failures each**. Dataset, harness/launcher hashes, image and recorded static settings match within the collection. Client/server request-ID joins were not captured; the harness classifies these as candidate comparisons. [Canonical results and provenance](../benchmarks/lswb-replay/c24-native-packed256-n3-20261018/README.md).
 
-### Random serving: 128k input / 8k output, n=1 — 2026-10-18
+### Prefix-cache-cold random serving: 128k input / 8k output, n=1 — 2026-10-18
 
-SGLang `bench_serving` uses the same local ShareGPT-backed random dataset, exact **131,072 input / 8,192 output tokens**, seed 42 and unlimited offered rate. Each cell has a C-request warm-up, cache flush, then 3C measured requests.
+SGLang `bench_serving` uses the same local ShareGPT-backed random dataset, exact **131,072 input / 8,192 output tokens**, seed 42 and unlimited offered rate. **C is the maximum simultaneous requests, not the total request count.** Each cell has C warm-up requests followed by 3C measured requests, with a prefix-cache flush before each phase. At matched C24, **each mode runs 24 warm-up + 72 measured requests**, with at most 24 in flight. Warm-up results are excluded; each cell is one independent run.
 
-| Load policy | Mode | C | Output tokens/s | TTFT p90 (s) | Mean TPOT (ms) | Mean E2E (s) |
-|---|---|---:|---:|---:|---:|---:|
-| Matched | Native | 24 | 589.9 | 186.00 | 27.71 | 333.12 |
-| Matched | Packed Triton | 24 | 558.1 | 187.25 | 29.96 | 352.13 |
-| Matched | Packed Kernel | 24 | 588.7 | 186.17 | 27.79 | 333.84 |
-| Allocator ceiling | Native | 26 | 597.4 | 202.58 | 29.48 | 356.35 |
-| Allocator ceiling | Packed Triton | 32 | 600.7 | 246.78 | 36.06 | 436.23 |
-| Allocator ceiling | Packed Kernel | 32 | 631.7 | 245.41 | 33.56 | 414.80 |
+| Load policy | Mode | C | Measured requests | Output tokens/s | TTFT p90 (s) | Mean TPOT (ms) | Mean E2E (s) |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Matched | Native | 24 | 72 | 589.9 | 186.00 | 27.71 | 333.12 |
+| Matched | Packed Triton | 24 | 72 | 558.1 | 187.25 | 29.96 | 352.13 |
+| Matched | Packed Kernel | 24 | 72 | 588.7 | 186.17 | 27.79 | 333.84 |
+| Allocator ceiling | Native | 26 | 78 | 597.4 | 202.58 | 29.48 | 356.35 |
+| Allocator ceiling | Packed Triton | 32 | 96 | 600.7 | 246.78 | 36.06 | 436.23 |
+| Allocator ceiling | Packed Kernel | 32 | 96 | 631.7 | 245.41 | 33.56 | 414.80 |
 
-At C24, Kernel is **−0.21% output throughput / +0.27% TPOT**, versus Triton's **−5.39% / +8.09%**. At their own allocator ceilings (**Native C26, Packed C32**), Kernel gains **5.74% throughput** with **16.40% higher mean E2E**. All phases completed without errors and with exact output lengths.
+At matched C24, Kernel is **−0.21% output throughput / +0.27% TPOT**, versus Triton's **−5.39% / +8.09%**. At their allocator ceilings (Native C26, Packed C32), Kernel delivers **5.74% more output tokens/s** but **16.40% longer mean E2E**: 414.80 s versus Native's 356.35 s. More aggregate work is completed per second, not faster individual requests; the loads and total request counts differ. All phases completed without errors and with exact output lengths. These n=1 observations do not establish a repeatable gain.
 
-This collection used a different image from the replay triplicate. Dataset/client/launcher identities and recorded settings match internally; checkpoint-content and loaded-runtime identities are incomplete. [Canonical results and provenance](../benchmarks/serving/random-128k-8k-c24-capacity-n1-20261018/README.md).
+This collection used a different image from the replay triplicate. Dataset/client/launcher identities and recorded settings match internally; checkpoint-content identity is incomplete. [Canonical results and provenance](../benchmarks/serving/random-128k-8k-c24-capacity-n1-20261018/README.md).
 
 ### Shared-prefix working sets: C16, n=1 — 2026-10-19
 
@@ -97,21 +102,21 @@ Model-free [split-reader](../benchmarks/microbench/prefill-read-20261018/README.
 
 ## Agentic benchmark results
 
-Sangfor-Bench and SWE-bench use the same Claude Code harness with untouched Native 0731 versus Packed: **50 tasks, two runs per mode**. Sangfor uses TP4; SWE-bench combines one TP8 pair and one TP4 pair. DeepSWE-Bench has one TP4 run per mode over 60 tasks, with timeouts scoring zero under a 5,400-second budget. Counts below are mean solved tasks, not percentages.
+All agentic Packed runs used **Triton**; Kernel was not separately task-evaluated. Its numerical checks do not establish identical generated trajectories. Sangfor-Bench and SWE-bench use the same Claude Code harness against untouched Native: **50 tasks, two runs per mode**. SWE-bench's first pair uses **TP8**, while its second uses the default configuration. DeepSWE-Bench has one run per mode over 60 tasks, with timeouts scoring zero under a 5,400-second budget. Counts are mean solved tasks, not percentages.
 
-| Evaluation | Native | Packed | Difference |
+| Evaluation | Native | Packed Triton | Difference |
 |---|---:|---:|---:|
-| Sangfor-Bench (n=50, 2 runs each) | **23.0** | **23.5** | +0.5 task |
-| SWE-bench (n=50, 2 runs each) | **32.5** | **30.5** | −2 tasks |
-| DeepSWE-Bench (n=60, 1 run each) | **5** | **7** | +2 tasks |
+| Sangfor-Bench (50 tasks; 2 runs/mode) | **23.0** | **23.5** | +0.5 task |
+| SWE-bench (50 tasks; 2 runs/mode) | **32.5** | **30.5** | −2 tasks |
+| DeepSWE-Bench (60 tasks; 1 run/mode) | **5** | **7** | +2 tasks |
 
 Sangfor's direction changes across runs; SWE-bench consistently favors Native by two tasks. DeepSWE's **35/60 Native and 36/60 Packed timeouts** heavily limit interpretation. These small, partly heterogeneous evaluations establish neither quality equivalence nor a consistent improvement. Paired outcomes and scoring details are retained in [Appendix B](#appendix-b-agentic-outcomes).
 
-## Findings and next evidence
+## Findings
 
-The supported system benefit is **more persistent KV capacity**. Throughput depends on workload: Kernel stays near Native in the recorded replay and at matched random load, while synthetic prefix pressure produces substantial observed gains. The random capacity-ceiling gain includes higher latency; the shared-prefix gains remain single-run observations.
+The supported system benefit is **21.13% more measured persistent KV capacity**. At matched C24, Kernel's observed requests/s and TPOT differences are **−0.38% / +0.77%** in replay; output throughput and TPOT differ by **−0.21% / +0.27%** in random serving. These are small measured differences, not established equivalence. Throughput gains depend on workload: the random capacity-ceiling gain includes higher latency, and the synthetic shared-prefix gains remain single-run observations. Task-quality effects remain uncertain.
 
-Next, replicate the prefix-pressure comparisons, measure each mode's current SLO frontier, and strengthen paired task-success evidence. Historical passing points below are not the current Kernel's validated SLO ceiling.
+Historical passing points below are not the current Kernel's validated SLO ceiling.
 
 ## Appendix A: historical serving measurements
 
@@ -119,7 +124,7 @@ These results preserve the original two-mode Native/Packed implementations and p
 
 ### Historical random serving: 2,048 output tokens
 
-TP4 H100, DeepSeek-V4-Flash-0731, memory fraction 0.88, FP8 KV, context cap 1,048,576, full decode graphs through 136 and no prefill graphs. Each point used a C-request warm-up and 3C measured requests. Historical pools were **3,730,944 / 4,519,168 slots**.
+Each point used a C-request warm-up and 3C measured requests. Historical pools were **3,730,944 / 4,519,168 slots**; memory fraction, KV dtype, context cap and graph settings match those above.
 
 #### Same concurrency
 
@@ -147,13 +152,13 @@ TP4 H100, DeepSeek-V4-Flash-0731, memory fraction 0.88, FP8 KV, context cap 1,04
 | 256k | Native | 14 | 0.0473 | 12,490 | — | 143,886 | 74.2 | 296,208 |
 | 256k | Packed | 17 | 0.0470 | 12,426 | −0.5% | 173,528 | 91.8 | 361,531 |
 
-Extra capacity raised offered concurrency without a substantial throughput gain; latency generally increased. These cold long-input screens are n=1 per cell and do not isolate prefill or decode costs.
+Extra capacity raised offered concurrency without a substantial throughput gain; latency generally increased. These prefix-cache-cold long-input screens are n=1 per cell and do not isolate prefill or decode costs. Total tokens/s counts input plus output, unlike the output-only throughput in the current studies.
 
 ### Historical recorded replay
 
 The same 4,916-request cohort averages roughly 144k prompt tokens with short decodes. Prompt length is non-decreasing in 4,823/4,823 within-task pairs. Under an **idealized exact-nesting/no-eviction assumption**, lengths imply 98.06% reusable tokens (14.4M uncached of 743.5M); lengths alone do not establish exact prefix nesting.
 
-The v0.5.18 observations supersede a v0.5.15 study reporting Native C12 / Packed C15 and +77.7% same-concurrency throughput. Source, version and execution differences prevent attributing that contrast solely to the upgrade. Historical runs used fresh servers, empty radix caches, TP4, 1,200-second dispatch windows and no prefill graphs; decode graph coverage was extended above C15.
+An earlier study under a different software configuration, **SGLang v0.5.15**, reported Native C12 / Packed C15 and +77.7% same-concurrency throughput. Source, version and execution differences prevent treating it as a controlled upgrade comparison. Historical runs used fresh servers, empty radix caches and 1,200-second dispatch windows; decode graph coverage was extended above C15.
 
 #### Matched C21
 
@@ -233,14 +238,14 @@ Each ladder point is one fresh-boot window except Native C24 † (three-run mean
 
 Interpretation:
 
-- An earlier Packed C25 ceiling was a stop-rule artifact: later C26–C28 windows passed. C26 shared its host with another TP4 server. Historical TTFT-p90 variation was about 0.4 s, not a confidence interval or universal noise floor.
+- An earlier Packed C25 ceiling was a stop-rule artifact: later C26–C28 windows passed. C26 shared its host with another four-GPU server. Historical TTFT-p90 variation was about 0.4 s, not a confidence interval or universal noise floor.
 - Historical C21 cache hits differ by only +0.03 pp. At C24/C28, requests with ≥95% device hits have TTFT p90 8.97/9.51 s; low-hit requests reach 52/76 s. These descriptive strata do not isolate queueing or prefill costs.
 - Packed C28 mean TPOT is +29.2% versus the historical Native C24 aggregate; these are different loads. The original matched-C24 single-run median was 24.0 versus 22.3 ms (+8%).
 - C≈20–28 windows complete roughly 2,150–2,270 requests (~1.8 requests/s, 250–270k prompt tokens/s). Extra users did not yield a clear throughput gain; the aggregate cannot identify the bottleneck.
 
 ## Appendix B: agentic outcomes
 
-Matrices show paired task outcomes, with Native as rows and Packed as columns. Recorded errors and cap-hits count as failures; the Sangfor adjudication is documented below. DeepSWE-Bench requires a full verifier pass (reward 1).
+Matrices show paired task outcomes, with Native as rows and **Packed Triton** (abbreviated Packed) as columns. Recorded errors and cap-hits count as failures; the Sangfor adjudication is documented below. DeepSWE-Bench requires a full verifier pass (reward 1).
 
 ### Sangfor-Bench Hard 50
 

@@ -181,8 +181,12 @@ quality and serving overhead remain unvalidated.
 ### Retention-budget comparisons
 
 The maintained [comparison and sweep commands](../training/README.md#compare-masks-and-sweep-retention)
-evaluate magnitude, structured and frozen learned masks on the same 2,100
-development query-layer examples. Training remains at 256 survivors; evaluation
+evaluate magnitude, structured and frozen learned masks. The figures below use
+**all 50 issues: 40 training + 10 development**, totaling **5,460 query-layer
+examples** across 21 layers (four positions per training issue and ten per
+development issue). These combined curves include training data; they are not
+held-out quality estimates. The commands default to the ten development issues;
+use `--split all` to reproduce these figures. Training remains at 256 survivors; evaluation
 sweeps 64–448 in steps of 64. The sweep's structured mask is **N:8**, including
 **4:8 at 256**, whereas the separate six-row comparison uses **2:4 at 256**.
 Non-256 replay is an offline numerical simulation, not serving validation.
@@ -201,7 +205,13 @@ The current result supports the hypothesis that a row-only learned scorer can re
 - Frozen replay does not measure error propagation through the full model or closed-loop coding-task quality.
 - Scorer overhead and end-to-end serving performance remain unvalidated.
 
-The next evidence needed is a fresh held-out evaluation, followed by separately approved task-quality and serving measurements.
+### Next steps
+
+- Evaluate the learned policy on fresh held-out issues before claiming generalization.
+- Replicate the report's prefix-pressure comparisons and measure each mode's current SLO frontier. Historical passing points do not establish the current Kernel's ceiling.
+- Strengthen paired task-success evidence, distinguishing the existing Triton evaluations from any new Kernel or learned-policy runs.
+
+Task-quality and serving runs require separate approval; frozen replay alone does not establish their outcomes.
 
 ## 6. Mathematical limits and mask representability
 
