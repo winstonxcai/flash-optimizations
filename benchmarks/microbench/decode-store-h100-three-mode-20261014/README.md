@@ -1,4 +1,4 @@
-# Representative three-mode microbench
+# H100 three-mode decode/store microbench
 
 Author: Winston Cai.
 
@@ -35,7 +35,17 @@ All modes and both allocations match fixture/source/binary hashes. Nsight Comput
 `-lineinfo` builds. Counter coverage includes duration, DRAM, L2, occupancy,
 registers, local-memory traffic and stalls. Timing remains authoritative:
 profiler replay perturbs execution; caches/clocks were not controlled. Local
-memory traffic alone does not prove compiler spills. No viewer screenshots yet.
+memory traffic alone does not prove compiler spills.
+
+## Viewer screenshot
+
+![Packed Kernel: H64/B16/K512 Compute details](profiling/h64_b16_k512/screenshots/kernel-compute-details.jpg)
+
+Unedited Nsight Compute 2026.3.1 viewer capture, saved 2026-10-19 from
+`profiling/h64_b16_k512/kernel.ncu-rep`, launch 7171. The duration and
+compute/memory throughput counters are legible; the unlocked-frequency warning
+is retained. This is one profiled attention launch, not complete-path acceptance
+timing or a Native comparison. Other modes and shapes remain in the reports.
 
 ## Reproduce / archive
 

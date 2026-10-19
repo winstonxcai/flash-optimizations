@@ -137,16 +137,25 @@
   "archive_root": "raw/retired-results-20261014",
   "profile_client_success_rate_is_retention_gate": false,
   "profile_gui_opening_verified": false,
+  "viewer_review": {
+    "date": "2026-10-19",
+    "viewer": "Nsight Systems 2026.5.1",
+    "opened_modes": ["kernel"],
+    "screenshot_accepted": false,
+    "reason": "Collapsed kernel rows and excessive empty space; refinement encountered noWindowsAvailable and procNotFound errors.",
+    "rejected_draft": "raw/nsight-viewer-review-20261019/kernel-c24-systems-timeline-draft.jpg"
+  },
   "profile_import_commit": "9da64b08e0aaf8b65ed813f9b23a3d4731ca4629",
   "documents": {
     "README.md": {
-      "sha256": "b8ca6fa6d1079e041d1dd48f165b781de5d8908a7779aaba53ad7e5d6519f6ed",
-      "bytes": 2025
+      "sha256": "df4c28dbdab986845cf66feb1a50275bf2dd2f94b3d82b53a77cab7090dea247",
+      "bytes": 2343
     },
     "PROFILE.md": {
       "sha256": "c09c41f173724e1b129905dd8caac004742e34711f907ea9ea3020dd52eb3c8f",
       "bytes": 17428
     }
   },
-  "curated_root": "benchmarks/lswb-replay/representative-20261013"
+  "curated_root": "benchmarks/lswb-replay/c24-three-mode-profiles-n1-20261013",
+  "previous_curated_root": "benchmarks/lswb-replay/representative-20261013"
 }

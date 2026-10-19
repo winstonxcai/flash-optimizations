@@ -36,7 +36,11 @@ All three original `.nsys-rep` files and client summaries/manifests were importe
 from `origin/remnant` commit `9da64b0`; report sizes and SHA-256 hashes match
 their LFS identities. Retention does not depend on profiled client success rate.
 Graph-node/NVTX/rank coverage and event-loss caveats remain in `PROFILE.md`.
-Viewer screenshots remain outstanding; GUI opening has not yet been verified.
+The Kernel report opened in Nsight Systems 2026.5.1 on 2026-10-19. Its initial
+timeline screenshot failed visual review (collapsed kernel rows and excessive
+empty space); refinement encountered viewer/process and computer-use errors.
+The rejected draft remains only in local `raw/nsight-viewer-review-20261019/`.
+A readable Systems screenshot and GUI checks for Native/Triton remain outstanding.
 
 ## Archive
 

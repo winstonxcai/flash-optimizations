@@ -232,7 +232,7 @@ requires matplotlib; JSON/CSV generation without `--plot` uses the standard libr
 reported client-summary p90 uses the harness nearest-rank convention. To reproduce locally:
 
 ```bash
-python3 benchmarks/lswb-replay/store-decode-ablation-20261014/analyze.py --plot
+python3 benchmarks/lswb-replay/c24-packed256-store-decode-ablation-n1-20261014/analyze.py --plot
 ```
 
 There are 2158 successful requests common to all four runs with matching body

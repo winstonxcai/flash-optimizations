@@ -293,5 +293,25 @@
         }
       ]
     }
-  ]
+  ],
+  "curated_root": "benchmarks/serving/random-128k-8k-c24-capacity-n1-20261018",
+  "previous_curated_root": "benchmarks/serving/128k-8k-20261018",
+  "curation_review": {
+    "date": "2026-10-18",
+    "source_parent_commit": "447111f",
+    "runs_checked": 6,
+    "phases_checked": 12,
+    "image": "sha256:09dfea18bd2c4168481710dcb1830a2c2efdb8e8f45f9d1ad7bb85a1b7ff48ab",
+    "client_python_tree_sha256": "9f5daca9faffb58ea1b2e56d0c0bc1c36224a653f95c4d0415f13d5126a8829e",
+    "dataset_sha256": "35f0e213ce091ed9b9af2a1f0755e9d39f9ccec34ab281cd4ca60d70f6479ba4",
+    "script_sha256": "07c8424b0e85b3090f2b763c3d6a79fb35c95a9bd3c9bfea1071a7b33609e557",
+    "script_matches_local": true,
+    "seed": 42,
+    "settings_matched": true,
+    "launcher_sha256": "f037bfa24ef921339a548839d3ae97a83e0d3c096e322aa2b1b92bb8fd2cfa61",
+    "lengths_counts_throughput_recomputed": true,
+    "n_per_cell": 1,
+    "source_identity_limit": "Client tree hash and image IDs match; no loaded runtime tree/extension content manifest or GPU telemetry was retained.",
+    "evidence_status": "single_run_study_repeat_before_performance_claim"
+  }
 }

@@ -11,7 +11,7 @@
       "original_run_id": "20261018_204739",
       "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/native-c24-repeat1-20261018_204400/20261018_204739",
       "transfer_path": "transfer/lswb-c24-n3-20261018/native-c24-repeat1-20261018_204400/20261018_204739",
-      "benchmark_path": "benchmarks/lswb-replay/c24-n3-20261018/native/unprofiled/20261018_204739",
+      "benchmark_path": "benchmarks/lswb-replay/c24-native-packed256-n3-20261018/native/unprofiled/20261018_204739",
       "files": [
         {
           "path": "native/unprofiled/20261018_204739/done.json",
@@ -49,7 +49,7 @@
       "original_run_id": "20261018_213417",
       "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/native-c24-repeat2-20261018_204400/20261018_213417",
       "transfer_path": "transfer/lswb-c24-n3-20261018/native-c24-repeat2-20261018_204400/20261018_213417",
-      "benchmark_path": "benchmarks/lswb-replay/c24-n3-20261018/native/unprofiled/20261018_213417",
+      "benchmark_path": "benchmarks/lswb-replay/c24-native-packed256-n3-20261018/native/unprofiled/20261018_213417",
       "files": [
         {
           "path": "native/unprofiled/20261018_213417/done.json",
@@ -87,7 +87,7 @@
       "original_run_id": "20261018_215741",
       "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/native-c24-repeat3-20261018_204400/20261018_215741",
       "transfer_path": "transfer/lswb-c24-n3-20261018/native-c24-repeat3-20261018_204400/20261018_215741",
-      "benchmark_path": "benchmarks/lswb-replay/c24-n3-20261018/native/unprofiled/20261018_215741",
+      "benchmark_path": "benchmarks/lswb-replay/c24-native-packed256-n3-20261018/native/unprofiled/20261018_215741",
       "files": [
         {
           "path": "native/unprofiled/20261018_215741/done.json",
@@ -125,7 +125,7 @@
       "original_run_id": "20261018_204739",
       "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/triton-k256-c24-repeat1-20261018_204400/20261018_204739",
       "transfer_path": "transfer/lswb-c24-n3-20261018/triton-k256-c24-repeat1-20261018_204400/20261018_204739",
-      "benchmark_path": "benchmarks/lswb-replay/c24-n3-20261018/triton/unprofiled/20261018_204739",
+      "benchmark_path": "benchmarks/lswb-replay/c24-native-packed256-n3-20261018/triton/unprofiled/20261018_204739",
       "files": [
         {
           "path": "triton/unprofiled/20261018_204739/done.json",
@@ -163,7 +163,7 @@
       "original_run_id": "20261018_211056",
       "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/triton-k256-c24-repeat2-20261018_204400/20261018_211056",
       "transfer_path": "transfer/lswb-c24-n3-20261018/triton-k256-c24-repeat2-20261018_204400/20261018_211056",
-      "benchmark_path": "benchmarks/lswb-replay/c24-n3-20261018/triton/unprofiled/20261018_211056",
+      "benchmark_path": "benchmarks/lswb-replay/c24-native-packed256-n3-20261018/triton/unprofiled/20261018_211056",
       "files": [
         {
           "path": "triton/unprofiled/20261018_211056/done.json",
@@ -201,7 +201,7 @@
       "original_run_id": "20261018_222024",
       "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/triton-k256-c24-repeat3-20261018_204400/20261018_222024",
       "transfer_path": "transfer/lswb-c24-n3-20261018/triton-k256-c24-repeat3-20261018_204400/20261018_222024",
-      "benchmark_path": "benchmarks/lswb-replay/c24-n3-20261018/triton/unprofiled/20261018_222024",
+      "benchmark_path": "benchmarks/lswb-replay/c24-native-packed256-n3-20261018/triton/unprofiled/20261018_222024",
       "files": [
         {
           "path": "triton/unprofiled/20261018_222024/done.json",
@@ -239,7 +239,7 @@
       "original_run_id": "20261018_211053",
       "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/kernel-k256-c24-repeat1-20261018_204400/20261018_211053",
       "transfer_path": "transfer/lswb-c24-n3-20261018/kernel-k256-c24-repeat1-20261018_204400/20261018_211053",
-      "benchmark_path": "benchmarks/lswb-replay/c24-n3-20261018/kernel/unprofiled/20261018_211053",
+      "benchmark_path": "benchmarks/lswb-replay/c24-native-packed256-n3-20261018/kernel/unprofiled/20261018_211053",
       "files": [
         {
           "path": "kernel/unprofiled/20261018_211053/done.json",
@@ -277,7 +277,7 @@
       "original_run_id": "20261018_213416",
       "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/kernel-k256-c24-repeat2-20261018_204400/20261018_213416",
       "transfer_path": "transfer/lswb-c24-n3-20261018/kernel-k256-c24-repeat2-20261018_204400/20261018_213416",
-      "benchmark_path": "benchmarks/lswb-replay/c24-n3-20261018/kernel/unprofiled/20261018_213416",
+      "benchmark_path": "benchmarks/lswb-replay/c24-native-packed256-n3-20261018/kernel/unprofiled/20261018_213416",
       "files": [
         {
           "path": "kernel/unprofiled/20261018_213416/done.json",
@@ -315,7 +315,7 @@
       "original_run_id": "20261018_215724",
       "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/kernel-k256-c24-repeat3-20261018_204400/20261018_215724",
       "transfer_path": "transfer/lswb-c24-n3-20261018/kernel-k256-c24-repeat3-20261018_204400/20261018_215724",
-      "benchmark_path": "benchmarks/lswb-replay/c24-n3-20261018/kernel/unprofiled/20261018_215724",
+      "benchmark_path": "benchmarks/lswb-replay/c24-native-packed256-n3-20261018/kernel/unprofiled/20261018_215724",
       "files": [
         {
           "path": "kernel/unprofiled/20261018_215724/done.json",
@@ -347,5 +347,25 @@
         }
       ]
     }
-  ]
+  ],
+  "curated_root": "benchmarks/lswb-replay/c24-native-packed256-n3-20261018",
+  "previous_curated_root": "benchmarks/lswb-replay/c24-n3-20261018",
+  "curation_review": {
+    "date": "2026-10-18",
+    "source_parent_commit": "447111f",
+    "runs_checked": 9,
+    "image": "sha256:51ed908c159139e522c2254b13c2713bf2fa5c51182f21cfec908252d2831972",
+    "launcher_sha256": "a91267f2cd7ef677ab0bcd5a73185b00e56a2a9f0e0a98e649e49c3ab6a9b8d1",
+    "dataset_sha256": "1e97f17d8a46f2d18232cab4f0f552bcfaf2bc74c51230a1917fc0771eae46e7",
+    "harness_sha256": {
+      "adapter": "363d6adffde63bfe54c483d629cca780d43689ec101a778f25fc110060f00b13",
+      "runner": "76ca1e4c25452e1fd163c957a4b262169fd1bba0d8bc3d9ccd3f45b232068bc4"
+    },
+    "settings_matched": true,
+    "raw_client_counts_and_means_recomputed": true,
+    "aggregate_sample_statistics_recomputed": true,
+    "slo_passes": 9,
+    "source_identity_limit": "Runtime tree and loaded extension hashes were not collected; client/server timing coverage is count-based.",
+    "evidence_status": "preferred_repeated_c24_serving_reference_with_provenance_limits"
+  }
 }

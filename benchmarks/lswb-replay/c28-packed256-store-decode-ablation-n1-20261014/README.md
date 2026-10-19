@@ -212,8 +212,8 @@ rather than creating another numerical harness.
 From the repository root:
 
 ```bash
-python3 benchmarks/lswb-replay/store-decode-ablation-20261014/analyze.py \
-  --root benchmarks/lswb-replay/store-decode-ablation-c28-20261014 \
+python3 benchmarks/lswb-replay/c24-packed256-store-decode-ablation-n1-20261014/analyze.py \
+  --root benchmarks/lswb-replay/c28-packed256-store-decode-ablation-n1-20261014 \
   --concurrency 28 --plot
 ```
 

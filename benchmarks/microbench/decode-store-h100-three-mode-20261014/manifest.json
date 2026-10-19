@@ -1,5 +1,17 @@
 {
   "schema_version": 1,
+  "viewer_review": {
+    "date": "2026-10-19",
+    "viewer": "Nsight Compute 2026.3.1.0 (build 38829034)",
+    "report": "profiling/h64_b16_k512/kernel.ncu-rep",
+    "report_sha256": "0e223cac32f26650f8c53890f207dffd2be18b2261b5edf5010404fbe90430b6",
+    "launch_id": 7171,
+    "screenshot": "profiling/h64_b16_k512/screenshots/kernel-compute-details.jpg",
+    "sha256": "d32cc778de7f8554d3053a4c8d6b2bd445e5e8a0a2e0dee67c6dcbd81adfd53f",
+    "bytes": 524367,
+    "unedited": true,
+    "visual_review": "Readable duration and compute/memory throughput counters, with the unlocked-frequency warning retained. One profiled attention launch, not complete-path acceptance timing."
+  },
   "status": "passed",
   "account": "poohthewinniechurchill",
   "timing_run_id": "representative-20261014T023127Z",
@@ -2396,8 +2408,10 @@
       "bytes": 450929
     },
     "README.md": {
-      "sha256": "e714dc723c23630a3f7a94a8d0b01db08f92d273a7549f3843489111e06f6999",
-      "bytes": 3178
+      "sha256": "9fc6eb84c4274acb4a582dbd0c9e1217b3f6034b52b7966950ff218fd6bc28e7",
+      "bytes": 3181,
+      "previous_curated_sha256": "e714dc723c23630a3f7a94a8d0b01db08f92d273a7549f3843489111e06f6999",
+      "previous_curated_bytes": 3178
     },
     "validation.json": {
       "sha256": "97cb64289e69078fb2b8f7cc702009228ee6745ffd9aad074eac8a4446e75fe1",
@@ -2474,5 +2488,6 @@
   },
   "reference_date": "2026-10-14",
   "retired_results_archive": "raw/retired-results-20261014",
-  "curated_root": "benchmarks/microbench/representative-20261014"
+  "curated_root": "benchmarks/microbench/decode-store-h100-three-mode-20261014",
+  "previous_curated_root": "benchmarks/microbench/representative-20261014"
 }
