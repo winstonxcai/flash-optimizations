@@ -15,6 +15,23 @@ records rather than this milestone log.
 
 No pending integration milestones recorded.
 
+## 2026-10-19 — Recorded-request serving benchmark client
+
+Parent `d50974b`; SGLang `921cc2e03f61`; FlashMLA `97f3faa58450`.
+
+- **Added:** one-time raw LongSWE-derived JSONL conversion with original
+  messages/tools/order, recorded token caps and a separate hash/provenance
+  manifest. Direct CLI commands reuse SGLang's existing OpenAI dataset/backend;
+  the random-text `bench-serving.sh` wrapper remains unchanged.
+- **Fixed:** optional recorded prompt-length metadata bypasses unavailable HF
+  chat templates without changing the server payload. Tool-call-only output
+  contributes to TTFT, and requested streaming completion usage must be present.
+  Serving runtime and kernels are unchanged by this integration.
+- **Validation:** AST syntax, `ruff check --select F401,F821` on changed Python
+  files, and `git diff --check` passed. Added client regression cases have not
+  completed locally: collection was blocked by missing `orjson`, then
+  `pybase64`. Original-file conversion and image/GPU serving remain unverified.
+
 ## 2026-10-19 — Prefill-read benchmark and opt-in fusion
 
 Parent `ba4efd8`; SGLang `40d07208195c`; FlashMLA `9f9a2e5da6e8`.
