@@ -6,6 +6,12 @@ Run from the repository root on the GPU node. Modes: `native` = Native;
 `triton` = Packed with Triton packing/reconstruction; `kernel` = Packed with
 optimized kernels. All three use the same Docker image.
 
+**GPUQ is only for queueing jobs on shared GPU servers (including the VDI host).**
+It reserves exclusive GPUs; it is not required for local CPU checks, dedicated
+machines or Modal. On shared machines, run GPU commands inside your GPUQ job or
+active lease. Bare serving/capture examples below assume you already hold an
+allocation. Build the image and prepare inputs before queueing GPU work.
+
 ## Isolated latent-KV capture
 
 Capture reuses the **same `remnant:v0.5.18` image as serving**, but starts a
@@ -14,20 +20,66 @@ separate, short-lived container; it never runs inside or replaces the production
 The shell entry point owns all Docker operations: local image/component checks,
 mounts, GPU selection/availability, container launch, timeouts and exact-container
 cleanup. It does not source production environment defaults. It requires Docker,
-`nvidia-smi` and GNU `timeout`. These examples are commands for an explicitly
-allocated GPU-server session, not automatic launch steps:
+`nvidia-smi` and GNU `timeout`.
+
+### Prepare inputs on CPU
+
+Ask Winston for the frozen, audited OpenHands cohort: `requests.jsonl`,
+`manifest.json` and `audit.json` in one directory. These contain request/tool
+payloads and stay outside Git; a clone does not include them. Use the original
+files together, not a newly sampled cohort or manually edited receipts. The
+local checkpoint must include all 48 shards, tokenizer/configuration files and
+the original Hugging Face download metadata for revision
+`7872f01b1d1fe23eabc4c98b48bffcef5a386062`.
+
+Set absolute **host** paths below. The capture parent may exist, but its `scratch`
+child must be new. This GPU-free command uses the serving image's existing
+`calibrate.preflight` to validate inputs and generate `capture-config.json`,
+`replay.jsonl` and the serving-tokenization audit; it does not load model weights.
+The two-file source record is required by the existing shared-capture audit,
+not by training/evaluation compatibility checks.
 
 ```bash
 python3 scripts/sources.py .
 CAPTURE_IMAGE=$(docker image inspect --format '{{.Id}}' "${IMAGE:-remnant:v0.5.18}")
-CAPTURE_GPUS=0,1,2,3 bash scripts/local/capture-latent.sh run \
-  "$CAPTURE_IMAGE" /data/models/DeepSeek-V4-Flash-0731 \
-  /data/capture/scratch /data/capture/published 3600 30312
+CAPTURE_MODEL=/data/models/DeepSeek-V4-Flash-0731
+CAPTURE_COHORT=/data/pruning/cohort
+CAPTURE_BASE=/data/capture
+mkdir -p "$CAPTURE_BASE"
+docker run --rm -i --pull never --network none \
+  --mount "type=bind,src=$CAPTURE_COHORT,dst=/cohort,readonly" \
+  --mount "type=bind,src=$CAPTURE_MODEL,dst=/model,readonly" \
+  --mount "type=bind,src=$CAPTURE_BASE,dst=/capture-data" \
+  --entrypoint python3 "$CAPTURE_IMAGE" - <<'PY'
+import hashlib
+import json
+from pathlib import Path
+from sglang.benchmark.remnant.calibrate import preflight
+
+root = Path("/capture-data/scratch")
+preflight(Path("/cohort"), Path("/model"), root, storage_schema=2, audit_shared=True)
+source = Path("/sgl-workspace/sglang-remnant/python/sglang")
+names = ("srt/remnant/capture.py", "benchmark/remnant/calibrate.py")
+hashes = {name: hashlib.sha256((source / name).read_bytes()).hexdigest() for name in names}
+(root / "source-manifest.json").write_text(json.dumps({"source_sha256": hashes}, indent=2) + "\n")
+PY
 ```
 
-Provision `capture-config.json` and `replay.jsonl` in scratch beforehand. Schema 2,
-an explicit `audit_shared` policy, and concurrency two are required; shared-only
-capture also requires the existing matching `shared-audit-proof.json`. Scratch
+### Capture on four allocated GPUs
+
+Keep the same resolved image ID and prepared paths. On a shared GPU server,
+execute this inside the GPUQ allocation, using its assigned GPU IDs:
+
+```bash
+CAPTURE_GPUS=0,1,2,3 bash scripts/local/capture-latent.sh run \
+  "$CAPTURE_IMAGE" "$CAPTURE_MODEL" \
+  "$CAPTURE_BASE/scratch" "$CAPTURE_BASE/published" 3600 30312
+```
+
+Preparation above selects schema 2, audited capture and concurrency two. For a
+later shared-only rollout (`audit_shared=false`), obtain a matching
+`shared-audit-proof.json` from a completed audited pilot; do not disable auditing
+or copy an unrelated proof to bypass this requirement. Scratch
 and publication destinations must be distinct and writable. Scratch must retain
 50 GiB free; existing client staging/publication limits and resume checks remain.
 Do not use a read-only mount such as the server's `/mnt/public_data` as output.
@@ -76,7 +128,7 @@ No model is loaded by this check:
 ```bash
 docker run --rm --pull never --network none \
   --mount "type=bind,src=$PWD,dst=/capture-repo,readonly" \
-  --mount type=bind,src=/data/capture/published,dst=/published \
+  --mount "type=bind,src=$CAPTURE_BASE/published,dst=/published" \
   -e PYTHONPATH=/opt/sglang-runtime-fixes:/sgl-workspace/sglang-remnant/python:/capture-repo \
   -e PYTHONDONTWRITEBYTECODE=1 \
   -e REMNANT_CAPTURE_VALIDATION_ROOT=/published \
@@ -240,6 +292,9 @@ changes to the VDI before using this command. Keep pulls outside the GPUQ job.
 One job reserves GPUs 4–7 for two sequential, unprofiled 1,200-second runs.
 Both use seed 20260919, the same replay manifest, and the existing cache flush.
 GPUQ waits for the specified GPUs; choose another block/port if needed.
+For shared service-account execution, the examples scope Git trust to the parent,
+both forks and nested CUTLASS for the source preflight. No global Git setting or
+wildcard trust is added.
 
 ```bash
 cd /home/jovyan/winstonxcai/flash-optimizations
@@ -253,6 +308,11 @@ gpuq run --user winstonxcai --project flash-optimizations \
   --workload-key remnant-ttft-c24 --expected-duration 50m \
   --timeout 5400 --detach -- bash -lc '
 set -euo pipefail
+export GIT_CONFIG_COUNT=4
+export GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$PWD"
+export GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1="$PWD/third_party/sglang"
+export GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2="$PWD/third_party/flashmla"
+export GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3="$PWD/third_party/flashmla/csrc/cutlass"
 export SGLANG_ROOT_CT="/mnt/host_root$PWD/third_party/sglang"
 export SGLANG_PY="$SGLANG_ROOT_CT/python"
 export LOG_HOST="$PWD/logs/ttft-c24-$(date +%Y%m%d_%H%M%S)"
@@ -367,9 +427,11 @@ gpuq run --user winstonxcai --project flash-optimizations \
   --workload-key remnant-node-c24 \
   --expected-duration 45m --timeout 5400 --detach -- bash -lc '
 set -euo pipefail
-export GIT_CONFIG_COUNT=2
+export GIT_CONFIG_COUNT=4
 export GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$PWD"
 export GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1="$PWD/third_party/sglang"
+export GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2="$PWD/third_party/flashmla"
+export GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3="$PWD/third_party/flashmla/csrc/cutlass"
 export NSYS_GRAPH_TRACE=node
 export SGLANG_ROOT_CT="/mnt/host_root$PWD/third_party/sglang"
 export SGLANG_PY="$SGLANG_ROOT_CT/python"
@@ -418,7 +480,7 @@ adds overhead; use unprofiled controls for serving acceptance.
 
 Ensure the image is ready first. Change `MODE` and `CONCURRENCY` to select the
 control. The job stops its server on exit and saves its server log. `--output`
-is a directory. Git trust is scoped to the job's two repositories.
+is a directory. Git trust is scoped to the parent, both forks and nested CUTLASS.
 
 ```bash
 mkdir -p logs
@@ -431,9 +493,11 @@ gpuq run --user winstonxcai --project flash-optimizations \
   --workload-key remnant-native-unprofiled-c24 \
   --expected-duration 25m --timeout 7200 --detach -- bash -lc '
 set -euo pipefail
-export GIT_CONFIG_COUNT=2
+export GIT_CONFIG_COUNT=4
 export GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$PWD"
 export GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1="$PWD/third_party/sglang"
+export GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2="$PWD/third_party/flashmla"
+export GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3="$PWD/third_party/flashmla/csrc/cutlass"
 cleanup() { bash scripts/local/serve.sh "$MODE" stop; }
 trap cleanup EXIT
 bash scripts/local/serve.sh "$MODE"

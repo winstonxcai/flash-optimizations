@@ -11,7 +11,10 @@ The learned rank-64 policy reduces mean development attention-output error from 
 This method is a learned extension to Remnant's training-free TopMag50 baseline; only the pruning scorers are trained.
 
 Maintained implementation and CPU checks: [training pipeline](../training/README.md).
-The ignored experiment workspace is historical evidence, not a runtime dependency.
+See [data/checkpoint access](../training/README.md#cache-and-checkpoints) and
+[shared-image capture setup](../scripts/local/README.md#isolated-latent-kv-capture).
+Historical mechanism studies below retain their original findings; their archived
+sources are separate from the maintained training/evaluation commands.
 
 ## 1. Data and experimental scope
 
@@ -166,7 +169,28 @@ The norm includes all 64 heads. Compare against magnitude-only TopMag50 using th
 
 Reductions are versus TopMag50. p95 is across the 2,100 query-layer errors, not issue means.
 
-Evidence under `experiments/attention-pruning/`: `continued-result.json` and `continued-best-policy.json` for the uniform run; `anchored-best-policy.json` for the per-layer mix. Development was repeatedly used for selection; fresh-test significance, task quality and serving overhead remain unvalidated.
+Historical result/policy summaries are supplied with the external data bundle.
+Checkpoints remain under `~/.cache/remnant/attention-pruning/`: the uniform run
+uses `continued-all-results-001/continued-all-001/selected-layer-XX.json`; the
+per-layer mix substitutes `anchored-pilot-001/outputs/relaxed-layer-08.json` and
+`anchored-layer-12.json`. The [training guide](../training/README.md#cache-and-checkpoints)
+lists retained comparison/sweep records and policy relocation instructions.
+Development was repeatedly used for selection; fresh-test significance, task
+quality and serving overhead remain unvalidated.
+
+### Retention-budget comparisons
+
+The maintained [comparison and sweep commands](../training/README.md#compare-masks-and-sweep-retention)
+evaluate magnitude, structured and frozen learned masks on the same 2,100
+development query-layer examples. Training remains at 256 survivors; evaluation
+sweeps 64–448 in steps of 64. The sweep's structured mask is **N:8**, including
+**4:8 at 256**, whereas the separate six-row comparison uses **2:4 at 256**.
+Non-256 replay is an offline numerical simulation, not serving validation.
+
+- [Mean relative output-L2 curves](figures/attention-error-mean.png): average
+  queries within issue/layer, then layers and issues equally.
+- [p95 relative output-L2 curves](figures/attention-error-p95.png): the pooled
+  95th percentile of query-layer errors, not an uncertainty interval.
 
 ## 5. Interpretation and limitations
 
@@ -363,8 +387,11 @@ a substantial gain in prior experiments. Keep the final development target at
 guards and a subsequent fresh-test evaluation. Neither these failures nor the
 LP infeasibility of particular masks proves that 25% is impossible.
 
-Protocol and evidence locations are recorded in
-`experiments/attention-pruning/README.md` under the mask-search investigation.
+Historical mask-search evidence is archived under
+`~/.cache/remnant/attention-pruning/`: `mask-headroom-20261012-001/`,
+`shared-mask-transfer-20261012-001/`, `absolute-margin-20261012-001/` and
+`full-mask-20261012-001/`. Request the corresponding source snapshots with these
+records; the maintained evaluator does not rerun the retired oracle/student probes.
 
 ## 8. Query geometry across layers and heads — 2026-10-12
 
@@ -538,5 +565,8 @@ the audit recomputed every prior and exactly replayed all selected fitting
 and holdout metrics. Source archives, calibration receipts and all checkpoints
 are preserved. No Modal job, production change or weight promotion occurred.
 
-Operational protocols, reproduction commands and run history remain in the
-separate study workspace at `experiments/attention-pruning/README.md`.
+Use the [training guide](../training/README.md) for maintained fitting,
+comparison and retention-sweep commands. Historical diagnostic records and
+their source snapshots remain in the external archives named above; obtain
+them from Winston when reproducing a retired study. A current-code rerun is a
+new measurement, not a replacement for those historical results.
