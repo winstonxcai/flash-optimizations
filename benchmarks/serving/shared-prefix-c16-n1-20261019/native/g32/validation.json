@@ -1,0 +1,8 @@
+{
+  "mode": "native",
+  "groups": 32,
+  "valid": true,
+  "requests_per_s": 0.5446472701039278,
+  "cache_hit_pct": 82.93572433589655,
+  "uncached_prefill_tokens": 29389195
+}
