@@ -10,6 +10,9 @@ The learned rank-64 policy reduces mean development attention-output error from 
 
 This method is a learned extension to Remnant's training-free TopMag50 baseline; only the pruning scorers are trained.
 
+Maintained implementation and CPU checks: [training pipeline](../training/README.md).
+The ignored experiment workspace is historical evidence, not a runtime dependency.
+
 ## 1. Data and experimental scope
 
 - Capture untouched DeepSeek-V4-Flash-0731, revision `7872f01b1d1fe23eabc4c98b48bffcef5a386062`, on TP4: 50 OpenHands issues, one per repository, naturally 100–121k-token prompts. Generate to EOS/tool-call completion; do not execute tools.
