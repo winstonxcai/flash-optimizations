@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "purpose": "Make the original Native C24 SLO run visible as repeat 1 of the historical-plus-repeat aggregate in docs/report.md.",
+  "run_label": "repeat-1",
+  "original_run_id": "20260909_081547",
+  "original_run_path": "raw/lswb-replay/native-slo-c24/20260909_081547",
+  "curated_run_path": "benchmarks/lswb-replay/native-c24-historical-slo/repeat-1/20260909_081547",
+  "archive_policy": "Complete original archive retained unchanged; only compact summary and provenance files copied into benchmarks.",
+  "comparison_scope": "Historical Native C24 SLO aggregate; separate from c24-native-packed256-n3-20261018.",
+  "review_scope": "Byte-identical metadata copies, saved completion status, throughput arithmetic and 10-second TTFT-p90 check; no new serving or GPU validation.",
+  "limitations": [
+    "One original run is included here; historical repeats 2 and 3 remain linked from README.md and docs/report.md.",
+    "Adapter hashes differ between the original and later historical repeats.",
+    "Saved harness validity is not numerical or coding-task-quality validation."
+  ],
+  "original_files": [
+    {
+      "path": "client/REPORT.md",
+      "bytes": 766,
+      "sha256": "3ea510d3fba5470d587344796335782b01ce034674e1c6ae24b62587605da76f",
+      "curated_path": "repeat-1/20260909_081547/client/REPORT.md"
+    },
+    {
+      "path": "client/active_requests.jsonl",
+      "bytes": 812154,
+      "sha256": "d289b8f0d9e3fe830a1480fa44d1bd6fee33f5c1e022666a800ef8d50e2cdf38",
+      "curated_path": null
+    },
+    {
+      "path": "client/dataset_manifest.json",
+      "bytes": 1816107,
+      "sha256": "cc70d920a5fc01f9a9a3a2a96cccd3d1c5a511a2dde8a91fd8d3a06668eb03ca",
+      "curated_path": null
+    },
+    {
+      "path": "client/done.json",
+      "bytes": 193,
+      "sha256": "4e71aef19983c2d81257e5c7df829ab9c6deef354d0df7075e28bd5c96a8de6f",
+      "curated_path": "repeat-1/20260909_081547/client/done.json"
+    },
+    {
+      "path": "client/manifest.json",
+      "bytes": 1624,
+      "sha256": "42c95251a0957d23b0d78373148366f6062fbcd9484882a339a46b12c7b71d72",
+      "curated_path": "repeat-1/20260909_081547/client/manifest.json"
+    },
+    {
+      "path": "client/requests.jsonl",
+      "bytes": 881246,
+      "sha256": "885c09c9998f48dc2e2be5b5435f697834d7c439f423c3cac239d489fb14952f",
+      "curated_path": null
+    },
+    {
+      "path": "client/responses.jsonl",
+      "bytes": 1835234,
+      "sha256": "c9c0720ca35b1418af2411f688830c144836cea1da839eb8bd9fe0841914f47c",
+      "curated_path": null
+    },
+    {
+      "path": "client/summary.json",
+      "bytes": 2024,
+      "sha256": "5b4157ec9bdd1b4285c92a3e8b67b5e0ffed67ff61c0a8ddca5c73346a382311",
+      "curated_path": "repeat-1/20260909_081547/client/summary.json"
+    },
+    {
+      "path": "client.log",
+      "bytes": 226,
+      "sha256": "34f75c332f9848ca85f246705d1d42063cb718c79d60372607e483033959fd24",
+      "curated_path": null
+    },
+    {
+      "path": "gpu-samples.csv",
+      "bytes": 6040,
+      "sha256": "d5fa4d7dab717d28449f0fbb67e358a095cc7ce811be2bb6364d4aaad4374ca6",
+      "curated_path": null
+    }
+  ]
+}
