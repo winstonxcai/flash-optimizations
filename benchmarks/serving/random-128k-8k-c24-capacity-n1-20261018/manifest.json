@@ -1,0 +1,317 @@
+{
+  "schema_version": 1,
+  "comparison": "serving-128k-8k-20261018",
+  "input_tokens": 131072,
+  "output_tokens": 8192,
+  "n_per_cell": 1,
+  "sources": [
+    {
+      "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/serving/native-bs-128k-o8192-c24-20261018_214313-29880/20261018_214625-CzkfhG",
+      "transferred_path": "native-bs-128k-o8192-c24-20261018_214313-29880/20261018_214625-CzkfhG",
+      "original_files": [
+        {
+          "path": "config.json",
+          "sha256": "4f017693a75ed8d8812b83dd7c6b0ff6db289a9730ac30ec94bd439f278a3bf6"
+        },
+        {
+          "path": "server-info.json",
+          "sha256": "59cdc5ca68d602c9e782eae810dc2215f0c5b31cee7e4795b09ef2c0a09cd2a8"
+        },
+        {
+          "path": "client-source.json",
+          "sha256": "ce93dbf0862e791301ffe552fbc60f50b7e6ed22d4eaf032e07e066e9c9782dc"
+        },
+        {
+          "path": "image-at-collection.txt",
+          "sha256": "16131013da4dcded6a39655d7659a767756b6a1e3628e83e1df25b27f9f41c3b"
+        },
+        {
+          "path": "image-id.txt",
+          "sha256": "16131013da4dcded6a39655d7659a767756b6a1e3628e83e1df25b27f9f41c3b"
+        },
+        {
+          "path": "launcher-sha256.txt",
+          "sha256": "f037bfa24ef921339a548839d3ae97a83e0d3c096e322aa2b1b92bb8fd2cfa61"
+        },
+        {
+          "path": "warmup.jsonl",
+          "sha256": "9e6166dd453dbe5635a552574ec7acf5b6cc72e5a9fce4d10bfb2e8a17030056",
+          "derived_file": "warmup.json",
+          "omitted_fields": [
+            "generated_texts",
+            "itls"
+          ]
+        },
+        {
+          "path": "measured.jsonl",
+          "sha256": "0f5da175949ff8b6d194894dff0a72401f821aee240ca6f7cd8e986df2959a83",
+          "derived_file": "measured.json",
+          "omitted_fields": [
+            "generated_texts",
+            "itls"
+          ]
+        }
+      ]
+    },
+    {
+      "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/serving/triton-bs-128k-o8192-c24-20261018_214313-11210/20261018_214626-FoqLeC",
+      "transferred_path": "triton-bs-128k-o8192-c24-20261018_214313-11210/20261018_214626-FoqLeC",
+      "original_files": [
+        {
+          "path": "config.json",
+          "sha256": "4f017693a75ed8d8812b83dd7c6b0ff6db289a9730ac30ec94bd439f278a3bf6"
+        },
+        {
+          "path": "server-info.json",
+          "sha256": "c45a898fc0c3b73e9e114270213690a877c22598ddab46c79855e1b7f5c654a9"
+        },
+        {
+          "path": "client-source.json",
+          "sha256": "ce93dbf0862e791301ffe552fbc60f50b7e6ed22d4eaf032e07e066e9c9782dc"
+        },
+        {
+          "path": "image-at-collection.txt",
+          "sha256": "16131013da4dcded6a39655d7659a767756b6a1e3628e83e1df25b27f9f41c3b"
+        },
+        {
+          "path": "image-id.txt",
+          "sha256": "16131013da4dcded6a39655d7659a767756b6a1e3628e83e1df25b27f9f41c3b"
+        },
+        {
+          "path": "launcher-sha256.txt",
+          "sha256": "f037bfa24ef921339a548839d3ae97a83e0d3c096e322aa2b1b92bb8fd2cfa61"
+        },
+        {
+          "path": "warmup.jsonl",
+          "sha256": "f0da59bcbdd8d92ac0bfd5885b1909d407d9c9104f91a39ecae478415de4371f",
+          "derived_file": "warmup.json",
+          "omitted_fields": [
+            "generated_texts",
+            "itls"
+          ]
+        },
+        {
+          "path": "measured.jsonl",
+          "sha256": "636f1c1a3af7b034eb2c3374a56404c859bca998afacaaed6bf2da10e9b990c9",
+          "derived_file": "measured.json",
+          "omitted_fields": [
+            "generated_texts",
+            "itls"
+          ]
+        }
+      ]
+    },
+    {
+      "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/serving/kernel-bs-128k-o8192-c24-20261018_214313-9428/20261018_221256-fnxbv8",
+      "transferred_path": "kernel-bs-128k-o8192-c24-20261018_214313-9428/20261018_221256-fnxbv8",
+      "original_files": [
+        {
+          "path": "config.json",
+          "sha256": "4f017693a75ed8d8812b83dd7c6b0ff6db289a9730ac30ec94bd439f278a3bf6"
+        },
+        {
+          "path": "server-info.json",
+          "sha256": "ead064d7e8e8ac6b457bc5ad6dce5b0196916bc7811eefceee21db1b85eb8809"
+        },
+        {
+          "path": "client-source.json",
+          "sha256": "ce93dbf0862e791301ffe552fbc60f50b7e6ed22d4eaf032e07e066e9c9782dc"
+        },
+        {
+          "path": "image-at-collection.txt",
+          "sha256": "16131013da4dcded6a39655d7659a767756b6a1e3628e83e1df25b27f9f41c3b"
+        },
+        {
+          "path": "image-id.txt",
+          "sha256": "16131013da4dcded6a39655d7659a767756b6a1e3628e83e1df25b27f9f41c3b"
+        },
+        {
+          "path": "launcher-sha256.txt",
+          "sha256": "f037bfa24ef921339a548839d3ae97a83e0d3c096e322aa2b1b92bb8fd2cfa61"
+        },
+        {
+          "path": "warmup.jsonl",
+          "sha256": "33d16a765279c8cf0410daea65fcdbb5ff32a00be1557994308c3ef62add73be",
+          "derived_file": "warmup.json",
+          "omitted_fields": [
+            "generated_texts",
+            "itls"
+          ]
+        },
+        {
+          "path": "measured.jsonl",
+          "sha256": "fd9e44ebf37ff5ab6b4ff12d2269f69b9cd8d0405661f3605d8064c47ef235c5",
+          "derived_file": "measured.json",
+          "omitted_fields": [
+            "generated_texts",
+            "itls"
+          ]
+        }
+      ]
+    },
+    {
+      "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/serving/native-bs-128k-o8192-cauto-20261018_214318-16723/20261018_221403-qjt7aN",
+      "transferred_path": "native-bs-128k-o8192-cauto-20261018_214318-16723/20261018_221403-qjt7aN",
+      "original_files": [
+        {
+          "path": "config.json",
+          "sha256": "1db027dad78c6f3813dcfff1b95a7a691efe2c0257d77945b815be61114b6d50"
+        },
+        {
+          "path": "server-info.json",
+          "sha256": "244f4b71f623a23132dd4e329ad5871e2aeda68fccf96f84625db910da725d9d"
+        },
+        {
+          "path": "client-source.json",
+          "sha256": "ce93dbf0862e791301ffe552fbc60f50b7e6ed22d4eaf032e07e066e9c9782dc"
+        },
+        {
+          "path": "image-at-collection.txt",
+          "sha256": "16131013da4dcded6a39655d7659a767756b6a1e3628e83e1df25b27f9f41c3b"
+        },
+        {
+          "path": "image-id.txt",
+          "sha256": "16131013da4dcded6a39655d7659a767756b6a1e3628e83e1df25b27f9f41c3b"
+        },
+        {
+          "path": "launcher-sha256.txt",
+          "sha256": "f037bfa24ef921339a548839d3ae97a83e0d3c096e322aa2b1b92bb8fd2cfa61"
+        },
+        {
+          "path": "warmup.jsonl",
+          "sha256": "2694c1c33c9cb496bc61f166da99dacf893a782572288ea07d80659761452d89",
+          "derived_file": "warmup.json",
+          "omitted_fields": [
+            "generated_texts",
+            "itls"
+          ]
+        },
+        {
+          "path": "measured.jsonl",
+          "sha256": "af9c437386d67867f5bee6da1c2312ef53b5fa7de0945e8255acdcc9378b7ed2",
+          "derived_file": "measured.json",
+          "omitted_fields": [
+            "generated_texts",
+            "itls"
+          ]
+        }
+      ]
+    },
+    {
+      "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/serving/triton-bs-128k-o8192-cauto-20261018_214318-9742/20261018_223930-fConi0",
+      "transferred_path": "triton-bs-128k-o8192-cauto-20261018_214318-9742/20261018_223930-fConi0",
+      "original_files": [
+        {
+          "path": "config.json",
+          "sha256": "cc8c004da2f3cba3bc53c09c5602ce7406ba747a8ca67879ff0950226b8b1f62"
+        },
+        {
+          "path": "server-info.json",
+          "sha256": "872428d1907f0b1b61344fd42037f31d01bfbe576d3eca2b75d6dfc293822dd8"
+        },
+        {
+          "path": "client-source.json",
+          "sha256": "ce93dbf0862e791301ffe552fbc60f50b7e6ed22d4eaf032e07e066e9c9782dc"
+        },
+        {
+          "path": "image-at-collection.txt",
+          "sha256": "16131013da4dcded6a39655d7659a767756b6a1e3628e83e1df25b27f9f41c3b"
+        },
+        {
+          "path": "image-id.txt",
+          "sha256": "16131013da4dcded6a39655d7659a767756b6a1e3628e83e1df25b27f9f41c3b"
+        },
+        {
+          "path": "launcher-sha256.txt",
+          "sha256": "f037bfa24ef921339a548839d3ae97a83e0d3c096e322aa2b1b92bb8fd2cfa61"
+        },
+        {
+          "path": "warmup.jsonl",
+          "sha256": "da77c2d41dd8c6212cefde7f353f4d1380f8340143342a53607f193eb278c041",
+          "derived_file": "warmup.json",
+          "omitted_fields": [
+            "generated_texts",
+            "itls"
+          ]
+        },
+        {
+          "path": "measured.jsonl",
+          "sha256": "d7ee1f93ef4cfe0032aef5da52e78e4237647494209b0d9e98d612267c9af5e9",
+          "derived_file": "measured.json",
+          "omitted_fields": [
+            "generated_texts",
+            "itls"
+          ]
+        }
+      ]
+    },
+    {
+      "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/serving/kernel-bs-128k-o8192-cauto-20261018_214318-10437/20261018_224200-pfX80I",
+      "transferred_path": "kernel-bs-128k-o8192-cauto-20261018_214318-10437/20261018_224200-pfX80I",
+      "original_files": [
+        {
+          "path": "config.json",
+          "sha256": "cc8c004da2f3cba3bc53c09c5602ce7406ba747a8ca67879ff0950226b8b1f62"
+        },
+        {
+          "path": "server-info.json",
+          "sha256": "6c2c2c2b81478373401124c701c4fc277540364b7b781d7def6db845a54657dd"
+        },
+        {
+          "path": "client-source.json",
+          "sha256": "ce93dbf0862e791301ffe552fbc60f50b7e6ed22d4eaf032e07e066e9c9782dc"
+        },
+        {
+          "path": "image-at-collection.txt",
+          "sha256": "16131013da4dcded6a39655d7659a767756b6a1e3628e83e1df25b27f9f41c3b"
+        },
+        {
+          "path": "image-id.txt",
+          "sha256": "16131013da4dcded6a39655d7659a767756b6a1e3628e83e1df25b27f9f41c3b"
+        },
+        {
+          "path": "launcher-sha256.txt",
+          "sha256": "f037bfa24ef921339a548839d3ae97a83e0d3c096e322aa2b1b92bb8fd2cfa61"
+        },
+        {
+          "path": "warmup.jsonl",
+          "sha256": "ed1ebf0eac9ceed3286046207e1f455019dfc430db8238621d4c979f6e8fe33a",
+          "derived_file": "warmup.json",
+          "omitted_fields": [
+            "generated_texts",
+            "itls"
+          ]
+        },
+        {
+          "path": "measured.jsonl",
+          "sha256": "9c17daf941fe15e5b016608d6dba59e8f52a6a87d904bd02345f554a18919e47",
+          "derived_file": "measured.json",
+          "omitted_fields": [
+            "generated_texts",
+            "itls"
+          ]
+        }
+      ]
+    }
+  ],
+  "curated_root": "benchmarks/serving/random-128k-8k-c24-capacity-n1-20261018",
+  "previous_curated_root": "benchmarks/serving/128k-8k-20261018",
+  "curation_review": {
+    "date": "2026-10-18",
+    "source_parent_commit": "447111f",
+    "runs_checked": 6,
+    "phases_checked": 12,
+    "image": "sha256:09dfea18bd2c4168481710dcb1830a2c2efdb8e8f45f9d1ad7bb85a1b7ff48ab",
+    "client_python_tree_sha256": "9f5daca9faffb58ea1b2e56d0c0bc1c36224a653f95c4d0415f13d5126a8829e",
+    "dataset_sha256": "35f0e213ce091ed9b9af2a1f0755e9d39f9ccec34ab281cd4ca60d70f6479ba4",
+    "script_sha256": "07c8424b0e85b3090f2b763c3d6a79fb35c95a9bd3c9bfea1071a7b33609e557",
+    "script_matches_local": true,
+    "seed": 42,
+    "settings_matched": true,
+    "launcher_sha256": "f037bfa24ef921339a548839d3ae97a83e0d3c096e322aa2b1b92bb8fd2cfa61",
+    "lengths_counts_throughput_recomputed": true,
+    "n_per_cell": 1,
+    "source_identity_limit": "Client tree hash and image IDs match; no loaded runtime tree/extension content manifest or GPU telemetry was retained.",
+    "evidence_status": "single_run_study_repeat_before_performance_claim"
+  }
+}

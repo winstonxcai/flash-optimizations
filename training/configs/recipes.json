@@ -1,0 +1,38 @@
+{
+  "rank64": {
+    "epochs": 40,
+    "temperature_start": 0.015,
+    "temperature_end": 0.008,
+    "gradient_mode": "straight_through",
+    "learning_rate_scale": 0.5,
+    "train_batch_size": 8,
+    "bound": 0.5
+  },
+  "continuation": {
+    "epochs": 80,
+    "temperature_start": 0.008,
+    "temperature_end": 0.004,
+    "gradient_mode": "straight_through",
+    "learning_rate_scale": 0.5,
+    "train_batch_size": 8,
+    "bound": 0.5
+  },
+  "relaxed": {
+    "epochs": 32,
+    "temperature_start": 0.008,
+    "temperature_end": 0.004,
+    "gradient_mode": "relaxed",
+    "learning_rate_scale": 0.5,
+    "train_batch_size": 8,
+    "bound": 0.5
+  },
+  "anchored": {
+    "epochs": 32,
+    "temperature_start": 0.008,
+    "temperature_end": 0.004,
+    "gradient_mode": "anchored",
+    "learning_rate_scale": 0.5,
+    "train_batch_size": 8,
+    "bound": 0.5
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "mode": "triton",
+  "groups": 40,
+  "valid": true,
+  "requests_per_s": 0.44060663314839105,
+  "cache_hit_pct": 77.89454226352474,
+  "uncached_prefill_tokens": 38071446
+}

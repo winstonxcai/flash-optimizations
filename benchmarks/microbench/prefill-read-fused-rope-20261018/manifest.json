@@ -1,0 +1,279 @@
+{
+  "status": "passed",
+  "question": "Does fusing Packed prefill unpack and RoPE eliminate the measured reconstruction penalty without changing results?",
+  "decision": "retain opt-in fusion as partial improvement; no Native speedup or production promotion",
+  "protocol": "remnant-prefill-read-v1",
+  "schema_version": 2,
+  "prefill_reader": "fused",
+  "run_id": "prefill-read-fused-rope-20261018T150514Z",
+  "profile": "poohthewinniechurchill",
+  "image": "im-FV3WjUGSdwvvdMXnzY4kXG",
+  "source_heads_at_launch": {
+    ".": "e5643d6457d021bb84423068d975a3eb3b4963b2",
+    "third_party/sglang": "0098b4277fbd1d9be6a6761683014869e13fba06",
+    "third_party/flashmla": "57e95603ff504f8f626505d82b07c55d606b947b"
+  },
+  "source_path": "raw/experiments/prefill-read-fused-rope/20261018T144353Z/source",
+  "dirty_source_content_included": true,
+  "source_archive": {
+    "path": "microbench/prefill-read-fused-rope-20261018T150514Z/submitted-sources.tar.gz",
+    "sha256": "7584296515cfedf28b181255716d08338cd349739afadfde93498241b3032953"
+  },
+  "uploaded_source_trees": {
+    "sglang": {
+      "sha256": "edb96f0b0de636c6d390c541e4399896d1e6bdcdcf424e4b2db1e793d5819b90",
+      "files": 4408
+    },
+    "flashmla": {
+      "sha256": "2a08ab536010993b8b4d67d8f3a205dd085c4bffda0182cd7d653b204325490b",
+      "files": 1104
+    }
+  },
+  "build": {
+    "sources": {
+      "sglang": "edb96f0b0de636c6d390c541e4399896d1e6bdcdcf424e4b2db1e793d5819b90",
+      "flashmla": "2a08ab536010993b8b4d67d8f3a205dd085c4bffda0182cd7d653b204325490b"
+    },
+    "torch": "2.13.0+cu130",
+    "cuda": "13.0",
+    "arch": "sm_90a",
+    "native_dtype": "float32",
+    "cpu_import_driver_stub_sha256": "67f959d1ab945005774464fcbf5a10722f97d0781b5800dd8636dc56747c2735",
+    "binaries": {
+      "/usr/local/lib/python3.12/dist-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so": "52ad642d207d15fbeaa581ed80816def544a04cda59de439b2936470aa78d857",
+      "/usr/local/lib/python3.12/dist-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so": "3fd5951947384ba697a98fe0727e283b393a3769515cda518e2d56f12267f9f0",
+      "/opt/remnant-native-store.so": "bb735f2ee514d2d19f10ab8ad411c7898fb350eda78aab0917f5ea9d0b2c49a2"
+    },
+    "nvcc": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:58:59_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0\n",
+    "ncu": "NVIDIA (R) Nsight Compute Command Line Profiler\nCopyright (c) 2018-2025 NVIDIA Corporation\nVersion 2025.3.1.0 (build 36398880) (public-release)\n"
+  },
+  "environment": {
+    "device": "NVIDIA H100 80GB HBM3",
+    "capability": [
+      9,
+      0
+    ],
+    "python": "3.12.3 (main, Jun 19 2026, 12:46:00) [GCC 13.3.0]",
+    "torch": "2.13.0+cu130",
+    "cuda": "13.0",
+    "triton": "3.7.1",
+    "tvm_ffi": "0.1.11"
+  },
+  "commands": {
+    "timing": {
+      "argv": [
+        "/Users/poohthewinnie/.local/bin/modal",
+        "run",
+        "--detach",
+        "/Users/poohthewinnie/Documents/Programming/flash-optimizations/raw/experiments/prefill-read-fused-rope/20261018T144353Z/source/scripts/modal/kernels.py::benchmark_kernels",
+        "--run-id",
+        "prefill-read-fused-rope-20261018T150514Z",
+        "--suite",
+        "prefill-read",
+        "--prefill-reader",
+        "fused"
+      ],
+      "source_overrides": {
+        "REMNANT_SGLANG_SOURCE_OVERRIDE": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/raw/experiments/prefill-read-fused-rope/20261018T144353Z/source/third_party/sglang",
+        "REMNANT_FLASHMLA_SOURCE_OVERRIDE": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/raw/experiments/prefill-read-fused-rope/20261018T144353Z/source/third_party/flashmla"
+      },
+      "profile": "poohthewinniechurchill"
+    },
+    "capture": {
+      "argv": [
+        "/Users/poohthewinnie/.local/bin/modal",
+        "run",
+        "--detach",
+        "/Users/poohthewinnie/Documents/Programming/flash-optimizations/raw/experiments/prefill-read-fused-rope/20261018T144353Z/source/scripts/modal/kernels.py::profile_kernels",
+        "--run-id",
+        "prefill-read-fused-rope-20261018T150514Z",
+        "--suite",
+        "prefill-read",
+        "--prefill-reader",
+        "fused",
+        "--max-seconds",
+        "850"
+      ],
+      "source_overrides": {
+        "REMNANT_SGLANG_SOURCE_OVERRIDE": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/raw/experiments/prefill-read-fused-rope/20261018T144353Z/source/third_party/sglang",
+        "REMNANT_FLASHMLA_SOURCE_OVERRIDE": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/raw/experiments/prefill-read-fused-rope/20261018T144353Z/source/third_party/flashmla"
+      },
+      "profile": "poohthewinniechurchill"
+    },
+    "local_export": {
+      "status": "passed",
+      "source_sha256": "3d3a96e1bdbdae6e67366153309d3834825284038e90ba43bac750611676aa00",
+      "reader": "Nsight Compute 2026.3.1.0 report API",
+      "operations": 108,
+      "launches": 360,
+      "previous_CLI_operations_cross_checked": 86,
+      "new_allocation": false,
+      "command": [
+        "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/python3",
+        "raw/experiments/prefill-read-fused-rope/20261018T144353Z/export_profiles.py",
+        "--ncu-python",
+        "/Applications/NVIDIA Nsight Compute.app/Contents/MacOS/python"
+      ]
+    }
+  },
+  "coverage": {
+    "status": "passed",
+    "operations": 108,
+    "launches": 360,
+    "metrics_per_launch": 6,
+    "unique_NVTX_ranges": 108,
+    "reports": {
+      "prefill-read-packed256.ncu-rep": {
+        "bytes": 12489736,
+        "sha256": "7d8cdc1a96eacb8f2fb7d7e20152b6e6fa2f4810af9a50c86a0c47fc082b9f85"
+      },
+      "prefill-read-packed192.ncu-rep": {
+        "bytes": 12490168,
+        "sha256": "c13f897519b54d71cd147a344bf1d9a1fc9fc98b47398cfdd1eb9570fc27e02e"
+      },
+      "prefill-read-native.ncu-rep": {
+        "bytes": 12413255,
+        "sha256": "27de5a82185dd76b6fac65bb538d2a9cdb4da20b735cd5d32d2f0c4d87b8dc70"
+      }
+    },
+    "all_filters_partition_full_reports": true,
+    "all_sources_binaries_inputs_match_timing": true,
+    "separate_rope_launches": 0,
+    "CLI_cross_checked_operations": 86,
+    "local_reader": {
+      "python": "3.11.14 (main, Feb 12 2026, 00:41:29) [Clang 21.1.4 ]",
+      "module_sha256": "ddccb43c0450b451d1b0bc7c4ecb14b2b0cc19c8c1c323d217f4beaa3ce97111",
+      "extension_sha256": "cb7e61df5d7e7d0328da1c37ded59e5ce77fbd90abee1b097b969c776dc24d00",
+      "version": "2026.3.1.0 (build 38829034) (public-release)"
+    },
+    "GPU_capture_job_status": "failed during CSV export after all captures completed",
+    "export_completion": "local report API; no new remote allocation"
+  },
+  "apps": {
+    "timing": "ap-E5GQXyAs5ajZiO704urGy8",
+    "capture": "ap-5wrmAOsQxXf1LGBTEeaMR3",
+    "blocked_cpu_export": "ap-pShdafvBnrOwfExfZ5QRr7",
+    "all_stopped_zero_tasks": true
+  },
+  "model_load": false,
+  "model_volumes": false,
+  "automatic_retries": 0,
+  "budget": {
+    "additional_cap_usd": 4,
+    "original_cap_usd": 8,
+    "baseline_compute_usd": 28.09956901,
+    "latest_compute_usd": 30.07879665,
+    "latest_delta_usd": 1.9792276400000013,
+    "conservative_observed_delta_usd": 1.9926732200000004,
+    "prior_study_high_water_usd": 3.90425653,
+    "storage_and_credit_adjustments_excluded": true,
+    "billing_can_settle": true
+  },
+  "original_capture_job": {
+    "status": "failed during CSV export after all 108 operations captured",
+    "result_sha256": "50de00466b18538b17d17348ea072eafc5dcaf4113df52d6683572279101ad9d",
+    "CPU_recovery": {
+      "reason": "all captures passed; GPU job deadline reached during final CSV exports",
+      "new_gpu_allocation": false,
+      "timeout_seconds": 300,
+      "automatic_retries": 0,
+      "source_sha256": "db9b97de70bf182ab85fb5b570912e3cd5c9c9161410e73c2d1bc066fe8a8784",
+      "argv": [
+        "/Users/poohthewinnie/.local/bin/modal",
+        "run",
+        "--detach",
+        "/Users/poohthewinnie/Documents/Programming/flash-optimizations/raw/experiments/prefill-read-fused-rope/20261018T144353Z/export_profiles.py::export_profiles",
+        "--run-id",
+        "prefill-read-fused-rope-20261018T150514Z",
+        "--expected-files",
+        "{\"prefill-read-native.json\":\"2fd0f618a7c1b5f96633594a3149d4c9f37b4afeed6d86112d3bd80062b053af\",\"prefill-read-native.ncu-rep\":\"27de5a82185dd76b6fac65bb538d2a9cdb4da20b735cd5d32d2f0c4d87b8dc70\",\"prefill-read-packed192.json\":\"66798344cf5a98f91668aaf57c3d0ab1a4e46b8e962a54be46ebb0483aed2eae\",\"prefill-read-packed192.ncu-rep\":\"c13f897519b54d71cd147a344bf1d9a1fc9fc98b47398cfdd1eb9570fc27e02e\",\"prefill-read-packed256.json\":\"17cf9708aea566154d50360a9ae258085a578ea452caab352a278396e42fe48e\",\"prefill-read-packed256.ncu-rep\":\"7d8cdc1a96eacb8f2fb7d7e20152b6e6fa2f4810af9a50c86a0c47fc082b9f85\",\"result.json\":\"50de00466b18538b17d17348ea072eafc5dcaf4113df52d6683572279101ad9d\",\"build-manifest.json\":\"1ada1b5f1f9f2609f71bd96b890e9c57f032aa5ba35688a0cea52a0a14c73ca1\"}",
+        "--contract-sha256",
+        "1b73a8971c6aa9759792f224cceac4e5398628a8756922f1dd8ecd2285eaf2b2"
+      ],
+      "status": "blocked before allocation by workspace billing cycle spend limit",
+      "app_id": "ap-pShdafvBnrOwfExfZ5QRr7",
+      "archive_sha256": "0a19666a7a2d868155e5677bd96b5882051ff009347a5d53a676029e1551c1a2"
+    }
+  },
+  "completion": "local NVIDIA report API; no new allocation",
+  "modal_volume": "remnant-stage2a-results",
+  "modal_run_path": "microbench/prefill-read-fused-rope-20261018T150514Z",
+  "raw_artifacts": "raw/experiments/prefill-read-fused-rope/20261018T144353Z/artifacts",
+  "remote_verification": {
+    "status": "passed",
+    "files": {
+      "prefill-read-native.json": {
+        "bytes": 114777,
+        "sha256": "2fd0f618a7c1b5f96633594a3149d4c9f37b4afeed6d86112d3bd80062b053af"
+      },
+      "prefill-read-native.ncu-rep": {
+        "bytes": 12413255,
+        "sha256": "27de5a82185dd76b6fac65bb538d2a9cdb4da20b735cd5d32d2f0c4d87b8dc70"
+      },
+      "prefill-read-packed192.json": {
+        "bytes": 115842,
+        "sha256": "66798344cf5a98f91668aaf57c3d0ab1a4e46b8e962a54be46ebb0483aed2eae"
+      },
+      "prefill-read-packed192.ncu-rep": {
+        "bytes": 12490168,
+        "sha256": "c13f897519b54d71cd147a344bf1d9a1fc9fc98b47398cfdd1eb9570fc27e02e"
+      },
+      "prefill-read-packed256.json": {
+        "bytes": 115842,
+        "sha256": "17cf9708aea566154d50360a9ae258085a578ea452caab352a278396e42fe48e"
+      },
+      "prefill-read-packed256.ncu-rep": {
+        "bytes": 12489736,
+        "sha256": "7d8cdc1a96eacb8f2fb7d7e20152b6e6fa2f4810af9a50c86a0c47fc082b9f85"
+      },
+      "result.json": {
+        "bytes": 5129709,
+        "sha256": "50de00466b18538b17d17348ea072eafc5dcaf4113df52d6683572279101ad9d"
+      },
+      "build-manifest.json": {
+        "bytes": 1240,
+        "sha256": "1ada1b5f1f9f2609f71bd96b890e9c57f032aa5ba35688a0cea52a0a14c73ca1"
+      },
+      "submitted-sources.tar.gz": {
+        "sha256": "7584296515cfedf28b181255716d08338cd349739afadfde93498241b3032953",
+        "bytes": 14255435
+      },
+      "postprocess.tar.gz": {
+        "sha256": "50982463d682e4687381a365a8b036e7b6ca60317bf197b2b0f1f6701ffaeb18",
+        "bytes": 1630226
+      }
+    }
+  },
+  "production_default": "split",
+  "rollback": "omit fused_rope or select --prefill-reader split",
+  "commit": false,
+  "push": false,
+  "files": {
+    "README.md": "3b23f190e0269fdd098e210554c43e3d0134c718777505b77cf2bd7f39bbc335",
+    "candidate-sglang.patch": "dc2d7adc4ae711a70e79d4e4ba2022a29fa8e2f1c73f9529e18744ed2f623241",
+    "comparison.json": "955e3e8afd42f8e156aeb3aa1cdba38ca818db1de4790437b7e644b453267293",
+    "kernel-traffic.csv": "072224bbcc016ddfadff37ce30ffc441bab7ed7271aab20a34537085f97e5e92",
+    "timing.csv": "0e4b09e1af8b6f0b18d00fde77dae8b0a4dcbe1f707896fcf732378e332688c7",
+    "timing.json": "9ddd682abf68b12a5de93cb1e652fc431727904773c659b035de8449a16171ba",
+    "traffic.csv": "da8b63b009ee6625431871867a7b952937387753c2a39d7e9de449a308a00dd1",
+    "traffic.json": "0456693cf2bb41fc068d1aa1819664a445f1d6e0491a223621b6e48850c9c7e0",
+    "validation.json": "2280805f801b351504c305d59c5d38e399e9fa9dec2bc64ab47bc65e56157e79"
+  },
+  "publication": {
+    "branch": "remnant",
+    "sglang_branch": "remnant/v0.5.18",
+    "sglang_commit": "40d07208195c31f75f30ee0c12f3c8c6c1fd2793",
+    "scope": "Prefill-read benchmark, opt-in fused reader, validation, maintained launcher and both studies",
+    "measured_sources": "Original dirty-source identities and archives above remain authoritative",
+    "maintained_launcher": "scripts/modal/kernels.py; normal resource caps retained",
+    "local_checks": {
+      "modal_workflow_tests_passed": 44,
+      "benchmark_tests_passed": 61,
+      "gpu_tests_skipped_locally": 99
+    },
+    "new_gpu_launch": false,
+    "production_default_changed": false,
+    "push_requested": false,
+    "excluded": "Unrelated benchmark reorganization, serving/report edits, FlashMLA decode-tuning pin and calibrate.py whitespace"
+  }
+}

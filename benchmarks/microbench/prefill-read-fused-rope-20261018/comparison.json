@@ -1,0 +1,129 @@
+{
+  "status": "passed",
+  "counter_ratios_over_fresh_native": {
+    "reconstruction/packed192": {
+      "dram_read_bytes": [
+        0.8878710462287105,
+        0.9259118355720738
+      ],
+      "dram_write_bytes": [
+        0.9886071640715206,
+        1.0028132888906862
+      ],
+      "l2_read_sectors": [
+        0.9357845879637569,
+        0.9501501906653826
+      ],
+      "l2_write_sectors": [
+        0.9935117119931992,
+        1.0038764904446984
+      ]
+    },
+    "reconstruction/packed256": {
+      "dram_read_bytes": [
+        1.0046868592184661,
+        1.0160583941605839
+      ],
+      "dram_write_bytes": [
+        0.988402398805658,
+        1.0087376493142604
+      ],
+      "l2_read_sectors": [
+        1.0303552625661592,
+        1.0412668154968745
+      ],
+      "l2_write_sectors": [
+        0.9912673179350261,
+        1.0051460640664052
+      ]
+    },
+    "complete/packed192": {
+      "dram_read_bytes": [
+        0.9810542868245777,
+        1.0018800685506306
+      ],
+      "dram_write_bytes": [
+        0.9861494660400015,
+        1.0019156479605924
+      ],
+      "l2_read_sectors": [
+        0.9781318948385322,
+        1.009799584594164
+      ],
+      "l2_write_sectors": [
+        0.9993331595633679,
+        1.0015719627253803
+      ]
+    },
+    "complete/packed256": {
+      "dram_read_bytes": [
+        0.9859919100041397,
+        1.007125453621983
+      ],
+      "dram_write_bytes": [
+        0.9912419410728317,
+        1.001229557733127
+      ],
+      "l2_read_sectors": [
+        0.9783839415966992,
+        1.0051114070804488
+      ],
+      "l2_write_sectors": [
+        0.9994257788452499,
+        1.0018058953863662
+      ]
+    }
+  },
+  "historical_comparison": "cross-run, not paired; same input hashes",
+  "representative_case": "prefill_h64_s143360_q512_warm_reconstruction",
+  "representative": {
+    "native": {
+      "fused": {
+        "duration_ns": 75744.0,
+        "dram_read_bytes": 21043200.0,
+        "dram_write_bytes": 38356736.0,
+        "l2_read_sectors": 1057581.0,
+        "l2_write_sectors": 1759820.0
+      },
+      "split_historical": {
+        "duration_ns": 75552.0,
+        "dram_read_bytes": 21048576.0,
+        "dram_write_bytes": 38458368.0,
+        "l2_read_sectors": 1057096.0,
+        "l2_write_sectors": 1746821.0
+      }
+    },
+    "packed192": {
+      "fused": {
+        "duration_ns": 96832.0,
+        "dram_read_bytes": 18683648.0,
+        "dram_write_bytes": 37919744.0,
+        "l2_read_sectors": 993731.0,
+        "l2_write_sectors": 1753043.0
+      },
+      "split_historical": {
+        "duration_ns": 110432.0,
+        "dram_read_bytes": 20628736.0,
+        "dram_write_bytes": 38347776.0,
+        "l2_read_sectors": 1257345.0,
+        "l2_write_sectors": 2132340.0
+      }
+    },
+    "packed256": {
+      "fused": {
+        "duration_ns": 96608.0,
+        "dram_read_bytes": 21381120.0,
+        "dram_write_bytes": 38376448.0,
+        "l2_read_sectors": 1101224.0,
+        "l2_write_sectors": 1752002.0
+      },
+      "split_historical": {
+        "duration_ns": 109600.0,
+        "dram_read_bytes": 23280384.0,
+        "dram_write_bytes": 38454784.0,
+        "l2_read_sectors": 1368004.0,
+        "l2_write_sectors": 2131081.0
+      }
+    }
+  }
+}

@@ -1,17 +1,32 @@
-# mustafar runtime artifacts (prune ctrl log, serve logs, bytecode)
-mustafar/ctrl/
-mustafar/logs/
-mustafar/__pycache__/
-**/__pycache__/
+# Author: Winston Cai.
 
-# Raw per-leg measurement outputs (470M jsonl/csv/log, regenerable)
-mustafar/results/
+# Raw run outputs, local archives and generated serving state.
+# benchmarks/ and transfer/ remain trackable; large reports use Git LFS.
+/results/
+/raw/
+/logs/
+/ctrl/
 
-# LongBench v2 dataset copy (903M, regenerable from transferibility/data/longbench)
-mustafar/data/
+# Python/tool caches and generated builds.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+/build/
+/dist/
+*.egg-info/
+*.so
+.DS_Store
 
-# LIVE auth token / env config — never commit
-mustafar/scripts/**/config.json
-mustafar/scripts/config.json
-mustafar/scripts/local/config/config_deepswe.json
-mustafar/scripts/local/config/config_swe_sangfor.json
+# Local credentials; keep public decode-graph configuration files trackable.
+.env
+.env.*
+!.env.example
+/scripts/**/config.json
+/scripts/local/config/config_deepswe.json
+/scripts/local/config/config_swe_sangfor.json
+
+# Existing local experiment-work policy.
+/experiments/
+/data/

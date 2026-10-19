@@ -1,0 +1,8 @@
+# Author: Winston Cai.
+
+*.nsys-rep filter=lfs diff=lfs merge=lfs -text
+benchmarks/microbench/**/profiling/**/*.ncu-rep filter=lfs diff=lfs merge=lfs -text
+benchmarks/**/*.jsonl filter=lfs diff=lfs merge=lfs -text
+benchmarks/microbench/**/timing.csv filter=lfs diff=lfs merge=lfs -text
+transfer/**/*.ncu-rep filter=lfs diff=lfs merge=lfs -text
+transfer/**/*.sqlite.gz filter=lfs diff=lfs merge=lfs -text

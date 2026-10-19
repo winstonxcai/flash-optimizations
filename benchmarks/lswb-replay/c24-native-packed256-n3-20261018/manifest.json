@@ -1,0 +1,371 @@
+{
+  "schema_version": 1,
+  "batch": "20261018_204400",
+  "concurrency": 24,
+  "dispatch_window_s": 1200,
+  "profiled": false,
+  "copies": [
+    {
+      "mode": "native",
+      "repeat": 1,
+      "original_run_id": "20261018_204739",
+      "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/native-c24-repeat1-20261018_204400/20261018_204739",
+      "transfer_path": "transfer/lswb-c24-n3-20261018/native-c24-repeat1-20261018_204400/20261018_204739",
+      "benchmark_path": "benchmarks/lswb-replay/c24-native-packed256-n3-20261018/native/unprofiled/20261018_204739",
+      "files": [
+        {
+          "path": "native/unprofiled/20261018_204739/done.json",
+          "sha256": "7cb6cb8457fd9fd8ddc59420a53057ffa26d11cd5948f55a9067b94abeba57c5"
+        },
+        {
+          "path": "native/unprofiled/20261018_204739/image-id.txt",
+          "sha256": "f366e481094b969735a6b05df0594cf32fc83058e90879bd1acee686c9c88655"
+        },
+        {
+          "path": "native/unprofiled/20261018_204739/launcher-sha256.txt",
+          "sha256": "a91267f2cd7ef677ab0bcd5a73185b00e56a2a9f0e0a98e649e49c3ab6a9b8d1"
+        },
+        {
+          "path": "native/unprofiled/20261018_204739/manifest.json",
+          "sha256": "0fb807102d80751c1ab950944c98f7389e3c55265acaf21692dad6836bbe1db4"
+        },
+        {
+          "path": "native/unprofiled/20261018_204739/request-timing-validation.json",
+          "sha256": "1ea560d62043ad61731e60c0d74ae9ae7c29b2ba6b7b64fe58d8a23e385e47aa"
+        },
+        {
+          "path": "native/unprofiled/20261018_204739/server-info.json",
+          "sha256": "304ff3c8d7719f8f459ec3f1cae40ecf366169eea3da47874bff30e48914b03b"
+        },
+        {
+          "path": "native/unprofiled/20261018_204739/summary.json",
+          "sha256": "7bb0cebd7c6e5d17031d7ea0ef1f7cd9e06a3379c9a17f315e2a2c88b4600200"
+        }
+      ]
+    },
+    {
+      "mode": "native",
+      "repeat": 2,
+      "original_run_id": "20261018_213417",
+      "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/native-c24-repeat2-20261018_204400/20261018_213417",
+      "transfer_path": "transfer/lswb-c24-n3-20261018/native-c24-repeat2-20261018_204400/20261018_213417",
+      "benchmark_path": "benchmarks/lswb-replay/c24-native-packed256-n3-20261018/native/unprofiled/20261018_213417",
+      "files": [
+        {
+          "path": "native/unprofiled/20261018_213417/done.json",
+          "sha256": "06d3c98868ca5afc59923356aa113795edd7cd67ef881b7cb2cb3a749cd7607b"
+        },
+        {
+          "path": "native/unprofiled/20261018_213417/image-id.txt",
+          "sha256": "f366e481094b969735a6b05df0594cf32fc83058e90879bd1acee686c9c88655"
+        },
+        {
+          "path": "native/unprofiled/20261018_213417/launcher-sha256.txt",
+          "sha256": "a91267f2cd7ef677ab0bcd5a73185b00e56a2a9f0e0a98e649e49c3ab6a9b8d1"
+        },
+        {
+          "path": "native/unprofiled/20261018_213417/manifest.json",
+          "sha256": "108eab18c8e23d9d89c9d757d0f7cec50dedef357b18e090995efac11f33f3e4"
+        },
+        {
+          "path": "native/unprofiled/20261018_213417/request-timing-validation.json",
+          "sha256": "beaee0e1dee3b57b6cf5db1b1710145acd7d425320e767a3dedc0101aa4392d7"
+        },
+        {
+          "path": "native/unprofiled/20261018_213417/server-info.json",
+          "sha256": "bf0c50166cf7195d6a1181511c5bebe9842cce56942b883a535d40d8e7b3701b"
+        },
+        {
+          "path": "native/unprofiled/20261018_213417/summary.json",
+          "sha256": "485698fa06cba5a6b08cf9969dbbb18c9ef7caaeb3c0d776233786f0afc76984"
+        }
+      ]
+    },
+    {
+      "mode": "native",
+      "repeat": 3,
+      "original_run_id": "20261018_215741",
+      "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/native-c24-repeat3-20261018_204400/20261018_215741",
+      "transfer_path": "transfer/lswb-c24-n3-20261018/native-c24-repeat3-20261018_204400/20261018_215741",
+      "benchmark_path": "benchmarks/lswb-replay/c24-native-packed256-n3-20261018/native/unprofiled/20261018_215741",
+      "files": [
+        {
+          "path": "native/unprofiled/20261018_215741/done.json",
+          "sha256": "54a7ea2fdf8f394e728d7fb2c4c69edde9a56b17a594e103a8700a2ede3719a1"
+        },
+        {
+          "path": "native/unprofiled/20261018_215741/image-id.txt",
+          "sha256": "f366e481094b969735a6b05df0594cf32fc83058e90879bd1acee686c9c88655"
+        },
+        {
+          "path": "native/unprofiled/20261018_215741/launcher-sha256.txt",
+          "sha256": "a91267f2cd7ef677ab0bcd5a73185b00e56a2a9f0e0a98e649e49c3ab6a9b8d1"
+        },
+        {
+          "path": "native/unprofiled/20261018_215741/manifest.json",
+          "sha256": "e83417fa9daeefc5cdd9d8245db65d133dee4c6489f9392e8a08713505c8f434"
+        },
+        {
+          "path": "native/unprofiled/20261018_215741/request-timing-validation.json",
+          "sha256": "62ec351d9a462618384d463eddf67af2cf59898fde26c81ce30b12cb7def701a"
+        },
+        {
+          "path": "native/unprofiled/20261018_215741/server-info.json",
+          "sha256": "aec115d2fc9ca146736ad11fdacfe8f2020423088b7084993711c859ae34ffcf"
+        },
+        {
+          "path": "native/unprofiled/20261018_215741/summary.json",
+          "sha256": "ab02dcbbf033f796f10ee75e836605bf4bf6ff8748d1550c10f7fde060554390"
+        }
+      ]
+    },
+    {
+      "mode": "triton",
+      "repeat": 1,
+      "original_run_id": "20261018_204739",
+      "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/triton-k256-c24-repeat1-20261018_204400/20261018_204739",
+      "transfer_path": "transfer/lswb-c24-n3-20261018/triton-k256-c24-repeat1-20261018_204400/20261018_204739",
+      "benchmark_path": "benchmarks/lswb-replay/c24-native-packed256-n3-20261018/triton/unprofiled/20261018_204739",
+      "files": [
+        {
+          "path": "triton/unprofiled/20261018_204739/done.json",
+          "sha256": "462544224265932331ad71c0201e030db3eeb6cd85f8cad980771068d41ac6d1"
+        },
+        {
+          "path": "triton/unprofiled/20261018_204739/image-id.txt",
+          "sha256": "f366e481094b969735a6b05df0594cf32fc83058e90879bd1acee686c9c88655"
+        },
+        {
+          "path": "triton/unprofiled/20261018_204739/launcher-sha256.txt",
+          "sha256": "a91267f2cd7ef677ab0bcd5a73185b00e56a2a9f0e0a98e649e49c3ab6a9b8d1"
+        },
+        {
+          "path": "triton/unprofiled/20261018_204739/manifest.json",
+          "sha256": "c7378cd550e57a230f7db6f0a8036a853f1ed8d09a40e7c73b084de4fd7a799f"
+        },
+        {
+          "path": "triton/unprofiled/20261018_204739/request-timing-validation.json",
+          "sha256": "e4776a21aef9e5b0c7f7707769181c374a93f38332b29a1ac1dae3518732c817"
+        },
+        {
+          "path": "triton/unprofiled/20261018_204739/server-info.json",
+          "sha256": "f13729179e7ba16d4640556d61386f94a36d63ea5c4d18ec7ba43d21dbe752aa"
+        },
+        {
+          "path": "triton/unprofiled/20261018_204739/summary.json",
+          "sha256": "90115f33a35f0e4224a7b1aaa76d8124f05dbc118538d079029ec0eb654680bb"
+        }
+      ]
+    },
+    {
+      "mode": "triton",
+      "repeat": 2,
+      "original_run_id": "20261018_211056",
+      "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/triton-k256-c24-repeat2-20261018_204400/20261018_211056",
+      "transfer_path": "transfer/lswb-c24-n3-20261018/triton-k256-c24-repeat2-20261018_204400/20261018_211056",
+      "benchmark_path": "benchmarks/lswb-replay/c24-native-packed256-n3-20261018/triton/unprofiled/20261018_211056",
+      "files": [
+        {
+          "path": "triton/unprofiled/20261018_211056/done.json",
+          "sha256": "eb58a50a78af1c1b73454316cb4b0dd0a434108c8dc7559dba4d68f62cc63a6f"
+        },
+        {
+          "path": "triton/unprofiled/20261018_211056/image-id.txt",
+          "sha256": "f366e481094b969735a6b05df0594cf32fc83058e90879bd1acee686c9c88655"
+        },
+        {
+          "path": "triton/unprofiled/20261018_211056/launcher-sha256.txt",
+          "sha256": "a91267f2cd7ef677ab0bcd5a73185b00e56a2a9f0e0a98e649e49c3ab6a9b8d1"
+        },
+        {
+          "path": "triton/unprofiled/20261018_211056/manifest.json",
+          "sha256": "f284639084746e15e9a30b7446cb2b6ee11ff465f0b773bb2c6db445365b0f84"
+        },
+        {
+          "path": "triton/unprofiled/20261018_211056/request-timing-validation.json",
+          "sha256": "a63bb91bd19c3fb97ab47a3116b219f3366c6204c81555952071253b3f662f6d"
+        },
+        {
+          "path": "triton/unprofiled/20261018_211056/server-info.json",
+          "sha256": "f8db1c4b23321d382bdce05d1edb3398191cd14840f59795d9af07002b65e5c6"
+        },
+        {
+          "path": "triton/unprofiled/20261018_211056/summary.json",
+          "sha256": "e2e06d904fb5f617c8829dc832920c1495aca754a08c43f1ef2652459047fd37"
+        }
+      ]
+    },
+    {
+      "mode": "triton",
+      "repeat": 3,
+      "original_run_id": "20261018_222024",
+      "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/triton-k256-c24-repeat3-20261018_204400/20261018_222024",
+      "transfer_path": "transfer/lswb-c24-n3-20261018/triton-k256-c24-repeat3-20261018_204400/20261018_222024",
+      "benchmark_path": "benchmarks/lswb-replay/c24-native-packed256-n3-20261018/triton/unprofiled/20261018_222024",
+      "files": [
+        {
+          "path": "triton/unprofiled/20261018_222024/done.json",
+          "sha256": "cd304d3e4552b92c25827f69b7e74368047eac44ca11e0493246e098ab516a2f"
+        },
+        {
+          "path": "triton/unprofiled/20261018_222024/image-id.txt",
+          "sha256": "f366e481094b969735a6b05df0594cf32fc83058e90879bd1acee686c9c88655"
+        },
+        {
+          "path": "triton/unprofiled/20261018_222024/launcher-sha256.txt",
+          "sha256": "a91267f2cd7ef677ab0bcd5a73185b00e56a2a9f0e0a98e649e49c3ab6a9b8d1"
+        },
+        {
+          "path": "triton/unprofiled/20261018_222024/manifest.json",
+          "sha256": "cf37ca65aac3627ab009e863852ac58b874789cab00e122252e0b98fe4265eb3"
+        },
+        {
+          "path": "triton/unprofiled/20261018_222024/request-timing-validation.json",
+          "sha256": "52424493dde1ff2be7378768b196e49632f0e1fb8c2866d604a8b695a754d919"
+        },
+        {
+          "path": "triton/unprofiled/20261018_222024/server-info.json",
+          "sha256": "12287d859edf8f488eabae71a1f8f35d78227b65094bce3edf58d3adf706bef8"
+        },
+        {
+          "path": "triton/unprofiled/20261018_222024/summary.json",
+          "sha256": "35159757bbae99be4844c69e25dbffc817e5310d68ea23b8bbb004638a80c298"
+        }
+      ]
+    },
+    {
+      "mode": "kernel",
+      "repeat": 1,
+      "original_run_id": "20261018_211053",
+      "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/kernel-k256-c24-repeat1-20261018_204400/20261018_211053",
+      "transfer_path": "transfer/lswb-c24-n3-20261018/kernel-k256-c24-repeat1-20261018_204400/20261018_211053",
+      "benchmark_path": "benchmarks/lswb-replay/c24-native-packed256-n3-20261018/kernel/unprofiled/20261018_211053",
+      "files": [
+        {
+          "path": "kernel/unprofiled/20261018_211053/done.json",
+          "sha256": "cfe77ec05285876d6a65f5463df9869f775243f5a6e364117caef7e5cc5889e8"
+        },
+        {
+          "path": "kernel/unprofiled/20261018_211053/image-id.txt",
+          "sha256": "f366e481094b969735a6b05df0594cf32fc83058e90879bd1acee686c9c88655"
+        },
+        {
+          "path": "kernel/unprofiled/20261018_211053/launcher-sha256.txt",
+          "sha256": "a91267f2cd7ef677ab0bcd5a73185b00e56a2a9f0e0a98e649e49c3ab6a9b8d1"
+        },
+        {
+          "path": "kernel/unprofiled/20261018_211053/manifest.json",
+          "sha256": "5319bb10c0647a72e197871b429ff2842acaa84c39fbb3e95de25123ca0a99fe"
+        },
+        {
+          "path": "kernel/unprofiled/20261018_211053/request-timing-validation.json",
+          "sha256": "591d93895d5bf976e68291022dfba77f57ac6842516cfa6873789f72d247bfda"
+        },
+        {
+          "path": "kernel/unprofiled/20261018_211053/server-info.json",
+          "sha256": "a5e14b1109391e73ed98c3d5e658a38337b696e79a7e3e56e56dcc34e5fc9d05"
+        },
+        {
+          "path": "kernel/unprofiled/20261018_211053/summary.json",
+          "sha256": "fa3c98da925fa80a6427f03fd1d64788db5e359cf840a9827e78b8c8daacf294"
+        }
+      ]
+    },
+    {
+      "mode": "kernel",
+      "repeat": 2,
+      "original_run_id": "20261018_213416",
+      "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/kernel-k256-c24-repeat2-20261018_204400/20261018_213416",
+      "transfer_path": "transfer/lswb-c24-n3-20261018/kernel-k256-c24-repeat2-20261018_204400/20261018_213416",
+      "benchmark_path": "benchmarks/lswb-replay/c24-native-packed256-n3-20261018/kernel/unprofiled/20261018_213416",
+      "files": [
+        {
+          "path": "kernel/unprofiled/20261018_213416/done.json",
+          "sha256": "42c3e27cc43d35b6be466b1ae93b3ff02d7efd13a72cc6c5cb56201abda90fa1"
+        },
+        {
+          "path": "kernel/unprofiled/20261018_213416/image-id.txt",
+          "sha256": "f366e481094b969735a6b05df0594cf32fc83058e90879bd1acee686c9c88655"
+        },
+        {
+          "path": "kernel/unprofiled/20261018_213416/launcher-sha256.txt",
+          "sha256": "a91267f2cd7ef677ab0bcd5a73185b00e56a2a9f0e0a98e649e49c3ab6a9b8d1"
+        },
+        {
+          "path": "kernel/unprofiled/20261018_213416/manifest.json",
+          "sha256": "e171ae0aefdb62750e61429b8999c2af61b46695e1723e248353690b6941239c"
+        },
+        {
+          "path": "kernel/unprofiled/20261018_213416/request-timing-validation.json",
+          "sha256": "b8a27e527d6ddf2a095069cabf303e80d1c7a02f914ea9912b3f6fed2ca89684"
+        },
+        {
+          "path": "kernel/unprofiled/20261018_213416/server-info.json",
+          "sha256": "23c6a7f273f57c3ece913494a65b4156d211251e3e017c89489a0dd0a5008965"
+        },
+        {
+          "path": "kernel/unprofiled/20261018_213416/summary.json",
+          "sha256": "7e1fd1fa7bfdce6334ab0af156ca8b89b69196b5e8d1429ce84d2530b0133155"
+        }
+      ]
+    },
+    {
+      "mode": "kernel",
+      "repeat": 3,
+      "original_run_id": "20261018_215724",
+      "original_path": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/kernel-k256-c24-repeat3-20261018_204400/20261018_215724",
+      "transfer_path": "transfer/lswb-c24-n3-20261018/kernel-k256-c24-repeat3-20261018_204400/20261018_215724",
+      "benchmark_path": "benchmarks/lswb-replay/c24-native-packed256-n3-20261018/kernel/unprofiled/20261018_215724",
+      "files": [
+        {
+          "path": "kernel/unprofiled/20261018_215724/done.json",
+          "sha256": "c2517093c152af77bd3508b02bb77abdad45ce9353142c879e3dc6db35cc315c"
+        },
+        {
+          "path": "kernel/unprofiled/20261018_215724/image-id.txt",
+          "sha256": "f366e481094b969735a6b05df0594cf32fc83058e90879bd1acee686c9c88655"
+        },
+        {
+          "path": "kernel/unprofiled/20261018_215724/launcher-sha256.txt",
+          "sha256": "a91267f2cd7ef677ab0bcd5a73185b00e56a2a9f0e0a98e649e49c3ab6a9b8d1"
+        },
+        {
+          "path": "kernel/unprofiled/20261018_215724/manifest.json",
+          "sha256": "6454b1f66cd1ba36b9bb75065737ff62a9cbc314665c1d32ee65f9063e9d91d7"
+        },
+        {
+          "path": "kernel/unprofiled/20261018_215724/request-timing-validation.json",
+          "sha256": "4fe03e19b977aeff34a67a18889afabbfa4aae6bfb6b50619057698a1f3ead8c"
+        },
+        {
+          "path": "kernel/unprofiled/20261018_215724/server-info.json",
+          "sha256": "27d75576a607f0cd6e010824f2611fc97f6a27187c8fe1f300f83b4ca43a189b"
+        },
+        {
+          "path": "kernel/unprofiled/20261018_215724/summary.json",
+          "sha256": "5ddffed94599010a11ae25c67340b2ad8333da4e15601a779be7091a0f112bcf"
+        }
+      ]
+    }
+  ],
+  "curated_root": "benchmarks/lswb-replay/c24-native-packed256-n3-20261018",
+  "previous_curated_root": "benchmarks/lswb-replay/c24-n3-20261018",
+  "curation_review": {
+    "date": "2026-10-18",
+    "source_parent_commit": "447111f",
+    "runs_checked": 9,
+    "image": "sha256:51ed908c159139e522c2254b13c2713bf2fa5c51182f21cfec908252d2831972",
+    "launcher_sha256": "a91267f2cd7ef677ab0bcd5a73185b00e56a2a9f0e0a98e649e49c3ab6a9b8d1",
+    "dataset_sha256": "1e97f17d8a46f2d18232cab4f0f552bcfaf2bc74c51230a1917fc0771eae46e7",
+    "harness_sha256": {
+      "adapter": "363d6adffde63bfe54c483d629cca780d43689ec101a778f25fc110060f00b13",
+      "runner": "76ca1e4c25452e1fd163c957a4b262169fd1bba0d8bc3d9ccd3f45b232068bc4"
+    },
+    "settings_matched": true,
+    "raw_client_counts_and_means_recomputed": true,
+    "aggregate_sample_statistics_recomputed": true,
+    "slo_passes": 9,
+    "source_identity_limit": "Runtime tree and loaded extension hashes were not collected; client/server timing coverage is count-based.",
+    "evidence_status": "preferred_repeated_c24_serving_reference_with_provenance_limits"
+  }
+}

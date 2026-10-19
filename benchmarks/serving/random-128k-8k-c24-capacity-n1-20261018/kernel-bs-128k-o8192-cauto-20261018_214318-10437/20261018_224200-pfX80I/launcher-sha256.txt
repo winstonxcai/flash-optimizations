@@ -1,0 +1,3 @@
+62479b74d4d8ec54359219d3f1cdabcc6efece83b4b11c4420e02c900e332747  scripts/local/serve.sh
+1fdade92bc1ee030abbdfdd99d68553bd4fa32de2906205615a255b9824915a2  scripts/local/run-server.sh
+07c8424b0e85b3090f2b763c3d6a79fb35c95a9bd3c9bfea1071a7b33609e557  scripts/local/bench-serving.sh

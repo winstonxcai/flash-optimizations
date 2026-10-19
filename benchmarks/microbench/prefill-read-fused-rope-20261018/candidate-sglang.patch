@@ -1,0 +1,940 @@
+--- a/benchmark/remnant/README.md
++++ b/benchmark/remnant/README.md
+@@ -16,6 +16,60 @@
+ Native's 1.8? The changed mechanism is the persistent record: unchanged Native,
+ Packed192 and Packed256. Both Packed variants use the existing production
+ prefill reader; this experiment changes no runtime kernel or frontend.
++
++### Fused unpack/RoPE candidate
++
++Question: can one Packed read kernel remove the measured separate RoPE pass
++without changing the reconstructed BF16 rows? `--prefill-reader split` remains
++the default and the serving path. The opt-in `--prefill-reader fused` candidate
++shares unpack arithmetic, rounds dequantized values to BF16 before rotation,
++then writes the final row once. Selection, persistent format, Native, SWA and
++attention are unchanged. This is a local candidate, pending H100 qualification.
++
++Use this same 36-case matrix and seed for the candidate; record the reader in
++JSON/CSV and retain the verified split study in
++`benchmarks/microbench/prefill-read-20261018/` as historical evidence. New timing
++includes a fresh Native control; comparisons against the saved split timing
++are cross-run, not paired. Never overwrite or relabel the original measurements.
++Before interpreting speed, require exact BF16 equality with the split reader
++for every supported survivor count, the independent references, invalid/padded
++and duplicate selections, strided indices, changing-input graph replay, context
++growth without recompilation, and sanitizer checks. Profile coverage must show
++one fused C4 read and no standalone tail-RoPE launch. Stop on a parity, coverage,
++sanitizer, deadline or budget failure. Promote no serving default without passing
++these checks and a measured complete-path improvement. Roll back by selecting
++`split`; no cache conversion is needed. New Modal execution needs scoped budget
++authorization. The maintained Modal runner is left unchanged because its contents
++were restored concurrently during this work. The candidate controller and CPU
++tests are retained in the documented source snapshot
++`raw/experiments/prefill-read-fused-rope/20261018T144353Z/source/scripts/modal/`.
++It reuses the previously verified batched profiler and forwards the reader option;
++the numerical implementation and fixtures remain in this SGLang fork.
++
++```bash
++python third_party/sglang/benchmark/remnant/microbench.py \
++  --suite prefill-read --prefill-reader fused \
++  --native-library <CPU-built-library> --output <fresh-output-prefix>
++```
++
++The source-snapshot Modal command uses the checked-out forks explicitly:
++
++```bash
++REMNANT_SGLANG_SOURCE_OVERRIDE="$PWD/third_party/sglang" \
++REMNANT_FLASHMLA_SOURCE_OVERRIDE="$PWD/third_party/flashmla" \
++modal run --detach \
++  raw/experiments/prefill-read-fused-rope/20261018T144353Z/source/scripts/modal/kernels.py::benchmark_kernels \
++  --suite prefill-read --prefill-reader fused --run-id <unique-id>
++```
++
++After timing/validation passes, invoke that same source snapshot's
++`profile_kernels` with the same suite/reader/run ID and `--max-seconds 850`.
++This profiles all 108 operations in three reports. Each GPU action has a
++900-second hard limit; CPU image builds have a 3,000-second limit. No automatic
++retries, weights or model volumes. Candidate timing also runs the existing unpack
++and CUDA-graph tests plus memcheck, racecheck and synccheck before measurement.
++The snapshot is experiment reproduction source, outside normal builds/uploads;
++retain its verified archive/patch when retiring it after the promotion decision.
+ 
+ The opt-in `--suite prefill-read` compares all three variants in paired rounds
+ on identical FP32 latents/weights, queries, logical positions, shuffled physical
+--- a/benchmark/remnant/microbench.py
++++ b/benchmark/remnant/microbench.py
+@@ -670,6 +670,8 @@
+ def prefill_read_operations(
+     case: PrefillReadCase,
+     seed: int,
++    *,
++    fused_rope: bool = False,
+ ) -> tuple[list[Operation], dict]:
+     """Production C4/SWA preparation and sparse prefill, with variant-owned banks.
+ 
+@@ -823,6 +825,14 @@
+             torch.empty((rows + swa_rows, 1, 512), device="cuda", dtype=torch.bfloat16)
+             for _ in range(banks)
+         ]
++        # Candidate qualification uses a distinct, retained split-reader buffer.
++        # Its allocation and every baseline comparison stay outside timing and
++        # profiler capture; Native's measured path remains unchanged.
++        split_workspace = (
++            torch.empty_like(workspaces[0][:rows])
++            if fused_rope and mode != "native"
++            else None
++        )
+ 
+         def reconstruct(
+             bank,
+@@ -844,6 +854,7 @@
+                     gather_lengths,
+                     freqs,
+                     workspace[:rows],
++                    fused_rope=fused_rope,
+                 )
+             dequantize_k_cache_paged(
+                 swa_sources[bank], swa_ids, case.swa_page_size, out=workspace[rows:]
+@@ -877,10 +888,28 @@
+             workspaces=workspaces,
+             cursor=cursor,
+             label=label,
++            split_workspace=split_workspace,
++            source_banks=sources,
+         ):
+             configure(mode, keep_count)
+             for bank in range(banks):
+                 reconstruct(bank)
++                if split_workspace is not None:
++                    unpack_gather_bf16(
++                        source_banks[bank],
++                        physical[None],
++                        raw[None],
++                        gather_lengths,
++                        freqs,
++                        split_workspace,
++                    )
++                    if not torch.equal(
++                        workspaces[bank][:rows].view(torch.int16),
++                        split_workspace.view(torch.int16),
++                    ):
++                        raise RuntimeError(
++                            f"{case.name}/{label}: fused/split BF16 byte parity failed"
++                        )
+                 if workspaces[bank].dtype != torch.bfloat16:
+                     raise RuntimeError(f"{case.name}/{label}: expected BF16 workspace")
+                 # Promote only the validation view to the independent FP32
+@@ -929,7 +958,11 @@
+         if case.stage != "attention":
+             kernels.append("dequantize_k_cache_paged")
+             if mode != "native":
+-                kernels += ["unpack_gather_bf16", "rope_tail_complex"]
++                kernels += (
++                    ["unpack_gather_bf16_rope"]
++                    if fused_rope
++                    else ["unpack_gather_bf16_kernel", "rope_tail_complex"]
++                )
+         if case.stage != "reconstruction":
+             kernels += ["sparse_attn_fwd_kernel", "elementwise.*MulFunctor"]
+         operations.append(
+@@ -950,6 +983,7 @@
+                     expected_workspace,
+                     x,
+                     weight,
++                    split_workspace,
+                 ),
+                 validate,
+                 tuple(kernels),
+@@ -961,6 +995,7 @@
+         op.validate()
+     return operations, {
+         "common_inputs_sha256": common_hash,
++        "prefill_reader": "fused" if fused_rope else "split",
+         "path_layouts": prefill_path_layouts(),
+         "c4_rows": rows,
+         "swa_rows": swa_rows,
+@@ -971,6 +1006,11 @@
+             "workspace_rows": rows + swa_rows,
+             "sampled_query_ids": sample_ids.tolist(),
+             "attention_reference": "independent Torch softmax/sink; SGL compatibility log2 max/LSE",
++            "packed_reader_reference": (
++                "bitwise split-reader parity for every C4 row and bank"
++                if fused_rope
++                else "independent BF16 workspace reference"
++            ),
+         },
+         "fixture": "serving-informed synthetic, one request; metadata and cache construction untimed",
+     }
+@@ -1252,7 +1292,7 @@
+                 if can_write:
+                     write_results(payload, base)
+                 operations, identity = (
+-                    factory(case, args.seed)
++                    factory(case, args.seed, fused_rope=args.prefill_reader == "fused")
+                     if is_prefill
+                     else factory(case, args.seed, args.keep_count, modes)
+                 )
+--- a/benchmark/remnant/test_microbench.py
++++ b/benchmark/remnant/test_microbench.py
+@@ -180,11 +180,18 @@
+         assert cases.case_suite(case) == "prefill-read"
+     assert len(fixtures) == 6
+     assert len(cases.selected_profile_matrix(suite="prefill-read")) == 108
++    assert args.prefill_reader == "split"
++    fused_args = cases.parser().parse_args(
++        ["--suite", "prefill-read", "--prefill-reader", "fused"]
++    )
++    assert cases.selected_cases(fused_args) == matrix
+     for argv in (
+         ["--suite", "prefill-read", "--modes", "native,triton"],
+         ["--suite", "prefill-read", "--keep-count", "192"],
+         ["--profile-path", "packed192"],
+         ["--suite", "prefill-read", "--histories", "1024"],
++        ["--prefill-reader", "fused"],
++        ["--suite", "decode", "--prefill-reader", "fused"],
+     ):
+         with pytest.raises(ValueError):
+             cases.selected_cases(cases.parser().parse_args(argv))
+@@ -219,6 +226,16 @@
+         ],
+     }
+     cases.validate_timing(payload, suite="prefill-read")
++    candidate = copy.deepcopy(payload)
++    candidate["config"] = {"prefill_reader": "fused"}
++    for record in candidate["cases"]:
++        record["prefill_reader"] = "fused"
++    cases.validate_timing(candidate, suite="prefill-read", prefill_reader="fused")
++    with pytest.raises(RuntimeError):
++        cases.validate_timing(candidate, suite="prefill-read")
++    candidate["cases"][0]["prefill_reader"] = "split"
++    with pytest.raises(RuntimeError, match="reader mismatch"):
++        cases.validate_timing(candidate, suite="prefill-read", prefill_reader="fused")
+     for change in (
+         lambda p: p["cases"].pop(),
+         lambda p: p["cases"][0]["paths"].pop("packed256"),
+@@ -511,15 +528,23 @@
+ @pytest.mark.parametrize("heads", [64, 128])
+ @pytest.mark.parametrize("stage", cases.PREFILL_STAGES)
+ @pytest.mark.parametrize("policy", cases.PREFILL_POLICIES)
+-def test_gpu_prefill_read_complete_fixture(heads, stage, policy, benchmark):
++@pytest.mark.parametrize("fused_rope", [False, True], ids=["split", "fused"])
++def test_gpu_prefill_read_complete_fixture(heads, stage, policy, fused_rope, benchmark):
+     import torch
+ 
+     with torch.inference_mode():
+         operations, identity = benchmark.prefill_read_operations(
+-            benchmark.PrefillReadCase(heads, 4100, 8, stage, policy), cases.SEED
++            benchmark.PrefillReadCase(heads, 4100, 8, stage, policy),
++            cases.SEED,
++            fused_rope=fused_rope,
+         )
+         assert [op.key for op in operations] == list(cases.PREFILL_VARIANTS)
+         assert identity["path_layouts"] == cases.prefill_path_layouts()
++        assert identity["prefill_reader"] == ("fused" if fused_rope else "split")
++        if stage != "attention":
++            for op in operations[1:]:
++                assert ("unpack_gather_bf16_rope" in op.expected_kernels) == fused_rope
++                assert ("rope_tail_complex" in op.expected_kernels) != fused_rope
+         assert identity["buffer_banks"] == (4 if policy == "rotating" else 1)
+         assert len({op.owned[0].data_ptr() for op in operations}) == 1
+         operations[0].owned[0].mul_(0.9)
+@@ -531,6 +556,95 @@
+             benchmark.configure(op.mode, op.keep_count)
+             op.call()
+             op.validate()
++
++
++@pytest.mark.parametrize("valid", [False, True])
++def test_fused_reader_preserves_bf16_rounding_and_rotation_on_cpu(valid):
++    """Execute the actual Triton arithmetic body with CPU memory primitives.
++
++    This checks rounding/sign/position/store semantics against independent
++    Torch complex arithmetic, not GPU compilation, layout or synchronization.
++    The H100 tests separately cover the real gather, compilation and graphs.
++    """
++    import ast
++    from types import SimpleNamespace
++
++    import torch
++
++    class Pointer:
++        def __init__(self, data, offsets=0):
++            self.data, self.offsets = data, offsets
++
++        def __add__(self, offsets):
++            return Pointer(self.data, self.offsets + offsets)
++
++    def load(pointer, mask, other):
++        result = torch.full(mask.shape, other, dtype=torch.float32)
++        result[mask] = pointer.data[pointer.offsets[mask]]
++        return result
++
++    def store(pointer, value, mask):
++        pointer.data[pointer.offsets[mask]] = value[mask].to(pointer.data.dtype)
++
++    # Deliberately non-BF16 inputs make a missing intermediate rounding visible.
++    value = torch.linspace(-1.137, 1.377, 512)
++    rounded = value.to(torch.bfloat16).float()
++    angles = torch.linspace(0.13, 1.17, 16 * 32).reshape(16, 32)
++    freqs = torch.polar(torch.ones_like(angles), angles)
++    raw = torch.tensor(2 if valid else 2**31 - 1, dtype=torch.int64)
++    output = torch.full((3 * 512,), -91, dtype=torch.bfloat16)
++    tl = SimpleNamespace(
++        constexpr=int,
++        bfloat16=torch.bfloat16,
++        float32=torch.float32,
++        arange=torch.arange,
++        program_id=lambda axis: 1,
++        gather=lambda x, indices, axis: torch.gather(x, axis, indices.long()),
++        load=load,
++        store=store,
++        where=torch.where,
++    )
++    path = ROOT / "python/sglang/srt/remnant/triton/kernels.py"
++    function = next(
++        node
++        for node in ast.parse(path.read_text()).body
++        if isinstance(node, ast.FunctionDef)
++        and node.name == "_unpack_gather_bf16_rope_kernel"
++    )
++    function.decorator_list = []
++    namespace = {
++        "tl": tl,
++        "_unpack_gather_row": lambda *args: (
++            value if valid else torch.zeros_like(value),
++            raw,
++            torch.tensor(valid),
++        ),
++    }
++    exec(
++        compile(ast.Module(body=[function], type_ignores=[]), str(path), "exec"),
++        namespace,
++    )
++    args = {arg.arg: None for arg in function.args.args}
++    args.update(
++        freq_ptr=Pointer(torch.view_as_real(freqs).flatten()),
++        output_ptr=Pointer(output),
++        HEAD_DIM=512,
++        NOPE_DIM=448,
++        ROPE_PAIRS=32,
++        BLOCK_D=512,
++    )
++    namespace[function.name](**args)
++    expected = torch.zeros(512, dtype=torch.bfloat16)
++    if valid:
++        expected.copy_(rounded)
++        tail = torch.view_as_complex(rounded[448:].reshape(32, 2)) * freqs[8]
++        expected[448:] = torch.view_as_real(tail).flatten().to(torch.bfloat16)
++        unrounded = torch.view_as_complex(value[448:].reshape(32, 2)) * freqs[8]
++        assert not torch.equal(
++            expected[448:], torch.view_as_real(unrounded).flatten().to(torch.bfloat16)
++        ), "fixture must detect removal of the pre-RoPE BF16 round trip"
++    assert torch.equal(output[512:1024].view(torch.int16), expected.view(torch.int16))
++    assert torch.all(output[:512] == -91) and torch.all(output[1024:] == -91)
+ 
+ 
+ def test_prefill_workspace_dtype_and_independent_constant_attention_on_cpu():
+@@ -576,6 +690,8 @@
+         keep_count=256,
+         expected_workspace=torch.ones((2, 512), dtype=torch.float32),
+         workspaces=workspaces,
++        split_workspace=None,
++        sources=[],
+         cursor=cursor,
+         label="native",
+         banks=1,
+--- a/python/sglang/benchmark/remnant/cases.py
++++ b/python/sglang/benchmark/remnant/cases.py
+@@ -278,6 +278,7 @@
+             "packed_keep_count",
+             "record_bytes",
+             "execution",
++            "prefill_reader",
+             "mean_ms",
+             "median_ms",
+             "p95_ms",
+@@ -314,6 +315,11 @@
+                             )
+                         ),
+                         execution=case["execution"],
++                        prefill_reader=(
++                            case.get("prefill_reader", "split")
++                            if case["suite"] == "prefill-read"
++                            else ""
++                        ),
+                         mean_ms=values["mean"],
+                         median_ms=values["median"],
+                         p95_ms=values["p95"],
+@@ -347,6 +353,12 @@
+     p.add_argument("--topk-lengths", default="512,317")
+     p.add_argument("--histories", default="143360")
+     p.add_argument("--query-chunks", default="512,1536,8192")
++    p.add_argument(
++        "--prefill-reader",
++        choices=("split", "fused"),
++        default="split",
++        help="Opt-in Packed unpack/RoPE candidate; only for --suite prefill-read",
++    )
+     p.add_argument("--seed", type=int, default=SEED)
+     p.add_argument("--warmup", type=int, default=10)
+     p.add_argument("--rounds", type=int, default=30)
+@@ -375,6 +387,8 @@
+             )
+     elif args.profile_path:
+         raise ValueError("--profile-path requires --suite prefill-read")
++    if args.suite != "prefill-read" and args.prefill_reader != "split":
++        raise ValueError("--prefill-reader fused requires --suite prefill-read")
+     if args.profile_replay_id and not args.profile_path:
+         raise ValueError("--profile-replay-id requires a prefill --profile-path")
+     modes = benchmark_modes(args.keep_count, args.modes)
+@@ -443,10 +457,15 @@
+     keep_count: int = 256,
+     modes: str | None = None,
+     suite: str = "all",
++    prefill_reader: str = "split",
+ ) -> None:
+     """Require the full default matrix and all measured rounds before promotion."""
+     if suite not in ("all", "prefill-read"):
+         raise ValueError(f"unsupported timing judge suite: {suite}")
++    if prefill_reader not in ("split", "fused") or (
++        suite != "prefill-read" and prefill_reader != "split"
++    ):
++        raise ValueError("prefill_reader fused requires suite prefill-read")
+     args = parser().parse_args([])
+     args.suite = suite
+     requested_modes = (
+@@ -466,6 +485,11 @@
+         != (PREFILL_PROTOCOL if suite == "prefill-read" else PROTOCOL)
+         or payload.get("schema_version") != 2
+         or payload.get("config", {}).get("keep_count", 256) != keep_count
++        or (
++            suite == "prefill-read"
++            and payload.get("config", {}).get("prefill_reader", "split")
++            != prefill_reader
++        )
+     ):
+         raise RuntimeError(
+             "Incomplete default decode/store matrix or protocol mismatch"
+@@ -490,6 +514,8 @@
+         ):
+             raise RuntimeError(f"Wrong prefill variant layouts: {case['name']}")
+         if suite == "prefill-read":
++            if case.get("prefill_reader", "split") != prefill_reader:
++                raise RuntimeError(f"Prefill reader mismatch: {case['name']}")
+             definition = definitions[case["name"]]
+             digest = case.get("common_inputs_sha256", "")
+             if (
+--- a/python/sglang/srt/remnant/packed.py
++++ b/python/sglang/srt/remnant/packed.py
+@@ -270,6 +270,7 @@
+     output: torch.Tensor,
+     *,
+     layer_id: int | None = None,
++    fused_rope: bool = False,
+ ) -> torch.Tensor:
+     """Gather selected records, dequantize, zero-fill and apply tail RoPE.
+ 
+@@ -277,7 +278,11 @@
+     physical entries address Packed rows, raw entries address logical C4 rows.
+     Lengths are int32 [queries]. The caller owns contiguous BF16 output and a
+     contiguous complex RoPE table. Invalid/padded selections produce zero rows.
++    ``fused_rope`` opts into the experimental one-launch reader; the verified
++    split path remains the default. Neither reader changes the persistent ABI.
+     """
++    if type(fused_rope) is not bool:
++        raise TypeError("fused_rope must be a bool")
+     buffers = _as_buffers(packed_buffers, layer_id)
+     if physical_indices.shape != raw_indices.shape:
+         raise ValueError("physical_indices and raw_indices must have equal shape")
+@@ -293,6 +298,36 @@
+     if not freqs_cis.is_complex() or not freqs_cis.is_contiguous():
+         raise ValueError("freqs_cis must be a contiguous complex tensor")
+     if flat_rows == 0:
++        return output
++    if fused_rope:
++        from .triton import _unpack_gather_bf16_rope_kernel
++
++        _unpack_gather_bf16_rope_kernel[(flat_rows,)](
++            buffers.values,
++            buffers.bitmaps,
++            buffers.scales,
++            physical_indices,
++            raw_indices,
++            topk_lengths,
++            torch.view_as_real(freqs_cis),
++            out2d,
++            n_queries,
++            selected_k,
++            HEAD_DIM=config.HEAD_DIM,
++            NOPE_DIM=config.NOPE_DIM,
++            ROPE_PAIRS=config.ROPE_DIM // 2,
++            KEEP_K=_buffer_keep_count(buffers),
++            BITMAP_WORDS=config.BITMAP_WORDS,
++            BLOCK_D=config.HEAD_DIM,
++            PHYSICAL_STRIDE_Q=physical_indices.stride(0),
++            PHYSICAL_STRIDE_K=physical_indices.stride(1),
++            RAW_STRIDE_Q=raw_indices.stride(0),
++            RAW_STRIDE_K=raw_indices.stride(1),
++            LENGTH_STRIDE=topk_lengths.stride(0),
++            PACKED_ROWS=buffers.values.numel() // _buffer_keep_count(buffers),
++            FREQ_ROWS=freqs_cis.numel() // (config.ROPE_DIM // 2),
++            num_warps=8,
++        )
+         return output
+     from .triton import (
+         _rope_tail_complex_inplace_kernel,
+--- a/python/sglang/srt/remnant/triton/__init__.py
++++ b/python/sglang/srt/remnant/triton/__init__.py
+@@ -8,6 +8,7 @@
+     _pack_fp8_kernel,
+     _rope_tail_complex_inplace_kernel,
+     _unpack_gather_bf16_kernel,
++    _unpack_gather_bf16_rope_kernel,
+ )
+ 
+ __all__ = [
+@@ -15,4 +16,5 @@
+     "_pack_fp8_kernel",
+     "_rope_tail_complex_inplace_kernel",
+     "_unpack_gather_bf16_kernel",
++    "_unpack_gather_bf16_rope_kernel",
+ ]
+--- a/python/sglang/srt/remnant/triton/kernels.py
++++ b/python/sglang/srt/remnant/triton/kernels.py
+@@ -123,15 +123,14 @@
+         )
+ 
+ 
+-@triton.jit(do_not_specialize=_GATHER_RUNTIME_PARAMETERS)
+-def _unpack_gather_bf16_kernel(
++@triton.jit
++def _unpack_gather_row(
+     values_ptr,
+     bitmap_ptr,
+     scales_ptr,
+     physical_indices_ptr,
+     raw_indices_ptr,
+     topk_lengths_ptr,
+-    output_ptr,
+     n_queries,
+     selected_k,
+     HEAD_DIM: tl.constexpr,
+@@ -146,7 +145,7 @@
+     PACKED_ROWS,
+     FREQ_ROWS,
+ ):
+-    """Gather packed rows and reconstruct pre-RoPE BF16 rows."""
++    """Shared guarded gather; return pre-round FP32 values, raw row and validity."""
+     selected_row = tl.program_id(0)
+     query = selected_row // selected_k
+     k = selected_row % selected_k
+@@ -189,7 +188,138 @@
+     ).to(tl.int32)
+     scale = tl.exp2((scale_code - 127).to(tl.float32))
+     value = tl.where(valid & kept & in_bounds, fp8 * scale, 0.0)
++    return value, raw, valid
++
++
++@triton.jit(do_not_specialize=_GATHER_RUNTIME_PARAMETERS)
++def _unpack_gather_bf16_kernel(
++    values_ptr,
++    bitmap_ptr,
++    scales_ptr,
++    physical_indices_ptr,
++    raw_indices_ptr,
++    topk_lengths_ptr,
++    output_ptr,
++    n_queries,
++    selected_k,
++    HEAD_DIM: tl.constexpr,
++    KEEP_K: tl.constexpr,
++    BITMAP_WORDS: tl.constexpr,
++    BLOCK_D: tl.constexpr,
++    PHYSICAL_STRIDE_Q,
++    PHYSICAL_STRIDE_K: tl.constexpr,
++    RAW_STRIDE_Q,
++    RAW_STRIDE_K: tl.constexpr,
++    LENGTH_STRIDE: tl.constexpr,
++    PACKED_ROWS,
++    FREQ_ROWS,
++):
++    """Known-good split reader: materialize pre-RoPE BF16 rows."""
++    value, _, _ = _unpack_gather_row(
++        values_ptr,
++        bitmap_ptr,
++        scales_ptr,
++        physical_indices_ptr,
++        raw_indices_ptr,
++        topk_lengths_ptr,
++        n_queries,
++        selected_k,
++        HEAD_DIM,
++        KEEP_K,
++        BITMAP_WORDS,
++        BLOCK_D,
++        PHYSICAL_STRIDE_Q,
++        PHYSICAL_STRIDE_K,
++        RAW_STRIDE_Q,
++        RAW_STRIDE_K,
++        LENGTH_STRIDE,
++        PACKED_ROWS,
++        FREQ_ROWS,
++    )
++    selected_row = tl.program_id(0)
++    offs = tl.arange(0, BLOCK_D)
++    in_bounds = offs < HEAD_DIM
+     tl.store(output_ptr + selected_row * HEAD_DIM + offs, value, mask=in_bounds)
++
++
++@triton.jit(do_not_specialize=_GATHER_RUNTIME_PARAMETERS)
++def _unpack_gather_bf16_rope_kernel(
++    values_ptr,
++    bitmap_ptr,
++    scales_ptr,
++    physical_indices_ptr,
++    raw_indices_ptr,
++    topk_lengths_ptr,
++    freq_ptr,
++    output_ptr,
++    n_queries,
++    selected_k,
++    HEAD_DIM: tl.constexpr,
++    NOPE_DIM: tl.constexpr,
++    ROPE_PAIRS: tl.constexpr,
++    KEEP_K: tl.constexpr,
++    BITMAP_WORDS: tl.constexpr,
++    BLOCK_D: tl.constexpr,
++    PHYSICAL_STRIDE_Q,
++    PHYSICAL_STRIDE_K: tl.constexpr,
++    RAW_STRIDE_Q,
++    RAW_STRIDE_K: tl.constexpr,
++    LENGTH_STRIDE: tl.constexpr,
++    PACKED_ROWS,
++    FREQ_ROWS,
++):
++    """Opt-in fused read: preserve the split reader's intermediate BF16 rounding.
++
++    Adjacent logical coordinates form complex pairs, even when only one is
++    retained. Rotate both reconstructed components, including pruned zero lanes.
++    XOR-1 gathers each partner from the same 512-coordinate register vector;
++    no dense intermediate or cross-program synchronization is required.
++    """
++    value, raw, valid = _unpack_gather_row(
++        values_ptr,
++        bitmap_ptr,
++        scales_ptr,
++        physical_indices_ptr,
++        raw_indices_ptr,
++        topk_lengths_ptr,
++        n_queries,
++        selected_k,
++        HEAD_DIM,
++        KEEP_K,
++        BITMAP_WORDS,
++        BLOCK_D,
++        PHYSICAL_STRIDE_Q,
++        PHYSICAL_STRIDE_K,
++        RAW_STRIDE_Q,
++        RAW_STRIDE_K,
++        LENGTH_STRIDE,
++        PACKED_ROWS,
++        FREQ_ROWS,
++    )
++    # The split path stores BF16 before its RoPE kernel reloads FP32. Do not
++    # rotate the unrounded dequantized value merely because it is in registers.
++    value = value.to(tl.bfloat16).to(tl.float32)
++    offs = tl.arange(0, BLOCK_D)
++    partner = tl.gather(value, offs ^ 1, axis=0)
++    tail = (offs >= NOPE_DIM) & (offs < HEAD_DIM)
++    pair = (offs - NOPE_DIM) // 2
++    freq_base = raw * 4 * ROPE_PAIRS + pair
++    c = tl.load(freq_ptr + freq_base * 2, mask=valid & tail, other=1.0).to(tl.float32)
++    s = tl.load(freq_ptr + freq_base * 2 + 1, mask=valid & tail, other=0.0).to(
++        tl.float32
++    )
++    # Keep the operand order of the separate complex rotation, including the
++    # imaginary component's real*s + imag*c expression and final BF16 store.
++    even = offs % 2 == 0
++    x_real = tl.where(even, value, partner)
++    x_imag = tl.where(even, partner, value)
++    rotated = tl.where(even, x_real * c - x_imag * s, x_real * s + x_imag * c)
++    result = tl.where(tail, rotated, value)
++    tl.store(
++        output_ptr + tl.program_id(0) * HEAD_DIM + offs,
++        result,
++        mask=offs < HEAD_DIM,
++    )
+ 
+ 
+ @triton.jit(do_not_specialize=_GATHER_RUNTIME_PARAMETERS)
+--- a/python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py
++++ b/python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py
+@@ -114,6 +114,17 @@
+         buffers, physical, raw, lengths, freqs_cpu.cuda(), workspace
+     )
+     rows = physical.numel()
++    # Candidate and split outputs own distinct storage. Extra rows are a
++    # canary: neither empty nor partially valid selections may write them.
++    fused = torch.full((rows + 3, 512), -91, dtype=torch.bfloat16, device="cuda")
++    unpack_gather_bf16(
++        buffers, physical, raw, lengths, freqs_cpu.cuda(), fused, fused_rope=True
++    )
++    assert torch.equal(
++        fused[:rows].view(torch.int16),
++        workspace.dense_bf16[:rows].view(torch.int16),
++    ), f"fused/split BF16 bytes differ for k={keep_count}, strided={strided}"
++    assert torch.all(fused[rows:] == -91)
+     assert torch.equal(indices.cpu().flatten(), torch.arange(rows, dtype=torch.int32))
+     if not rows:
+         assert torch.count_nonzero(native).item() == 0
+@@ -139,10 +150,48 @@
+             tail = decoded[p, 448:].float().reshape(32, 2)
+             rotated = torch.view_as_complex(tail.contiguous()) * freqs_cpu[r * 4]
+             expected_tail = torch.view_as_real(rotated).flatten().to(torch.bfloat16)
++        expected_dense = (
++            decoded[p].clone() if valid else torch.zeros(512, dtype=torch.bfloat16)
++        )
++        expected_dense[448:] = expected_tail
++        torch.testing.assert_close(
++            fused[row].cpu(), expected_dense, atol=2e-2, rtol=2e-2
++        )
+         actual_tail = native[page, value_base + 448 : value_base + 576].view(
+             torch.bfloat16
+         )
+         torch.testing.assert_close(actual_tail, expected_tail, atol=2e-2, rtol=2e-2)
++
++
++@pytest.mark.parametrize("keep_count", [192, 256])
++def test_fused_rope_rotates_into_pruned_partner_lanes(keep_count):
++    """A retained real/imaginary lane must contribute to its pruned partner."""
++    remnant.configure_cache_format("remnant", "triton", keep_count=keep_count)
++    latent = torch.zeros((2, 512), dtype=torch.float32)
++    latent[:, : keep_count - 2] = 2
++    latent[:, 448] = 3
++    latent[:, 451] = -3
++    mask = latent != 0
++    planes = pack_rows_ref(latent, mask, torch.ones(512), 1e-6, keep_count=keep_count)
++    physical = torch.tensor([[1, 1]], dtype=torch.int32, device="cuda")
++    raw = torch.tensor([[0, 2]], dtype=torch.int32, device="cuda")
++    lengths = torch.tensor([2], dtype=torch.int32, device="cuda")
++    angles = torch.linspace(0.2, 1.1, 16 * 32).reshape(16, 32)
++    freqs = torch.polar(torch.ones_like(angles), angles)
++    split = torch.empty((2, 512), dtype=torch.bfloat16, device="cuda")
++    fused = torch.empty_like(split)
++    buffers = tuple(t.cuda() for t in planes)
++    for flag, output in ((False, split), (True, fused)):
++        unpack_gather_bf16(
++            buffers, physical, raw, lengths, freqs.cuda(), output, fused_rope=flag
++        )
++    assert torch.equal(fused.view(torch.int16), split.view(torch.int16))
++    expected = unpack_rows_ref(*planes)[[1, 1]]
++    pairs = expected[:, 448:].float().reshape(2, 32, 2)
++    rotated = torch.view_as_complex(pairs.contiguous()) * freqs[[0, 8]]
++    expected[:, 448:] = torch.view_as_real(rotated).flatten(1).to(torch.bfloat16)
++    assert torch.all(expected[:, [449, 450]] != 0)
++    torch.testing.assert_close(fused.cpu(), expected, atol=2e-2, rtol=2e-2)
+ 
+ 
+ def test_prefill_widths_reuse_gather_kernels(monkeypatch):
+@@ -162,6 +211,7 @@
+     workspace = NativeWorkspace.allocate(2, 768, 64, "cuda")
+     names = {
+         "_unpack_gather_bf16_kernel",
++        "_unpack_gather_bf16_rope_kernel",
+         "_rope_tail_complex_inplace_kernel",
+         "_bf16_to_native_kernel",
+     }
+@@ -194,6 +244,20 @@
+             lengths.cuda(),
+             freqs.cuda(),
+             workspace,
++        )
++        fused = torch.empty((2 * width, 512), dtype=torch.bfloat16, device="cuda")
++        unpack_gather_bf16(
++            buffers,
++            physical.cuda(),
++            raw.cuda(),
++            lengths.cuda(),
++            freqs.cuda(),
++            fused,
++            fused_rope=True,
++        )
++        assert torch.equal(
++            fused.view(torch.int16),
++            workspace.dense_bf16[: 2 * width].view(torch.int16),
+         )
+         torch.cuda.synchronize()
+         if warm_counts is None:
+--- a/test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py
++++ b/test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py
+@@ -152,6 +152,95 @@
+         torch.cuda.synchronize()
+         self.assertTrue(torch.equal(output, first))
+         remnant.configure_cache_format("native")
++
++    def test_fused_read_replays_changed_planes_indices_lengths_and_frequencies(self):
++        for count in (64, 128, 192, 256, 320, 384, 448):
++            with self.subTest(keep_count=count):
++                remnant.configure_cache_format("remnant", "triton", keep_count=count)
++                torch.manual_seed(101 + count)
++                source = torch.randn(4, 512)
++                weight = torch.linspace(0.5, 1.5, 512)
++                planes = pack_rows_ref(
++                    source,
++                    topmag_keep_mask(source, count / 512),
++                    weight,
++                    1e-6,
++                    keep_count=count,
++                )
++                buffers = tuple(x.cuda() for x in planes)
++                physical = torch.tensor(
++                    [[0, 2, -1, 3], [3, 3, 1, 0]], device="cuda", dtype=torch.int32
++                )
++                raw = torch.tensor(
++                    [[0, 2, 1, 3], [2, 0, 1, 4]], device="cuda", dtype=torch.int32
++                )
++                lengths = torch.tensor([4, 3], device="cuda", dtype=torch.int32)
++                angles = torch.arange(32 * 32).float().reshape(32, 32) * 0.0037
++                freqs = torch.polar(torch.ones_like(angles), angles).cuda()
++                output = torch.empty((8, 512), device="cuda", dtype=torch.bfloat16)
++                split = torch.empty_like(output)
++                owned = (*buffers, physical, raw, lengths, freqs, output)
++                addresses = [x.data_ptr() for x in owned]
++
++                def call():
++                    unpack_gather_bf16(
++                        buffers,
++                        physical,
++                        raw,
++                        lengths,
++                        freqs,
++                        output,
++                        fused_rope=True,
++                    )
++
++                call()
++                torch.cuda.synchronize()
++                graph = torch.cuda.CUDAGraph()
++                with torch.cuda.graph(graph):
++                    call()
++                for iteration in range(2):
++                    source.normal_()
++                    planes = pack_rows_ref(
++                        source,
++                        topmag_keep_mask(source, count / 512),
++                        weight,
++                        1e-6,
++                        keep_count=count,
++                    )
++                    for target, values in zip(buffers, planes):
++                        target.copy_(values)
++                    physical.copy_(physical.roll(1, dims=1))
++                    raw.copy_(raw.roll(1, dims=1))
++                    raw[0, 1] = -1
++                    lengths.copy_(torch.tensor([4 - iteration, 2 + iteration]))
++                    phase = angles * (iteration + 2)
++                    freq_cpu = torch.polar(torch.ones_like(phase), phase)
++                    freqs.copy_(freq_cpu)
++                    graph.replay()
++                    unpack_gather_bf16(buffers, physical, raw, lengths, freqs, split)
++                    self.assertTrue(
++                        torch.equal(output.view(torch.int16), split.view(torch.int16))
++                    )
++                    decoded = unpack_rows_ref(*planes)
++                    expected = torch.zeros((8, 512), dtype=torch.bfloat16)
++                    p_cpu, r_cpu, lens = physical.cpu(), raw.cpu(), lengths.cpu()
++                    for row in range(8):
++                        query, k = divmod(row, 4)
++                        p, r = int(p_cpu[query, k]), int(r_cpu[query, k])
++                        if k < lens[query] and 0 <= p < 4 and 0 <= r * 4 < 32:
++                            expected[row] = decoded[p]
++                            tail = decoded[p, 448:].float().reshape(32, 2)
++                            rotated = (
++                                torch.view_as_complex(tail.contiguous())
++                                * freq_cpu[r * 4]
++                            )
++                            expected[row, 448:] = (
++                                torch.view_as_real(rotated).flatten().to(torch.bfloat16)
++                            )
++                    torch.testing.assert_close(
++                        output.cpu(), expected, atol=2e-2, rtol=2e-2
++                    )
++                    self.assertEqual([x.data_ptr() for x in owned], addresses)
+ 
+     def test_consecutive_mixed_layers_replay_with_stable_buffers(self):
+         counts = (128, 192, 256, 320)
+--- a/test/registered/attention/unittests/dsv4/test_remnant_pack.py
++++ b/test/registered/attention/unittests/dsv4/test_remnant_pack.py
+@@ -10,7 +10,7 @@
+ 
+ from sglang.srt import remnant
+ from sglang.srt.remnant import config
+-from sglang.srt.remnant.packed import _as_buffers, pack_rows_fused
++from sglang.srt.remnant.packed import _as_buffers, pack_rows_fused, unpack_gather_bf16
+ from sglang.srt.remnant.reference import (
+     pack_rows_ref,
+     topmag_keep_mask,
+@@ -23,6 +23,63 @@
+ 
+     def tearDown(self):
+         remnant.configure_cache_format("native")
++
++    def test_bf16_reader_opt_in_dispatch_and_empty_inputs(self):
++        import sys
++        from unittest.mock import patch
++
++        calls = []
++
++        class Kernel:
++            def __init__(self, name):
++                self.name = name
++
++            def __getitem__(self, grid):
++                return lambda *args, **kwargs: calls.append((self.name, grid))
++
++        exports = SimpleNamespace(
++            _unpack_gather_bf16_kernel=Kernel("split"),
++            _rope_tail_complex_inplace_kernel=Kernel("rope"),
++            _unpack_gather_bf16_rope_kernel=Kernel("fused"),
++        )
++        buffers = (
++            torch.zeros((1, 256), dtype=torch.uint8),
++            torch.zeros((1, 8), dtype=torch.uint64),
++            torch.zeros((1, 8), dtype=torch.uint8),
++        )
++        index = torch.zeros((1, 1), dtype=torch.int32)
++        lengths = torch.ones(1, dtype=torch.int32)
++        freqs = torch.ones((16, 32), dtype=torch.complex64)
++        output = torch.empty((1, 512), dtype=torch.bfloat16)
++        package = unpack_gather_bf16.__module__.rsplit(".", 1)[0]
++        with patch.dict(sys.modules, {package + ".triton": exports}):
++            unpack_gather_bf16(buffers, index, index, lengths, freqs, output)
++            self.assertEqual(calls, [("split", (1,)), ("rope", (1,))])
++            calls.clear()
++            unpack_gather_bf16(
++                buffers, index, index, lengths, freqs, output, fused_rope=True
++            )
++            self.assertEqual(calls, [("fused", (1,))])
++            calls.clear()
++            for physical, raw, active in (
++                (index[:0], index[:0], lengths[:0]),
++                (index[:, :0], index[:, :0], lengths),
++            ):
++                unpack_gather_bf16(
++                    buffers, physical, raw, active, freqs, output, fused_rope=True
++                )
++            self.assertEqual(calls, [])
++            for invalid in (1, 0, "fused", None):
++                with self.assertRaisesRegex(TypeError, "fused_rope must be a bool"):
++                    unpack_gather_bf16(
++                        buffers,
++                        index,
++                        index,
++                        lengths,
++                        freqs,
++                        output,
++                        fused_rope=invalid,
++                    )
+ 
+     def test_profiles_validate_counts_ids_and_atomic_updates(self):
+         ratios = (0, 128, 4, 128, 4, 0, 4)

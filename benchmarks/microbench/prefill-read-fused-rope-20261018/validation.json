@@ -1,0 +1,78 @@
+{
+  "status": "passed",
+  "cases": 36,
+  "raw_samples": 3240,
+  "checks": {
+    "racecheck": {
+      "tests": 67,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "synccheck": {
+      "tests": 67,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "memcheck": {
+      "tests": 67,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "validation": {
+      "tests": 291,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "all_inputs_match_split_study": true,
+  "statistics_and_paired_ratios_recomputed": true,
+  "source_and_CPU_binaries_match": true,
+  "loaded_prefill_libraries": "FlashMLA and Native store; remnant_ops is not required for prefill",
+  "csv_rows": 108,
+  "gpu_function_seconds": 244.044332201,
+  "csv_matches_json": true,
+  "all_loaded_python_and_JIT_source_hashes_match": 218,
+  "CPU_checks": {
+    "tests": 140,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "profiling": {
+    "status": "passed",
+    "operations": 108,
+    "launches": 360,
+    "metrics_per_launch": 6,
+    "unique_NVTX_ranges": 108,
+    "reports": {
+      "prefill-read-packed256.ncu-rep": {
+        "bytes": 12489736,
+        "sha256": "7d8cdc1a96eacb8f2fb7d7e20152b6e6fa2f4810af9a50c86a0c47fc082b9f85"
+      },
+      "prefill-read-packed192.ncu-rep": {
+        "bytes": 12490168,
+        "sha256": "c13f897519b54d71cd147a344bf1d9a1fc9fc98b47398cfdd1eb9570fc27e02e"
+      },
+      "prefill-read-native.ncu-rep": {
+        "bytes": 12413255,
+        "sha256": "27de5a82185dd76b6fac65bb538d2a9cdb4da20b735cd5d32d2f0c4d87b8dc70"
+      }
+    },
+    "all_filters_partition_full_reports": true,
+    "all_sources_binaries_inputs_match_timing": true,
+    "separate_rope_launches": 0,
+    "CLI_cross_checked_operations": 86,
+    "local_reader": {
+      "python": "3.11.14 (main, Feb 12 2026, 00:41:29) [Clang 21.1.4 ]",
+      "module_sha256": "ddccb43c0450b451d1b0bc7c4ecb14b2b0cc19c8c1c323d217f4beaa3ce97111",
+      "extension_sha256": "cb7e61df5d7e7d0328da1c37ded59e5ce77fbd90abee1b097b969c776dc24d00",
+      "version": "2026.3.1.0 (build 38829034) (public-release)"
+    },
+    "GPU_capture_job_status": "failed during CSV export after all captures completed",
+    "export_completion": "local report API; no new remote allocation"
+  }
+}
