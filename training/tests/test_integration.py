@@ -1767,6 +1767,16 @@ else:
         self.assertEqual(len(result["summary"]), 21)
         self.assertEqual(result["coverage"]["methods"], 21)
         self.assertEqual(len(result["figures"]["files"]), 2)
+        combined_args = list(args)
+        combined_args[combined_args.index(str(output))] = str(self.root / "all.json")
+        combined_args[combined_args.index(str(figures))] = str(self.root / "all-figures")
+        combined = evaluate.main(combined_args + ["--split", "all"])
+        self.assertEqual(combined["split"], "training + development")
+        self.assertEqual(combined["coverage"]["issues"], 2)
+        self.assertEqual(combined["coverage"]["query_layer_examples"], 14)
+        for records in combined["records"].values():
+            self.assertEqual({row["rid"] for row in records}, {"train", "development"})
+            self.assertEqual(len(records), 14)
         for path in result["figures"]["files"]:
             self.assertTrue(Path(path).read_bytes().startswith(b"\x89PNG\r\n\x1a\n"))
         patterned = {

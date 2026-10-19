@@ -211,7 +211,7 @@ def _comparison_reports(output: Path, result: dict) -> None:
             else "# Six-method attention-error comparison"
         ),
         "",
-        f"**{result['status']} — reused development data, not a fresh held-out test.**",
+        f"**{result['status']} — reused {result['split']} data, not a fresh held-out test.**",
         "",
         "| Method | Retained features | Mean relative output error ↓ | p95 relative output error ↓ |",
         "|---|---:|---:|---:|",
@@ -298,10 +298,10 @@ def plot_retention_sweep(result: dict, destination: Path) -> dict:
             fig.text(
                 0.5,
                 0.045,
-                f'{coverage["issues"]} development issues · {coverage["layers"]} CSA layers · '
+                f'{coverage["issues"]} {result["split"]} issues · {coverage["layers"]} CSA layers · '
                 f'{coverage["query_layer_examples"]:,} paired examples · 64 heads\n'
                 "Structured: 1:8–7:8 (256 = 4:8, not 2:4). Frozen 256-trained learned scorer.\n"
-                "Reused development data; quantized frozen-attention replay, not task-quality results.",
+                "Reused data; quantized frozen-attention replay, not task-quality results.",
                 ha="center",
                 va="bottom",
                 fontsize=8,
@@ -452,8 +452,12 @@ def compare_masks(
     threads: int,
     retention_sweep: bool = False,
     figure_dir: Path | None = None,
+    split: str = "development",
 ) -> dict:
-    """Layer-at-a-time, inference-only comparison on the original development set."""
+    """Inference-only comparison on development or the combined frozen cohort."""
+    if split not in ("development", "all"):
+        raise ValueError("comparison split must be development or all")
+    roles = ("train", "development") if split == "all" else ("development",)
     outputs = [
         output,
         output.with_suffix(".csv"),
@@ -495,12 +499,12 @@ def compare_masks(
         read_checkpoint(selected[layer])
     records = {m.key: [] for m in methods}
     expected, completed = set(), []
-    issues = set(config["split"]["development"])
+    issues = {rid for role in roles for rid in config["split"][role]}
     result = {
         "schema_version": 1,
         "status": "partial",
         "fresh_test_completed": False,
-        "split": "development",
+        "split": "training + development" if split == "all" else "development",
         "records": records,
         "completed_layers": completed,
         "definitions": {
@@ -519,7 +523,7 @@ def compare_masks(
                 else "raw pre-RoPE coordinates; consecutive groups for 2:4 and 3:8"
             ),
             "learned_192": "256-trained frozen scorer evaluated with 192 survivors",
-            "scope": "Reused development data; numerical replay, not fresh-test significance or serving quality",
+            "scope": "Reused frozen cohort; numerical replay, not fresh-test significance or serving quality",
         },
         "settings": {
             "cache": str(cache.resolve()),
@@ -545,15 +549,20 @@ def compare_masks(
                     checkpoint["selected_parameters"], "cpu", 42 + layer
                 ).eval()
                 states = load_cached_layer(cache, layer)
-                rows = states["development"]
+                rows = [state for role in roles for state in states[role]]
                 keys = {(s["rid"], layer, s["ordinal"]) for s in rows}
                 if (
                     len(keys) != len(rows)
                     or {s["rid"] for s in rows} != issues
-                    or any(sum(s["rid"] == rid for s in rows) != 10 for rid in issues)
+                    or any(
+                        sum(s["rid"] == rid for s in rows)
+                        != (4 if role == "train" else 10)
+                        for role in roles
+                        for rid in config["split"][role]
+                    )
                 ):
                     raise ValueError(
-                        f"layer {layer}: complete ten-position development coverage required"
+                        f"layer {layer}: complete requested cohort coverage required (4 train / 10 development positions per issue)"
                     )
                 expected.update(keys)
                 for state in rows:
@@ -623,8 +632,8 @@ def compare_masks(
         result["elapsed_seconds"] = time.monotonic() - started
         full = (
             set(layers) == set(LAYERS)
-            and len(issues) == 10
-            and len(expected) == 2100
+            and len(issues) == (50 if split == "all" else 10)
+            and len(expected) == (5460 if split == "all" else 2100)
         )
         result["status"] = "complete" if full else "partial-layer diagnostic"
         result["coverage"] = {
@@ -657,11 +666,17 @@ def main(arguments=None):
         parser.add_argument("--" + name, type=Path, required=True)
     parser.add_argument("--layers", default=",".join(map(str, LAYERS)))
     parser.add_argument("--threads", type=int, default=4)
+    parser.add_argument(
+        "--split",
+        choices=("development", "all"),
+        default="development",
+        help="comparison/sweep cohort; all combines training and development",
+    )
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument(
         "--compare-masks",
         action="store_true",
-        help="six-method development comparison, with frozen 256-trained scorer at both budgets",
+        help="six-method comparison, with frozen 256-trained scorer at both budgets",
     )
     modes.add_argument(
         "--retention-sweep",
@@ -678,6 +693,8 @@ def main(arguments=None):
         parser.error("positive thread count required")
     if args.figure_dir is not None and not args.retention_sweep:
         parser.error("--figure-dir requires --retention-sweep")
+    if args.split != "development" and not (args.compare_masks or args.retention_sweep):
+        parser.error("--split requires --compare-masks or --retention-sweep")
     if args.output.exists() or args.output.resolve().is_relative_to(
         Path(__file__).resolve().parents[1]
     ):
@@ -693,6 +710,7 @@ def main(arguments=None):
             threads=args.threads,
             retention_sweep=args.retention_sweep,
             figure_dir=args.figure_dir,
+            split=args.split,
         )
     math = load_runner(args.runner)
     ref = math.reference()

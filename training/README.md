@@ -121,9 +121,10 @@ python -m training.evaluate --compare-masks \
   --output "$PRUNING_RESULTS/comparison.json" --threads 4
 
 # Three curves at each budget: 64, 128, 192, 256, 320, 384, 448.
+# Include all 50 issues (40 training + 10 development).
 python -m training.evaluate --retention-sweep \
   --cache "$PRUNING_CACHE" --policy "$PRUNING_POLICY" --runner "$PRUNING_RUNNER" \
-  --output "$PRUNING_RESULTS/sweep.json" --threads 4 \
+  --output "$PRUNING_RESULTS/sweep.json" --threads 4 --split all \
   --figure-dir "$PRUNING_RESULTS/sweep-figures"
 ```
 
@@ -133,6 +134,12 @@ python -m training.evaluate --retention-sweep \
   where N = survivors / 64; its 256 point is **4:8, not 2:4**.
 - **Learned:** identical frozen, 256-trained layer scorers at every budget;
   Learned-192 is **trained at 256, evaluated at 192**.
+
+Comparison commands default to the ten development issues. `--split all` includes
+all 50 issues and 5,460 query-layer examples (four positions per training issue,
+ten per development issue, across 21 layers). Mean error weights issues equally;
+p95 pools all examples. Combined curves include training data and do not measure
+held-out generalization.
 
 Named adaptations are masks, not complete upstream reproductions. At 256, replay
 uses the existing codec; non-256 budgets use a validated dense numerical codec
