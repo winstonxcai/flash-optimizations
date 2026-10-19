@@ -57,6 +57,8 @@ if [ "$ACTION" = stop ]; then
   exit 0
 fi
 
+check_sources || exit 1
+
 case "${STORE_IMPLEMENTATION:-}" in
   ""|triton|kernel) ;;
   *) echo "STORE_IMPLEMENTATION must be triton or kernel" >&2; exit 2 ;;

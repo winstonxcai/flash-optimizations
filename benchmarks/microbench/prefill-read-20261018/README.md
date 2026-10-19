@@ -165,4 +165,5 @@ it is outside maintained builds/uploads. Historical attempts and original
 profiles remain outside Git, in the documented raw directory and Modal volume.
 Canonical-runner reconciliation is deferred because the user explicitly requested
 snapshot continuation while preserving concurrent workspace edits.
-No commit or push was requested or performed.
+The original experiment did not commit or push. This curated collection is now
+committed; that does not change the recorded source or validation scope.

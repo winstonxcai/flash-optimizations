@@ -46,6 +46,16 @@ SGLANG_SOURCE = Path(os.getenv("REMNANT_SGLANG_SOURCE_OVERRIDE", str(REPO_ROOT /
 FLASHMLA_SOURCE = Path(os.getenv("REMNANT_FLASHMLA_SOURCE_OVERRIDE", str(REPO_ROOT / "third_party/flashmla")))
 if not modal.is_local():
     SGLANG_SOURCE, FLASHMLA_SOURCE = SGLANG_ROOT, FLASHMLA_ROOT
+if modal.is_local():
+    from scripts.sources import check_sources
+
+    SOURCE_IDENTITIES = check_sources(
+        REPO_ROOT,
+        {name: path for name, path in (("sglang", SGLANG_SOURCE), ("flashmla", FLASHMLA_SOURCE))
+         if f"REMNANT_{name.upper()}_SOURCE_OVERRIDE" in os.environ},
+    )
+else:
+    SOURCE_IDENTITIES = json.loads(os.environ["REMNANT_SOURCE_IDENTITIES"])
 RESULTS_ROOT = Path("/results")
 NATIVE_LIBRARY = Path("/opt/remnant-native-store.so")
 MANIFEST = Path("/opt/remnant-build.json")
@@ -233,6 +243,7 @@ def _build_image() -> None:
     # 5. Save exact source/binary provenance for every GPU run.
     manifest = {
         "sources": sources,
+        "source_identities": SOURCE_IDENTITIES,
         "torch": torch.__version__,
         "cuda": torch.version.cuda,
         "arch": "sm_90a",
@@ -270,6 +281,7 @@ kernel_image = (
     .pip_install("typing_extensions==4.15.0")
     .env(
         {
+            "REMNANT_SOURCE_IDENTITIES": json.dumps(SOURCE_IDENTITIES),
             "PYTHONPATH": f"{SGLANG_ROOT / 'python'}:{REMOTE_REPO}",
             "PYTHONUNBUFFERED": "1",
             "PYTHONDONTWRITEBYTECODE": "1",

@@ -82,11 +82,11 @@ docker run --rm --pull never --network none \
 
 ## Update the image
 
-Pull outside `foo.txt` and outside GPUQ jobs:
+Update outside running GPUQ jobs. Preserve dirty fork work before synchronizing:
 
 ```bash
 git pull --ff-only origin remnant
-git submodule update --init --recursive
+git submodule update --init --recursive --checkout
 bash scripts/local/container.sh rebuild
 ```
 
@@ -97,6 +97,12 @@ its servers. Host script changes need only a pull. To start an existing image:
 ```bash
 bash scripts/local/container.sh up
 ```
+
+Local container, serving and benchmark entry points reject dirty or pin-mismatched
+forks (including nested submodules) before external work. Stop commands still
+work. For a manual Docker build, run `python3 scripts/sources.py .` first. These
+checks validate host source, not an already-built image; rebuild after source
+changes. The direct in-image benchmark client relies on its launcher's preflight.
 
 The `typing_extensions` overlay installs offline from the small Git-tracked
 wheel in `third_party/wheels/`, with its upstream SHA-256 enforced. This build

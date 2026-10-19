@@ -71,5 +71,5 @@ Raw logs/exports and the interrupted attempt remain in
 `remnant-stage2a-results:/microbench/<run-id>/` and the local
 `~/.cache/remnant/modal-results/` archive. Only representative evidence was
 copied here; historical result folders are now archived under repo-root
-`raw/retired-results-20261014/`. No commit or push. Use Git LFS for
-the selected viewer reports before committing.
+`raw/retired-results-20261014/`. The selected collection is committed;
+viewer reports are tracked with Git LFS.

@@ -19,6 +19,7 @@ set -u
 
 TAG=${1:-} PORT=${2:-$PORT} OUT=${3:-}
 [ -n "$TAG" ] || { echo "usage: $0 <tag> [port] [out_dir]"; exit 1; }
+check_sources || exit 1
 
 LM_EVAL_BIN=${LM_EVAL_BIN:-lm-eval}
 command -v "$LM_EVAL_BIN" >/dev/null 2>&1 \

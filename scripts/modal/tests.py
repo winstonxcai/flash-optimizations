@@ -18,6 +18,166 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
 
 from scripts.modal import kernels
+from scripts.sources import check_sources
+
+
+class SourcePreflightTests(unittest.TestCase):
+    """Real Git fixtures; no Docker, Modal API or shared fork mutations."""
+
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix="remnant-sources-")
+        self.addCleanup(temporary.cleanup)
+        self.repo = Path(temporary.name) / "parent with spaces"
+        self.initialize(self.repo)
+        self.forks = {}
+        for name in ("sglang", "flashmla"):
+            root = self.repo / "third_party" / name
+            self.initialize(root)
+            self.forks[name] = root
+        self.cutlass = self.forks["flashmla"] / "csrc/cutlass"
+        self.initialize(self.cutlass)
+        self.pin(self.forks["flashmla"], self.cutlass)
+        for root in self.forks.values():
+            self.pin(self.repo, root)
+
+    @staticmethod
+    def git(root, *args):
+        return subprocess.check_output(
+            ["git", "-C", str(root), *args], text=True, stderr=subprocess.PIPE, timeout=10,
+        ).strip()
+
+    @classmethod
+    def initialize(cls, root):
+        root.mkdir(parents=True, exist_ok=True)
+        cls.git(root, "init", "-q")
+        cls.git(root, "config", "user.name", "Source fixture")
+        cls.git(root, "config", "user.email", "fixture@example.invalid")
+        cls.git(root, "config", "commit.gpgsign", "false")
+        (root / "source.txt").write_text("original\n")
+        cls.git(root, "add", "source.txt")
+        cls.git(root, "commit", "-qm", "fixture")
+
+    @classmethod
+    def pin(cls, parent, child):
+        revision = cls.git(child, "rev-parse", "HEAD")
+        cls.git(parent, "update-index", "--add", "--cacheinfo", f"160000,{revision},{child.relative_to(parent)}")
+        cls.git(parent, "commit", "-qm", "pin source")
+
+    def test_exact_recursive_pins_allow_parent_edits(self):
+        (self.repo / "source.txt").write_text("parent documentation edit\n")
+        records = check_sources(self.repo)
+        self.assertEqual(set(records), {"parent", "sglang", "flashmla", "flashmla/csrc/cutlass"})
+        for name in ("sglang", "flashmla", "flashmla/csrc/cutlass"):
+            self.assertEqual(records[name]["commit"], records[name]["expected_commit"])
+            self.assertFalse(records[name]["dirty"])
+
+    def test_rejects_dirty_states_without_changing_them(self):
+        root = self.forks["sglang"]
+        for state in ("unstaged", "staged", "untracked"):
+            with self.subTest(state=state):
+                path = root / ("untracked.txt" if state == "untracked" else "source.txt")
+                path.write_text(state)
+                if state == "staged":
+                    self.git(root, "add", str(path))
+                before = self.git(root, "status", "--porcelain=v1", "--untracked-files=all")
+                with self.assertRaisesRegex(RuntimeError, "sglang is dirty"):
+                    check_sources(self.repo)
+                self.assertEqual(before, self.git(root, "status", "--porcelain=v1", "--untracked-files=all"))
+                # Repair only the disposable fixture, never the shared checkout.
+                path.unlink() if state == "untracked" else path.write_text("original\n")
+                self.git(root, "add", "-u")
+
+    def test_rejects_ahead_behind_and_nested_mismatches(self):
+        root = self.forks["sglang"]
+        original = self.git(root, "rev-parse", "HEAD")
+        self.git(root, "commit", "--allow-empty", "-qm", "ahead")
+        ahead = self.git(root, "rev-parse", "HEAD")
+        with self.assertRaisesRegex(RuntimeError, f"expected {original}, actual {ahead}"):
+            check_sources(self.repo)
+        self.pin(self.repo, root)
+        self.git(root, "checkout", "-q", original)
+        with self.assertRaisesRegex(RuntimeError, f"expected {ahead}, actual {original}"):
+            check_sources(self.repo)
+        self.git(root, "checkout", "-q", ahead)
+        self.git(self.cutlass, "commit", "--allow-empty", "-qm", "nested ahead")
+        with self.assertRaisesRegex(RuntimeError, "flashmla/csrc/cutlass pin mismatch"):
+            check_sources(self.repo)
+
+    def test_rejects_uninitialized_submodule(self):
+        root = self.forks["sglang"]
+        root.rename(root.with_name("uninitialized-sglang-backup"))
+        root.mkdir()
+        with self.assertRaisesRegex(RuntimeError, "not an initialized Git checkout"):
+            check_sources(self.repo)
+
+    def test_explicit_override_records_dirty_content_and_nested_identity(self):
+        root = self.forks["flashmla"]
+        first = check_sources(self.repo, {"flashmla": root})
+        (root / "source.txt").write_text("candidate\n")
+        second = check_sources(self.repo, {"flashmla": root})
+        record = second["flashmla"]
+        self.assertTrue(record["override"])
+        self.assertTrue(record["dirty"])
+        self.assertEqual(record["commit"], record["expected_commit"])
+        self.assertNotEqual(first["flashmla"]["sha256"], record["sha256"])
+        self.assertEqual(len(second["flashmla/csrc/cutlass"]["sha256"]), 64)
+        (self.forks["sglang"] / "source.txt").write_text("unapproved\n")
+        with self.assertRaisesRegex(RuntimeError, "sglang is dirty"):
+            check_sources(self.repo, {"flashmla": root})
+
+    def test_local_and_modal_boundaries_fail_before_external_work(self):
+        root = self.forks["sglang"]
+        (root / "source.txt").write_text("dirty\n")
+        tools = self.repo / "mock-tools"
+        tools.mkdir()
+        for name in ("docker", "curl", "ssh", "lm-eval"):
+            path = tools / name
+            path.write_text("#!/bin/sh\necho 'unexpected external work' >&2\nexit 97\n")
+            path.chmod(0o755)
+        environment = {
+            **os.environ, "HOST_REPO": str(self.repo), "BENCH_EXECUTION": "docker",
+            "LOG_HOST": str(self.repo / "logs"), "PATH": str(tools) + os.pathsep + os.environ["PATH"],
+        }
+        for script, args in (
+            ("container.sh", ["rebuild"]), ("serve.sh", ["native"]),
+            ("bench-serving.sh", ["fixture"]), ("bench-lswb.sh", ["fixture"]),
+            ("bench-agentic.sh", ["sangfor", "fixture"]), ("bench-lb2.sh", ["fixture"]),
+        ):
+            with self.subTest(script=script):
+                result = subprocess.run(
+                    ["bash", str(kernels.REPO_ROOT / "scripts/local" / script), *args],
+                    env=environment,
+                    capture_output=True, text=True, timeout=10,
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("sglang is dirty", result.stderr)
+                self.assertNotIn("unexpected external work", result.stdout + result.stderr)
+        for name, status in (("docker", 0), ("curl", 1), ("sleep", 0)):
+            path = tools / name
+            path.write_text(f"#!/bin/sh\nexit {status}\n")
+            path.chmod(0o755)
+        stopped = subprocess.run(
+            ["bash", str(kernels.REPO_ROOT / "scripts/local/serve.sh"), "native", "stop"],
+            env=environment, capture_output=True, text=True, timeout=10,
+        )
+        self.assertEqual(stopped.returncode, 0, stopped.stdout + stopped.stderr)
+        self.assertIn("stopped native", stopped.stdout)
+        for module in ("kernels", "serve"):
+            # Execute only the existing launcher's host preamble. Reaching App
+            # construction is a failure: bad sources must not reach image setup.
+            code = f"""
+import modal, runpy
+from unittest.mock import patch
+with patch('scripts.sources.check_sources', side_effect=RuntimeError('source rejected')), \\
+     patch.object(modal, 'App', side_effect=AssertionError('image setup reached')):
+    try:
+        runpy.run_module('scripts.modal.{module}', run_name='preflight_fixture')
+    except RuntimeError as error:
+        assert str(error) == 'source rejected', str(error)
+    else:
+        raise AssertionError('source gate missing')
+"""
+            subprocess.run([sys.executable, "-c", code], cwd=kernels.REPO_ROOT, check=True, timeout=15)
 
 
 class ContractTests(unittest.TestCase):
@@ -684,6 +844,13 @@ if kind == 'duplicate' and measured:
         path.chmod(0o755)
 
     def run_client(self, concurrency="4", execution="direct", kind="valid", tag="native"):
+        if execution == "docker" and not (self.root / ".git").exists():
+            # Exercise the real host gate as well as the mocked Docker client.
+            SourcePreflightTests.initialize(self.root)
+            for name in ("sglang", "flashmla"):
+                fork = self.root / "third_party" / name
+                SourcePreflightTests.initialize(fork)
+                SourcePreflightTests.pin(self.root, fork)
         self.info_path.write_text(json.dumps(self.info))
         return subprocess.run(
             ["bash", str(self.script), tag, "30213", "1024", "16", concurrency],

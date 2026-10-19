@@ -30,6 +30,15 @@ to be clean, including untracked files. Follow the root [source safeguards](../A
 when synchronizing; never discard or stash work automatically. Approved source
 overrides must record both commits and submitted-content hashes.
 
+`scripts/sources.py` is the read-only gate used before local container/serving/
+benchmark work and before Modal image definitions. It checks nested submodules
+too; it never synchronizes them. Model-free Modal experiments may explicitly set
+`REMNANT_SGLANG_SOURCE_OVERRIDE` / `REMNANT_FLASHMLA_SOURCE_OVERRIDE` to Git
+checkouts, including dirty worktrees. Their commits, expected pins, dirty state,
+content hashes and nested-source identities are retained in the build manifest.
+Ordinary serving does not accept these overrides. A source check does not prove
+that an existing container's loaded binaries match; source changes need a rebuild.
+
 ## Integration map
 
 Paths below are relative to the owning fork. Native is the default; Packed is

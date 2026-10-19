@@ -23,6 +23,7 @@ set -u
 TAG=${1:-} PORT=${2:-$PORT} C=${3:-15} DUR=${4:-1200}
 NSYS_WINDOWS=${5:-}
 [ -n "$TAG" ] || { echo "usage: $0 <tag> [port] [concurrency] [duration_s]"; exit 1; }
+check_sources || exit 1
 require_replay_config
 [[ "$C" =~ ^[1-9][0-9]*$ ]] || { echo "concurrency must be a positive integer" >&2; exit 2; }
 [[ "$DUR" =~ ^[1-9][0-9]*$ ]] || { echo "duration must be a positive integer" >&2; exit 2; }

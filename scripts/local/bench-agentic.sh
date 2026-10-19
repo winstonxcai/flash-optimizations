@@ -28,6 +28,7 @@ set -u
 BENCH=${1:-} INSTANCE=${2:-} RID=${3:-}
 [ -n "$BENCH" ] || { echo "usage: $0 <sangfor|swe> <instance-list> [run-id]"; exit 1; }
 [ -n "$INSTANCE" ] || { echo "usage: $0 <sangfor|swe> <instance-list>"; exit 1; }
+check_sources || exit 1
 require_remote_eval_config
 
 case "$BENCH" in

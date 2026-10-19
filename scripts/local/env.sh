@@ -62,6 +62,9 @@ to_ct () { echo "$REPO_CT${1#$HOST_REPO}"; }
 # container commands so paths and JSON values are not interpolated into bash -c.
 ct_script () { docker exec -i "$CONTAINER" bash -s -- "$@"; }
 
+# Host-side only. Container/direct runners use their caller's recorded preflight.
+check_sources () { python3 "$SCRIPT_DIR/../sources.py" "$HOST_REPO"; }
+
 # ------------------------------ server helpers ------------------------------
 # These manage a server that serve.sh brought up inside $CONTAINER. The launch
 # log is written host-side so it can be grepped here.

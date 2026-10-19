@@ -69,6 +69,7 @@ BASH
 }
 
 # ------------------------------ dispatch ------------------------------
+check_sources || exit 1
 case "$ACTION" in
   prep) prep ;;
   recreate)

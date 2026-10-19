@@ -16,8 +16,9 @@ Author: Winston Cai.
 
 Downloaded only the three compressed `server.1.sqlite.gz` exports from
 `origin/remnant` commit `40a7d7d`; local checkout and dirty work were preserved.
-`analysis.json` is the compact canonical aggregate. No GPU runs, commits,
-pushes, or runtime edits were made.
+`analysis.json` is the compact canonical aggregate. The original analysis made
+no GPU runs or runtime edits. Reports and client metadata were later imported
+from commit `9da64b0`; this committed collection preserves the original analysis.
 
 | Check | Native | Triton | Kernel |
 |---|---:|---:|---:|
@@ -45,9 +46,11 @@ pushes, or runtime edits were made.
   It does not identify the content hashes of mounted dirty runtime code or
   loaded binaries. Native, Triton, and Kernel configuration is independently
   confirmed by arguments and recorded kernels, not by image metadata alone.
-- Fresh client summaries/failure records were not pushed with these exports.
-  Replay validity is from previously observed GPUQ logs; the request failure
-  causes remain unverified.
+- Client summaries are now retained under each mode's `profiled/<run-id>/`.
+  They confirm the table's success counts and unchanged 99% validity threshold.
+  All reported failures are `missing_output_event`: Native 9, Triton 7, Kernel 5.
+  This identifies the client failure category, not its underlying server/stream
+  cause; per-request failure diagnosis remains unverified.
 
 ## Decode at actual B24
 
@@ -309,4 +312,5 @@ server seed and alternating mode order. Avoid creating a replacement harness.
 Do not enable mixed chunks or change chunk size while claiming kernel-only
 parity; treat scheduling changes as a separately controlled mechanism.
 
-No runtime edits, new GPU jobs, commits, or pushes were made.
+The original diagnostic analysis made no runtime edits or new GPU runs. Later
+curation and documentation commits do not revalidate the historical measurements.

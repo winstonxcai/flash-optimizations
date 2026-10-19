@@ -94,9 +94,12 @@
     "traffic.json": "497b7a5f0b89cc6580ccfb3433e124abd63d6706e0e8a4ae590e09005e60a429",
     "kernel-traffic.csv": "8d54f9e7913f952ea8c89d292c0287f674e46261232d69c0c117b9bb5cbca794",
     "traffic.csv": "e1f60be5192d854243016ba4f2f10fdced7b4615a64a7cc2b9daae165892c0f6",
-    "README.md": "3397e564463e37443788ce782bd8278737b53e1d379f1976f6d75c1bd778b320",
+    "README.md": "6a6f0fb88be15b38e295fe24b271ab5e311b005d645bf418e7d800fe3d16cb9d",
     "validation.json": "ff970adc9438c2fe24a779940110d88e74aed29686ae341da572c7038c48dbe9",
     "timing.csv": "0a9ea55ad097c12ee12a01d5d75a4458a2bc629d50ab9bc0d6318f271eb970b6"
+  },
+  "previous_curated_document_hashes": {
+    "README.md": "3397e564463e37443788ce782bd8278737b53e1d379f1976f6d75c1bd778b320"
   },
   "profile_execution": {
     "status": "passed and independently verified",

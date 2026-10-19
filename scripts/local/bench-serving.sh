@@ -36,6 +36,7 @@ case "$execution" in
   docker|direct) ;;
   *) die "BENCH_EXECUTION must be docker or direct" ;;
 esac
+[ "$execution" = direct ] || check_sources || exit 1
 for tool in "$python" curl timeout; do
   command -v "$tool" >/dev/null 2>&1 || die "missing required tool: $tool"
 done

@@ -45,16 +45,22 @@ REMOTE_REPO = Path("/opt/flash-optimizations")
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2] if modal.is_local() else REMOTE_REPO
+if modal.is_local():
+    from scripts.sources import check_sources
+
+    SOURCE_IDENTITIES = check_sources(REPO_ROOT)
+else:
+    SOURCE_IDENTITIES = json.loads(os.environ["REMNANT_SOURCE_IDENTITIES"])
 
 
-def _source_revision(path: Path, identity: str) -> str:
+def _source_revision(identity: str) -> str:
     """Images receive source identities explicitly; no Git checkout is needed remotely."""
     if not modal.is_local():
         revision = os.environ.get(f"REMNANT_{identity.upper()}_SHA", "")
         if not re.fullmatch(r"[0-9a-f]{40}", revision):
             raise RuntimeError(f"missing submitted source identity: {identity}")
         return revision
-    return subprocess.check_output(["git", "-C", str(path), "rev-parse", "HEAD"], text=True, timeout=10).strip()
+    return SOURCE_IDENTITIES[identity]["commit"]
 
 
 def _compiled_source_digest(roots: list[Path]) -> str:
@@ -87,11 +93,10 @@ def _verify_compiled_sources(expected: str) -> None:
 
 
 SOURCE_REVISIONS = {
-    "parent": _source_revision(REPO_ROOT, "parent"),
-    "sglang": _source_revision(REPO_ROOT / "third_party" / "sglang", "sglang"),
-    "flashmla": _source_revision(REPO_ROOT / "third_party" / "flashmla", "flashmla"),
+    identity: _source_revision(identity) for identity in ("parent", "sglang", "flashmla")
 }
 SOURCE_ENV = {f"REMNANT_{name.upper()}_SHA": revision for name, revision in SOURCE_REVISIONS.items()}
+SOURCE_ENV["REMNANT_SOURCE_IDENTITIES"] = json.dumps(SOURCE_IDENTITIES)
 app = modal.App("remnant")
 model_volume = modal.Volume.from_name("deepseek-v4-flash-0731", create_if_missing=True)
 # Keep the existing volume name: renaming the public modes must not orphan results.
@@ -324,6 +329,7 @@ def benchmark_serving(
         **SOURCE_ENV,
     }
     (run / "source-revisions.json").write_text(json.dumps(SOURCE_REVISIONS, indent=2) + "\n")
+    (run / "source-identities.json").write_text(json.dumps(SOURCE_IDENTITIES, indent=2) + "\n")
     try:
         with _running_serving_server(env, run / "server.log", deadline):
             remaining = int(deadline - time.monotonic())

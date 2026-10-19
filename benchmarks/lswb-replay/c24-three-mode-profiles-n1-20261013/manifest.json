@@ -148,12 +148,12 @@
   "profile_import_commit": "9da64b08e0aaf8b65ed813f9b23a3d4731ca4629",
   "documents": {
     "README.md": {
-      "sha256": "df4c28dbdab986845cf66feb1a50275bf2dd2f94b3d82b53a77cab7090dea247",
-      "bytes": 2343
+      "sha256": "5f98e6d3c547792ee9c512d0b82a4a6821c3aeb73ec5978fe4dd7fe961e6a1b8",
+      "bytes": 2355
     },
     "PROFILE.md": {
-      "sha256": "c09c41f173724e1b129905dd8caac004742e34711f907ea9ea3020dd52eb3c8f",
-      "bytes": 17428
+      "sha256": "082fb1840043814c60b22e7f13ce3e476e9223fa0602267a084069161a5b52b3",
+      "bytes": 17850
     }
   },
   "curated_root": "benchmarks/lswb-replay/c24-three-mode-profiles-n1-20261013",

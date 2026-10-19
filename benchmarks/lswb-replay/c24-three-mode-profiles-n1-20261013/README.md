@@ -3,7 +3,7 @@
 Author: Winston Cai.
 
 Native is the baseline, Triton the reference/control, Kernel the optimization
-target. This is a curation workspace, not a newly validated paired experiment.
+target. This is a committed reference collection, not a newly validated paired experiment.
 Original run IDs are preserved. Retired local folders remain recoverable in
 repo-root `raw/`; the VDI originals are unchanged.
 
