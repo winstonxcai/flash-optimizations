@@ -14,12 +14,12 @@ kernel code live in two independent Git submodules.
 |---|---|
 | SGLang runtime, packing, allocator, and dispatch | `third_party/sglang/` |
 | FlashMLA direct decode kernel | `third_party/flashmla/` |
-| Fork file-change map | `third_party/changelog.md` |
+| Fork integration and file map | `third_party/README.md` |
+| Fork integration history | `third_party/CHANGELOG.md` |
 | Local serving and evaluation | `scripts/local/` |
 | Modal workflows and local CPU checks | `scripts/modal/serve.py`, `kernels.py`, and `tests.py`; read their module docstrings |
-| Kernel experiments and decisions | `experiments/E###*/`; read the active experiment's plan/goal and record |
 | Maintained pruning data/training/evaluation | `training/`; read `training/README.md` |
-| Historical attention-pruning experiments | `docs/attention-aware-latent-kv-compression.md`; ignored `experiments/attention-pruning/`; historical Modal runner `capture.py` |
+| Attention-aware pruning methods and findings | `docs/attention-aware-latent-kv-compression.md` |
 | Project findings and paper narrative | `docs/report.md` |
 | Paper figures | `docs/figures/` |
 
@@ -44,10 +44,26 @@ disagrees with them. Do not treat a recorded branch head as the current checkout
   commit/push, handle each affected fork on its own branch, then update the
   parent pins. Push referenced fork commits before the parent. Stage only the
   requested work; do not sweep unrelated dirty files into a commit.
-- Update `third_party/changelog.md` when the set of fork files changed by
-  Remnant changes. Preserve upstream licenses and attribution. Add or retain
-  `Author: Winston Cai.` in the top docstring/comment for Remnant changes, using
-  the file's existing language and format.
+- After an authorized parent pull/checkout or pin change, synchronize the forks
+  to the exact recorded commits, not the latest remote branch; ahead is also a
+  mismatch. Inspect dirty work first. For a clean reproduction checkout use
+  `git submodule update --init --recursive --checkout`; this may detach HEAD.
+  Prefer a fast-forward to the recorded pin when preserving a development branch.
+  Never force, reset, discard or automatically stash work to synchronize. Stop
+  and report if matching the pin would disturb existing changes.
+- Before ordinary reproducible builds, serving or benchmark runs, existing
+  local/Modal preflights must require each fork's HEAD to equal the parent pin
+  and reject staged, unstaged or untracked fork changes. Fail before image builds
+  or GPU allocation, reporting expected/actual commits and synchronization steps;
+  preflights must not repair the checkout themselves. Deliberate development or
+  approved experiments may use an explicit source override with recorded commit
+  and content hashes. Commit fork changes and update parent pins before release.
+- Update `third_party/README.md` when fork ownership, changed files or contracts
+  change. Record meaningful integrations/fixes in `third_party/CHANGELOG.md`
+  with the parent commit, both fork pins and validation scope; keep tuning/debug
+  chronology in Git and run records. Preserve upstream licenses and attribution.
+  Add or retain `Author: Winston Cai.` in the top docstring/comment for Remnant
+  changes, using the file's existing language and format.
 
 ## Code quality and engineering practices
 
@@ -96,9 +112,29 @@ performance improvements must have measured evidence.
   for. Preserve historical experiment evidence, and keep unvalidated candidates
   distinct from the production path until their promotion gates pass.
 
+## Review and acceptance
+
+- Summarize nontrivial changes as **Purpose, Risk, Evidence, Limitations,
+  Rollback**. Evidence includes source identity, exact commands and outcomes;
+  state what the checks cannot establish, not just what passed.
+- Independently review benchmark fixtures, measured paths and comparison
+  fairness alongside kernel changes. Use a fresh-context review for high-risk
+  changes; test success alone is not independent review.
+- Scale scrutiny to risk. Prioritize numerical arithmetic, CUDA synchronization,
+  persistent layouts, allocator accounting, statistical claims and GPU job
+  ownership over cosmetic issues. Require concrete evidence for findings.
+- Turn discovered failure modes into focused regression checks where practical,
+  rather than repeatedly expanding instructions.
+- Review correctness first, simplicity second. Keep simplification behavior-
+  preserving. After three review/fix rounds, reassess the approach; subsequent
+  reviews should focus on new changes and unresolved findings, not repeat nits.
+- Keep changes small and reversible. Identify the known-good baseline and how
+  to disable or revert a candidate before promotion; human approval remains
+  required wherever the task or repository policy requires it.
+
 ## Goal-oriented experiments and file lifecycle
 
-Keep `experiments/` and `scripts/modal/` organized around explicit goals, not
+Keep research work and shared runners organized around explicit goals, not
 the chronology of debugging attempts. A new experiment should leave a clear
 decision and a reproducible command, not a collection of unexplained scripts.
 
@@ -118,8 +154,8 @@ decision and a reproducible command, not a collection of unexplained scripts.
 
 ### Placement and ownership
 
-- Put experiment-specific candidates, probes, and analysis under the owning
-  `experiments/E###*/` directory, or the established named study directory.
+- Keep experiment-specific candidates, probes, and analysis isolated from
+  production code and shared runners.
   Keep one plan/README as the index of its entry points, artifacts, and decision;
   do not add parallel status documents or result trees.
 - Reserve `scripts/modal/` for maintained remote orchestration and genuinely
@@ -194,15 +230,14 @@ change; preserve independent references and established tolerances.
 | Low-level pack/unpack | `third_party/sglang/python/sglang/test/kernels/deepseek_v4/test_remnant_*_kernel.py` |
 | Startup cache-format validation | `third_party/sglang/test/registered/unit/test_dsv4_c4_cache_format.py` |
 | Native/Adapter/Direct decode timing | `third_party/sglang/benchmark/remnant/microbench.py` and its README |
-| Historical store/read integration timing | `experiments/E010/archive/modal/remnant_integration.py` (archived) |
-| Cached builds, validation, timing and kernel profiles | `scripts/modal/kernels.py` and the active experiment's runner |
+| Cached builds, validation, timing and kernel profiles | `scripts/modal/kernels.py` |
 
 - Direct reads Packed records inside FlashMLA. Adapter reconstructs Native
   cache records before stock FlashMLA. Report their complete measured paths
   accurately, including combine/reconstruction where required by the protocol.
-- Use the active experiment's explicit matrix and acceptance rules. The frozen
-  E010 decode judge is H64/H128 × B8/B16 × K512/K317; supplemental shapes do not
-  replace it. Do not turn a pruning-quality study into a kernel-speed gate.
+- Use the approved experiment's explicit matrix and acceptance rules;
+  supplemental shapes do not replace required coverage. Do not turn a
+  pruning-quality study into a kernel-speed gate.
 - Check numerical validity before interpreting timing. Apply relevant graph,
   stream, and sanitizer coverage for CUDA changes. Missing instrumentation or
   an unexplained sanitizer failure does not count as passing validation.

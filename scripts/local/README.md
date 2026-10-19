@@ -442,6 +442,11 @@ If logs appear empty, inspect `stderr.log` in the job's reported `log_dir`.
 
 ## Inspect and push compact results
 
+These commands are for the **GPU server (VDI)** checkout, which retains its
+legacy `results/` folder and direct-staging workflow for now. They are not
+instructions for the local curated checkout, where raw `results/` is ignored
+and retained evidence belongs in `benchmarks/`. No server folder migration is required.
+
 Set `RUN` to the exact completed run directory. The summary contains **mean**
 TPOT in milliseconds and completion-token throughput in tokens/second.
 
