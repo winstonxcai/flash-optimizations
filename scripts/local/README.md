@@ -8,16 +8,18 @@ optimized kernels. All three use the same Docker image.
 
 ## Isolated latent-KV capture
 
-Capture uses a **prepared capture-only image and separate container**, never the
-running production container. Image setup is a prerequisite, not part of capture.
-The shell entry point owns all Docker operations: local image/label checks,
+Capture reuses the **same `remnant:v0.5.18` image as serving**, but starts a
+separate, short-lived container; it never runs inside or replaces the production
+`remnant` container. No capture-specific image, tag or label is required.
+The shell entry point owns all Docker operations: local image/component checks,
 mounts, GPU selection/availability, container launch, timeouts and exact-container
 cleanup. It does not source production environment defaults. It requires Docker,
 `nvidia-smi` and GNU `timeout`. These examples are commands for an explicitly
 allocated GPU-server session, not automatic launch steps:
 
 ```bash
-CAPTURE_IMAGE=$(docker image inspect --format '{{.Id}}' remnant-capture:local)
+python3 scripts/sources.py .
+CAPTURE_IMAGE=$(docker image inspect --format '{{.Id}}' "${IMAGE:-remnant:v0.5.18}")
 CAPTURE_GPUS=0,1,2,3 bash scripts/local/capture-latent.sh run \
   "$CAPTURE_IMAGE" /data/models/DeepSeek-V4-Flash-0731 \
   /data/capture/scratch /data/capture/published 3600 30312
@@ -30,14 +32,17 @@ and publication destinations must be distinct and writable. Scratch must retain
 50 GiB free; existing client staging/publication limits and resume checks remain.
 Do not use a read-only mount such as the server's `/mnt/public_data` as output.
 
-The prepared image must already contain the capture observer, runtime hooks,
-calibration client (including `capture-preflight`) and compiled extensions. The
-shell verifies these components in a GPU-free container, then calls the client's
+The shared Dockerfile copies the fork's capture observer, runtime hooks and
+calibration client (`calibrate.py`) alongside the compiled extensions. Use an
+up-to-date local image from the normal [image workflow](#update-the-image);
+rebuild before capture if those sources changed, not inside a running GPU job.
+The shell verifies these components in a GPU-free container, then calls the client's
 data preflight against the actual mounts. Missing prerequisites fail;
 capture never builds, pulls, patches or updates an image. Container launches use
 `--pull never`; no kernel build or production image/configuration change occurs.
 Capture stays Native, TP4/concurrency two, seed 42, with prefix reuse, overlap
-scheduling and CUDA graphs disabled through the existing capture-only settings.
+scheduling and CUDA graphs disabled for this capture process only. Sharing the
+image does not mean sharing production server settings or GPU allocations.
 
 `3600` is the **total container budget**, including model startup, readiness,
 replay and writer drain—not an additional hour after loading. The client gets
@@ -55,12 +60,12 @@ groups. Configuration, audit proof, writable storage, free-space and port checks
 live in `calibrate.py capture-preflight`; tensor collection and publication are
 unchanged. No separate Python orchestration module is required.
 
-Use an updated capture-only image; compiled kernels need no source changes.
+Using the shared image requires no capture-specific kernel build.
 Shared-only rollout proofs are source-bound and must match its calibration
 client and collector. A stale proof fails rather than being bypassed.
 
 After successful capture, check the real publications with the existing integration
-test in a **GPU-free** container using the same image. The prepared image must also
+test in a **GPU-free** container using the same image. For this test the image must also
 include the training test dependencies (Torch, NumPy and Matplotlib). This verifies
 every configured issue/layer, quotas, all TP heads and Native output/LSE; audited
 captures additionally verify exact cross-rank sharing. A missing or corrupt

@@ -12,34 +12,42 @@ sampled decode positions per issue/layer, respectively. Development evaluation
 uses the same **2,100 query-layer examples** across all **21 CSA layers (2,4,…,42)**
 and **64 heads**. These are reused development data, not a fresh held-out test.
 
-Artifacts are outside Git. Ask Winston for the cache, frozen numerical source
-snapshot and selected-policy bundle; a clone alone cannot reproduce the study.
-Existing local copies are under `~/.cache/remnant/attention-pruning/`:
+Data and checkpoints are outside Git. Ask Winston for the cache and selected
+policy/checkpoints; a clone alone does not include the study data.
+Use repo-root `data/training-cache-001/` for the cache (Git-ignored). Other
+artifact paths below are relative to `~/.cache/remnant/attention-pruning/`:
 
 | Artifact | Location / required contents |
 |---|---|
-| Cache | `full-cache-001/training-cache-001/`: `config.json`, `index.json`, `progress.json`, all 21 `layer-XX.json` receipts and `layer-XX.pt` payloads |
+| Cache | Repo-root `data/training-cache-001/`: `config.json`, `index.json`, `progress.json`, all 21 `layer-XX.json` receipts and `layer-XX.pt` payloads |
 | Policy / checkpoints | The selected policy JSON and every checkpoint named in its `selected` entries; the best mix uses `continued-all-results-001/continued-all-001/` and `anchored-pilot-001/outputs/` |
-| Exact paths / hashes | `evaluator-extension-NSETUJ/comparison.json` and `retention-sweep-9ULSmw/sweep.json`, under `provenance`: cache, policy, runner and all selected checkpoints |
+| Historical comparisons | `evaluator-extension-NSETUJ/comparison.json` and `retention-sweep-9ULSmw/sweep.json`; existing measurements are not overwritten |
 
-Copy the matching source tree, not just `calibrate.py`; current fork sources may
-differ. When relocating, rebase checkpoint paths in a **copy** of the policy
-(relative paths resolve beside it), retaining checkpoint bytes and SHA-256s.
-Never rewrite cache receipts or historical evidence to bypass validation.
+When relocating, update checkpoint paths in a **copy** of the policy; relative
+paths resolve beside it. Layer IDs and complete, finite model parameters remain
+required; old optional checkpoint fingerprints are ignored.
 
-`artifacts.py` owns shared cache/checkpoint integrity checks and frozen-source
-loading. One numerical revision is allowed per Python process. Loading and replay
-use the same dependency checks, compile verified source bytes rather than cached
-bytecode, and require the owned reference modules and package exports.
+Early iterations use the selected current calibration/reference code, without
+source-fingerprint or Torch-version gates. Cache payload checksums, tensor
+geometry/finiteness, query identities and Native denominators are still checked.
+New runs save settings and measurements, not source/checkpoint provenance.
+Keep historical caches/results unchanged and compare all methods in the same new
+run; version changes do not guarantee identical historical scores. Training stays
+at **256 survivors**; only evaluation sweeps **64–448 in steps of 64**.
 
-**Current compatibility blocker:** the historical cache above omits the numerical
-`bitmap.py` hash now required by `training.artifacts`; replay preflight rejects
-it. Obtain a reviewed version-compatible bundle before running the commands below.
-Historical comparison/sweep replay used Torch **2.10.0**; the cache records
-**2.13.0+cu130**. Record the actual environment and compare methods in one run;
-do not assume historical errors are bit-exact across Torch versions.
+## Environment
 
-## Run
+- **GPU server or Modal:** use the shared image and its installed Torch. Do not
+  replace Torch inside the image or create a separate training/capture image.
+- **Local CPU tests:** use the closest available CPU Torch version to the image's
+  version that supports your platform, with NumPy and Matplotlib. Exact version
+  equality is not required; no Docker image is needed for these checks.
+
+Compare methods within one environment. Runs record Torch/device/thread settings;
+local CPU checks are not bit-exact reproductions of image-based runs or GPU
+validation.
+
+## Run in the shared image
 
 Use the existing `remnant` container from the shared `remnant:v0.5.18` image;
 no separate training image or host Python installation is needed. From the
@@ -51,15 +59,16 @@ docker exec -it -e CUDA_VISIBLE_DEVICES="$TRAIN_GPU" \
   --workdir "/mnt/host_root$PWD" "${CONTAINER:-remnant}" bash
 ```
 
-Run the following **inside the container**. Replace the example paths with your
-compatible cache, warm policy and hash-matching calibration source tree. The
-image needs Torch, NumPy and Matplotlib. Host paths are available under
+Run the following **inside the container**, from the mounted repository root.
+The cache and calibration paths use that checkout; replace the policy and output
+examples with your own paths. The image needs Torch, NumPy and Matplotlib.
+Host paths are available under
 `/mnt/host_root`; output paths must be fresh, persistent and **outside the checkout**.
 
 ```bash
-export PRUNING_CACHE=/mnt/host_root/data/pruning/cache
+export PRUNING_CACHE="$PWD/data/training-cache-001"
 export PRUNING_POLICY=/mnt/host_root/data/pruning/policy.json
-export PRUNING_RUNNER=/mnt/host_root/data/frozen-sglang/python/sglang/benchmark/remnant/calibrate.py
+export PRUNING_RUNNER="$PWD/third_party/sglang/python/sglang/benchmark/remnant/calibrate.py"
 export PRUNING_OUTPUT=/mnt/host_root/data/pruning/new-fit
 export PRUNING_RESULTS=/mnt/host_root/data/pruning/new-evaluation
 
@@ -84,7 +93,19 @@ rank64 recipe expands rank-16 checkpoints. Use `--help` for options. Capture set
 and commands are in [the local launch guide](../scripts/local/README.md#isolated-latent-kv-capture).
 
 Real Docker checks use the existing shell launcher and publication test described
-in the local launch guide.
+in the local launch guide. Capture reuses the same shared serving image in its own
+short-lived container; only process settings, mounts and outputs differ. It does
+not change the running production container or the saved cache.
+
+For local CPU checks, run directly from the repository root in the CPU environment:
+
+```bash
+python -m unittest training.tests.test_integration.TrainingIntegrationTests -v
+```
+
+Local evaluation uses the same commands below; set `PRUNING_CACHE` to
+`$PWD/data/training-cache-001` and use local policy, runner and external output
+paths rather than `/mnt/host_root` container paths.
 
 ## Compare masks and sweep retention
 
@@ -122,7 +143,7 @@ Each command writes canonical **JSON**, sibling **CSV/Markdown**, and a
 `.partial.json` progress record. The sweep also writes `attention-error-mean.png`
 and `attention-error-p95.png`. Existing output/figure paths are rejected. JSON/CSV
 errors are fractions; Markdown and plots show percentages. Identity/coverage and
-source/checkpoint checks must pass before a completed table is published.
+numerical/data checks must pass before a completed table is published.
 
 ## Mean, p95 and uncertainty
 

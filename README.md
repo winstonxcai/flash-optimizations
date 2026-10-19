@@ -40,6 +40,10 @@ python -m pip install modal
 python -m unittest scripts.modal.tests
 ```
 
+Training's local CPU checks may use the closest available CPU Torch version to
+the shared image; see [training environments](training/README.md#environment).
+GPU-server and Modal work uses the image's installed Torch.
+
 ## Run on GPUs
 
 ### Local: four H100s
@@ -64,6 +68,10 @@ The benchmark client uses the running server; it never starts or stops one.
 It may download ShareGPT text; restricted-network hosts should prepare
 `BENCH_DATASET_PATH` first. See [local workflows](scripts/local/README.md#random-text-serving-benchmark)
 for dataset setup, GPUQ, profiling and the separate LongSWE replay harness.
+
+Latent-KV capture also uses this image, in an isolated short-lived container with
+capture-specific Native settings—not a separate image or the live serving process.
+See [capture setup](scripts/local/README.md#isolated-latent-kv-capture).
 
 ### Modal
 
