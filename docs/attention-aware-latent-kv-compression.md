@@ -580,3 +580,121 @@ comparison and retention-sweep commands. Historical diagnostic records and
 their source snapshots remain in the external archives named above; obtain
 them from Winston when reproducing a retired study. A current-code rerun is a
 new measurement, not a replacement for those historical results.
+
+## 11. Coordinate and cross-row interactions — 2026-10-19
+
+Completed CPU diagnosis on all **3,360 training** and **2,100 development**
+query-layer states, across all 21 layers and 64 heads. Compared TopMag50 with
+the unchanged best per-layer learned policy. No fitting or checkpoint selection
+was performed. The main run took **739.7 seconds wall time**, using four CPU
+threads; no model load or GPU was required.
+
+### Method and validation
+
+At the unpruned smooth expansion point, keep residual
+$r=F(X)-O_{\mathrm{Native}}$ and deletion directions
+$\delta x_t=-x_t\odot(1-m_t)$. In the final inverse-query-RoPE coordinates,
+form the following energies without materializing full Jacobians:
+
+$$
+D=\sum_{t,i}\delta x_{ti}^{2}\lVert J_t e_i\rVert_2^2,
+\qquad R=\sum_t\lVert J_t\delta x_t\rVert_2^2,
+\qquad A=\sum_tJ_t\delta x_t.
+$$
+
+All predictions include the same baseline and linear residual terms:
+
+$$
+Q_E=\frac{\lVert r\rVert_F^2+2\langle r,A\rangle+E}
+{\lVert O_{\mathrm{Native}}\rVert_F^2},
+\qquad E\in\{D,R,\lVert A\rVert_F^2\}.
+$$
+
+Thus $R-D$ isolates within-row coordinate cross terms, and
+$\lVert A\rVert_F^2-R$ isolates cross-row terms in this local model. The
+smooth finite-pruning and exact Packed stages recompute the full forward map.
+These are Gauss–Newton predictions, not the full residual-weighted Hessian.
+Stored key/output RoPE magnitudes are used rather than assuming exact unit norm.
+
+Seven initial FP64 cases passed: an explicit-Jacobian synthetic case plus one
+training/development state at layers 2, 22 and 42. Across 14 directions, maximum
+analytic/autograd relative discrepancy was **1.12e-15**; centered finite
+differences at steps 1e-3 and 1e-4 differed by at most **3.45e-6**. A mixed
+NoPE/RoPE explicit-Jacobian check and zero-perturbation check also passed.
+Six cached-state FP32/FP64 comparisons had maximum discrepancy **2.22e-6**.
+Every admitted state's raw+RoPE row inputs were distinct; no unverified physical
+alias grouping was introduced. All **10,920** Packed measurements matched the
+previous all-50 sweep within **9.29e-9** absolute relative-L2 units.
+
+### Mean relative output-L2 error (%)
+
+| Stage | Training TopMag | Training learned | Development TopMag | Development learned |
+|---|---:|---:|---:|---:|
+| Diagonal prediction | 5.9403* | 6.0842 | 5.8614* | 6.0223 |
+| Include within-row interactions | 6.4330 | 6.1106 | 6.3544 | 6.1700 |
+| Include all linear interactions | 8.7959 | 7.3178 | 8.7156 | 7.6930 |
+| Actual finite smooth pruning | 8.7665 | 6.4315 | 8.7109 | 7.2156 |
+| Actual Packed replay | 8.6425 | 6.3586 | 8.5848 | 7.1727 |
+
+Means weight issue/layer groups equally. *The residual-inclusive diagonal
+approximation was negative for three training and one development TopMag states;
+their signed MSEs are retained. Only their square-root summaries exclude them,
+with explicit missing counts. All other rows have complete coverage. Use the
+signed-MSE records for full-cohort comparisons, not the starred conditional means.
+
+Actual Packed **p95** is **13.3741% / 10.1182%** for training TopMag/learned,
+and **13.0988% / 11.0297%** for development. The learned mean reduction is
+**26.43% training / 16.45% development**; this reproduces the existing result,
+not a new policy improvement.
+
+### Does the approximation order the two frozen masks correctly?
+
+| Predictor | Training agreement with Packed | Development agreement with Packed |
+|---|---:|---:|
+| Diagonal | 28.51% | 25.19% |
+| Within-row | 69.29% | 56.76% |
+| Full linear | 97.68% | 90.14% |
+| Finite smooth replay | 100.00% | 99.67% |
+
+No ties occurred at the recorded 1e-10 squared-error threshold. This evaluates
+only the TopMag-versus-incumbent choice per state; it is not evidence of reliable
+ranking over arbitrary masks or of globally optimal pruning.
+
+**Conclusion: do not assume cross terms are negligible.** In development,
+cross-row terms account for 43.18% of TopMag's mean full tangent energy and
+32.42% for the learned policy (ratios of aggregated energies, excluding the
+baseline/linear residual terms). They are larger than within-row cross terms
+on average. Full linear prediction reduces mean absolute MSE prediction error
+versus the diagonal by **83.17% TopMag / 55.39% learned** on development.
+
+Finite-deletion nonlinearity still matters: the development mean norm of the
+nonlinear residual is **3.75% / 4.29%** of Native output norm for TopMag/learned,
+versus **1.24% / 1.22%** for the Packed-minus-smooth residual. These are vector
+norms, not additive shares of total error. Similar aggregate full-linear and
+smooth means do not establish accurate per-state vectors. On training learned
+masks, full linear MSE prediction is actually worse than diagonal by this error
+metric, despite much better two-mask ordering.
+
+The next justified step is to test whether matrix-free joint-mask proposal
+scores improve **exact Packed** error, with exact replay accepting proposals;
+not simply fit a denser row-local diagonal. Cross-row, query-conditioned
+information is available offline but not to the production row-only scorer.
+Any distillation/generalization study must retain that distinction and use fresh
+data before claiming a new quality result. No such follow-up was run here.
+
+Evidence: gitignored `data/coordinate-interactions-20261019/` contains
+`result.json`, `queries.csv`, `summary.csv`, derivative/precision/parity checks,
+input/source identities and the verified `source.tar.gz`. The existing
+`experiments/attention-pruning/diagnose_pruning.py` was extended; because that
+directory is ignored, its exact executed source is preserved in this archive.
+Both forks, training equations, cache and selected checkpoints were unchanged.
+
+Reproduce from the repository root, choosing a fresh output directory:
+
+```bash
+python experiments/attention-pruning/diagnose_pruning.py \
+  --cache data/training-cache-001 \
+  --policy experiments/attention-pruning/anchored-best-policy.json \
+  --runner third_party/sglang/python/sglang/benchmark/remnant/calibrate.py \
+  --output data/coordinate-interactions-<new-run> --threads 4
+```
