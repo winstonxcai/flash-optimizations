@@ -1,0 +1,21 @@
+{
+  "status": "Transfer only; pending benchmark review",
+  "original_run": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/native-mf082-c20-20261020_131400/20261020_131718",
+  "mode": "native",
+  "memory_fraction": 0.82,
+  "concurrency": 20,
+  "requested_duration_s": 1200.0,
+  "summary_valid": true,
+  "counts": {
+    "attempted": 2219,
+    "completion_tokens": 337757,
+    "failed": 21,
+    "not_started_due_to_duration": 2697,
+    "prompt_tokens": 315576172,
+    "selected": 4916,
+    "successful": 2198,
+    "users_completed": 34,
+    "users_selected": 92,
+    "users_started": 54
+  }
+}
