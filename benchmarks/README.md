@@ -12,9 +12,12 @@ alone do not establish a repeatable speedup.
 | Question | Collection | Evidence and appropriate use |
 |---|---|---|
 | Same-concurrency serving overhead | [C24 Native / Packed-256, n=3](lswb-replay/c24-native-packed256-n3-20261018/README.md) | **Preferred repeated C24 reference.** Nine fresh-server, unprofiled 1,200 s replays; three per mode. Recorded settings, image, dataset and harness identities match. All nine TTFT p90 values pass 10 s. Full loaded runtime identity was not captured. |
+| Packed serving at C27 | [C27 Packed-256 Triton / Kernel, n=3](lswb-replay/c27-packed256-n3-20261020/README.md) | **Repeated SLO probe.** Six fresh-server 1,200 s replays. Triton passes the 10 s TTFT-p90 threshold in 2/3 runs; Kernel in 0/3. Neither is a consistently passing ceiling. Candidate-level harness audit; no paired overnight Native control. |
+| Packed serving at C28 | [C28 Packed-256 Triton / Kernel, n=3](lswb-replay/c28-packed256-n3-20261020/README.md) | **Repeated SLO probe.** Six fresh-server 1,200 s replays. Each mode passes the 10 s TTFT-p90 threshold in 1/3 runs. Throughput is near the earlier Native C24 reference at a different load/date; no demonstrated stable SLO-ceiling gain. |
 | Original Native C24 SLO baseline | [Historical Native C24, repeat 1](lswb-replay/native-c24-historical-slo/README.md) | **Historical reference.** Original run `20260909_081547`, used as repeat 1 in the report's historical Native aggregate. Compact original metrics and provenance are visible here; later repeats remain linked. Separate from the newer matched three-mode triplicate. |
 | Long-input serving at matched load and capacity | [Random 128k input / 8k output, n=1](serving/random-128k-8k-c24-capacity-n1-20261018/README.md) | **Single-run study.** Six cells: C24 and each mode's allocator ceiling. Available source identities and recorded settings match. Repeat before treating a gain as stable; allocator capacity is not an SLO ceiling. |
 | Shared-prefix retention under increasing working sets | [Shared-prefix C16, G16/G32/G40, n=1](serving/shared-prefix-c16-n1-20261019/README.md) | **Single-run synthetic screening.** Nine cells at fixed C16, sweeping distinct prefix groups. Exact completions, input lengths and cache accounting passed review. Packed gains at G32/G40 accompany higher device hits; overlapping allocations and incomplete runtime identity limit attribution. Not LongSWE replay or a replicated production gain. |
+| Repeated shared-prefix retention at G32 | [Shared-prefix G32/C16, three modes, n=3](serving/shared-prefix-g32-c16-n3-20261020/README.md) | **Preferred repeated synthetic mechanism reference.** Nine measurements with a successful cache flush before each, one resident server per mode. Packed observes approximately 2.4× Native throughput and 72% fewer uncached prompt tokens. One fixed dataset seed and a capacity-sensitive working set; not a general coding-agent speedup. |
 | Decode/store operation cost and GPU counters | [H100 three-mode decode/store](microbench/decode-store-h100-three-mode-20261014/README.md) | **Validated operation reference.** 33 timing cases, documented 114 passing GPU checks and 12 Compute reports. Timing samples are not independent serving runs. |
 | Native / Packed192 / Packed256 prefill-read cost | [Original split reader](microbench/prefill-read-20261018/README.md) | **Model-free operation study.** 36 timing cases and 108 captured operations on shared inputs; Packed reconstruction adds cost. This is not a serving-speed measurement. |
 | Fusing Packed prefill unpack and RoPE | [Fused-reader candidate](microbench/prefill-read-fused-rope-20261018/README.md) | **Validated opt-in experiment.** All-count parity, graph/sanitizer checks, 36 timing cases and 108 captures. Fusion removes part of the penalty but remains slower than Native. CSV export recovery and cross-run comparison limits are recorded. |
@@ -38,13 +41,16 @@ benchmarks/
 ├── README.md
 ├── lswb-replay/
 │   ├── c24-native-packed256-n3-20261018/
+│   ├── c27-packed256-n3-20261020/
+│   ├── c28-packed256-n3-20261020/
 │   ├── native-c24-historical-slo/
 │   ├── c24-three-mode-profiles-n1-20261013/
 │   ├── c24-packed256-store-decode-ablation-n1-20261014/
 │   └── c28-packed256-store-decode-ablation-n1-20261014/
 ├── serving/
 │   ├── random-128k-8k-c24-capacity-n1-20261018/
-│   └── shared-prefix-c16-n1-20261019/
+│   ├── shared-prefix-c16-n1-20261019/
+│   └── shared-prefix-g32-c16-n3-20261020/
 └── microbench/
     ├── decode-store-h100-three-mode-20261014/
     ├── prefill-read-20261018/

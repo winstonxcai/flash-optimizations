@@ -1,0 +1,985 @@
+{
+  "schema_version": 1,
+  "author": "Winston Cai",
+  "collection": "shared-prefix-g32-c16-n3-20261020",
+  "transfer_commit": "895b1a1",
+  "previous_analysis_commit": "dc90c14",
+  "original_transfer_path": "transfer/overnight-benchmarks-20261020_095706",
+  "incoming_transfer_checksum_count": 334,
+  "incoming_transfer_checksums_valid": true,
+  "root_metadata_history": {
+    "commit": "dc90c14",
+    "files_sha256": {
+      "analysis.csv": "ccdd3e0e03e30ededba50af4d0d575f19e3cf391182fbd42642ae1a85b7d5961",
+      "ANALYSIS.md": "b582a6ecd10af198a31135962ff9f33126fa8119e92092da709e921a93bbd844",
+      "README.md": "a76df2919a69950405dbf9c9c73aa3a2d2dfc5b9f3828ec6b7332e11f197b82c",
+      "analysis.json": "ab2acc880c9df33de8925e024309e5adfeaae353f19f6437c2635528340b8c22",
+      "SHA256SUMS": "9f2007c3acb4879268a31037cdb477cf9652e7df0149d7b1b550604a0e156b6a",
+      "transfer-manifest.json": "dca60eb63bedf58f48cc5790f60fc153d7546de739dec2327dba4844cabf94be",
+      "jobs.json": "75b77f24b2ff2176ad71fde8d985a953bfc27972929a931c6dafb457d3688473"
+    },
+    "handling": "Joint jobs, manifest, checksums and analysis are split into collection records; complete original metadata remains recoverable at this Git commit."
+  },
+  "source_identity": {
+    "parent": {
+      "path": "/home/jovyan/winstonxcai/flash-optimizations",
+      "commit": "1e3b6f6438b4f3e7eb13748a4a63de54f197e66e"
+    },
+    "sglang": {
+      "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang",
+      "expected_commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+      "commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+      "override": false,
+      "dirty": false
+    },
+    "flashmla/csrc/cutlass": {
+      "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla/csrc/cutlass",
+      "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+      "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+      "override": false,
+      "dirty": false
+    },
+    "flashmla": {
+      "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla",
+      "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+      "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+      "override": false,
+      "dirty": false
+    }
+  },
+  "image_id": "sha256:09dfea18bd2c4168481710dcb1830a2c2efdb8e8f45f9d1ad7bb85a1b7ff48ab",
+  "gpuq_jobs": [
+    {
+      "id": "job-20261019-172731-0da1bceb",
+      "status": "succeeded",
+      "exit_code": 0,
+      "workload_key": "gsp-g32-c16-triton-n3-gsp-g32-c16-n3-20261020_012700-IfChBC",
+      "allocated_gpu_ids": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "created_at": "2026-10-19T17:27:31.326707+00:00",
+      "started_at": "2026-10-19T18:22:21.749049+00:00",
+      "finished_at": "2026-10-19T19:16:27.370844+00:00",
+      "log_dir": "/var/lib/gpuq/jobs/job-20261019-172731-0da1bceb",
+      "output_dir": null,
+      "error": null
+    },
+    {
+      "id": "job-20261019-172725-83419095",
+      "status": "succeeded",
+      "exit_code": 0,
+      "workload_key": "gsp-g32-c16-kernel-n3-gsp-g32-c16-n3-20261020_012700-IfChBC",
+      "allocated_gpu_ids": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "created_at": "2026-10-19T17:27:25.531642+00:00",
+      "started_at": "2026-10-19T17:27:28.761440+00:00",
+      "finished_at": "2026-10-19T18:22:18.913941+00:00",
+      "log_dir": "/var/lib/gpuq/jobs/job-20261019-172725-83419095",
+      "output_dir": null,
+      "error": null
+    },
+    {
+      "id": "job-20261019-172718-1d1152c0",
+      "status": "succeeded",
+      "exit_code": 0,
+      "workload_key": "gsp-g32-c16-native-n3-gsp-g32-c16-n3-20261020_012700-IfChBC",
+      "allocated_gpu_ids": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "created_at": "2026-10-19T17:27:18.936209+00:00",
+      "started_at": "2026-10-19T17:27:22.745094+00:00",
+      "finished_at": "2026-10-19T19:28:56.482032+00:00",
+      "log_dir": "/var/lib/gpuq/jobs/job-20261019-172718-1d1152c0",
+      "output_dir": null,
+      "error": null
+    }
+  ],
+  "artifacts": [
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/READY",
+      "path": "provenance/READY",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/image-id.txt",
+      "path": "provenance/image-id.txt",
+      "sha256": "16131013da4dcded6a39655d7659a767756b6a1e3628e83e1df25b27f9f41c3b",
+      "bytes": 72
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/input-sha256.txt",
+      "path": "provenance/input-sha256.txt",
+      "sha256": "64424fd7ab79684c3bcc419748b90fa1a780880d79eae263e056d70eaa20f77d",
+      "bytes": 605
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/inputs.json",
+      "path": "provenance/inputs.json",
+      "sha256": "b9f6ffe74d4179e05606bc16c8f5ca8e278a10d87958c8764fd640aec3afad20",
+      "bytes": 31726
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/gpus.txt",
+      "path": "kernel/server/gpus.txt",
+      "sha256": "15af9c0762c700dca8ba006a48ae4f0ee55ec2b3c82a9f7eacfaad603f364570",
+      "bytes": 8
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat1/client.log",
+      "path": "kernel/repeat1/client.log",
+      "sha256": "fe69de8d7d428133eb6a9fd2b5059c633859f318a8b9689b82082d67f2bf70f7",
+      "bytes": 42331
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat1/finished.txt",
+      "path": "kernel/repeat1/finished.txt",
+      "sha256": "dc982495bffc4b5df77c616611021c9736ec6d2c4d09c7018bc79a2350ebbf56",
+      "bytes": 26
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat1/measured.json",
+      "path": "kernel/repeat1/measured.json",
+      "sha256": "e696f77e77f25322d1f7530569b8ca8857f4c8e5664ab9f97b09365bc9e98786",
+      "bytes": 151148
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat1/started.txt",
+      "path": "kernel/repeat1/started.txt",
+      "sha256": "4cc98c2785871a61903c55827be576df3f4b94b156a641f5e8d252a26db3af4b",
+      "bytes": 26
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat1/validation.json",
+      "path": "kernel/repeat1/validation.json",
+      "sha256": "73a51db51abfd6b6360045f6326eeebb00fdcab626c149fe577158cd3fa133bf",
+      "bytes": 229
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat2/client.log",
+      "path": "kernel/repeat2/client.log",
+      "sha256": "aca3e2b1c702f2158ba4b679d6e842e0ae258f282f6b6b783990f5de5eab6c53",
+      "bytes": 36124
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat2/finished.txt",
+      "path": "kernel/repeat2/finished.txt",
+      "sha256": "6af555d0569f1e0badc532f10cfc7e54dbff7f1a1fb9a147d4e7e5b59487c68f",
+      "bytes": 26
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat2/measured.json",
+      "path": "kernel/repeat2/measured.json",
+      "sha256": "495ad17767d2a03fedd37ae29dc88b1d2bf8d6e29f89ad2bf73de8b0d22ae6cf",
+      "bytes": 151092
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat2/started.txt",
+      "path": "kernel/repeat2/started.txt",
+      "sha256": "1815573c0c1d8a881f5599af0f38bc39713e3e780b5403bc9bb0def3fc9deeb7",
+      "bytes": 26
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat2/validation.json",
+      "path": "kernel/repeat2/validation.json",
+      "sha256": "6144a052be6c864bde16da4030b1a9eeb02db12f4025dde2af137759d07a831d",
+      "bytes": 229
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat3/client.log",
+      "path": "kernel/repeat3/client.log",
+      "sha256": "8c96b2f882f1fb7570b7f3dc0349c753c9ec9ef371b41a13851998ada3d6c9f0",
+      "bytes": 28982
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat3/finished.txt",
+      "path": "kernel/repeat3/finished.txt",
+      "sha256": "96e55c171ecabe4ad83564a958634713e1f9e68c89a8f3c8a42d00384a8bbbf2",
+      "bytes": 26
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat3/measured.json",
+      "path": "kernel/repeat3/measured.json",
+      "sha256": "82085a4b312565dafa409b5e82a8723d323524cae77ba6a9dc96e11fbeb864a5",
+      "bytes": 150940
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat3/started.txt",
+      "path": "kernel/repeat3/started.txt",
+      "sha256": "37428b820644d12e88832ffdd627bf55098b86403e83faad3fe130c3dcb445cc",
+      "bytes": 26
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat3/validation.json",
+      "path": "kernel/repeat3/validation.json",
+      "sha256": "3d7127ed0b69344a20c4cbb932a24d1f34ba0bdad4d4c2ead88efb3eac585054",
+      "bytes": 229
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/serve_kernel.log",
+      "path": "kernel/server/serve_kernel.log",
+      "sha256": "c76c02106280d1b5d40a8fb04bc6df173d504edcde1e2dae64f266be9119eb69",
+      "bytes": 2167285
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/server-info.json",
+      "path": "kernel/server/server-info.json",
+      "sha256": "48e95c7e8a74021a5a47aa45a06ea3ddd5c5da7b221d643d5fc80cd559da4586",
+      "bytes": 33080
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/launcher-sha256.txt",
+      "path": "provenance/launcher-sha256.txt",
+      "sha256": "af892926f059e58472728fe8cbdbe38c22300f6e57f91695c85a6a3216a226e7",
+      "bytes": 631
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/gpus.txt",
+      "path": "native/server/gpus.txt",
+      "sha256": "3904e7e527755d40523bdf249124c8ce18027ae8a9b7dece2869936af89ebd98",
+      "bytes": 8
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat1/client.log",
+      "path": "native/repeat1/client.log",
+      "sha256": "65fbce3abe461393859056df4d57f3ed16f5d637526a8e2bbe965c0e1b9ee46f",
+      "bytes": 39645
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat1/finished.txt",
+      "path": "native/repeat1/finished.txt",
+      "sha256": "28ca14ccaa1ad85b8cce740b2344cb3370ffae3e909720dd270b21150c6573e2",
+      "bytes": 26
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat1/measured.json",
+      "path": "native/repeat1/measured.json",
+      "sha256": "72b61e833e8b99e6db0eca71ccfa863c2540cb1f45a0c3fe1cfb01738d81284d",
+      "bytes": 143770
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat1/started.txt",
+      "path": "native/repeat1/started.txt",
+      "sha256": "a035c379ff6540325990d605997e2cc4fe94df84fb046e27aff83855a59eda56",
+      "bytes": 26
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat1/validation.json",
+      "path": "native/repeat1/validation.json",
+      "sha256": "3cc3ca3b4bf3753523803ea005782f4a8138bb18d87c079809f8ebea4004d738",
+      "bytes": 228
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat2/client.log",
+      "path": "native/repeat2/client.log",
+      "sha256": "de2361252d250fd335103b1f67e68870ab140244802c1eb998e816b341a68524",
+      "bytes": 38203
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat2/finished.txt",
+      "path": "native/repeat2/finished.txt",
+      "sha256": "ec8c7fec295962d06108a448eecbd70d51c81582539c699ceba72d6036e837d0",
+      "bytes": 26
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat2/measured.json",
+      "path": "native/repeat2/measured.json",
+      "sha256": "96a2fe821279fe0d61cea7de684a68ecdce04905a2541dd341802205ea5df9f7",
+      "bytes": 143791
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat2/started.txt",
+      "path": "native/repeat2/started.txt",
+      "sha256": "be8931ce280904c0499471462d896ff5d05fdaa53a54d56a54f6e4eeaf26afd0",
+      "bytes": 26
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat2/validation.json",
+      "path": "native/repeat2/validation.json",
+      "sha256": "eb8020101900a5ef82f91c6821d979c02a6b43fb5a586d7efaa86eb5b70d7f9e",
+      "bytes": 230
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat3/client.log",
+      "path": "native/repeat3/client.log",
+      "sha256": "c5d61b87a17aafa2a646facf1bd3915b44b512e25b9abc4d830191ee4d6396e9",
+      "bytes": 42294
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat3/finished.txt",
+      "path": "native/repeat3/finished.txt",
+      "sha256": "992467129d76e9b06e95649248903673bb8329e0bed3a124d2ab121718626e7b",
+      "bytes": 26
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat3/measured.json",
+      "path": "native/repeat3/measured.json",
+      "sha256": "d68f3dbdc939c047d44fc6db99732ff6a5b00f4fbba79aaf591f773f54c8cfcf",
+      "bytes": 143761
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat3/started.txt",
+      "path": "native/repeat3/started.txt",
+      "sha256": "cafda5ff069f94bda6b9db68c0bc5828a6ddd05eff5a2689639cc16da85a540b",
+      "bytes": 26
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat3/validation.json",
+      "path": "native/repeat3/validation.json",
+      "sha256": "a5cb218f16bfc0e6ed85ca4257a8e83ce8757039800aa49d3c4e1412a71e9fcf",
+      "bytes": 228
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/serve_native.log",
+      "path": "native/server/serve_native.log",
+      "sha256": "24b6c9554ee78f2c9a59662c55be16e081e894bfa1933c2295e2b4baa2d337af",
+      "bytes": 3837841
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/server-info.json",
+      "path": "native/server/server-info.json",
+      "sha256": "02ce8afef891c0ac1d59109d42d70b3e638d3464a6c2e0d728164733d162e8d0",
+      "bytes": 32906
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/sources.json",
+      "path": "provenance/sources.json",
+      "sha256": "1d4fff28f2c589caa4217617bb156de1b2c031d09840445d050e5fc363b9273e",
+      "bytes": 968
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/gpus.txt",
+      "path": "triton/server/gpus.txt",
+      "sha256": "15af9c0762c700dca8ba006a48ae4f0ee55ec2b3c82a9f7eacfaad603f364570",
+      "bytes": 8
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat1/client.log",
+      "path": "triton/repeat1/client.log",
+      "sha256": "4996d5124bf925062d9c93ee372323cfee2a2f3178722df7509febb70c71b44a",
+      "bytes": 53639
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat1/finished.txt",
+      "path": "triton/repeat1/finished.txt",
+      "sha256": "79ceefed0f9cdcf7ff90c5f4b12b6f3a7304fd792b4a80b6461b573089960773",
+      "bytes": 26
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat1/measured.json",
+      "path": "triton/repeat1/measured.json",
+      "sha256": "3744402e749da6cb3795b20dcb218177e743e71da1ffff386169e3f60be37093",
+      "bytes": 151323
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat1/started.txt",
+      "path": "triton/repeat1/started.txt",
+      "sha256": "041905c5edd48c41687cd5e20b6665a6f5bb5d0271cc81007e233ef9b172906f",
+      "bytes": 26
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat1/validation.json",
+      "path": "triton/repeat1/validation.json",
+      "sha256": "5d586d0d439f4f5c0a49e6254ff4b0401590e2dc302e199fb57a8179f0b11add",
+      "bytes": 230
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat2/client.log",
+      "path": "triton/repeat2/client.log",
+      "sha256": "292980207673fa66e943c1a26844df8a6869e2d77c2737d9d3f25b9a727b056d",
+      "bytes": 55011
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat2/finished.txt",
+      "path": "triton/repeat2/finished.txt",
+      "sha256": "a8af4c477dfd5bac3246d9be43ac98dd03c750ebe6e58256b7dc477b94c71bb9",
+      "bytes": 26
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat2/measured.json",
+      "path": "triton/repeat2/measured.json",
+      "sha256": "8796db986257357398312a0425f235786d2402026bf068c7e5f3cf32400c410c",
+      "bytes": 151311
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat2/started.txt",
+      "path": "triton/repeat2/started.txt",
+      "sha256": "a10e0ade09f8998c4667164dc76b4d8cf3172b2a81908e8c474635816ef69089",
+      "bytes": 26
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat2/validation.json",
+      "path": "triton/repeat2/validation.json",
+      "sha256": "7cd4d9766908748c614bd0aaac2e1d8d1a65973d7bb7925fa7fec6635cf51ef1",
+      "bytes": 230
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat3/client.log",
+      "path": "triton/repeat3/client.log",
+      "sha256": "a5d51b4e3c1006a2c468409258cea2373e6ae3ffd5534116f1a743dcf464e105",
+      "bytes": 51188
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat3/finished.txt",
+      "path": "triton/repeat3/finished.txt",
+      "sha256": "bd7d1470a013a00ffcde5d0bdef77d114e2985b6e20258a71c627bf0e1175e70",
+      "bytes": 26
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat3/measured.json",
+      "path": "triton/repeat3/measured.json",
+      "sha256": "8dd607bf9f48ab4ccd58579934b6f368fe60254cbc96b00f5d46609a76113a00",
+      "bytes": 151265
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat3/started.txt",
+      "path": "triton/repeat3/started.txt",
+      "sha256": "8ce24122c9145f851353f78664bb6f32650f93f409fe6458a6edd7b42345ec04",
+      "bytes": 26
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat3/validation.json",
+      "path": "triton/repeat3/validation.json",
+      "sha256": "2a646a77d36d769ecd6f07ba6588934eba4fd373d18b7db7a1984f952583f66d",
+      "bytes": 229
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/serve_triton.log",
+      "path": "triton/server/serve_triton.log",
+      "sha256": "6273cca85023e0395d1bcd0aaddedac23a5a3b72cfc197225e24a4d0e56b73e1",
+      "bytes": 2096001
+    },
+    {
+      "transfer_path": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/server-info.json",
+      "path": "triton/server/server-info.json",
+      "sha256": "4aefaf30ba2c11411d805a29292ce9ef2c5d667393a4deb0dd68f161552dbe54",
+      "bytes": 33077
+    },
+    {
+      "transfer_path": "gpuq-logs/job-20261019-172731-0da1bceb.log",
+      "path": "provenance/gpuq-logs/job-20261019-172731-0da1bceb.log",
+      "sha256": "37ba29579603098b8e3a955478b6c4d6f533828f4ecc5a27987b461c9e0dba43",
+      "bytes": 3439
+    },
+    {
+      "transfer_path": "gpuq-logs/job-20261019-172725-83419095.log",
+      "path": "provenance/gpuq-logs/job-20261019-172725-83419095.log",
+      "sha256": "943e9a30df3618d819eb124a39004a993c01419ce812ba33e6a6e12aec413105",
+      "bytes": 3439
+    },
+    {
+      "transfer_path": "gpuq-logs/job-20261019-172718-1d1152c0.log",
+      "path": "provenance/gpuq-logs/job-20261019-172718-1d1152c0.log",
+      "sha256": "8bd3e74cc2b20654b72ee45146a9e2da8e3ac5ec823104a18375c2bdc180cc14",
+      "bytes": 3442
+    }
+  ],
+  "original_source_artifacts": [
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/READY",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_bytes": 0,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/READY",
+      "curated_path": "provenance/READY"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/image-id.txt",
+      "source_sha256": "16131013da4dcded6a39655d7659a767756b6a1e3628e83e1df25b27f9f41c3b",
+      "source_bytes": 72,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/image-id.txt",
+      "curated_path": "provenance/image-id.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/input-sha256.txt",
+      "source_sha256": "64424fd7ab79684c3bcc419748b90fa1a780880d79eae263e056d70eaa20f77d",
+      "source_bytes": 605,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/input-sha256.txt",
+      "curated_path": "provenance/input-sha256.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/inputs.json",
+      "source_sha256": "b9f6ffe74d4179e05606bc16c8f5ca8e278a10d87958c8764fd640aec3afad20",
+      "source_bytes": 31726,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/inputs.json",
+      "curated_path": "provenance/inputs.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/launcher-sha256.txt",
+      "source_sha256": "af892926f059e58472728fe8cbdbe38c22300f6e57f91695c85a6a3216a226e7",
+      "source_bytes": 631,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/launcher-sha256.txt",
+      "curated_path": "provenance/launcher-sha256.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/run.sh",
+      "source_sha256": "195c271e4e4a75944b07ba0d2206a353452f46471b607d4337b96bb87d31a6ff",
+      "source_bytes": 5866,
+      "action": "hash only"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/sources.json",
+      "source_sha256": "1d4fff28f2c589caa4217617bb156de1b2c031d09840445d050e5fc363b9273e",
+      "source_bytes": 968,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/sources.json",
+      "curated_path": "provenance/sources.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/gpus.txt",
+      "source_sha256": "15af9c0762c700dca8ba006a48ae4f0ee55ec2b3c82a9f7eacfaad603f364570",
+      "source_bytes": 8,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/gpus.txt",
+      "curated_path": "triton/server/gpus.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat1/client.log",
+      "source_sha256": "4996d5124bf925062d9c93ee372323cfee2a2f3178722df7509febb70c71b44a",
+      "source_bytes": 53639,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat1/client.log",
+      "curated_path": "triton/repeat1/client.log"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat1/finished.txt",
+      "source_sha256": "79ceefed0f9cdcf7ff90c5f4b12b6f3a7304fd792b4a80b6461b573089960773",
+      "source_bytes": 26,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat1/finished.txt",
+      "curated_path": "triton/repeat1/finished.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat1/measured.jsonl",
+      "source_sha256": "92a5d81dc88a143ad1977029a240abeb4c6b80d5c5bbd75862c363aca7ce2391",
+      "source_bytes": 8864523,
+      "action": "compacted measurement",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat1/measured.json",
+      "curated_path": "triton/repeat1/measured.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat1/started.txt",
+      "source_sha256": "041905c5edd48c41687cd5e20b6665a6f5bb5d0271cc81007e233ef9b172906f",
+      "source_bytes": 26,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat1/started.txt",
+      "curated_path": "triton/repeat1/started.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat1/validation.json",
+      "source_sha256": "5d586d0d439f4f5c0a49e6254ff4b0401590e2dc302e199fb57a8179f0b11add",
+      "source_bytes": 230,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat1/validation.json",
+      "curated_path": "triton/repeat1/validation.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat2/client.log",
+      "source_sha256": "292980207673fa66e943c1a26844df8a6869e2d77c2737d9d3f25b9a727b056d",
+      "source_bytes": 55011,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat2/client.log",
+      "curated_path": "triton/repeat2/client.log"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat2/finished.txt",
+      "source_sha256": "a8af4c477dfd5bac3246d9be43ac98dd03c750ebe6e58256b7dc477b94c71bb9",
+      "source_bytes": 26,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat2/finished.txt",
+      "curated_path": "triton/repeat2/finished.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat2/measured.jsonl",
+      "source_sha256": "e31fdb142e85737655a0c0e97f0e731c163834a81e4901414b19cb3bf2550751",
+      "source_bytes": 8866226,
+      "action": "compacted measurement",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat2/measured.json",
+      "curated_path": "triton/repeat2/measured.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat2/started.txt",
+      "source_sha256": "a10e0ade09f8998c4667164dc76b4d8cf3172b2a81908e8c474635816ef69089",
+      "source_bytes": 26,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat2/started.txt",
+      "curated_path": "triton/repeat2/started.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat2/validation.json",
+      "source_sha256": "7cd4d9766908748c614bd0aaac2e1d8d1a65973d7bb7925fa7fec6635cf51ef1",
+      "source_bytes": 230,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat2/validation.json",
+      "curated_path": "triton/repeat2/validation.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat3/client.log",
+      "source_sha256": "a5d51b4e3c1006a2c468409258cea2373e6ae3ffd5534116f1a743dcf464e105",
+      "source_bytes": 51188,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat3/client.log",
+      "curated_path": "triton/repeat3/client.log"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat3/finished.txt",
+      "source_sha256": "bd7d1470a013a00ffcde5d0bdef77d114e2985b6e20258a71c627bf0e1175e70",
+      "source_bytes": 26,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat3/finished.txt",
+      "curated_path": "triton/repeat3/finished.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat3/measured.jsonl",
+      "source_sha256": "e52d578f359650af20714e5a71b1311e990998df0e44327b5e847423cbda1bd7",
+      "source_bytes": 8877677,
+      "action": "compacted measurement",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat3/measured.json",
+      "curated_path": "triton/repeat3/measured.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat3/started.txt",
+      "source_sha256": "8ce24122c9145f851353f78664bb6f32650f93f409fe6458a6edd7b42345ec04",
+      "source_bytes": 26,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat3/started.txt",
+      "curated_path": "triton/repeat3/started.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat3/validation.json",
+      "source_sha256": "2a646a77d36d769ecd6f07ba6588934eba4fd373d18b7db7a1984f952583f66d",
+      "source_bytes": 229,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/repeat3/validation.json",
+      "curated_path": "triton/repeat3/validation.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/serve_triton.log",
+      "source_sha256": "6273cca85023e0395d1bcd0aaddedac23a5a3b72cfc197225e24a4d0e56b73e1",
+      "source_bytes": 2096001,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/serve_triton.log",
+      "curated_path": "triton/server/serve_triton.log"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/server-info.json",
+      "source_sha256": "4aefaf30ba2c11411d805a29292ce9ef2c5d667393a4deb0dd68f161552dbe54",
+      "source_bytes": 33077,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/triton/server-info.json",
+      "curated_path": "triton/server/server-info.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/gpus.txt",
+      "source_sha256": "15af9c0762c700dca8ba006a48ae4f0ee55ec2b3c82a9f7eacfaad603f364570",
+      "source_bytes": 8,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/gpus.txt",
+      "curated_path": "kernel/server/gpus.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat1/client.log",
+      "source_sha256": "fe69de8d7d428133eb6a9fd2b5059c633859f318a8b9689b82082d67f2bf70f7",
+      "source_bytes": 42331,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat1/client.log",
+      "curated_path": "kernel/repeat1/client.log"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat1/finished.txt",
+      "source_sha256": "dc982495bffc4b5df77c616611021c9736ec6d2c4d09c7018bc79a2350ebbf56",
+      "source_bytes": 26,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat1/finished.txt",
+      "curated_path": "kernel/repeat1/finished.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat1/measured.jsonl",
+      "source_sha256": "5f3395e78b9cfe706e5a1bf483a8ae6350ae4b4c3896596be78e158049e15ac8",
+      "source_bytes": 8888937,
+      "action": "compacted measurement",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat1/measured.json",
+      "curated_path": "kernel/repeat1/measured.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat1/started.txt",
+      "source_sha256": "4cc98c2785871a61903c55827be576df3f4b94b156a641f5e8d252a26db3af4b",
+      "source_bytes": 26,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat1/started.txt",
+      "curated_path": "kernel/repeat1/started.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat1/validation.json",
+      "source_sha256": "73a51db51abfd6b6360045f6326eeebb00fdcab626c149fe577158cd3fa133bf",
+      "source_bytes": 229,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat1/validation.json",
+      "curated_path": "kernel/repeat1/validation.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat2/client.log",
+      "source_sha256": "aca3e2b1c702f2158ba4b679d6e842e0ae258f282f6b6b783990f5de5eab6c53",
+      "source_bytes": 36124,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat2/client.log",
+      "curated_path": "kernel/repeat2/client.log"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat2/finished.txt",
+      "source_sha256": "6af555d0569f1e0badc532f10cfc7e54dbff7f1a1fb9a147d4e7e5b59487c68f",
+      "source_bytes": 26,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat2/finished.txt",
+      "curated_path": "kernel/repeat2/finished.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat2/measured.jsonl",
+      "source_sha256": "8b23f21c07af0ce5cdd5dab38310694f68beebc97557cc4509e3944861443502",
+      "source_bytes": 8939832,
+      "action": "compacted measurement",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat2/measured.json",
+      "curated_path": "kernel/repeat2/measured.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat2/started.txt",
+      "source_sha256": "1815573c0c1d8a881f5599af0f38bc39713e3e780b5403bc9bb0def3fc9deeb7",
+      "source_bytes": 26,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat2/started.txt",
+      "curated_path": "kernel/repeat2/started.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat2/validation.json",
+      "source_sha256": "6144a052be6c864bde16da4030b1a9eeb02db12f4025dde2af137759d07a831d",
+      "source_bytes": 229,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat2/validation.json",
+      "curated_path": "kernel/repeat2/validation.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat3/client.log",
+      "source_sha256": "8c96b2f882f1fb7570b7f3dc0349c753c9ec9ef371b41a13851998ada3d6c9f0",
+      "source_bytes": 28982,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat3/client.log",
+      "curated_path": "kernel/repeat3/client.log"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat3/finished.txt",
+      "source_sha256": "96e55c171ecabe4ad83564a958634713e1f9e68c89a8f3c8a42d00384a8bbbf2",
+      "source_bytes": 26,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat3/finished.txt",
+      "curated_path": "kernel/repeat3/finished.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat3/measured.jsonl",
+      "source_sha256": "9ae4cf374120b02f49f1c483221e949cc1df998e23512e577a476f1b90b1d6f1",
+      "source_bytes": 8947410,
+      "action": "compacted measurement",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat3/measured.json",
+      "curated_path": "kernel/repeat3/measured.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat3/started.txt",
+      "source_sha256": "37428b820644d12e88832ffdd627bf55098b86403e83faad3fe130c3dcb445cc",
+      "source_bytes": 26,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat3/started.txt",
+      "curated_path": "kernel/repeat3/started.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat3/validation.json",
+      "source_sha256": "3d7127ed0b69344a20c4cbb932a24d1f34ba0bdad4d4c2ead88efb3eac585054",
+      "source_bytes": 229,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/repeat3/validation.json",
+      "curated_path": "kernel/repeat3/validation.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/serve_kernel.log",
+      "source_sha256": "c76c02106280d1b5d40a8fb04bc6df173d504edcde1e2dae64f266be9119eb69",
+      "source_bytes": 2167285,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/serve_kernel.log",
+      "curated_path": "kernel/server/serve_kernel.log"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/server-info.json",
+      "source_sha256": "48e95c7e8a74021a5a47aa45a06ea3ddd5c5da7b221d643d5fc80cd559da4586",
+      "source_bytes": 33080,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/kernel/server-info.json",
+      "curated_path": "kernel/server/server-info.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/gpus.txt",
+      "source_sha256": "3904e7e527755d40523bdf249124c8ce18027ae8a9b7dece2869936af89ebd98",
+      "source_bytes": 8,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/gpus.txt",
+      "curated_path": "native/server/gpus.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat1/client.log",
+      "source_sha256": "65fbce3abe461393859056df4d57f3ed16f5d637526a8e2bbe965c0e1b9ee46f",
+      "source_bytes": 39645,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat1/client.log",
+      "curated_path": "native/repeat1/client.log"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat1/finished.txt",
+      "source_sha256": "28ca14ccaa1ad85b8cce740b2344cb3370ffae3e909720dd270b21150c6573e2",
+      "source_bytes": 26,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat1/finished.txt",
+      "curated_path": "native/repeat1/finished.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat1/measured.jsonl",
+      "source_sha256": "3d79e2bc9531ba8aed055fbc3749566206e786afb9ce704fef768f13b8a7a030",
+      "source_bytes": 8814377,
+      "action": "compacted measurement",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat1/measured.json",
+      "curated_path": "native/repeat1/measured.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat1/started.txt",
+      "source_sha256": "a035c379ff6540325990d605997e2cc4fe94df84fb046e27aff83855a59eda56",
+      "source_bytes": 26,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat1/started.txt",
+      "curated_path": "native/repeat1/started.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat1/validation.json",
+      "source_sha256": "3cc3ca3b4bf3753523803ea005782f4a8138bb18d87c079809f8ebea4004d738",
+      "source_bytes": 228,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat1/validation.json",
+      "curated_path": "native/repeat1/validation.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat2/client.log",
+      "source_sha256": "de2361252d250fd335103b1f67e68870ab140244802c1eb998e816b341a68524",
+      "source_bytes": 38203,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat2/client.log",
+      "curated_path": "native/repeat2/client.log"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat2/finished.txt",
+      "source_sha256": "ec8c7fec295962d06108a448eecbd70d51c81582539c699ceba72d6036e837d0",
+      "source_bytes": 26,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat2/finished.txt",
+      "curated_path": "native/repeat2/finished.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat2/measured.jsonl",
+      "source_sha256": "2d6be8c447c609e0c7464bea297997fbe94ceba549e088485aaae4c8ce56364f",
+      "source_bytes": 8795523,
+      "action": "compacted measurement",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat2/measured.json",
+      "curated_path": "native/repeat2/measured.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat2/started.txt",
+      "source_sha256": "be8931ce280904c0499471462d896ff5d05fdaa53a54d56a54f6e4eeaf26afd0",
+      "source_bytes": 26,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat2/started.txt",
+      "curated_path": "native/repeat2/started.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat2/validation.json",
+      "source_sha256": "eb8020101900a5ef82f91c6821d979c02a6b43fb5a586d7efaa86eb5b70d7f9e",
+      "source_bytes": 230,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat2/validation.json",
+      "curated_path": "native/repeat2/validation.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat3/client.log",
+      "source_sha256": "c5d61b87a17aafa2a646facf1bd3915b44b512e25b9abc4d830191ee4d6396e9",
+      "source_bytes": 42294,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat3/client.log",
+      "curated_path": "native/repeat3/client.log"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat3/finished.txt",
+      "source_sha256": "992467129d76e9b06e95649248903673bb8329e0bed3a124d2ab121718626e7b",
+      "source_bytes": 26,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat3/finished.txt",
+      "curated_path": "native/repeat3/finished.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat3/measured.jsonl",
+      "source_sha256": "7620fdb24b5dbd3c4c1c05f27261f14d3b288f9bc756833db645899b6a638c4d",
+      "source_bytes": 8817533,
+      "action": "compacted measurement",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat3/measured.json",
+      "curated_path": "native/repeat3/measured.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat3/started.txt",
+      "source_sha256": "cafda5ff069f94bda6b9db68c0bc5828a6ddd05eff5a2689639cc16da85a540b",
+      "source_bytes": 26,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat3/started.txt",
+      "curated_path": "native/repeat3/started.txt"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat3/validation.json",
+      "source_sha256": "a5cb218f16bfc0e6ed85ca4257a8e83ce8757039800aa49d3c4e1412a71e9fcf",
+      "source_bytes": 228,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/repeat3/validation.json",
+      "curated_path": "native/repeat3/validation.json"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/serve_native.log",
+      "source_sha256": "24b6c9554ee78f2c9a59662c55be16e081e894bfa1933c2295e2b4baa2d337af",
+      "source_bytes": 3837841,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/serve_native.log",
+      "curated_path": "native/server/serve_native.log"
+    },
+    {
+      "source": "/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/server-info.json",
+      "source_sha256": "02ce8afef891c0ac1d59109d42d70b3e638d3464a6c2e0d728164733d162e8d0",
+      "source_bytes": 32906,
+      "action": "copied",
+      "destination": "logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/server-info.json",
+      "curated_path": "native/server/server-info.json"
+    }
+  ],
+  "transfer_omissions": {
+    "omitted_measurement_fields": [
+      "generated_texts",
+      "itls",
+      "server_info"
+    ],
+    "originals": "Full originals remain unchanged on the VDI.",
+    "notes": []
+  },
+  "statistical_protocol": "Three run-level observations per mode. Unweighted means, sample SD and sample variance; mean of run p90s, not pooled percentiles. All repeats retained."
+}
