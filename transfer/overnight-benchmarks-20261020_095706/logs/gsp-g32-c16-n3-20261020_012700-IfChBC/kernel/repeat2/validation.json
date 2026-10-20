@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "completed": 1280,
+  "exact_output_tokens": 256,
+  "ordered_input_lengths_match": true,
+  "request_throughput": 1.3482260506869441,
+  "ttft_p90_ms": 3816.9791852124035,
+  "mean_tpot_ms": 26.38896481333159
+}
