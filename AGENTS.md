@@ -31,6 +31,13 @@ disagrees with them. Do not treat a recorded branch head as the current checkout
 
 - Inspect the parent and relevant submodules' branch, status, and diff before
   editing. Preserve existing staged, unstaged, and untracked work.
+- After completing requested edits and relevant checks, commit by default unless
+  the user explicitly says otherwise. Include only files and changes made for
+  the current task in this conversation. Leave all unrelated dirty work and
+  pre-existing staged changes untouched; if a file contains unrelated edits,
+  stage only this task's hunks. Never use a blanket add/commit. If changes cannot
+  be safely separated, ask before committing. Report the commit; do not push
+  unless explicitly requested.
 - The established branches are parent `remnant`, SGLang `remnant/v0.5.18`, and
   FlashMLA `remnant/flashmla-v0518`. Do not develop on `main` or switch branches
   over dirty work. `origin/...` names are remote references, not local branches.
@@ -40,8 +47,8 @@ disagrees with them. Do not treat a recorded branch head as the current checkout
 - When the active experiment needs an isolated candidate, use its documented
   worktree or source-snapshot workflow. Record the source path and overrides;
   avoid unexplained `tmp/` copies. Preserve the shared fork checkout.
-- A submodule pin records a commit, not its uncommitted files. When asked to
-  commit/push, handle each affected fork on its own branch, then update the
+- A submodule pin records a commit, not its uncommitted files. When committing
+  or pushing, handle each affected fork on its own branch, then update the
   parent pins. Push referenced fork commits before the parent. Stage only the
   requested work; do not sweep unrelated dirty files into a commit.
 - After an authorized parent pull/checkout or pin change, synchronize the forks
@@ -248,6 +255,10 @@ change; preserve independent references and established tolerances.
 - Keep profiling separate from acceptance timing. Reuse prior profiles and
   collect new ones to answer a specific unresolved question. Check SASS,
   registers/spills, and actual instrumentation before attributing a speedup.
+- For Nsight Systems (`nsys`), read
+  `/Applications/NVIDIA Nsight Systems.app/Contents/skills/nsight-systems/SKILL.md`
+  before use on this Mac. On other hosts, use the installed skill's location;
+  report if unavailable rather than assuming this macOS path exists there.
 - Microbenchmarks and frozen attention replay do not establish serving
   TPOT/TTFT, SLO capacity, or closed-loop agent task quality.
 
