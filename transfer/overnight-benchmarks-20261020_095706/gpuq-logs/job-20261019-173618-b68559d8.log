@@ -1,0 +1,101 @@
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla",
+    "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "override": false,
+    "dirty": false
+  }
+}
+[lswb] decode graph preflight OK: c28, captured sizes=[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 15, 16, 18, 20, 24, 28, 32, 34, 40, 48, 56, 64, 68, 80, 96, 112, 120, 136]
+[lswb] waiting for idle server and flushing prefix cache
+Cache flushed.
+Please check backend logs for more details. (When there are running or waiting requests, the operation will not be performed.)
+== lswb replay tag=triton-k256-c28-repeat2-20261020_013611 port=30421 c28 @ 1200s -> /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/triton-k256-c28-repeat2-20261020_013611/20261020_034417 ==
+[lswb] request timing: 2195 records, 2195 valid, complete=True
+[lswb] client rc=0
+==== client.log ====
+{"attempted":2195,"completion_tokens":325885,"failed":21,"not_started_due_to_duration":2721,"prompt_tokens":306669669,"selected":4916,"successful":2174,"users_completed":29,"users_selected":92,"users_started":56,"valid":true}
+[lswb] artifacts at /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/triton-k256-c28-repeat2-20261020_013611/20261020_034417
+dir=20261020_034417
+slo=FAIL valid=True done=2174 ttft_p90=10.19s e2e_p90=22.68s l1=0.9716 l2=0.0000 uncached=8696421 succ=0.9904
+stopped triton server on port 30421
+=== triton Packed-256 C28: repeat 3/3 ===
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "1e3b6f6438b4f3e7eb13748a4a63de54f197e66e"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang",
+    "expected_commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla",
+    "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "override": false,
+    "dirty": false
+  }
+}
+Packed C4 profile: PackedProfile(default_count=256, overrides=(), compression_ratios=(0, 0, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 0, 0, 0))
+Request timing source: /mnt/host_root/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang/python/sglang/srt/observability/req_time_stats.py
+== serve triton on gpus=4,5,6,7 port=30421 master=29821 (log: /home/jovyan/winstonxcai/flash-optimizations/logs/triton-k256-c28-repeat3-20261020_013611/serve_triton.log) ==
+launched pid 85576
+  health OK after ~170s
+  pool(max_total_num_tokens)=4536832
+  max_total_num_tokens=4536832
+  is fired up and ready
+serve triton UP on port 30421 -- leave running, tear down with: scripts/local/serve.sh triton stop
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "1e3b6f6438b4f3e7eb13748a4a63de54f197e66e"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang",
+    "expected_commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla",
+    "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "override": false,
+    "dirty": false
+  }
+}
+[lswb] decode graph preflight OK: c28, captured sizes=[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 15, 16, 18, 20, 24, 28, 32, 34, 40, 48, 56, 64, 68, 80, 96, 112, 120, 136]
+[lswb] waiting for idle server and flushing prefix cache
+Cache flushed.
+Please check backend logs for more details. (When there are running or waiting requests, the operation will not be performed.)
+== lswb replay tag=triton-k256-c28-repeat3-20261020_013611 port=30421 c28 @ 1200s -> /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/triton-k256-c28-repeat3-20261020_013611/20261020_040817 ==
+[lswb] request timing: 2222 records, 2222 valid, complete=True
+[lswb] client rc=0
+==== client.log ====
+{"attempted":2222,"completion_tokens":326332,"failed":17,"not_started_due_to_duration":2694,"prompt_tokens":311147417,"selected":4916,"successful":2205,"users_completed":32,"users_selected":92,"users_started":58,"valid":true}
+[lswb] artifacts at /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/triton-k256-c28-repeat3-20261020_013611/20261020_040817
+dir=20261020_040817
+slo=PASS valid=True done=2205 ttft_p90=9.74s e2e_p90=22.58s l1=0.9712 l2=0.0000 uncached=8975257 succ=0.9923
+stopped triton server on port 30421
+Completed all three triton C28 repeats.
+

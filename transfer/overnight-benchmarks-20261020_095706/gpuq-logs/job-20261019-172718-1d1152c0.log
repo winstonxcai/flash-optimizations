@@ -1,0 +1,63 @@
+/home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/run.sh: OK
+scripts/sources.py: OK
+scripts/local/serve.sh: OK
+scripts/local/env.sh: OK
+scripts/local/run-server.sh: OK
+scripts/local/config/decode-graphs-extended.json: OK
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "1e3b6f6438b4f3e7eb13748a4a63de54f197e66e"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang",
+    "expected_commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla",
+    "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "override": false,
+    "dirty": false
+  }
+}
+Packed C4 profile: PackedProfile(default_count=256, overrides=(), compression_ratios=(0, 0, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 0, 0, 0))
+== serve native on gpus=0,1,2,3 port=30411 master=29811 (log: /home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native/serve_native.log) ==
+launched pid 70889
+  health OK after ~165s
+  pool(max_total_num_tokens)=3745536
+  max_total_num_tokens=3745536
+  is fired up and ready
+serve native UP on port 30411 -- leave running, tear down with: scripts/local/serve.sh native stop
+Server preflight PASS: native
+/root/.cache/sglang/benchmark/gen_shared_prefix_42_32_40_131072_512_256_TokenizersBackend.pkl: OK
+/mnt/host_root/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731/tokenizer.json: OK
+/mnt/host_root/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731/tokenizer_config.json: OK
+/mnt/host_root/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731/config.json: OK
+=== native G32 C16 repeat 1/3 ===
+PASS repeat1: 0.5522 req/s; TTFT-p90 26.692s; TPOT 65.76ms
+/root/.cache/sglang/benchmark/gen_shared_prefix_42_32_40_131072_512_256_TokenizersBackend.pkl: OK
+/mnt/host_root/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731/tokenizer.json: OK
+/mnt/host_root/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731/tokenizer_config.json: OK
+/mnt/host_root/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731/config.json: OK
+=== native G32 C16 repeat 2/3 ===
+PASS repeat2: 0.5619 req/s; TTFT-p90 27.668s; TPOT 59.90ms
+/root/.cache/sglang/benchmark/gen_shared_prefix_42_32_40_131072_512_256_TokenizersBackend.pkl: OK
+/mnt/host_root/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731/tokenizer.json: OK
+/mnt/host_root/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731/tokenizer_config.json: OK
+/mnt/host_root/mnt/public_data/deepseek-ai/DeepSeek-V4-Flash-0731/config.json: OK
+=== native G32 C16 repeat 3/3 ===
+PASS repeat3: 0.5560 req/s; TTFT-p90 24.118s; TPOT 67.10ms
+ALL THREE REPEATS PASSED: /home/jovyan/winstonxcai/flash-optimizations/logs/gsp-g32-c16-n3-20261020_012700-IfChBC/native
+stopped native server on port 30411
+
