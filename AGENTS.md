@@ -248,6 +248,10 @@ change; preserve independent references and established tolerances.
 - Keep profiling separate from acceptance timing. Reuse prior profiles and
   collect new ones to answer a specific unresolved question. Check SASS,
   registers/spills, and actual instrumentation before attributing a speedup.
+- For Nsight Systems (`nsys`), read
+  `/Applications/NVIDIA Nsight Systems.app/Contents/skills/nsight-systems/SKILL.md`
+  before use on this Mac. On other hosts, use the installed skill's location;
+  report if unavailable rather than assuming this macOS path exists there.
 - Microbenchmarks and frozen attention replay do not establish serving
   TPOT/TTFT, SLO capacity, or closed-loop agent task quality.
 
