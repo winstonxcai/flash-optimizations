@@ -24,7 +24,7 @@ TAG=${1:-} PORT=${2:-$PORT} C=${3:-15} DUR=${4:-1200}
 NSYS_WINDOWS=${5:-}
 [ -n "$TAG" ] || { echo "usage: $0 <tag> [port] [concurrency] [duration_s]"; exit 1; }
 check_sources || exit 1
-require_replay_config
+require_replay_config || exit 1
 [[ "$C" =~ ^[1-9][0-9]*$ ]] || { echo "concurrency must be a positive integer" >&2; exit 2; }
 [[ "$DUR" =~ ^[1-9][0-9]*$ ]] || { echo "duration must be a positive integer" >&2; exit 2; }
 
@@ -270,7 +270,7 @@ trap cleanup EXIT
 trap 'cleanup; exit 130' INT
 trap 'cleanup; exit 143' TERM
 
-( cd "$REPLAY_DIR" && exec "${PYTHON:-python3}" -B "$REPLAY_RUNNER" \
+( exec "${PYTHON:-python3}" -B "$REPLAY_RUNNER" \
     --result-root "$RUN_ROOT/client" \
     --dataset-root "$REPLAY_DATASET" \
     --dataset-manifest-input "$REPLAY_MANIFEST" \

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Optional paths and connection settings for external evaluations.
+# Local replay paths and optional connection settings for external evaluations.
+# Author: Winston Cai.
 #
 # This file is intentionally separate from env.sh. Serving and kernel scripts
 # should not require remote benchmark infrastructure to be configured.
@@ -11,13 +12,19 @@ EVAL_YJY=${EVAL_YJY:-}
 EVAL_VENV=${EVAL_VENV:-}
 EVAL_CFG=${EVAL_CFG:-}
 
+# Code defaults belong to this checkout, never to the optional legacy data root.
+REPLAY_LOCAL_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+REPLAY_RUNNER=${REPLAY_RUNNER:-$REPLAY_LOCAL_DIR/business_replay/runner.py}
+REPLAY_ADAPTER=${REPLAY_ADAPTER:-$REPLAY_LOCAL_DIR/business_replay/adapters/openai_sse.py}
 REPLAY_DIR=${REPLAY_DIR:-}
 if [ -n "$REPLAY_DIR" ]; then
-  REPLAY_RUNNER=${REPLAY_RUNNER:-$REPLAY_DIR/harnesses/business_replay/runner.py}
-  REPLAY_ADAPTER=${REPLAY_ADAPTER:-$REPLAY_DIR/harnesses/business_replay/adapters/openai_sse.py}
+  # Anchor a relative legacy root before removing the launcher's old cd.
+  [[ "$REPLAY_DIR" = /* ]] || REPLAY_DIR="$PWD/$REPLAY_DIR"
   REPLAY_DATASET=${REPLAY_DATASET:-$REPLAY_DIR/datasets/h20-dsv4pro/longcodebench_openai}
   REPLAY_MANIFEST=${REPLAY_MANIFEST:-$REPLAY_DIR/cache/official-longswebench/longswebench-openai-v1.json}
 fi
+REPLAY_DATASET=${REPLAY_DATASET:-}
+REPLAY_MANIFEST=${REPLAY_MANIFEST:-}
 
 require_remote_eval_config() {
   : "${EVAL_SSH:?Set EVAL_SSH to the remote SSH command}"
@@ -27,9 +34,27 @@ require_remote_eval_config() {
 }
 
 require_replay_config() {
-  : "${REPLAY_DIR:?Set REPLAY_DIR to the LongSWE-Bench client directory}"
-  : "${REPLAY_RUNNER:?Set REPLAY_RUNNER to the replay runner}"
-  : "${REPLAY_ADAPTER:?Set REPLAY_ADAPTER to the replay adapter}"
-  : "${REPLAY_DATASET:?Set REPLAY_DATASET to the replay dataset}"
-  : "${REPLAY_MANIFEST:?Set REPLAY_MANIFEST to the replay manifest}"
+  local name path base=${REPLAY_DIR:-$PWD}
+  for name in REPLAY_RUNNER REPLAY_ADAPTER REPLAY_DATASET REPLAY_MANIFEST; do
+    path=${!name}
+    if [ -z "$path" ]; then
+      printf 'FATAL: Set %s to the replay %s path (or set REPLAY_DIR for legacy dataset/manifest defaults).\n' \
+        "$name" "${name#REPLAY_}" >&2
+      return 1
+    fi
+    # Previously the client ran inside REPLAY_DIR. Preserve relative override
+    # semantics there; without it, use the caller's working directory.
+    [[ "$path" = /* ]] || path="$base/$path"
+    printf -v "$name" '%s' "$path"
+    if [ "$name" = REPLAY_DATASET ]; then
+      if [ ! -d "$path" ] || [ ! -r "$path" ] || [ ! -x "$path" ]; then
+        printf 'FATAL: REPLAY_DATASET must be a readable/searchable directory of replay JSON records: %s. Set REPLAY_DATASET; raw data/longswebench.jsonl is not compatible.\n' "$path" >&2
+        return 1
+      fi
+    elif [ ! -f "$path" ] || [ ! -r "$path" ]; then
+      printf 'FATAL: %s must be a readable file: %s. Set %s to an existing %s file.\n' \
+        "$name" "$path" "$name" "${name#REPLAY_}" >&2
+      return 1
+    fi
+  done
 }

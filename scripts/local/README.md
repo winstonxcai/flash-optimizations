@@ -174,7 +174,6 @@ Acquire a GPUQ allocation before serving; the queued example below handles it.
 
 ```bash
 export GPUS=4,5,6,7 PORT=30213 MASTER_PORT=29639
-export REPLAY_DIR=/home/jovyan/wenyuhong/benchmarks
 export MODE=triton                    # native | triton | kernel
 
 bash scripts/local/serve.sh "$MODE"
@@ -270,6 +269,71 @@ budget and process-group cleanup, then calls this same client. The separate
 capacity and image scripts remain retired.
 
 ## LSWB replay without profiling
+
+### Repository-owned replay client
+
+`bench-lswb.sh` now defaults to the two local production files:
+`business_replay/runner.py` (dataset/manifest loading, fixed active-session
+scheduler, audit and reports) and `business_replay/adapters/openai_sse.py`
+(OpenAI SSE requests, streaming timing, usage and cache details). Both paths
+are under `scripts/local/`. No external code checkout or package initializers
+are required. Tests, fixtures and corpus are not copied. The host needs
+Python 3.10+ and `requests`, but no model/tokenizer packages. Local integration author:
+Winston Cai; this is not a copied-code authorship claim.
+
+Obtain the prepared replay **directory of JSON records and its matching
+manifest** and configure your own data paths before running from the repository
+root. These commands are examples, **NOT EXECUTED** for this copy-only change:
+
+```bash
+unset REPLAY_DIR
+export REPLAY_DATASET=/data/lswb/longcodebench_openai
+export REPLAY_MANIFEST=/data/lswb/longswebench-openai-v1.json
+bash scripts/local/bench-lswb.sh "${MODE}-unprofiled-c24" "$PORT" 24 1200
+```
+
+`eval-env.sh` resolves absolute local runner/adapter defaults independently of
+`REPLAY_DIR`; explicit nonempty `REPLAY_RUNNER` and `REPLAY_ADAPTER` overrides
+still work. `REPLAY_DATASET` and `REPLAY_MANIFEST` must identify available data;
+a clone does not supply them. Optional `REPLAY_DIR` retains legacy data defaults
+at `datasets/h20-dsv4pro/longcodebench_openai` and
+`cache/official-longswebench/longswebench-openai-v1.json` beneath that root;
+it need not contain code or be the original directory. Explicit data overrides
+take precedence. Relative overrides retain their meaning relative to
+`REPLAY_DIR` when set, otherwise the caller's working directory. A relative
+`REPLAY_DIR` is anchored to the caller's working directory. The launcher no
+longer changes directory, and missing/unreadable paths fail with the variable
+and path to fix. The runner still validates manifest content.
+`data/longswebench.jsonl` and the bench-serving conversion below have a different
+schema and cannot replace the replay directory/manifest; the reader is unchanged.
+
+This remains a client of an **already-running server**: no weight loading or
+server lifecycle changes. C24 means **up to 24 active sessions**, each sending
+requests strictly serially and retaining its slot until exhausted. The time
+window stops new dispatch and drains in-flight work, so wall time can exceed
+1,200 seconds. Preflight, cache flush, flags and artifact collection are unchanged.
+
+**Provenance:** copied byte-for-byte from
+`/home/jovyan/wenyuhong/benchmarks/harnesses/business_replay/` (historical source
+only, not a runtime dependency). Checkout HEAD was
+`d2b0db9bb8d11c248e6be8054c25ce2f573fc94d`; both production files had uncommitted
+modifications, so the hashes identify the actual working-tree snapshot, not a
+pristine export of that revision. Original docstrings/notices are retained.
+No explicit source license/author was found; no license or authorship is invented.
+The unchanged `source_identity()` records this repository and local file hashes
+when run.
+
+```text
+76ca1e4c25452e1fd163c957a4b262169fd1bba0d8bc3d9ccd3f45b232068bc4  runner.py
+363d6adffde63bfe54c483d629cca780d43689ec101a778f25fc110060f00b13  adapters/openai_sse.py
+```
+
+**COPY-ONLY validation:** static file/path review, byte/hash comparisons,
+`bash -n` on the two modified shell files and `git diff --check` only. No copied
+Python execution/imports, `--help`, compilation, unittest, smoke, network,
+server or GPU checks were performed. Executable configuration checks were also
+skipped. Runtime correctness and artifact production remain unverified. Per the
+final minimal-file scope, no tests or fixtures are included.
 
 ### One-time conversion for SGLang bench-serving
 
@@ -411,7 +475,8 @@ gpuq run --user winstonxcai --project flash-optimizations \
   --gpus 4 --gpu-ids 4,5,6,7 --cwd "$PWD" \
   --env GPUS=4,5,6,7 --env PORT=30213 --env MASTER_PORT=29639 \
   --env SERVER_SEED=20260919 \
-  --env REPLAY_DIR=/home/jovyan/wenyuhong/benchmarks \
+  --env REPLAY_DATASET=/data/lswb/longcodebench_openai \
+  --env REPLAY_MANIFEST=/data/lswb/longswebench-openai-v1.json \
   --output "$PWD/logs/ttft-diagnostic-$(date +%Y%m%d_%H%M%S)" \
   --workload-key remnant-ttft-c24 --expected-duration 50m \
   --timeout 5400 --detach -- bash -lc '
@@ -530,7 +595,8 @@ read -rp 'Four physical GPU IDs for GPUQ to reserve (comma-separated): ' GPUS
 gpuq run --user winstonxcai --project flash-optimizations \
   --gpus 4 --gpu-ids "$GPUS" --cwd "$PWD" \
   --env GPUS="$GPUS" --env PORT=30213 --env MASTER_PORT=29639 \
-  --env REPLAY_DIR=/home/jovyan/wenyuhong/benchmarks \
+  --env REPLAY_DATASET=/data/lswb/longcodebench_openai \
+  --env REPLAY_MANIFEST=/data/lswb/longswebench-openai-v1.json \
   --output "$PWD/logs/nsys-node-c24-$(date +%Y%m%d_%H%M%S)" \
   --workload-key remnant-node-c24 \
   --expected-duration 45m --timeout 5400 --detach -- bash -lc '
@@ -595,7 +661,8 @@ mkdir -p logs
 gpuq run --user winstonxcai --project flash-optimizations \
   --gpus 4 --gpu-ids 4,5,6,7 --cwd "$PWD" \
   --env GPUS=4,5,6,7 --env PORT=30213 --env MASTER_PORT=29639 \
-  --env REPLAY_DIR=/home/jovyan/wenyuhong/benchmarks \
+  --env REPLAY_DATASET=/data/lswb/longcodebench_openai \
+  --env REPLAY_MANIFEST=/data/lswb/longswebench-openai-v1.json \
   --env MODE=native --env CONCURRENCY=24 \
   --output "$PWD/logs/native-unprofiled-c24" \
   --workload-key remnant-native-unprofiled-c24 \
