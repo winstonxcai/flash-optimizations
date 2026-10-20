@@ -1,0 +1,214 @@
+{
+  "status": "Diagnostic transfer; not benchmark qualification",
+  "requested_protocol": "business-request-slot-replay-v1",
+  "requested_memory_fraction": 0.82,
+  "requested_session_population": 24,
+  "requested_max_concurrency": 20,
+  "requested_duration_s": 1200,
+  "runs": [
+    {
+      "mode": "native",
+      "tag": "native-mf082-p24-c20-20261020_161012",
+      "runs": {
+        "measured": {
+          "original_run": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/native-mf082-p24-c20-20261020_161012/20261020_161522",
+          "protocol": "business-request-slot-replay-v1",
+          "summary_valid": false,
+          "slo": {
+            "basis": "All ready requests; invalid/no-output responses count as violations; unresolved cutoff requests bounded conservatively",
+            "metric": "ready_to_first_output",
+            "percentile": 90,
+            "ready_requests": 335,
+            "right_censored": 0,
+            "status": "fail",
+            "threshold_ms": 10000.0,
+            "violations": 288,
+            "within_threshold": 47
+          },
+          "counts": {
+            "attempted": 331,
+            "completed_during_drain": 20,
+            "completed_in_window": 311,
+            "completion_tokens": 31408,
+            "drain_timeouts": 0,
+            "failed": 6,
+            "not_started_due_to_duration": 4585,
+            "prompt_tokens": 38662700,
+            "ready_not_dispatched": 4,
+            "selected": 4916,
+            "successful": 325,
+            "successful_in_window": 305,
+            "users_completed": 1,
+            "users_selected": 92,
+            "users_started": 25
+          },
+          "replay": {
+            "arrival_mode": "immediate",
+            "concurrency_scope": "outstanding_requests",
+            "drain_timeout_s": 120.0,
+            "max_concurrency": 20,
+            "max_duration_s": 1200.0,
+            "max_gap_s": 30.0,
+            "per_user_order": "strict_serial_completion_before_next_dispatch",
+            "readiness": "immediate_on_admission_or_previous_response_observation",
+            "scheduler": "request-slot-fifo",
+            "session_population": 24,
+            "time_scale": 60.0,
+            "user_pool_policy": "fifo_ready_sessions_yield_after_each_response"
+          },
+          "memory_fraction": 0.82
+        },
+        "smoke": {
+          "original_run": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/native-mf082-p24-c20-20261020_161012-smoke/20261020_161346",
+          "protocol": "business-request-slot-replay-v1",
+          "summary_valid": true,
+          "slo": {
+            "basis": "All ready requests; invalid/no-output responses count as violations; unresolved cutoff requests bounded conservatively",
+            "metric": "ready_to_first_output",
+            "percentile": 90,
+            "ready_requests": 49,
+            "right_censored": 1,
+            "status": "pass",
+            "threshold_ms": 10000.0,
+            "violations": 2,
+            "within_threshold": 46
+          },
+          "counts": {
+            "attempted": 48,
+            "completed_during_drain": 2,
+            "completed_in_window": 46,
+            "completion_tokens": 4002,
+            "drain_timeouts": 0,
+            "failed": 0,
+            "not_started_due_to_duration": 4868,
+            "prompt_tokens": 5574745,
+            "ready_not_dispatched": 1,
+            "selected": 4916,
+            "successful": 48,
+            "successful_in_window": 46,
+            "users_completed": 0,
+            "users_selected": 92,
+            "users_started": 3
+          },
+          "replay": {
+            "arrival_mode": "immediate",
+            "concurrency_scope": "outstanding_requests",
+            "drain_timeout_s": 120.0,
+            "max_concurrency": 2,
+            "max_duration_s": 60.0,
+            "max_gap_s": 30.0,
+            "per_user_order": "strict_serial_completion_before_next_dispatch",
+            "readiness": "immediate_on_admission_or_previous_response_observation",
+            "scheduler": "request-slot-fifo",
+            "session_population": 3,
+            "time_scale": 60.0,
+            "user_pool_policy": "fifo_ready_sessions_yield_after_each_response"
+          },
+          "memory_fraction": 0.82
+        }
+      }
+    },
+    {
+      "mode": "kernel",
+      "tag": "kernel-mf082-p24-c20-20261020_161019",
+      "runs": {
+        "measured": {
+          "original_run": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/kernel-mf082-p24-c20-20261020_161019/20261020_161522",
+          "protocol": "business-request-slot-replay-v1",
+          "summary_valid": true,
+          "slo": {
+            "basis": "All ready requests; invalid/no-output responses count as violations; unresolved cutoff requests bounded conservatively",
+            "metric": "ready_to_first_output",
+            "percentile": 90,
+            "ready_requests": 2183,
+            "right_censored": 4,
+            "status": "fail",
+            "threshold_ms": 10000.0,
+            "violations": 240,
+            "within_threshold": 1939
+          },
+          "counts": {
+            "attempted": 2179,
+            "completed_during_drain": 20,
+            "completed_in_window": 2159,
+            "completion_tokens": 321976,
+            "drain_timeouts": 0,
+            "failed": 15,
+            "not_started_due_to_duration": 2737,
+            "prompt_tokens": 305660339,
+            "ready_not_dispatched": 4,
+            "selected": 4916,
+            "successful": 2164,
+            "successful_in_window": 2144,
+            "users_completed": 31,
+            "users_selected": 92,
+            "users_started": 54
+          },
+          "replay": {
+            "arrival_mode": "immediate",
+            "concurrency_scope": "outstanding_requests",
+            "drain_timeout_s": 120.0,
+            "max_concurrency": 20,
+            "max_duration_s": 1200.0,
+            "max_gap_s": 30.0,
+            "per_user_order": "strict_serial_completion_before_next_dispatch",
+            "readiness": "immediate_on_admission_or_previous_response_observation",
+            "scheduler": "request-slot-fifo",
+            "session_population": 24,
+            "time_scale": 60.0,
+            "user_pool_policy": "fifo_ready_sessions_yield_after_each_response"
+          },
+          "memory_fraction": 0.82
+        },
+        "smoke": {
+          "original_run": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/kernel-mf082-p24-c20-20261020_161019-smoke/20261020_161347",
+          "protocol": "business-request-slot-replay-v1",
+          "summary_valid": true,
+          "slo": {
+            "basis": "All ready requests; invalid/no-output responses count as violations; unresolved cutoff requests bounded conservatively",
+            "metric": "ready_to_first_output",
+            "percentile": 90,
+            "ready_requests": 49,
+            "right_censored": 1,
+            "status": "pass",
+            "threshold_ms": 10000.0,
+            "violations": 2,
+            "within_threshold": 46
+          },
+          "counts": {
+            "attempted": 48,
+            "completed_during_drain": 2,
+            "completed_in_window": 46,
+            "completion_tokens": 4048,
+            "drain_timeouts": 0,
+            "failed": 0,
+            "not_started_due_to_duration": 4868,
+            "prompt_tokens": 5575523,
+            "ready_not_dispatched": 1,
+            "selected": 4916,
+            "successful": 48,
+            "successful_in_window": 46,
+            "users_completed": 0,
+            "users_selected": 92,
+            "users_started": 3
+          },
+          "replay": {
+            "arrival_mode": "immediate",
+            "concurrency_scope": "outstanding_requests",
+            "drain_timeout_s": 120.0,
+            "max_concurrency": 2,
+            "max_duration_s": 60.0,
+            "max_gap_s": 30.0,
+            "per_user_order": "strict_serial_completion_before_next_dispatch",
+            "readiness": "immediate_on_admission_or_previous_response_observation",
+            "scheduler": "request-slot-fifo",
+            "session_population": 3,
+            "time_scale": 60.0,
+            "user_pool_policy": "fifo_ready_sessions_yield_after_each_response"
+          },
+          "memory_fraction": 0.82
+        }
+      }
+    }
+  ]
+}
