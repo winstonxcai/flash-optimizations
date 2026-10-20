@@ -1,0 +1,78 @@
+{
+  "status": "Diagnostic transfer; includes invalid runs; not benchmark qualification",
+  "requested_memory_fraction": 0.82,
+  "requested_concurrency": 24,
+  "requested_duration_s": 1200,
+  "requested_repeats_per_mode": 1,
+  "runs": [
+    {
+      "mode": "native",
+      "original_run": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/native-k256-mf082-c24-20261020_121111/20261020_121451",
+      "original_boot_logs": "/home/jovyan/winstonxcai/flash-optimizations/logs/native-k256-mf082-c24-20261020_121111",
+      "summary_valid": false,
+      "counts": {
+        "attempted": 284,
+        "completion_tokens": 29159,
+        "failed": 7,
+        "not_started_due_to_duration": 4632,
+        "prompt_tokens": 34797713,
+        "selected": 4916,
+        "successful": 277,
+        "users_completed": 1,
+        "users_selected": 92,
+        "users_started": 24
+      },
+      "reported_memory_fraction": 0.82,
+      "reported_mode": "native",
+      "missing_optional_artifacts": [
+        "client/active_requests.json"
+      ]
+    },
+    {
+      "mode": "triton",
+      "original_run": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/triton-k256-mf082-c24-20261020_121116/20261020_121451",
+      "original_boot_logs": "/home/jovyan/winstonxcai/flash-optimizations/logs/triton-k256-mf082-c24-20261020_121116",
+      "summary_valid": true,
+      "counts": {
+        "attempted": 2157,
+        "completion_tokens": 327179,
+        "failed": 15,
+        "not_started_due_to_duration": 2759,
+        "prompt_tokens": 305260738,
+        "selected": 4916,
+        "successful": 2142,
+        "users_completed": 27,
+        "users_selected": 92,
+        "users_started": 51
+      },
+      "reported_memory_fraction": 0.82,
+      "reported_mode": "triton",
+      "missing_optional_artifacts": [
+        "client/active_requests.json"
+      ]
+    },
+    {
+      "mode": "kernel",
+      "original_run": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/kernel-k256-mf082-c24-20261020_121123/20261020_123916",
+      "original_boot_logs": "/home/jovyan/winstonxcai/flash-optimizations/logs/kernel-k256-mf082-c24-20261020_121123",
+      "summary_valid": true,
+      "counts": {
+        "attempted": 2193,
+        "completion_tokens": 332557,
+        "failed": 14,
+        "not_started_due_to_duration": 2723,
+        "prompt_tokens": 310928669,
+        "selected": 4916,
+        "successful": 2179,
+        "users_completed": 30,
+        "users_selected": 92,
+        "users_started": 51
+      },
+      "reported_memory_fraction": 0.82,
+      "reported_mode": "kernel",
+      "missing_optional_artifacts": [
+        "client/active_requests.json"
+      ]
+    }
+  ]
+}
