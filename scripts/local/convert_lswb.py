@@ -1,4 +1,4 @@
-"""Convert frozen LongSWE-derived requests to SGLang OpenAI JSONL once.
+"""Prepare frozen LongSWE JSONL for bench-serving or fixed-session replay once.
 
 Author: Winston Cai.
 
@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import shutil
 import tempfile
 from pathlib import Path
@@ -33,6 +34,63 @@ def integer(value: object, identity: str, minimum: int = 0) -> int:
     if not isinstance(value, int) or isinstance(value, bool) or value < minimum:
         raise ValueError(f"{identity}: expected integer >= {minimum}, got {value!r}")
     return value
+
+
+def prepare_replay(args: argparse.Namespace) -> None:
+    """Publish original records and a manifest consumed by the unchanged runner."""
+    if __package__:
+        from .business_replay import runner
+    else:
+        from business_replay import runner
+
+    source = args.input.resolve(strict=True)
+    output = args.output_dir.resolve()
+    if output.exists():
+        raise ValueError(f"{output}: already exists; choose a fresh preparation directory")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    scratch = Path(tempfile.mkdtemp(prefix=".lswb-replay-", dir=output.parent))
+    source_digest = hashlib.sha256()
+    try:
+        records_root = scratch / "records"
+        records_root.mkdir()
+        with source.open("rb") as stream:
+            for number, raw in enumerate(stream, 1):
+                source_digest.update(raw)
+                if not raw.strip():
+                    continue
+                document = json.loads(raw)
+                created = document.get("created") if isinstance(document, dict) else None
+                if (
+                    not isinstance(created, (int, float))
+                    or isinstance(created, bool)
+                    or not math.isfinite(created)
+                ):
+                    raise ValueError(f"{source}:{number}: finite numeric created timestamp required")
+                # Preserve every field and its original bytes; the existing runner
+                # validates identity, session, messages, ordering and duplicates.
+                (records_root / f"{number:08d}.json").write_bytes(raw)
+        records, discovered = runner.load_dataset(records_root, 0)
+        entries = runner.dataset_entries(records, records_root)
+        write_json(scratch / "manifest.json", {
+            "schema_version": runner.SCHEMA_VERSION,
+            "protocol": runner.PROTOCOL,
+            "source_path": str(source),
+            "source_dataset_sha256": source_digest.hexdigest(),
+            "helper_sha256": digest(Path(__file__)),
+            "files_discovered": discovered,
+            "selected_requests": len(records),
+            "selected_users": len({record.user_id for record in records}),
+            "dataset_sha256": runner.workload_sha256(entries),
+            "records": entries,
+        })
+        for path in scratch.rglob("*"):
+            path.chmod(0o755 if path.is_dir() else 0o644)
+        scratch.chmod(0o755)
+        scratch.rename(output)
+    finally:
+        if scratch.exists():
+            shutil.rmtree(scratch)
+    print(f"Prepared {len(records)} replay requests: {output}")
 
 
 def prepare(args: argparse.Namespace) -> None:
@@ -191,10 +249,11 @@ def main() -> None:
         "--input", type=Path, required=True, help="Original raw JSONL file"
     )
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--format", choices=("openai", "replay"), default="openai")
     args = parser.parse_args()
     try:
-        prepare(args)
-    except (OSError, ValueError, KeyError, TypeError) as error:
+        (prepare_replay if args.format == "replay" else prepare)(args)
+    except (OSError, ValueError, KeyError, TypeError, RuntimeError) as error:
         parser.exit(1, f"convert_lswb: {error}\n")
 
 

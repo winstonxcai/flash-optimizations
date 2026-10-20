@@ -23,8 +23,8 @@ if [ -n "$REPLAY_DIR" ]; then
   REPLAY_DATASET=${REPLAY_DATASET:-$REPLAY_DIR/datasets/h20-dsv4pro/longcodebench_openai}
   REPLAY_MANIFEST=${REPLAY_MANIFEST:-$REPLAY_DIR/cache/official-longswebench/longswebench-openai-v1.json}
 fi
-REPLAY_DATASET=${REPLAY_DATASET:-}
-REPLAY_MANIFEST=${REPLAY_MANIFEST:-}
+REPLAY_DATASET=${REPLAY_DATASET:-$REPLAY_LOCAL_DIR/../../data/lswb-replay/records}
+REPLAY_MANIFEST=${REPLAY_MANIFEST:-$REPLAY_LOCAL_DIR/../../data/lswb-replay/manifest.json}
 
 require_remote_eval_config() {
   : "${EVAL_SSH:?Set EVAL_SSH to the remote SSH command}"
@@ -48,7 +48,7 @@ require_replay_config() {
     printf -v "$name" '%s' "$path"
     if [ "$name" = REPLAY_DATASET ]; then
       if [ ! -d "$path" ] || [ ! -r "$path" ] || [ ! -x "$path" ]; then
-        printf 'FATAL: REPLAY_DATASET must be a readable/searchable directory of replay JSON records: %s. Set REPLAY_DATASET; raw data/longswebench.jsonl is not compatible.\n' "$path" >&2
+        printf 'FATAL: REPLAY_DATASET must be a readable/searchable directory of replay JSON records: %s. Prepare data/longswebench.jsonl with convert_lswb.py --format replay or set REPLAY_DATASET.\n' "$path" >&2
         return 1
       fi
     elif [ ! -f "$path" ] || [ ! -r "$path" ]; then

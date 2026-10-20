@@ -707,6 +707,69 @@ with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')
 
 
 class LocalScriptTests(unittest.TestCase):
+    def test_raw_jsonl_prepares_for_existing_session_replay(self):
+        from scripts.local.business_replay import runner
+
+        with tempfile.TemporaryDirectory(prefix="remnant-replay-") as temporary:
+            root = Path(temporary)
+            source, output = root / "raw.jsonl", root / "prepared"
+            documents = [
+                {"id": "later", "token_name": "session", "created": 2,
+                 "messages": [{"role": "user", "content": "later"}],
+                 "tools": [{"type": "function", "function": {"name": "run"}}],
+                 "usage": {"prompt_tokens": 10, "completion_tokens": 3}},
+                {"id": "earlier", "token_name": "session", "created": 1,
+                 "messages": [{"role": "user", "content": "earlier"}]},
+            ]
+            lines = [json.dumps(row).encode() + b"\n" for row in documents]
+            source.write_bytes(b"\n".join(lines))
+            command = [sys.executable, str(kernels.REPO_ROOT / "scripts/local/convert_lswb.py"),
+                       "--format", "replay", "--input", str(source), "--output-dir", str(output)]
+            subprocess.run(command, cwd=root, check=True, capture_output=True, timeout=30)
+            records, count = runner.load_dataset_manifest(
+                output / "manifest.json", output / "records", 0, verify_snapshot=True,
+            )
+            self.assertEqual(count, 2)
+            self.assertEqual([r.request_id for r in records], ["earlier", "later"])
+            self.assertEqual({r.user_id for r in records}, {"session"})
+            self.assertEqual(records[1].path.read_bytes(), lines[0])
+            self.assertEqual(records[0].path.read_bytes(), lines[1])
+            self.assertEqual(records[1].expected_completion_tokens, 3)
+            self.assertEqual(source.read_bytes(), b"\n".join(lines))
+            # The original/default bench-serving conversion remains independent.
+            serving = root / "serving"
+            documents[1]["usage"] = {}
+            source.write_text("\n".join(json.dumps(row) for row in documents) + "\n")
+            subprocess.run(
+                command[:2] + ["--input", str(source), "--output-dir", str(serving)],
+                cwd=root, check=True, capture_output=True, timeout=30,
+            )
+            rows = [json.loads(line) for line in (serving / "requests.jsonl").read_text().splitlines()]
+            self.assertEqual(rows[0]["messages"], documents[0]["messages"])
+            self.assertEqual(rows[0]["tools"], documents[0]["tools"])
+            self.assertEqual([row["max_tokens"] for row in rows], [3, 256])
+            self.assertEqual(rows[0]["stream_options"], {"include_usage": True})
+            self.assertNotEqual(subprocess.run(command, cwd=root, capture_output=True, timeout=30).returncode, 0)
+            for bad in ({**documents[0], "created": float("nan")},
+                        {**documents[0], "token_name": ""}, documents[0]):
+                source.write_text(json.dumps(documents[0]) + "\n" + json.dumps(bad) + "\n")
+                failed = root / "failed"
+                attempt = command[:-1] + [str(failed)]
+                self.assertNotEqual(subprocess.run(attempt, cwd=root, capture_output=True, timeout=30).returncode, 0)
+                self.assertFalse(failed.exists())
+                self.assertFalse(list(root.glob(".lswb-replay-*")))
+
+    def test_replay_defaults_are_repo_local_and_allow_overrides(self):
+        script = kernels.REPO_ROOT / "scripts/local/eval-env.sh"
+        env = {k: v for k, v in os.environ.items() if not k.startswith("REPLAY_")}
+        command = ["bash", "-c", '. "$1"; printf "%s\\n" "$REPLAY_RUNNER" "$REPLAY_DATASET" "$REPLAY_MANIFEST"', "bash", str(script)]
+        paths = subprocess.check_output(command, cwd="/tmp", env=env, text=True, timeout=10).splitlines()
+        expected = ["scripts/local/business_replay/runner.py", "data/lswb-replay/records", "data/lswb-replay/manifest.json"]
+        self.assertEqual([Path(p).resolve() for p in paths], [kernels.REPO_ROOT / p for p in expected])
+        env.update(REPLAY_DATASET="/custom/records", REPLAY_MANIFEST="/custom/manifest.json")
+        paths = subprocess.check_output(command, env=env, text=True, timeout=10).splitlines()
+        self.assertEqual(paths[1:], ["/custom/records", "/custom/manifest.json"])
+
     def test_lswb_summary_resolves_only_the_requested_run(self):
         with tempfile.TemporaryDirectory(prefix="remnant-row-") as directory:
             results = Path(directory) / "results' with spaces"

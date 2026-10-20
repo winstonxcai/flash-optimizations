@@ -281,21 +281,28 @@ are required. Tests, fixtures and corpus are not copied. The host needs
 Python 3.10+ and `requests`, but no model/tokenizer packages. Local integration author:
 Winston Cai; this is not a copied-code authorship claim.
 
-Obtain the prepared replay **directory of JSON records and its matching
-manifest** and configure your own data paths before running from the repository
-root. These commands are examples, **NOT EXECUTED** for this copy-only change:
+Keep the large raw file at `data/longswebench.jsonl` on the GPU server; it need
+not be downloaded locally. Prepare it once on CPU, then reuse the resulting
+records and manifest for all modes. This creates an additional on-disk copy of
+the records without modifying the raw file or running a server:
 
 ```bash
-unset REPLAY_DIR
-export REPLAY_DATASET=/data/lswb/longcodebench_openai
-export REPLAY_MANIFEST=/data/lswb/longswebench-openai-v1.json
+python3 scripts/local/convert_lswb.py --format replay \
+  --input data/longswebench.jsonl --output-dir data/lswb-replay
+# After starting the desired server separately:
 bash scripts/local/bench-lswb.sh "${MODE}-unprofiled-c24" "$PORT" 24 1200
 ```
 
 `eval-env.sh` resolves absolute local runner/adapter defaults independently of
 `REPLAY_DIR`; explicit nonempty `REPLAY_RUNNER` and `REPLAY_ADAPTER` overrides
-still work. `REPLAY_DATASET` and `REPLAY_MANIFEST` must identify available data;
-a clone does not supply them. Optional `REPLAY_DIR` retains legacy data defaults
+still work. Data defaults are repo-root `data/lswb-replay/records/` and
+`data/lswb-replay/manifest.json`; a clone does not supply them. Preparation
+preserves original record bytes, IDs, sessions, timestamps, messages and tools;
+the existing runner validates records and sorts them by its existing rules.
+It refuses overwrites and publishes only after validation. New filenames and
+record serialization can change workload hashes relative to older manifests;
+reuse one prepared collection across new comparisons rather than claiming
+historical hash identity. Optional `REPLAY_DIR` retains legacy data defaults
 at `datasets/h20-dsv4pro/longcodebench_openai` and
 `cache/official-longswebench/longswebench-openai-v1.json` beneath that root;
 it need not contain code or be the original directory. Explicit data overrides
@@ -304,8 +311,8 @@ take precedence. Relative overrides retain their meaning relative to
 `REPLAY_DIR` is anchored to the caller's working directory. The launcher no
 longer changes directory, and missing/unreadable paths fail with the variable
 and path to fix. The runner still validates manifest content.
-`data/longswebench.jsonl` and the bench-serving conversion below have a different
-schema and cannot replace the replay directory/manifest; the reader is unchanged.
+Raw `data/longswebench.jsonl` must pass through `--format replay` first;
+the bench-serving conversion below is a different format. The reader is unchanged.
 
 This remains a client of an **already-running server**: no weight loading or
 server lifecycle changes. C24 means **up to 24 active sessions**, each sending
@@ -475,8 +482,8 @@ gpuq run --user winstonxcai --project flash-optimizations \
   --gpus 4 --gpu-ids 4,5,6,7 --cwd "$PWD" \
   --env GPUS=4,5,6,7 --env PORT=30213 --env MASTER_PORT=29639 \
   --env SERVER_SEED=20260919 \
-  --env REPLAY_DATASET=/data/lswb/longcodebench_openai \
-  --env REPLAY_MANIFEST=/data/lswb/longswebench-openai-v1.json \
+  --env REPLAY_DATASET="$PWD/data/lswb-replay/records" \
+  --env REPLAY_MANIFEST="$PWD/data/lswb-replay/manifest.json" \
   --output "$PWD/logs/ttft-diagnostic-$(date +%Y%m%d_%H%M%S)" \
   --workload-key remnant-ttft-c24 --expected-duration 50m \
   --timeout 5400 --detach -- bash -lc '
@@ -595,8 +602,8 @@ read -rp 'Four physical GPU IDs for GPUQ to reserve (comma-separated): ' GPUS
 gpuq run --user winstonxcai --project flash-optimizations \
   --gpus 4 --gpu-ids "$GPUS" --cwd "$PWD" \
   --env GPUS="$GPUS" --env PORT=30213 --env MASTER_PORT=29639 \
-  --env REPLAY_DATASET=/data/lswb/longcodebench_openai \
-  --env REPLAY_MANIFEST=/data/lswb/longswebench-openai-v1.json \
+  --env REPLAY_DATASET="$PWD/data/lswb-replay/records" \
+  --env REPLAY_MANIFEST="$PWD/data/lswb-replay/manifest.json" \
   --output "$PWD/logs/nsys-node-c24-$(date +%Y%m%d_%H%M%S)" \
   --workload-key remnant-node-c24 \
   --expected-duration 45m --timeout 5400 --detach -- bash -lc '
@@ -661,8 +668,8 @@ mkdir -p logs
 gpuq run --user winstonxcai --project flash-optimizations \
   --gpus 4 --gpu-ids 4,5,6,7 --cwd "$PWD" \
   --env GPUS=4,5,6,7 --env PORT=30213 --env MASTER_PORT=29639 \
-  --env REPLAY_DATASET=/data/lswb/longcodebench_openai \
-  --env REPLAY_MANIFEST=/data/lswb/longswebench-openai-v1.json \
+  --env REPLAY_DATASET="$PWD/data/lswb-replay/records" \
+  --env REPLAY_MANIFEST="$PWD/data/lswb-replay/manifest.json" \
   --env MODE=native --env CONCURRENCY=24 \
   --output "$PWD/logs/native-unprofiled-c24" \
   --workload-key remnant-native-unprofiled-c24 \
