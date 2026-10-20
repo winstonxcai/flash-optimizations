@@ -28,6 +28,50 @@ require_replay_config || exit 1
 [[ "$C" =~ ^[1-9][0-9]*$ ]] || { echo "concurrency must be a positive integer" >&2; exit 2; }
 [[ "$DUR" =~ ^[1-9][0-9]*$ ]] || { echo "duration must be a positive integer" >&2; exit 2; }
 
+# The default remains the historical session-owned slot protocol. Optional
+# request-owned slots are a distinct workload with queue-inclusive SLO timing.
+REPLAY_SCHEDULER=${REPLAY_SCHEDULER:-fixed-active-user-pool}
+REPLAY_ARGS=()
+case "$REPLAY_SCHEDULER" in
+  fixed-active-user-pool)
+    [ -z "${REPLAY_SESSION_POPULATION:-}${REPLAY_DRAIN_TIMEOUT:-}${REPLAY_TTFT_SLO_MS:-}" ] || {
+      echo "session population, drain and SLO overrides require REPLAY_SCHEDULER=request-slot-fifo" >&2; exit 2;
+    }
+    REPLAY_PROTOCOL=business-user-replay-v2
+    ;;
+  request-slot-fifo)
+    # Reuse the runner boundary validation before server/cache operations.
+    REPLAY_PROTOCOL=$("${PYTHON:-python3}" - "$REPLAY_RUNNER" "$C" "$DUR" \
+      "${REPLAY_SESSION_POPULATION:-}" "${REPLAY_DRAIN_TIMEOUT:-120}" "${REPLAY_TTFT_SLO_MS:-10000}" <<'PY_POLICY'
+import argparse
+import importlib.util
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+sys.path.insert(0, str(path.parent))
+spec = importlib.util.spec_from_file_location("replay_preflight", path)
+module = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = module
+spec.loader.exec_module(module)
+try:
+    args = argparse.Namespace(
+        scheduler="request-slot-fifo", max_concurrency=int(sys.argv[2]),
+        max_duration=float(sys.argv[3]), session_population=int(sys.argv[4]),
+        drain_timeout=float(sys.argv[5]), ttft_slo_ms=float(sys.argv[6]),
+        arrival_mode="immediate", warmup_manifest=None,
+    )
+    print(module.validate_policy(args))
+except ValueError as error:
+    raise SystemExit(f"Replay policy preflight failed: {error}")
+PY_POLICY
+    ) || exit 2
+    REPLAY_ARGS=(--scheduler request-slot-fifo --session-population "$REPLAY_SESSION_POPULATION"
+      --drain-timeout "${REPLAY_DRAIN_TIMEOUT:-120}" --ttft-slo-ms "${REPLAY_TTFT_SLO_MS:-10000}")
+    ;;
+  *) echo "Unknown REPLAY_SCHEDULER: $REPLAY_SCHEDULER" >&2; exit 2 ;;
+esac
+
 # Reject malformed/overlapping windows before starting the replay client.
 if [ -n "$NSYS_WINDOWS" ]; then
   [[ "$NSYS_WINDOWS" =~ ^[0-9]+:[0-9]+(,[0-9]+:[0-9]+)*$ ]] || { echo "capture windows must be start:end pairs" >&2; exit 2; }
@@ -280,7 +324,7 @@ trap 'cleanup; exit 143' TERM
     --max-requests 4916 --max-concurrency "$C" --max-duration "$DUR" \
     --arrival-mode immediate --time-scale 60 --max-gap 30 \
     --timeout 21600 --minimum-success-rate 0.99 \
-    --expected-protocol business-user-replay-v2 \
+    --expected-protocol "$REPLAY_PROTOCOL" "${REPLAY_ARGS[@]}" \
     --audit-level candidate --return-cached-tokens-details \
     > "$RUN_ROOT/client.log" 2>&1 ) &
 CLIENT=$!

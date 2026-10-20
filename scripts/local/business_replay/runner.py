@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Replay timestamped OpenAI chat records through a project adapter."""
+"""Replay timestamped OpenAI chat records through a project adapter.
+
+Author: Winston Cai. (Optional request-slot replay integration.)
+"""
 
 from __future__ import annotations
 
@@ -18,6 +21,10 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
+if __package__:
+    from . import request_slots
+else:
+    import request_slots
 
 SCHEMA_VERSION = 1
 PROTOCOL = "business-user-replay-v2"
@@ -100,6 +107,7 @@ def build_audit_metadata(
     adapter_path: Path,
     profile_name: str | None = None,
     profile_sha256: str | None = None,
+    scheduler_path: Path | None = None,
 ) -> dict[str, Any]:
     if level not in AUDIT_LEVELS:
         raise ValueError(f"unsupported audit level: {level}")
@@ -113,6 +121,8 @@ def build_audit_metadata(
         "runner": source_identity(runner_path),
         "adapter": source_identity(adapter_path),
     }
+    if scheduler_path is not None:
+        sources["scheduler"] = source_identity(scheduler_path)
     warnings: list[str] = []
     official_errors: list[str] = []
     for role, source in sources.items():
@@ -395,16 +405,21 @@ async def run_warmup(
     return results
 
 
-async def run_replay(records: list[Record], max_concurrency: int, duration: float | None, sender, paths):
+def session_groups(records: list[Record]) -> list[tuple[str, list[Record]]]:
+    """One shared definition of session and turn ordering for both policies."""
     groups: dict[str, list[Record]] = defaultdict(list)
     for record in records:
         groups[record.user_id].append(record)
     for group in groups.values():
         group.sort(key=lambda item: (item.created, item.request_id))
-    ordered_groups = sorted(
+    return sorted(
         groups.items(),
         key=lambda item: (item[1][0].created, item[1][0].request_id, item[0]),
     )
+
+
+async def run_replay(records: list[Record], max_concurrency: int, duration: float | None, sender, paths):
+    ordered_groups = session_groups(records)
     pending = deque(ordered_groups)
     lock = threading.Lock()
     results, activity = [], []
@@ -586,6 +601,26 @@ def summarize(records: list[Record], results: list[dict[str, Any]], activity: li
             "failure_reasons": dict(sorted(failures.items()))}
 
 
+def validate_policy(args) -> str:
+    """Validate optional policy settings before network or measured work."""
+    if args.scheduler == SCHEDULER:
+        if any(value is not None for value in (
+            args.session_population, args.drain_timeout, args.ttft_slo_ms
+        )):
+            raise ValueError("session-population, drain-timeout and ttft-slo-ms require request-slot-fifo")
+        return PROTOCOL
+    if args.session_population is None or args.session_population < args.max_concurrency:
+        raise ValueError("request-slot-fifo requires session-population >= max-concurrency > 0")
+    if args.arrival_mode != "immediate" or not math.isfinite(args.max_duration) or args.max_duration <= 0:
+        raise ValueError("request-slot-fifo requires arrival-mode immediate and a finite positive max-duration")
+    for name, value in (("drain-timeout", args.drain_timeout), ("ttft-slo-ms", args.ttft_slo_ms)):
+        if value is not None and (not math.isfinite(value) or value <= 0):
+            raise ValueError(f"{name} must be finite and positive")
+    if args.warmup_manifest is not None:
+        raise ValueError("request-slot-fifo initially supports cold-cache runs without warmup")
+    return request_slots.PROTOCOL
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--result-root", type=Path, required=True)
@@ -597,6 +632,13 @@ def main() -> None:
     parser.add_argument("--max-requests", type=int, default=3000)
     parser.add_argument("--max-concurrency", type=int, default=20)
     parser.add_argument("--max-duration", type=float, default=300)
+    parser.add_argument("--scheduler", choices=(SCHEDULER, request_slots.SCHEDULER), default=SCHEDULER)
+    parser.add_argument("--session-population", type=int,
+                        help="participating conversations; request-slot-fifo only")
+    parser.add_argument("--drain-timeout", type=float,
+                        help="bounded post-window drain seconds; request-slot-fifo default 120")
+    parser.add_argument("--ttft-slo-ms", type=float,
+                        help="ready-to-first-output p90 threshold; request-slot-fifo default 10000")
     parser.add_argument("--arrival-mode", choices=("replay", "immediate"), default="replay")
     parser.add_argument("--time-scale", type=float, default=60)
     parser.add_argument("--max-gap", type=float, default=30)
@@ -628,9 +670,13 @@ def main() -> None:
     )
     parser.add_argument("--warmup-replicas", type=int, default=1)
     args = parser.parse_args()
-    if args.expected_protocol is not None and args.expected_protocol != PROTOCOL:
+    try:
+        protocol = validate_policy(args)
+    except ValueError as error:
+        parser.error(str(error))
+    if args.expected_protocol is not None and args.expected_protocol != protocol:
         parser.error(
-            f"harness protocol is {PROTOCOL}, expected {args.expected_protocol}"
+            f"harness protocol is {protocol}, expected {args.expected_protocol}"
         )
     if args.result_root.exists() and any(args.result_root.iterdir()):
         raise RuntimeError("business result root must be new and empty")
@@ -656,6 +702,7 @@ def main() -> None:
             args.adapter,
             args.profile_name,
             args.profile_sha256,
+            Path(request_slots.__file__) if args.scheduler == request_slots.SCHEDULER else None,
         )
     except (OSError, RuntimeError, ValueError) as exc:
         parser.error(str(exc))
@@ -675,8 +722,10 @@ def main() -> None:
         )
     max_gap = None if args.max_gap == 0 else args.max_gap
     records = assign_offsets(records, args.arrival_mode, args.time_scale, max_gap)
+    if args.scheduler == request_slots.SCHEDULER and args.session_population > len({r.user_id for r in records}):
+        raise ValueError("session-population exceeds selected dataset sessions")
     entries = dataset_entries(records, args.dataset_root)
-    dataset = {"schema_version": SCHEMA_VERSION, "protocol": PROTOCOL, "source_root": str(args.dataset_root),
+    dataset = {"schema_version": SCHEMA_VERSION, "protocol": protocol, "source_root": str(args.dataset_root),
                "files_discovered": discovered, "selected_requests": len(records),
                "selected_users": len({r.user_id for r in records}), "arrival_mode": args.arrival_mode,
                "time_scale": args.time_scale, "max_gap_s": max_gap,
@@ -697,7 +746,7 @@ def main() -> None:
         "planned_requests": sum(copies for _, copies in plan),
         "included_in_metrics": False,
     }
-    manifest = {"schema_version": SCHEMA_VERSION, "protocol": PROTOCOL, "created_at": time.time(),
+    manifest = {"schema_version": SCHEMA_VERSION, "protocol": protocol, "created_at": time.time(),
                 "model": args.model, "available_models": available_models, "base_url": args.base_url,
                 "adapter": str(args.adapter), "dataset": {"source_root": str(args.dataset_root),
                 "manifest": "dataset_manifest.json", "sha256": dataset["dataset_sha256"],
@@ -718,6 +767,23 @@ def main() -> None:
                 },
                 "warmup": warmup_meta,
                 "audit": audit}
+    if args.scheduler == request_slots.SCHEDULER:
+        manifest["schema_version"] = 2
+        manifest["replay"].update(
+            scheduler=request_slots.SCHEDULER, session_population=args.session_population,
+            concurrency_scope="outstanding_requests",
+            user_pool_policy="fifo_ready_sessions_yield_after_each_response",
+            readiness="immediate_on_admission_or_previous_response_observation",
+            drain_timeout_s=args.drain_timeout if args.drain_timeout is not None else 120,
+        )
+        manifest["measurement"].update(
+            ttft_slo_ms=args.ttft_slo_ms if args.ttft_slo_ms is not None else 10000,
+            slo_basis="ready_to_first_output_including_client_queue_and_preparation",
+            throughput_basis="successful_completions_inside_fixed_window",
+            client_workers="owned_spawn_process_pool",
+        )
+        # The policy implementation is part of the measured source identity.
+        manifest["scheduler_source"] = audit["sources"]["scheduler"]
     atomic_json(args.result_root / "manifest.json", manifest)
     adapter_options = {
         "base_url": args.base_url,
@@ -751,9 +817,30 @@ def main() -> None:
         warmup_results = asyncio.run(
             run_warmup(plan, warmup_sender, warmup_path, warmup_lock)
         )
-    results, activity, duration = asyncio.run(run_replay(records, args.max_concurrency,
-        None if args.max_duration == 0 else args.max_duration, sender, paths))
-    summary = summarize(records, results, activity, duration, args.minimum_success_rate)
+    if args.scheduler == SCHEDULER:
+        results, activity, duration = asyncio.run(run_replay(records, args.max_concurrency,
+            None if args.max_duration == 0 else args.max_duration, sender, paths))
+        summary = summarize(records, results, activity, duration, args.minimum_success_rate)
+    else:
+        path_by_kind = dict(zip(("request", "response", "activity"), paths))
+        artifact_lock = threading.Lock()
+        emit = lambda kind, row: append_jsonl(path_by_kind[kind], row, artifact_lock)
+        async def run_owned():
+            # Finish worker cleanup while its callback event loop is still live.
+            with request_slots.ProcessSender(args.adapter, adapter_options, args.max_concurrency) as process_sender:
+                return await request_slots.run(
+                    session_groups(records), args.session_population, args.max_concurrency,
+                    args.max_duration, manifest["replay"]["drain_timeout_s"], process_sender, emit,
+                )
+
+        outcome = asyncio.run(run_owned())
+        duration = outcome.window_s
+        summary = request_slots.summarize(
+            outcome, records, args.minimum_success_rate,
+            manifest["measurement"]["ttft_slo_ms"], summarize, distribution,
+        )
+        summary["session_population"] = args.session_population
+        summary["max_concurrency"] = args.max_concurrency
     summary["warmup"] = {
         "mode": warmup_meta["mode"],
         "requests": len(warmup_results),
@@ -771,6 +858,7 @@ def main() -> None:
         return f"{value:.4%}" if value is not None else "n/a"
 
     report = ["# Business Replay Report", "", f"- Valid: `{str(summary['valid']).lower()}`",
+              f"- Protocol: `{protocol}`",
               f"- Model: `{args.model}`", f"- Adapter: `{args.adapter}`",
               f"- Selected / attempted / successful: `{summary['counts']['selected']} / {summary['counts']['attempted']} / {summary['counts']['successful']}`",
               f"- Success rate: `{summary['success_rate']:.4%}`", f"- Duration: `{duration:.3f} s`",
@@ -788,10 +876,13 @@ def main() -> None:
               f"{percent(summary['cache']['host_hit_rate'])} / "
               f"{percent(summary['cache']['total_hit_rate'])}`",
               f"- KV cache detail coverage: `"
-              f"{summary['cache']['requests_with_details']} / {summary['counts']['successful']}`", "",
+              f"{summary['cache']['requests_with_details']} / {summary['counts'].get('successful_in_window', summary['counts']['successful'])}`", "",
               "This report is a business replay episode and is not a baseline matrix result."]
+    if args.scheduler == request_slots.SCHEDULER:
+        report.extend(["", f"- Ready-to-first-output SLO: `{summary['slo']}`",
+                       "HTTP TTFT/E2E above exclude client queueing; use ready_ttft_ms/ready_latency_ms for the new workload."])
     (args.result_root / "REPORT.md").write_text("\n".join(report) + "\n", encoding="utf-8")
-    atomic_json(args.result_root / "done.json", {"schema_version": SCHEMA_VERSION, "protocol": PROTOCOL,
+    atomic_json(args.result_root / "done.json", {"schema_version": summary["schema_version"], "protocol": protocol,
                 "valid": summary["valid"], "audit_level": audit["level"],
                 "comparison_eligibility": audit["comparison_eligibility"],
                 "summary": "summary.json", "completed_at": time.time()})

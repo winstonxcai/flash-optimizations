@@ -320,7 +320,7 @@ requests strictly serially and retaining its slot until exhausted. The time
 window stops new dispatch and drains in-flight work, so wall time can exceed
 1,200 seconds. Preflight, cache flush, flags and artifact collection are unchanged.
 
-**Provenance:** copied byte-for-byte from
+**Original import provenance:** initially copied byte-for-byte from
 `/home/jovyan/wenyuhong/benchmarks/harnesses/business_replay/` (historical source
 only, not a runtime dependency). Checkout HEAD was
 `d2b0db9bb8d11c248e6be8054c25ce2f573fc94d`; both production files had uncommitted
@@ -335,12 +335,99 @@ when run.
 363d6adffde63bfe54c483d629cca780d43689ec101a778f25fc110060f00b13  adapters/openai_sse.py
 ```
 
-**COPY-ONLY validation:** static file/path review, byte/hash comparisons,
+**Historical import validation:** static file/path review, byte/hash comparisons,
 `bash -n` on the two modified shell files and `git diff --check` only. No copied
 Python execution/imports, `--help`, compilation, unittest, smoke, network,
 server or GPU checks were performed. Executable configuration checks were also
 skipped. Runtime correctness and artifact production remain unverified. Per the
-final minimal-file scope, no tests or fixtures are included.
+initial minimal-file scope, no tests or fixtures were included. The hashes above
+identify that original import; subsequent queue-timing changes have new source
+hashes recorded automatically in run manifests.
+
+### Optional request-slot FIFO replay
+
+**Question:** with the same participating conversation population, does Packed
+reduce repeated prefill and increase successful requests/s under a queue-inclusive
+first-output SLO? Native may tune outstanding concurrency without reducing that
+population. This is a new, closed-loop workload protocol, not a production arrival
+trace or a live-agent quality test. No throughput advantage is assumed.
+
+Use the existing runner and adapter with `--scheduler request-slot-fifo` and
+`--session-population P`. `--max-concurrency C` now limits outstanding requests;
+require `P >= C > 0` and at least P selected sessions. Sessions enter in recorded
+first-turn order. Each completion returns its session's next recorded turn to
+the FIFO tail; exhausted sessions are replaced from the remaining cohort. One
+request per session may be outstanding. Actual dispatch order depends on response
+completion order, so equality of the global dispatch sequence is not promised.
+
+The initial version requires `--arrival-mode immediate`, a positive fixed window,
+and no warmup. Immediate readiness after each response means zero tool think time.
+Timestamp pacing and independent offered-rate/backlog experiments are deferred.
+Pending sessions outside the participating population have not yet arrived and
+are not included in its SLO. Messages, tools, output caps, EOS and SSE parsing
+retain their existing definitions; generated answers do not alter later prompts.
+
+**Measurement:** the new protocol is `business-request-slot-replay-v1`. HTTP
+`ttft_ms` and `latency_ms` retain their historical meanings. New `ready_ttft_ms`
+and `ready_latency_ms` include FIFO waiting, worker dispatch, file reading,
+payload preparation and HTTP time, starting at admission or preceding response
+observation. The SLO uses ready-to-first-output **< 10,000 ms**, including invalid
+responses as violations. Ready requests unresolved at cutoff are right-censored:
+the summary reports conservative pass/fail bounds, or `inconclusive`; it does not
+silently drop them. `lswb-row.sh` uses this SLO status for the new protocol.
+
+Requests/s and token throughput count successful responses completed inside the
+fixed window divided by that window. `counts.successful_in_window` is the
+throughput numerator; `counts.successful`, `failed`, `attempted` and `success_rate`
+cover every dispatched request, including drain. Cache aggregates and token totals
+cover successful window completions. Per-request records also preserve drain
+responses. No new requests or sessions are admitted after cutoff. A CPU process
+pool initializes all workers and imports adapters before the measurement clock;
+workers are terminated and joined before runner exit. `--drain-timeout` defaults
+to 120 seconds and bounds collection of dispatched requests. Timeouts are failures,
+not excluded samples. Server lifecycle remains owned by the existing launcher.
+
+With an **already-running server inside your GPUQ allocation**, for a first
+P24/C20 screen at the server's configured memory fraction:
+
+```bash
+REPLAY_SCHEDULER=request-slot-fifo REPLAY_SESSION_POPULATION=24 \
+  bash scripts/local/bench-lswb.sh kernel-mf082-p24-c20 "$PORT" 20 1200
+```
+
+Optional launcher overrides: `REPLAY_DRAIN_TIMEOUT=120` and
+`REPLAY_TTFT_SLO_MS=10000`. Policy settings are validated on CPU before server
+health/cache operations. Changing the SLO must be explicit in comparisons.
+Population is validated against the selected dataset by the runner. Keep the
+population, cohort, memory budget and readiness policy equal across modes. Start
+with Native and Packed Kernel at P24/C20, then consider P20/P32 controls and
+independent C tuning. Repeat promising cells to n=3; stop expansion if retention
+does not improve or queue-inclusive latency exceeds the SLO. Preserve negative
+results alongside existing fixed-session replay evidence.
+
+**CPU checks:**
+
+```bash
+python3 -m unittest discover -s scripts/local/business_replay -p 'test_*.py' -v
+python3 -m unittest scripts.modal.tests.LocalScriptTests scripts.modal.tests.ServingClientTests
+bash -n scripts/local/bench-lswb.sh scripts/local/lswb-row.sh
+```
+
+Tests use deterministic FIFO cases and controlled fake CPU senders, including the
+real CLI/spawn/termination path. They cover ordering, population/concurrency,
+failure cleanup, fixed-window/drain accounting, queue timing, SLO censoring and
+the existing default policy. They do not establish H100 performance, real SSE
+integration, production traffic realism, or cache benefits. GPU qualification is
+a separate gate. The changed implementation lives in `runner.py`, optional policy
+module `request_slots.py`, and the adapter's opt-in timing metadata; tests live
+beside the owning client rather than adding another benchmark harness.
+
+**Risk/rollback:** FIFO rotation changes locality and can increase latency for
+both modes. The new SLO includes client waiting and is distinct from historical
+HTTP-only SLO results. Keep result tags/protocols separate. To disable the candidate,
+unset `REPLAY_SCHEDULER`, `REPLAY_SESSION_POPULATION`, `REPLAY_DRAIN_TIMEOUT` and
+`REPLAY_TTFT_SLO_MS`; the default remains `business-user-replay-v2`. No SGLang,
+FlashMLA, allocator, model or image changes are involved.
 
 ### One-time conversion for SGLang bench-serving
 

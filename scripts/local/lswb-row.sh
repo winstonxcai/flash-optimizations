@@ -46,14 +46,22 @@ summary_path = sys.argv[1]
 with open(summary_path) as stream:
     s = json.load(stream)
 c = s.get('cache', {})
-ttft = s['ttft_ms']['p90'] / 1000.0
-e2e  = s['latency_ms']['p90'] / 1000.0
-pass_ = bool(s.get('valid')) and ttft < 10.0
+slo = s.get('slo')
+ttft_stats = s['ready_ttft_ms'] if slo else s['ttft_ms']
+e2e_stats = s['ready_latency_ms'] if slo else s['latency_ms']
+ttft = ttft_stats['p90'] / 1000.0 if ttft_stats['p90'] is not None else float('nan')
+e2e = e2e_stats['p90'] / 1000.0 if e2e_stats['p90'] is not None else float('nan')
+pass_ = bool(s.get('valid')) and (slo['status'] == 'pass' if slo else ttft < 10.0)
 uncached = c.get('prompt_tokens', 0) - c.get('total_cached_tokens', 0)
+rate = lambda name: c[name] if c.get(name) is not None else float('nan')
+done = s.get('counts', {}).get('successful_in_window' if slo else 'successful', 0)
 print('dir=%s' % (summary_path.rsplit('/client',1)[0].rsplit('/',1)[-1]))
+if slo:
+    print('ttft_basis=ready_to_first_output slo_status=%s threshold_ms=%s censored=%s' % (
+        slo['status'], slo['threshold_ms'], slo['right_censored']))
 print('slo=%s valid=%s done=%d ttft_p90=%.2fs e2e_p90=%.2fs l1=%.4f l2=%.4f uncached=%d succ=%.4f' % (
     'PASS' if pass_ else 'FAIL', bool(s.get('valid')),
-    s.get('counts', {}).get('successful', 0), ttft, e2e,
-    c.get('device_hit_rate', 0.0), c.get('host_hit_rate', 0.0),
+    done, ttft, e2e,
+    rate('device_hit_rate'), rate('host_hit_rate'),
     uncached, s.get('success_rate', 0.0)))
 " "$S" 2>&1 || { echo "parse failed on $S"; exit 1; }

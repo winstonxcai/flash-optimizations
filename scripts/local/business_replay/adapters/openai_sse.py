@@ -3,6 +3,8 @@
 Projects can copy this adapter or provide a module with the same
 ``validate_server`` and ``send_request`` functions when their wire protocol or
 payload options differ.
+
+Author: Winston Cai. (Optional queue-inclusive replay timing.)
 """
 
 from __future__ import annotations
@@ -220,7 +222,7 @@ def _stream_completion(
     if first_output is not None and completion_tokens is not None and completion_tokens > 1:
         tpot_ms = (ended - first_output) * 1_000 / (completion_tokens - 1)
     body_hash = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-    return {
+    result = {
         "status": status,
         "valid": not errors,
         "errors": sorted(set(errors)),
@@ -236,6 +238,16 @@ def _stream_completion(
         "request_body_sha256": body_hash,
         "response_stream_sha256": response_hash.hexdigest(),
     }
+    if options.get("capture_client_timing"):
+        # CPU workers on this host share the monotonic clock. The runner turns
+        # these transient readings into offsets and includes its own queue and
+        # request preparation time without changing the historical HTTP metrics.
+        result["client_timing"] = {
+            "http_started_s": started,
+            "first_output_s": first_output,
+            "http_completed_s": ended,
+        }
+    return result
 
 
 def send_request(record: dict[str, Any], options: dict[str, Any]) -> dict[str, Any]:
