@@ -1,0 +1,3 @@
+aec3437ca3601f838bc48fa5342dfeb3b977e79dec45a271a8546b821a821e51  scripts/local/serve.sh
+1fdade92bc1ee030abbdfdd99d68553bd4fa32de2906205615a255b9824915a2  scripts/local/run-server.sh
+07b7461cb7b5e8be7fc9751f2f70c19195918bf86f895e55c6b76ae382c28751  scripts/local/bench-lswb.sh
