@@ -1,0 +1,371 @@
+{
+  "status": "Transferred evidence; pending benchmark review",
+  "protocol": "business-request-slot-replay-v1",
+  "memory_fraction": 0.86,
+  "session_population": 24,
+  "concurrency": 24,
+  "requested_duration_s": 1200,
+  "repeat_batch": "20261021_184122-1442878",
+  "runs": [
+    {
+      "mode": "native",
+      "repeat": 1,
+      "original_run": "/home/jovyan/winstonxcai/flash-optimizations/transfer/lswb-request-slots-mf086-p24-c24-20261021_181709/native-c24",
+      "job": {
+        "id": "job-20261021-090031-64772e01",
+        "status": "failed",
+        "state": null,
+        "exit_code": 1,
+        "error": "command exited with status 1",
+        "argv": [
+          "bash",
+          "-lc",
+          "export MODE=native PORT=30511 MASTER_PORT=29911 SWEEP_ID=20261021_164327\n\nset -euo pipefail\n\nexport GIT_CONFIG_COUNT=4\nexport GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0=\"$PWD\"\nexport GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1=\"$PWD/third_party/sglang\"\nexport GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2=\"$PWD/third_party/flashmla\"\nexport GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3=\"$PWD/third_party/flashmla/csrc/cutlass\"\n\nexport GPUS=\"${CUDA_VISIBLE_DEVICES:?GPUQ did not assign GPUs}\"\nIFS=, read -r -a allocated <<< \"$GPUS\"\n[ \"${#allocated[@]}\" -eq 4 ] || {\n  echo \"Expected four assigned GPUs; got $GPUS\"\n  exit 1\n}\n\nexport SGLANG_ROOT_CT=\"/mnt/host_root$PWD/third_party/sglang\"\nexport SGLANG_PY=\"$SGLANG_ROOT_CT/python\"\nexport TP=4 MEM_FRAC=0.86 SERVER_SEED=20260919\nexport CHUNK=8192 MAX_RUN=256 CTX_LEN=1048576\nunset C4_KEEP_COUNT C4_LAYER_KEEP_COUNTS STORE_IMPLEMENTATION\nunset DECODE_CFG SERVER_PID_FILE_CT\nif [ \"$MODE\" = kernel ]; then\n  export C4_KEEP_COUNT=256\nfi\n\nexport REPLAY_DIR=/home/jovyan/wenyuhong/benchmarks\nexport REPLAY_DATASET=\"$REPLAY_DIR/datasets/h20-dsv4pro/longcodebench_openai\"\nexport REPLAY_MANIFEST=\"$REPLAY_DIR/cache/official-longswebench/longswebench-openai-v1.json\"\nexport REPLAY_RUNNER=\"$PWD/scripts/local/business_replay/runner.py\"\nexport REPLAY_ADAPTER=\"$PWD/scripts/local/business_replay/adapters/openai_sse.py\"\nexport REPLAY_SCHEDULER=request-slot-fifo\nexport REPLAY_SESSION_POPULATION=24\nexport REPLAY_DRAIN_TIMEOUT=120\nexport REPLAY_TTFT_SLO_MS=10000\n\nexport RESULTS_HOST=\"$PWD/results\"\nexport LOG_HOST=\"$PWD/logs/${MODE}-mf086-p24-sweep-${SWEEP_ID}\"\nexport REQUEST_METRICS_DIR=\"$LOG_HOST/request-metrics\"\nmkdir -p \"$LOG_HOST\"\n\npython3 scripts/sources.py \"$PWD\" > \"$LOG_HOST/source-manifest.json\"\ndocker inspect \"${CONTAINER:-remnant}\" --format \"{{.Image}}\" \\\n  > \"$LOG_HOST/image-id.txt\"\nprintf \"%s\\n\" \"$GPUS\" > \"$LOG_HOST/gpus.txt\"\nsha256sum scripts/local/serve.sh scripts/local/run-server.sh \\\n  scripts/local/bench-lswb.sh > \"$LOG_HOST/launcher-sha256.txt\"\n\ncleanup() {\n  rc=$?\n  trap - EXIT INT TERM\n  bash scripts/local/serve.sh \"$MODE\" stop || rc=1\n  exit \"$rc\"\n}\ntrap cleanup EXIT\ntrap \"exit 130\" INT\ntrap \"exit 143\" TERM\n\nbash scripts/local/serve.sh \"$MODE\"\n\noverall_rc=0\nshopt -s nullglob\n\nfor C in 24; do\n  tag=\"${MODE}-mf086-p24-c${C}-${SWEEP_ID}\"\n  printf \"\\nStarting %s\\n\" \"$tag\"\n\n  rc=0\n  bash scripts/local/bench-lswb.sh \"$tag\" \"$PORT\" \"$C\" 1200 || rc=$?\n\n  runs=(\"$RESULTS_HOST/lswb-replay/$tag\"/20*)\n  [ \"${#runs[@]}\" -gt 0 ] || {\n    echo \"Missing result directory for $tag\"\n    exit 1\n  }\n  run=\"${runs[${#runs[@]}-1]}\"\n\n  mkdir -p \"$run/server\"\n  cp \"$LOG_HOST/serve_${MODE}.log\" \\\n     \"$LOG_HOST/source-manifest.json\" \\\n     \"$LOG_HOST/image-id.txt\" \\\n     \"$LOG_HOST/gpus.txt\" \\\n     \"$LOG_HOST/launcher-sha256.txt\" \"$run/server/\"\n\n  python3 - \"$run\" \"$rc\" \"$C\" \"$MODE\" <<\"PY_VALIDATE\"\nimport json\nimport sys\nfrom pathlib import Path\n\nroot = Path(sys.argv[1])\nrc, concurrency = int(sys.argv[2]), int(sys.argv[3])\nmode = sys.argv[4]\n\ndef read(name):\n    path = root / name\n    if not path.is_file():\n        raise SystemExit(f\"Incomplete cell: missing {path}\")\n    return json.loads(path.read_text())\n\ndone = read(\"client/done.json\")\nsummary = read(\"client/summary.json\")\nmanifest = read(\"client/manifest.json\")\ntiming = read(\"request-timing-validation.json\")\nserver = read(\"server-info.json\")\n\nprotocol = \"business-request-slot-replay-v1\"\nif any(x.get(\"protocol\") != protocol for x in (done, summary, manifest)):\n    raise SystemExit(f\"{root}: wrong replay protocol\")\nreplay = manifest[\"replay\"]\nif (replay[\"session_population\"], replay[\"max_concurrency\"],\n        replay[\"max_duration_s\"]) != (24, concurrency, 1200):\n    raise SystemExit(f\"{root}: wrong population, concurrency or window\")\nif server[\"mem_fraction_static\"] != 0.86 or server[\"tp_size\"] != 4:\n    raise SystemExit(f\"{root}: wrong memory fraction or TP\")\nexpected_format = \"native\" if mode == \"native\" else \"remnant\"\nif server[\"dsv4_c4_cache_format\"] != expected_format:\n    raise SystemExit(f\"{root}: wrong cache format\")\nif not timing.get(\"complete\") or summary.get(\"instrumentation_errors\"):\n    raise SystemExit(f\"{root}: timing collection or instrumentation failed\")\nif rc != 0 and summary[\"valid\"]:\n    raise SystemExit(f\"{root}: unexpected launcher failure, rc={rc}\")\n\nprint(\"Cell complete:\",\n      \"valid=\", summary[\"valid\"],\n      \"SLO=\", summary[\"slo\"][\"status\"],\n      \"req/s=\", summary[\"request_throughput\"])\nPY_VALIDATE\n\n  bash scripts/local/lswb-row.sh \"$run\"\n  printf \"Results: %s\\n\" \"$run\"\n\n  [ \"$rc\" -eq 0 ] || overall_rc=1\ndone\n\nexit \"$overall_rc\"\n"
+        ],
+        "cwd": "/home/jovyan/winstonxcai/flash-optimizations",
+        "workload_key": "native-mf086-p24-c24-20261021_164327",
+        "created_at": "2026-10-21T09:00:31.470307+00:00",
+        "started_at": "2026-10-21T09:00:35.029837+00:00",
+        "finished_at": "2026-10-21T09:24:46.251174+00:00",
+        "gpu_count": 4,
+        "output_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/native-mf086-p24-c24-20261021_164327-gpuq",
+        "log_dir": "/var/lib/gpuq/jobs/job-20261021-090031-64772e01"
+      },
+      "missing_files": [],
+      "summary_valid": false,
+      "slo": {
+        "basis": "All ready requests; invalid/no-output responses count as violations; unresolved cutoff requests bounded conservatively",
+        "metric": "ready_to_first_output",
+        "percentile": 90,
+        "ready_requests": 1311,
+        "right_censored": 0,
+        "status": "fail",
+        "threshold_ms": 10000.0,
+        "violations": 134,
+        "within_threshold": 1177
+      },
+      "counts": {
+        "attempted": 1311,
+        "completed_during_drain": 24,
+        "completed_in_window": 1287,
+        "completion_tokens": 182074,
+        "drain_timeouts": 0,
+        "failed": 16,
+        "not_started_due_to_duration": 3605,
+        "prompt_tokens": 176617898,
+        "ready_not_dispatched": 0,
+        "selected": 4916,
+        "successful": 1295,
+        "successful_in_window": 1271,
+        "users_completed": 16,
+        "users_selected": 92,
+        "users_started": 39
+      },
+      "failure_reasons": {
+        "missing_output_event": 16
+      },
+      "request_throughput": 1.0591666666666666,
+      "completion_token_throughput": 151.72833333333332
+    },
+    {
+      "mode": "native",
+      "repeat": 2,
+      "original_run": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/native-mf086-p24-c24-20261021_184122-1442878-repeat2/20261021_184507",
+      "job": {
+        "id": "job-20261021-104133-7de7b533",
+        "status": "failed",
+        "state": null,
+        "exit_code": 1,
+        "error": "command exited with status 1",
+        "argv": [
+          "bash",
+          "-lc",
+          "export MODE=native PORT=30521 MASTER_PORT=29921 SWEEP_ID=20261021_184122-1442878-repeat2\n\nset -euo pipefail\n\nexport GIT_CONFIG_COUNT=4\nexport GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0=\"$PWD\"\nexport GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1=\"$PWD/third_party/sglang\"\nexport GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2=\"$PWD/third_party/flashmla\"\nexport GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3=\"$PWD/third_party/flashmla/csrc/cutlass\"\n\nexport GPUS=\"${CUDA_VISIBLE_DEVICES:?GPUQ did not assign GPUs}\"\nIFS=, read -r -a allocated <<< \"$GPUS\"\n[ \"${#allocated[@]}\" -eq 4 ] || {\n  echo \"Expected four assigned GPUs; got $GPUS\"\n  exit 1\n}\n\nexport SGLANG_ROOT_CT=\"/mnt/host_root$PWD/third_party/sglang\"\nexport SGLANG_PY=\"$SGLANG_ROOT_CT/python\"\nexport TP=4 MEM_FRAC=0.86 SERVER_SEED=20260919\nexport CHUNK=8192 MAX_RUN=256 CTX_LEN=1048576\nunset C4_KEEP_COUNT C4_LAYER_KEEP_COUNTS STORE_IMPLEMENTATION\nunset DECODE_CFG SERVER_PID_FILE_CT\nif [ \"$MODE\" = kernel ]; then\n  export C4_KEEP_COUNT=256\nfi\n\nexport REPLAY_DIR=/home/jovyan/wenyuhong/benchmarks\nexport REPLAY_DATASET=\"$REPLAY_DIR/datasets/h20-dsv4pro/longcodebench_openai\"\nexport REPLAY_MANIFEST=\"$REPLAY_DIR/cache/official-longswebench/longswebench-openai-v1.json\"\nexport REPLAY_RUNNER=\"$PWD/scripts/local/business_replay/runner.py\"\nexport REPLAY_ADAPTER=\"$PWD/scripts/local/business_replay/adapters/openai_sse.py\"\nexport REPLAY_SCHEDULER=request-slot-fifo\nexport REPLAY_SESSION_POPULATION=24\nexport REPLAY_DRAIN_TIMEOUT=120\nexport REPLAY_TTFT_SLO_MS=10000\n\nexport RESULTS_HOST=\"$PWD/results\"\nexport LOG_HOST=\"$PWD/logs/${MODE}-mf086-p24-sweep-${SWEEP_ID}\"\nexport REQUEST_METRICS_DIR=\"$LOG_HOST/request-metrics\"\nmkdir -p \"$LOG_HOST\"\n\npython3 scripts/sources.py \"$PWD\" > \"$LOG_HOST/source-manifest.json\"\ndocker inspect \"${CONTAINER:-remnant}\" --format \"{{.Image}}\" \\\n  > \"$LOG_HOST/image-id.txt\"\nprintf \"%s\\n\" \"$GPUS\" > \"$LOG_HOST/gpus.txt\"\nsha256sum scripts/local/serve.sh scripts/local/run-server.sh \\\n  scripts/local/bench-lswb.sh > \"$LOG_HOST/launcher-sha256.txt\"\n\ncleanup() {\n  rc=$?\n  trap - EXIT INT TERM\n  bash scripts/local/serve.sh \"$MODE\" stop || rc=1\n  exit \"$rc\"\n}\ntrap cleanup EXIT\ntrap \"exit 130\" INT\ntrap \"exit 143\" TERM\n\nbash scripts/local/serve.sh \"$MODE\"\n\noverall_rc=0\nshopt -s nullglob\n\nfor C in 24; do\n  tag=\"${MODE}-mf086-p24-c${C}-${SWEEP_ID}\"\n  printf \"\\nStarting %s\\n\" \"$tag\"\n\n  rc=0\n  bash scripts/local/bench-lswb.sh \"$tag\" \"$PORT\" \"$C\" 1200 || rc=$?\n\n  runs=(\"$RESULTS_HOST/lswb-replay/$tag\"/20*)\n  [ \"${#runs[@]}\" -gt 0 ] || {\n    echo \"Missing result directory for $tag\"\n    exit 1\n  }\n  run=\"${runs[${#runs[@]}-1]}\"\n\n  mkdir -p \"$run/server\"\n  cp \"$LOG_HOST/serve_${MODE}.log\" \\\n     \"$LOG_HOST/source-manifest.json\" \\\n     \"$LOG_HOST/image-id.txt\" \\\n     \"$LOG_HOST/gpus.txt\" \\\n     \"$LOG_HOST/launcher-sha256.txt\" \"$run/server/\"\n\n  python3 - \"$run\" \"$rc\" \"$C\" \"$MODE\" <<\"PY_VALIDATE\"\nimport json\nimport sys\nfrom pathlib import Path\n\nroot = Path(sys.argv[1])\nrc, concurrency = int(sys.argv[2]), int(sys.argv[3])\nmode = sys.argv[4]\n\ndef read(name):\n    path = root / name\n    if not path.is_file():\n        raise SystemExit(f\"Incomplete cell: missing {path}\")\n    return json.loads(path.read_text())\n\ndone = read(\"client/done.json\")\nsummary = read(\"client/summary.json\")\nmanifest = read(\"client/manifest.json\")\ntiming = read(\"request-timing-validation.json\")\nserver = read(\"server-info.json\")\n\nprotocol = \"business-request-slot-replay-v1\"\nif any(x.get(\"protocol\") != protocol for x in (done, summary, manifest)):\n    raise SystemExit(f\"{root}: wrong replay protocol\")\nreplay = manifest[\"replay\"]\nif (replay[\"session_population\"], replay[\"max_concurrency\"],\n        replay[\"max_duration_s\"]) != (24, concurrency, 1200):\n    raise SystemExit(f\"{root}: wrong population, concurrency or window\")\nif server[\"mem_fraction_static\"] != 0.86 or server[\"tp_size\"] != 4:\n    raise SystemExit(f\"{root}: wrong memory fraction or TP\")\nexpected_format = \"native\" if mode == \"native\" else \"remnant\"\nif server[\"dsv4_c4_cache_format\"] != expected_format:\n    raise SystemExit(f\"{root}: wrong cache format\")\nif not timing.get(\"complete\") or summary.get(\"instrumentation_errors\"):\n    raise SystemExit(f\"{root}: timing collection or instrumentation failed\")\nif rc != 0 and summary[\"valid\"]:\n    raise SystemExit(f\"{root}: unexpected launcher failure, rc={rc}\")\n\nprint(\"Cell complete:\",\n      \"valid=\", summary[\"valid\"],\n      \"SLO=\", summary[\"slo\"][\"status\"],\n      \"req/s=\", summary[\"request_throughput\"])\nPY_VALIDATE\n\n  bash scripts/local/lswb-row.sh \"$run\"\n  printf \"Results: %s\\n\" \"$run\"\n\n  [ \"$rc\" -eq 0 ] || overall_rc=1\ndone\n\nexit \"$overall_rc\"\n"
+        ],
+        "cwd": "/home/jovyan/winstonxcai/flash-optimizations",
+        "workload_key": "native-mf086-p24-c24-20261021_184122-1442878-repeat2",
+        "created_at": "2026-10-21T10:41:33.277174+00:00",
+        "started_at": "2026-10-21T10:41:36.634554+00:00",
+        "finished_at": "2026-10-21T11:06:12.421422+00:00",
+        "gpu_count": 4,
+        "output_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/native-mf086-p24-c24-20261021_184122-1442878-repeat2-gpuq",
+        "log_dir": "/var/lib/gpuq/jobs/job-20261021-104133-7de7b533"
+      },
+      "missing_files": [],
+      "summary_valid": false,
+      "slo": {
+        "basis": "All ready requests; invalid/no-output responses count as violations; unresolved cutoff requests bounded conservatively",
+        "metric": "ready_to_first_output",
+        "percentile": 90,
+        "ready_requests": 1351,
+        "right_censored": 0,
+        "status": "pass",
+        "threshold_ms": 10000.0,
+        "violations": 132,
+        "within_threshold": 1219
+      },
+      "counts": {
+        "attempted": 1351,
+        "completed_during_drain": 24,
+        "completed_in_window": 1327,
+        "completion_tokens": 191377,
+        "drain_timeouts": 0,
+        "failed": 14,
+        "not_started_due_to_duration": 3565,
+        "prompt_tokens": 182881422,
+        "ready_not_dispatched": 0,
+        "selected": 4916,
+        "successful": 1337,
+        "successful_in_window": 1313,
+        "users_completed": 16,
+        "users_selected": 92,
+        "users_started": 39
+      },
+      "failure_reasons": {
+        "missing_output_event": 14
+      },
+      "request_throughput": 1.0941666666666667,
+      "completion_token_throughput": 159.48083333333332
+    },
+    {
+      "mode": "native",
+      "repeat": 3,
+      "original_run": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/native-mf086-p24-c24-20261021_184122-1442878-repeat3/20261021_190907",
+      "job": {
+        "id": "job-20261021-104133-359a526c",
+        "status": "failed",
+        "state": null,
+        "exit_code": 1,
+        "error": "command exited with status 1",
+        "argv": [
+          "bash",
+          "-lc",
+          "export MODE=native PORT=30523 MASTER_PORT=29923 SWEEP_ID=20261021_184122-1442878-repeat3\n\nset -euo pipefail\n\nexport GIT_CONFIG_COUNT=4\nexport GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0=\"$PWD\"\nexport GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1=\"$PWD/third_party/sglang\"\nexport GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2=\"$PWD/third_party/flashmla\"\nexport GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3=\"$PWD/third_party/flashmla/csrc/cutlass\"\n\nexport GPUS=\"${CUDA_VISIBLE_DEVICES:?GPUQ did not assign GPUs}\"\nIFS=, read -r -a allocated <<< \"$GPUS\"\n[ \"${#allocated[@]}\" -eq 4 ] || {\n  echo \"Expected four assigned GPUs; got $GPUS\"\n  exit 1\n}\n\nexport SGLANG_ROOT_CT=\"/mnt/host_root$PWD/third_party/sglang\"\nexport SGLANG_PY=\"$SGLANG_ROOT_CT/python\"\nexport TP=4 MEM_FRAC=0.86 SERVER_SEED=20260919\nexport CHUNK=8192 MAX_RUN=256 CTX_LEN=1048576\nunset C4_KEEP_COUNT C4_LAYER_KEEP_COUNTS STORE_IMPLEMENTATION\nunset DECODE_CFG SERVER_PID_FILE_CT\nif [ \"$MODE\" = kernel ]; then\n  export C4_KEEP_COUNT=256\nfi\n\nexport REPLAY_DIR=/home/jovyan/wenyuhong/benchmarks\nexport REPLAY_DATASET=\"$REPLAY_DIR/datasets/h20-dsv4pro/longcodebench_openai\"\nexport REPLAY_MANIFEST=\"$REPLAY_DIR/cache/official-longswebench/longswebench-openai-v1.json\"\nexport REPLAY_RUNNER=\"$PWD/scripts/local/business_replay/runner.py\"\nexport REPLAY_ADAPTER=\"$PWD/scripts/local/business_replay/adapters/openai_sse.py\"\nexport REPLAY_SCHEDULER=request-slot-fifo\nexport REPLAY_SESSION_POPULATION=24\nexport REPLAY_DRAIN_TIMEOUT=120\nexport REPLAY_TTFT_SLO_MS=10000\n\nexport RESULTS_HOST=\"$PWD/results\"\nexport LOG_HOST=\"$PWD/logs/${MODE}-mf086-p24-sweep-${SWEEP_ID}\"\nexport REQUEST_METRICS_DIR=\"$LOG_HOST/request-metrics\"\nmkdir -p \"$LOG_HOST\"\n\npython3 scripts/sources.py \"$PWD\" > \"$LOG_HOST/source-manifest.json\"\ndocker inspect \"${CONTAINER:-remnant}\" --format \"{{.Image}}\" \\\n  > \"$LOG_HOST/image-id.txt\"\nprintf \"%s\\n\" \"$GPUS\" > \"$LOG_HOST/gpus.txt\"\nsha256sum scripts/local/serve.sh scripts/local/run-server.sh \\\n  scripts/local/bench-lswb.sh > \"$LOG_HOST/launcher-sha256.txt\"\n\ncleanup() {\n  rc=$?\n  trap - EXIT INT TERM\n  bash scripts/local/serve.sh \"$MODE\" stop || rc=1\n  exit \"$rc\"\n}\ntrap cleanup EXIT\ntrap \"exit 130\" INT\ntrap \"exit 143\" TERM\n\nbash scripts/local/serve.sh \"$MODE\"\n\noverall_rc=0\nshopt -s nullglob\n\nfor C in 24; do\n  tag=\"${MODE}-mf086-p24-c${C}-${SWEEP_ID}\"\n  printf \"\\nStarting %s\\n\" \"$tag\"\n\n  rc=0\n  bash scripts/local/bench-lswb.sh \"$tag\" \"$PORT\" \"$C\" 1200 || rc=$?\n\n  runs=(\"$RESULTS_HOST/lswb-replay/$tag\"/20*)\n  [ \"${#runs[@]}\" -gt 0 ] || {\n    echo \"Missing result directory for $tag\"\n    exit 1\n  }\n  run=\"${runs[${#runs[@]}-1]}\"\n\n  mkdir -p \"$run/server\"\n  cp \"$LOG_HOST/serve_${MODE}.log\" \\\n     \"$LOG_HOST/source-manifest.json\" \\\n     \"$LOG_HOST/image-id.txt\" \\\n     \"$LOG_HOST/gpus.txt\" \\\n     \"$LOG_HOST/launcher-sha256.txt\" \"$run/server/\"\n\n  python3 - \"$run\" \"$rc\" \"$C\" \"$MODE\" <<\"PY_VALIDATE\"\nimport json\nimport sys\nfrom pathlib import Path\n\nroot = Path(sys.argv[1])\nrc, concurrency = int(sys.argv[2]), int(sys.argv[3])\nmode = sys.argv[4]\n\ndef read(name):\n    path = root / name\n    if not path.is_file():\n        raise SystemExit(f\"Incomplete cell: missing {path}\")\n    return json.loads(path.read_text())\n\ndone = read(\"client/done.json\")\nsummary = read(\"client/summary.json\")\nmanifest = read(\"client/manifest.json\")\ntiming = read(\"request-timing-validation.json\")\nserver = read(\"server-info.json\")\n\nprotocol = \"business-request-slot-replay-v1\"\nif any(x.get(\"protocol\") != protocol for x in (done, summary, manifest)):\n    raise SystemExit(f\"{root}: wrong replay protocol\")\nreplay = manifest[\"replay\"]\nif (replay[\"session_population\"], replay[\"max_concurrency\"],\n        replay[\"max_duration_s\"]) != (24, concurrency, 1200):\n    raise SystemExit(f\"{root}: wrong population, concurrency or window\")\nif server[\"mem_fraction_static\"] != 0.86 or server[\"tp_size\"] != 4:\n    raise SystemExit(f\"{root}: wrong memory fraction or TP\")\nexpected_format = \"native\" if mode == \"native\" else \"remnant\"\nif server[\"dsv4_c4_cache_format\"] != expected_format:\n    raise SystemExit(f\"{root}: wrong cache format\")\nif not timing.get(\"complete\") or summary.get(\"instrumentation_errors\"):\n    raise SystemExit(f\"{root}: timing collection or instrumentation failed\")\nif rc != 0 and summary[\"valid\"]:\n    raise SystemExit(f\"{root}: unexpected launcher failure, rc={rc}\")\n\nprint(\"Cell complete:\",\n      \"valid=\", summary[\"valid\"],\n      \"SLO=\", summary[\"slo\"][\"status\"],\n      \"req/s=\", summary[\"request_throughput\"])\nPY_VALIDATE\n\n  bash scripts/local/lswb-row.sh \"$run\"\n  printf \"Results: %s\\n\" \"$run\"\n\n  [ \"$rc\" -eq 0 ] || overall_rc=1\ndone\n\nexit \"$overall_rc\"\n"
+        ],
+        "cwd": "/home/jovyan/winstonxcai/flash-optimizations",
+        "workload_key": "native-mf086-p24-c24-20261021_184122-1442878-repeat3",
+        "created_at": "2026-10-21T10:41:33.462610+00:00",
+        "started_at": "2026-10-21T11:05:51.321396+00:00",
+        "finished_at": "2026-10-21T11:29:57.057494+00:00",
+        "gpu_count": 4,
+        "output_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/native-mf086-p24-c24-20261021_184122-1442878-repeat3-gpuq",
+        "log_dir": "/var/lib/gpuq/jobs/job-20261021-104133-359a526c"
+      },
+      "missing_files": [],
+      "summary_valid": false,
+      "slo": {
+        "basis": "All ready requests; invalid/no-output responses count as violations; unresolved cutoff requests bounded conservatively",
+        "metric": "ready_to_first_output",
+        "percentile": 90,
+        "ready_requests": 1295,
+        "right_censored": 0,
+        "status": "pass",
+        "threshold_ms": 10000.0,
+        "violations": 113,
+        "within_threshold": 1182
+      },
+      "counts": {
+        "attempted": 1295,
+        "completed_during_drain": 24,
+        "completed_in_window": 1271,
+        "completion_tokens": 179655,
+        "drain_timeouts": 0,
+        "failed": 13,
+        "not_started_due_to_duration": 3621,
+        "prompt_tokens": 175088957,
+        "ready_not_dispatched": 0,
+        "selected": 4916,
+        "successful": 1282,
+        "successful_in_window": 1258,
+        "users_completed": 15,
+        "users_selected": 92,
+        "users_started": 38
+      },
+      "failure_reasons": {
+        "missing_output_event": 13
+      },
+      "request_throughput": 1.0483333333333333,
+      "completion_token_throughput": 149.7125
+    },
+    {
+      "mode": "kernel",
+      "repeat": 1,
+      "original_run": "/home/jovyan/winstonxcai/flash-optimizations/transfer/lswb-request-slots-mf086-p24-c24-20261021_181709/kernel-c24",
+      "job": {
+        "id": "job-20261021-090902-38c14db0",
+        "status": "succeeded",
+        "state": null,
+        "exit_code": 0,
+        "error": null,
+        "argv": [
+          "bash",
+          "-lc",
+          "export MODE=kernel PORT=30512 MASTER_PORT=29912 SWEEP_ID=20261021_164327\n\nset -euo pipefail\n\nexport GIT_CONFIG_COUNT=4\nexport GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0=\"$PWD\"\nexport GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1=\"$PWD/third_party/sglang\"\nexport GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2=\"$PWD/third_party/flashmla\"\nexport GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3=\"$PWD/third_party/flashmla/csrc/cutlass\"\n\nexport GPUS=\"${CUDA_VISIBLE_DEVICES:?GPUQ did not assign GPUs}\"\nIFS=, read -r -a allocated <<< \"$GPUS\"\n[ \"${#allocated[@]}\" -eq 4 ] || {\n  echo \"Expected four assigned GPUs; got $GPUS\"\n  exit 1\n}\n\nexport SGLANG_ROOT_CT=\"/mnt/host_root$PWD/third_party/sglang\"\nexport SGLANG_PY=\"$SGLANG_ROOT_CT/python\"\nexport TP=4 MEM_FRAC=0.86 SERVER_SEED=20260919\nexport CHUNK=8192 MAX_RUN=256 CTX_LEN=1048576\nunset C4_KEEP_COUNT C4_LAYER_KEEP_COUNTS STORE_IMPLEMENTATION\nunset DECODE_CFG SERVER_PID_FILE_CT\nif [ \"$MODE\" = kernel ]; then\n  export C4_KEEP_COUNT=256\nfi\n\nexport REPLAY_DIR=/home/jovyan/wenyuhong/benchmarks\nexport REPLAY_DATASET=\"$REPLAY_DIR/datasets/h20-dsv4pro/longcodebench_openai\"\nexport REPLAY_MANIFEST=\"$REPLAY_DIR/cache/official-longswebench/longswebench-openai-v1.json\"\nexport REPLAY_RUNNER=\"$PWD/scripts/local/business_replay/runner.py\"\nexport REPLAY_ADAPTER=\"$PWD/scripts/local/business_replay/adapters/openai_sse.py\"\nexport REPLAY_SCHEDULER=request-slot-fifo\nexport REPLAY_SESSION_POPULATION=24\nexport REPLAY_DRAIN_TIMEOUT=120\nexport REPLAY_TTFT_SLO_MS=10000\n\nexport RESULTS_HOST=\"$PWD/results\"\nexport LOG_HOST=\"$PWD/logs/${MODE}-mf086-p24-sweep-${SWEEP_ID}\"\nexport REQUEST_METRICS_DIR=\"$LOG_HOST/request-metrics\"\nmkdir -p \"$LOG_HOST\"\n\npython3 scripts/sources.py \"$PWD\" > \"$LOG_HOST/source-manifest.json\"\ndocker inspect \"${CONTAINER:-remnant}\" --format \"{{.Image}}\" \\\n  > \"$LOG_HOST/image-id.txt\"\nprintf \"%s\\n\" \"$GPUS\" > \"$LOG_HOST/gpus.txt\"\nsha256sum scripts/local/serve.sh scripts/local/run-server.sh \\\n  scripts/local/bench-lswb.sh > \"$LOG_HOST/launcher-sha256.txt\"\n\ncleanup() {\n  rc=$?\n  trap - EXIT INT TERM\n  bash scripts/local/serve.sh \"$MODE\" stop || rc=1\n  exit \"$rc\"\n}\ntrap cleanup EXIT\ntrap \"exit 130\" INT\ntrap \"exit 143\" TERM\n\nbash scripts/local/serve.sh \"$MODE\"\n\noverall_rc=0\nshopt -s nullglob\n\nfor C in 24; do\n  tag=\"${MODE}-mf086-p24-c${C}-${SWEEP_ID}\"\n  printf \"\\nStarting %s\\n\" \"$tag\"\n\n  rc=0\n  bash scripts/local/bench-lswb.sh \"$tag\" \"$PORT\" \"$C\" 1200 || rc=$?\n\n  runs=(\"$RESULTS_HOST/lswb-replay/$tag\"/20*)\n  [ \"${#runs[@]}\" -gt 0 ] || {\n    echo \"Missing result directory for $tag\"\n    exit 1\n  }\n  run=\"${runs[${#runs[@]}-1]}\"\n\n  mkdir -p \"$run/server\"\n  cp \"$LOG_HOST/serve_${MODE}.log\" \\\n     \"$LOG_HOST/source-manifest.json\" \\\n     \"$LOG_HOST/image-id.txt\" \\\n     \"$LOG_HOST/gpus.txt\" \\\n     \"$LOG_HOST/launcher-sha256.txt\" \"$run/server/\"\n\n  python3 - \"$run\" \"$rc\" \"$C\" \"$MODE\" <<\"PY_VALIDATE\"\nimport json\nimport sys\nfrom pathlib import Path\n\nroot = Path(sys.argv[1])\nrc, concurrency = int(sys.argv[2]), int(sys.argv[3])\nmode = sys.argv[4]\n\ndef read(name):\n    path = root / name\n    if not path.is_file():\n        raise SystemExit(f\"Incomplete cell: missing {path}\")\n    return json.loads(path.read_text())\n\ndone = read(\"client/done.json\")\nsummary = read(\"client/summary.json\")\nmanifest = read(\"client/manifest.json\")\ntiming = read(\"request-timing-validation.json\")\nserver = read(\"server-info.json\")\n\nprotocol = \"business-request-slot-replay-v1\"\nif any(x.get(\"protocol\") != protocol for x in (done, summary, manifest)):\n    raise SystemExit(f\"{root}: wrong replay protocol\")\nreplay = manifest[\"replay\"]\nif (replay[\"session_population\"], replay[\"max_concurrency\"],\n        replay[\"max_duration_s\"]) != (24, concurrency, 1200):\n    raise SystemExit(f\"{root}: wrong population, concurrency or window\")\nif server[\"mem_fraction_static\"] != 0.86 or server[\"tp_size\"] != 4:\n    raise SystemExit(f\"{root}: wrong memory fraction or TP\")\nexpected_format = \"native\" if mode == \"native\" else \"remnant\"\nif server[\"dsv4_c4_cache_format\"] != expected_format:\n    raise SystemExit(f\"{root}: wrong cache format\")\nif not timing.get(\"complete\") or summary.get(\"instrumentation_errors\"):\n    raise SystemExit(f\"{root}: timing collection or instrumentation failed\")\nif rc != 0 and summary[\"valid\"]:\n    raise SystemExit(f\"{root}: unexpected launcher failure, rc={rc}\")\n\nprint(\"Cell complete:\",\n      \"valid=\", summary[\"valid\"],\n      \"SLO=\", summary[\"slo\"][\"status\"],\n      \"req/s=\", summary[\"request_throughput\"])\nPY_VALIDATE\n\n  bash scripts/local/lswb-row.sh \"$run\"\n  printf \"Results: %s\\n\" \"$run\"\n\n  [ \"$rc\" -eq 0 ] || overall_rc=1\ndone\n\nexit \"$overall_rc\"\n"
+        ],
+        "cwd": "/home/jovyan/winstonxcai/flash-optimizations",
+        "workload_key": "kernel-mf086-p24-c24-20261021_164327",
+        "created_at": "2026-10-21T09:09:02.698028+00:00",
+        "started_at": "2026-10-21T09:09:05.822104+00:00",
+        "finished_at": "2026-10-21T09:33:36.242711+00:00",
+        "gpu_count": 4,
+        "output_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/kernel-mf086-p24-c24-20261021_164327-gpuq",
+        "log_dir": "/var/lib/gpuq/jobs/job-20261021-090902-38c14db0"
+      },
+      "missing_files": [],
+      "summary_valid": true,
+      "slo": {
+        "basis": "All ready requests; invalid/no-output responses count as violations; unresolved cutoff requests bounded conservatively",
+        "metric": "ready_to_first_output",
+        "percentile": 90,
+        "ready_requests": 2231,
+        "right_censored": 0,
+        "status": "pass",
+        "threshold_ms": 10000.0,
+        "violations": 133,
+        "within_threshold": 2098
+      },
+      "counts": {
+        "attempted": 2231,
+        "completed_during_drain": 24,
+        "completed_in_window": 2207,
+        "completion_tokens": 332029,
+        "drain_timeouts": 0,
+        "failed": 14,
+        "not_started_due_to_duration": 2685,
+        "prompt_tokens": 312723651,
+        "ready_not_dispatched": 0,
+        "selected": 4916,
+        "successful": 2217,
+        "successful_in_window": 2193,
+        "users_completed": 31,
+        "users_selected": 92,
+        "users_started": 53
+      },
+      "failure_reasons": {
+        "missing_output_event": 14
+      },
+      "request_throughput": 1.8275,
+      "completion_token_throughput": 276.69083333333333
+    },
+    {
+      "mode": "kernel",
+      "repeat": 2,
+      "original_run": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/kernel-mf086-p24-c24-20261021_184122-1442878-repeat2/20261021_184518",
+      "job": {
+        "id": "job-20261021-104133-13fbd6ff",
+        "status": "succeeded",
+        "state": null,
+        "exit_code": 0,
+        "error": null,
+        "argv": [
+          "bash",
+          "-lc",
+          "export MODE=kernel PORT=30522 MASTER_PORT=29922 SWEEP_ID=20261021_184122-1442878-repeat2\n\nset -euo pipefail\n\nexport GIT_CONFIG_COUNT=4\nexport GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0=\"$PWD\"\nexport GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1=\"$PWD/third_party/sglang\"\nexport GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2=\"$PWD/third_party/flashmla\"\nexport GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3=\"$PWD/third_party/flashmla/csrc/cutlass\"\n\nexport GPUS=\"${CUDA_VISIBLE_DEVICES:?GPUQ did not assign GPUs}\"\nIFS=, read -r -a allocated <<< \"$GPUS\"\n[ \"${#allocated[@]}\" -eq 4 ] || {\n  echo \"Expected four assigned GPUs; got $GPUS\"\n  exit 1\n}\n\nexport SGLANG_ROOT_CT=\"/mnt/host_root$PWD/third_party/sglang\"\nexport SGLANG_PY=\"$SGLANG_ROOT_CT/python\"\nexport TP=4 MEM_FRAC=0.86 SERVER_SEED=20260919\nexport CHUNK=8192 MAX_RUN=256 CTX_LEN=1048576\nunset C4_KEEP_COUNT C4_LAYER_KEEP_COUNTS STORE_IMPLEMENTATION\nunset DECODE_CFG SERVER_PID_FILE_CT\nif [ \"$MODE\" = kernel ]; then\n  export C4_KEEP_COUNT=256\nfi\n\nexport REPLAY_DIR=/home/jovyan/wenyuhong/benchmarks\nexport REPLAY_DATASET=\"$REPLAY_DIR/datasets/h20-dsv4pro/longcodebench_openai\"\nexport REPLAY_MANIFEST=\"$REPLAY_DIR/cache/official-longswebench/longswebench-openai-v1.json\"\nexport REPLAY_RUNNER=\"$PWD/scripts/local/business_replay/runner.py\"\nexport REPLAY_ADAPTER=\"$PWD/scripts/local/business_replay/adapters/openai_sse.py\"\nexport REPLAY_SCHEDULER=request-slot-fifo\nexport REPLAY_SESSION_POPULATION=24\nexport REPLAY_DRAIN_TIMEOUT=120\nexport REPLAY_TTFT_SLO_MS=10000\n\nexport RESULTS_HOST=\"$PWD/results\"\nexport LOG_HOST=\"$PWD/logs/${MODE}-mf086-p24-sweep-${SWEEP_ID}\"\nexport REQUEST_METRICS_DIR=\"$LOG_HOST/request-metrics\"\nmkdir -p \"$LOG_HOST\"\n\npython3 scripts/sources.py \"$PWD\" > \"$LOG_HOST/source-manifest.json\"\ndocker inspect \"${CONTAINER:-remnant}\" --format \"{{.Image}}\" \\\n  > \"$LOG_HOST/image-id.txt\"\nprintf \"%s\\n\" \"$GPUS\" > \"$LOG_HOST/gpus.txt\"\nsha256sum scripts/local/serve.sh scripts/local/run-server.sh \\\n  scripts/local/bench-lswb.sh > \"$LOG_HOST/launcher-sha256.txt\"\n\ncleanup() {\n  rc=$?\n  trap - EXIT INT TERM\n  bash scripts/local/serve.sh \"$MODE\" stop || rc=1\n  exit \"$rc\"\n}\ntrap cleanup EXIT\ntrap \"exit 130\" INT\ntrap \"exit 143\" TERM\n\nbash scripts/local/serve.sh \"$MODE\"\n\noverall_rc=0\nshopt -s nullglob\n\nfor C in 24; do\n  tag=\"${MODE}-mf086-p24-c${C}-${SWEEP_ID}\"\n  printf \"\\nStarting %s\\n\" \"$tag\"\n\n  rc=0\n  bash scripts/local/bench-lswb.sh \"$tag\" \"$PORT\" \"$C\" 1200 || rc=$?\n\n  runs=(\"$RESULTS_HOST/lswb-replay/$tag\"/20*)\n  [ \"${#runs[@]}\" -gt 0 ] || {\n    echo \"Missing result directory for $tag\"\n    exit 1\n  }\n  run=\"${runs[${#runs[@]}-1]}\"\n\n  mkdir -p \"$run/server\"\n  cp \"$LOG_HOST/serve_${MODE}.log\" \\\n     \"$LOG_HOST/source-manifest.json\" \\\n     \"$LOG_HOST/image-id.txt\" \\\n     \"$LOG_HOST/gpus.txt\" \\\n     \"$LOG_HOST/launcher-sha256.txt\" \"$run/server/\"\n\n  python3 - \"$run\" \"$rc\" \"$C\" \"$MODE\" <<\"PY_VALIDATE\"\nimport json\nimport sys\nfrom pathlib import Path\n\nroot = Path(sys.argv[1])\nrc, concurrency = int(sys.argv[2]), int(sys.argv[3])\nmode = sys.argv[4]\n\ndef read(name):\n    path = root / name\n    if not path.is_file():\n        raise SystemExit(f\"Incomplete cell: missing {path}\")\n    return json.loads(path.read_text())\n\ndone = read(\"client/done.json\")\nsummary = read(\"client/summary.json\")\nmanifest = read(\"client/manifest.json\")\ntiming = read(\"request-timing-validation.json\")\nserver = read(\"server-info.json\")\n\nprotocol = \"business-request-slot-replay-v1\"\nif any(x.get(\"protocol\") != protocol for x in (done, summary, manifest)):\n    raise SystemExit(f\"{root}: wrong replay protocol\")\nreplay = manifest[\"replay\"]\nif (replay[\"session_population\"], replay[\"max_concurrency\"],\n        replay[\"max_duration_s\"]) != (24, concurrency, 1200):\n    raise SystemExit(f\"{root}: wrong population, concurrency or window\")\nif server[\"mem_fraction_static\"] != 0.86 or server[\"tp_size\"] != 4:\n    raise SystemExit(f\"{root}: wrong memory fraction or TP\")\nexpected_format = \"native\" if mode == \"native\" else \"remnant\"\nif server[\"dsv4_c4_cache_format\"] != expected_format:\n    raise SystemExit(f\"{root}: wrong cache format\")\nif not timing.get(\"complete\") or summary.get(\"instrumentation_errors\"):\n    raise SystemExit(f\"{root}: timing collection or instrumentation failed\")\nif rc != 0 and summary[\"valid\"]:\n    raise SystemExit(f\"{root}: unexpected launcher failure, rc={rc}\")\n\nprint(\"Cell complete:\",\n      \"valid=\", summary[\"valid\"],\n      \"SLO=\", summary[\"slo\"][\"status\"],\n      \"req/s=\", summary[\"request_throughput\"])\nPY_VALIDATE\n\n  bash scripts/local/lswb-row.sh \"$run\"\n  printf \"Results: %s\\n\" \"$run\"\n\n  [ \"$rc\" -eq 0 ] || overall_rc=1\ndone\n\nexit \"$overall_rc\"\n"
+        ],
+        "cwd": "/home/jovyan/winstonxcai/flash-optimizations",
+        "workload_key": "kernel-mf086-p24-c24-20261021_184122-1442878-repeat2",
+        "created_at": "2026-10-21T10:41:33.366467+00:00",
+        "started_at": "2026-10-21T10:41:38.036571+00:00",
+        "finished_at": "2026-10-21T11:05:48.069593+00:00",
+        "gpu_count": 4,
+        "output_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/kernel-mf086-p24-c24-20261021_184122-1442878-repeat2-gpuq",
+        "log_dir": "/var/lib/gpuq/jobs/job-20261021-104133-13fbd6ff"
+      },
+      "missing_files": [],
+      "summary_valid": true,
+      "slo": {
+        "basis": "All ready requests; invalid/no-output responses count as violations; unresolved cutoff requests bounded conservatively",
+        "metric": "ready_to_first_output",
+        "percentile": 90,
+        "ready_requests": 2214,
+        "right_censored": 0,
+        "status": "pass",
+        "threshold_ms": 10000.0,
+        "violations": 126,
+        "within_threshold": 2088
+      },
+      "counts": {
+        "attempted": 2214,
+        "completed_during_drain": 24,
+        "completed_in_window": 2190,
+        "completion_tokens": 326901,
+        "drain_timeouts": 0,
+        "failed": 15,
+        "not_started_due_to_duration": 2702,
+        "prompt_tokens": 310214738,
+        "ready_not_dispatched": 0,
+        "selected": 4916,
+        "successful": 2199,
+        "successful_in_window": 2175,
+        "users_completed": 30,
+        "users_selected": 92,
+        "users_started": 52
+      },
+      "failure_reasons": {
+        "missing_output_event": 15
+      },
+      "request_throughput": 1.8125,
+      "completion_token_throughput": 272.4175
+    },
+    {
+      "mode": "kernel",
+      "repeat": 3,
+      "original_run": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/kernel-mf086-p24-c24-20261021_184122-1442878-repeat3/20261021_190936",
+      "job": {
+        "id": "job-20261021-104133-d359d303",
+        "status": "succeeded",
+        "state": null,
+        "exit_code": 0,
+        "error": null,
+        "argv": [
+          "bash",
+          "-lc",
+          "export MODE=kernel PORT=30524 MASTER_PORT=29924 SWEEP_ID=20261021_184122-1442878-repeat3\n\nset -euo pipefail\n\nexport GIT_CONFIG_COUNT=4\nexport GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0=\"$PWD\"\nexport GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1=\"$PWD/third_party/sglang\"\nexport GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2=\"$PWD/third_party/flashmla\"\nexport GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3=\"$PWD/third_party/flashmla/csrc/cutlass\"\n\nexport GPUS=\"${CUDA_VISIBLE_DEVICES:?GPUQ did not assign GPUs}\"\nIFS=, read -r -a allocated <<< \"$GPUS\"\n[ \"${#allocated[@]}\" -eq 4 ] || {\n  echo \"Expected four assigned GPUs; got $GPUS\"\n  exit 1\n}\n\nexport SGLANG_ROOT_CT=\"/mnt/host_root$PWD/third_party/sglang\"\nexport SGLANG_PY=\"$SGLANG_ROOT_CT/python\"\nexport TP=4 MEM_FRAC=0.86 SERVER_SEED=20260919\nexport CHUNK=8192 MAX_RUN=256 CTX_LEN=1048576\nunset C4_KEEP_COUNT C4_LAYER_KEEP_COUNTS STORE_IMPLEMENTATION\nunset DECODE_CFG SERVER_PID_FILE_CT\nif [ \"$MODE\" = kernel ]; then\n  export C4_KEEP_COUNT=256\nfi\n\nexport REPLAY_DIR=/home/jovyan/wenyuhong/benchmarks\nexport REPLAY_DATASET=\"$REPLAY_DIR/datasets/h20-dsv4pro/longcodebench_openai\"\nexport REPLAY_MANIFEST=\"$REPLAY_DIR/cache/official-longswebench/longswebench-openai-v1.json\"\nexport REPLAY_RUNNER=\"$PWD/scripts/local/business_replay/runner.py\"\nexport REPLAY_ADAPTER=\"$PWD/scripts/local/business_replay/adapters/openai_sse.py\"\nexport REPLAY_SCHEDULER=request-slot-fifo\nexport REPLAY_SESSION_POPULATION=24\nexport REPLAY_DRAIN_TIMEOUT=120\nexport REPLAY_TTFT_SLO_MS=10000\n\nexport RESULTS_HOST=\"$PWD/results\"\nexport LOG_HOST=\"$PWD/logs/${MODE}-mf086-p24-sweep-${SWEEP_ID}\"\nexport REQUEST_METRICS_DIR=\"$LOG_HOST/request-metrics\"\nmkdir -p \"$LOG_HOST\"\n\npython3 scripts/sources.py \"$PWD\" > \"$LOG_HOST/source-manifest.json\"\ndocker inspect \"${CONTAINER:-remnant}\" --format \"{{.Image}}\" \\\n  > \"$LOG_HOST/image-id.txt\"\nprintf \"%s\\n\" \"$GPUS\" > \"$LOG_HOST/gpus.txt\"\nsha256sum scripts/local/serve.sh scripts/local/run-server.sh \\\n  scripts/local/bench-lswb.sh > \"$LOG_HOST/launcher-sha256.txt\"\n\ncleanup() {\n  rc=$?\n  trap - EXIT INT TERM\n  bash scripts/local/serve.sh \"$MODE\" stop || rc=1\n  exit \"$rc\"\n}\ntrap cleanup EXIT\ntrap \"exit 130\" INT\ntrap \"exit 143\" TERM\n\nbash scripts/local/serve.sh \"$MODE\"\n\noverall_rc=0\nshopt -s nullglob\n\nfor C in 24; do\n  tag=\"${MODE}-mf086-p24-c${C}-${SWEEP_ID}\"\n  printf \"\\nStarting %s\\n\" \"$tag\"\n\n  rc=0\n  bash scripts/local/bench-lswb.sh \"$tag\" \"$PORT\" \"$C\" 1200 || rc=$?\n\n  runs=(\"$RESULTS_HOST/lswb-replay/$tag\"/20*)\n  [ \"${#runs[@]}\" -gt 0 ] || {\n    echo \"Missing result directory for $tag\"\n    exit 1\n  }\n  run=\"${runs[${#runs[@]}-1]}\"\n\n  mkdir -p \"$run/server\"\n  cp \"$LOG_HOST/serve_${MODE}.log\" \\\n     \"$LOG_HOST/source-manifest.json\" \\\n     \"$LOG_HOST/image-id.txt\" \\\n     \"$LOG_HOST/gpus.txt\" \\\n     \"$LOG_HOST/launcher-sha256.txt\" \"$run/server/\"\n\n  python3 - \"$run\" \"$rc\" \"$C\" \"$MODE\" <<\"PY_VALIDATE\"\nimport json\nimport sys\nfrom pathlib import Path\n\nroot = Path(sys.argv[1])\nrc, concurrency = int(sys.argv[2]), int(sys.argv[3])\nmode = sys.argv[4]\n\ndef read(name):\n    path = root / name\n    if not path.is_file():\n        raise SystemExit(f\"Incomplete cell: missing {path}\")\n    return json.loads(path.read_text())\n\ndone = read(\"client/done.json\")\nsummary = read(\"client/summary.json\")\nmanifest = read(\"client/manifest.json\")\ntiming = read(\"request-timing-validation.json\")\nserver = read(\"server-info.json\")\n\nprotocol = \"business-request-slot-replay-v1\"\nif any(x.get(\"protocol\") != protocol for x in (done, summary, manifest)):\n    raise SystemExit(f\"{root}: wrong replay protocol\")\nreplay = manifest[\"replay\"]\nif (replay[\"session_population\"], replay[\"max_concurrency\"],\n        replay[\"max_duration_s\"]) != (24, concurrency, 1200):\n    raise SystemExit(f\"{root}: wrong population, concurrency or window\")\nif server[\"mem_fraction_static\"] != 0.86 or server[\"tp_size\"] != 4:\n    raise SystemExit(f\"{root}: wrong memory fraction or TP\")\nexpected_format = \"native\" if mode == \"native\" else \"remnant\"\nif server[\"dsv4_c4_cache_format\"] != expected_format:\n    raise SystemExit(f\"{root}: wrong cache format\")\nif not timing.get(\"complete\") or summary.get(\"instrumentation_errors\"):\n    raise SystemExit(f\"{root}: timing collection or instrumentation failed\")\nif rc != 0 and summary[\"valid\"]:\n    raise SystemExit(f\"{root}: unexpected launcher failure, rc={rc}\")\n\nprint(\"Cell complete:\",\n      \"valid=\", summary[\"valid\"],\n      \"SLO=\", summary[\"slo\"][\"status\"],\n      \"req/s=\", summary[\"request_throughput\"])\nPY_VALIDATE\n\n  bash scripts/local/lswb-row.sh \"$run\"\n  printf \"Results: %s\\n\" \"$run\"\n\n  [ \"$rc\" -eq 0 ] || overall_rc=1\ndone\n\nexit \"$overall_rc\"\n"
+        ],
+        "cwd": "/home/jovyan/winstonxcai/flash-optimizations",
+        "workload_key": "kernel-mf086-p24-c24-20261021_184122-1442878-repeat3",
+        "created_at": "2026-10-21T10:41:33.538333+00:00",
+        "started_at": "2026-10-21T11:06:15.629979+00:00",
+        "finished_at": "2026-10-21T11:30:11.077676+00:00",
+        "gpu_count": 4,
+        "output_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/kernel-mf086-p24-c24-20261021_184122-1442878-repeat3-gpuq",
+        "log_dir": "/var/lib/gpuq/jobs/job-20261021-104133-d359d303"
+      },
+      "missing_files": [],
+      "summary_valid": true,
+      "slo": {
+        "basis": "All ready requests; invalid/no-output responses count as violations; unresolved cutoff requests bounded conservatively",
+        "metric": "ready_to_first_output",
+        "percentile": 90,
+        "ready_requests": 2230,
+        "right_censored": 0,
+        "status": "pass",
+        "threshold_ms": 10000.0,
+        "violations": 122,
+        "within_threshold": 2108
+      },
+      "counts": {
+        "attempted": 2230,
+        "completed_during_drain": 24,
+        "completed_in_window": 2206,
+        "completion_tokens": 332361,
+        "drain_timeouts": 0,
+        "failed": 15,
+        "not_started_due_to_duration": 2686,
+        "prompt_tokens": 312435826,
+        "ready_not_dispatched": 0,
+        "selected": 4916,
+        "successful": 2215,
+        "successful_in_window": 2191,
+        "users_completed": 30,
+        "users_selected": 92,
+        "users_started": 54
+      },
+      "failure_reasons": {
+        "missing_output_event": 15
+      },
+      "request_throughput": 1.8258333333333334,
+      "completion_token_throughput": 276.9675
+    }
+  ]
+}

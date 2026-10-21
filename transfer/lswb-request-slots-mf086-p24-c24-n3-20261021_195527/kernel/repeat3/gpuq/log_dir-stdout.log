@@ -1,0 +1,81 @@
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "53792072b241214ba4ec84bf935e66ec6445db4c"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang",
+    "expected_commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla",
+    "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "override": false,
+    "dirty": false
+  }
+}
+Packed C4 profile: PackedProfile(default_count=256, overrides=(), compression_ratios=(0, 0, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 0, 0, 0))
+Request timing source: /mnt/host_root/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang/python/sglang/srt/observability/req_time_stats.py
+== serve kernel on gpus=0,1,2,3 port=30524 master=29924 (log: /home/jovyan/winstonxcai/flash-optimizations/logs/kernel-mf086-p24-sweep-20261021_184122-1442878-repeat3/serve_kernel.log) ==
+launched pid 132420
+  health OK after ~165s
+  pool(max_total_num_tokens)=4275712
+  max_total_num_tokens=4275712
+  is fired up and ready
+serve kernel UP on port 30524 -- leave running, tear down with: scripts/local/serve.sh kernel stop
+
+Starting kernel-mf086-p24-c24-20261021_184122-1442878-repeat3
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "53792072b241214ba4ec84bf935e66ec6445db4c"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang",
+    "expected_commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla",
+    "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "override": false,
+    "dirty": false
+  }
+}
+[lswb] decode graph preflight OK: c24, captured sizes=[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 15, 16, 18, 20, 24, 28, 32, 34, 40, 48, 56, 64, 68, 80, 96, 112, 120, 136]
+[lswb] waiting for idle server and flushing prefix cache
+Cache flushed.
+Please check backend logs for more details. (When there are running or waiting requests, the operation will not be performed.)
+== lswb replay tag=kernel-mf086-p24-c24-20261021_184122-1442878-repeat3 port=30524 c24 @ 1200s -> /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/kernel-mf086-p24-c24-20261021_184122-1442878-repeat3/20261021_190936 ==
+[lswb] request timing: 2230 records, 2230 valid, complete=True
+[lswb] client rc=0
+==== client.log ====
+{"attempted":2230,"completed_during_drain":24,"completed_in_window":2206,"completion_tokens":332361,"drain_timeouts":0,"failed":15,"not_started_due_to_duration":2686,"prompt_tokens":312435826,"ready_not_dispatched":0,"selected":4916,"successful":2215,"successful_in_window":2191,"users_completed":30,"users_selected":92,"users_started":54,"valid":true}
+[lswb] artifacts at /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/kernel-mf086-p24-c24-20261021_184122-1442878-repeat3/20261021_190936
+Cell complete: valid= True SLO= pass req/s= 1.8258333333333334
+dir=20261021_190936
+ttft_basis=ready_to_first_output slo_status=pass threshold_ms=10000.0 censored=0
+slo=PASS valid=True done=2191 ttft_p90=8.77s e2e_p90=19.81s l1=0.9734 l2=0.0000 uncached=8299890 succ=0.9933
+Results: /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/kernel-mf086-p24-c24-20261021_184122-1442878-repeat3/20261021_190936
+stopped kernel server on port 30524
