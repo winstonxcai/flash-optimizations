@@ -1,0 +1,88 @@
+{
+  "status": "Transferred evidence; pending benchmark review",
+  "protocol": "business-request-slot-replay-v1",
+  "memory_fraction": 0.86,
+  "session_population": 24,
+  "concurrency": 24,
+  "requested_duration_s": 1200,
+  "runs": [
+    {
+      "mode": "native",
+      "original_run": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/native-mf086-p24-c24-20261021_164327/20261021_170358",
+      "job_id": "job-20261021-090031-64772e01",
+      "job_status": "failed",
+      "exit_code": 1,
+      "summary_valid": false,
+      "slo": {
+        "basis": "All ready requests; invalid/no-output responses count as violations; unresolved cutoff requests bounded conservatively",
+        "metric": "ready_to_first_output",
+        "percentile": 90,
+        "ready_requests": 1311,
+        "right_censored": 0,
+        "status": "fail",
+        "threshold_ms": 10000.0,
+        "violations": 134,
+        "within_threshold": 1177
+      },
+      "counts": {
+        "attempted": 1311,
+        "completed_during_drain": 24,
+        "completed_in_window": 1287,
+        "completion_tokens": 182074,
+        "drain_timeouts": 0,
+        "failed": 16,
+        "not_started_due_to_duration": 3605,
+        "prompt_tokens": 176617898,
+        "ready_not_dispatched": 0,
+        "selected": 4916,
+        "successful": 1295,
+        "successful_in_window": 1271,
+        "users_completed": 16,
+        "users_selected": 92,
+        "users_started": 39
+      },
+      "request_throughput": 1.0591666666666666,
+      "completion_token_throughput": 151.72833333333332,
+      "missing_provenance": []
+    },
+    {
+      "mode": "kernel",
+      "original_run": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/kernel-mf086-p24-c24-20261021_164327/20261021_171250",
+      "job_id": "job-20261021-090902-38c14db0",
+      "job_status": "succeeded",
+      "exit_code": 0,
+      "summary_valid": true,
+      "slo": {
+        "basis": "All ready requests; invalid/no-output responses count as violations; unresolved cutoff requests bounded conservatively",
+        "metric": "ready_to_first_output",
+        "percentile": 90,
+        "ready_requests": 2231,
+        "right_censored": 0,
+        "status": "pass",
+        "threshold_ms": 10000.0,
+        "violations": 133,
+        "within_threshold": 2098
+      },
+      "counts": {
+        "attempted": 2231,
+        "completed_during_drain": 24,
+        "completed_in_window": 2207,
+        "completion_tokens": 332029,
+        "drain_timeouts": 0,
+        "failed": 14,
+        "not_started_due_to_duration": 2685,
+        "prompt_tokens": 312723651,
+        "ready_not_dispatched": 0,
+        "selected": 4916,
+        "successful": 2217,
+        "successful_in_window": 2193,
+        "users_completed": 31,
+        "users_selected": 92,
+        "users_started": 53
+      },
+      "request_throughput": 1.8275,
+      "completion_token_throughput": 276.69083333333333,
+      "missing_provenance": []
+    }
+  ]
+}
