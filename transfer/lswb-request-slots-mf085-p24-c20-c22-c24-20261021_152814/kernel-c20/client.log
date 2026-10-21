@@ -1,0 +1,1 @@
+{"attempted":2170,"completed_during_drain":20,"completed_in_window":2150,"completion_tokens":322876,"drain_timeouts":0,"failed":15,"not_started_due_to_duration":2746,"prompt_tokens":304245417,"ready_not_dispatched":4,"selected":4916,"successful":2155,"successful_in_window":2135,"users_completed":29,"users_selected":92,"users_started":53,"valid":true}

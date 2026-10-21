@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "complete": true,
+  "server_seed": 20260919,
+  "mode": "native",
+  "records": 995,
+  "valid_timing_records": 995,
+  "client_successful": 984,
+  "errors": [],
+  "coverage_basis": "count lower bound; not a verified per-request client/server join",
+  "client_join_verified": false,
+  "partial": false
+}
