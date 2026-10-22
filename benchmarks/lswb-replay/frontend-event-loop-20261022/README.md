@@ -105,6 +105,73 @@ python -m unittest discover \
   -s benchmarks/lswb-replay/frontend-event-loop-20261022 -p probe.py -v
 ```
 
+## Next diagnostic: locate first-output residence time
+
+Question: does the C40 Packed Kernel delay accumulate before the scheduler
+emits output, inside detokenization, or between detokenizer send and API receipt?
+The existing C40 HiCache records cannot distinguish these stages. Overlap with
+API preparation is not a causal attribution, especially at high API occupancy.
+
+- **Mechanism changed:** timestamps only, enabled at server startup with
+  `FRONTEND_DIAGNOSTICS=1` through the local launcher. Default is disabled.
+  No attention, packing, scheduling, cache, request-body or success-policy change.
+- **Frozen matrix:** Native and Packed Kernel-256; C40, TP4, MF0.88,
+  HiCache ratio 2, write-through/kernel/layer-first, seed 20260919,
+  chunk 8192, original session-owned LongSWE replay, one 900-second run each.
+  Analyze the whole run and the cohort received after 180 seconds separately.
+- **Baseline:** reuse the saved uninstrumented C40 records for context; this
+  diagnostic is not another throughput acceptance result or a paired speedup.
+  Both diagnostic modes use the same committed Python source and existing
+  image; native extensions are unchanged. Record the actual image ID.
+- **Source isolation:** parent worktree `frontend-first-output`, based on
+  `2b3e325`; fork branch `codex/frontend-first-output`, based on `921cc2e03f61`.
+  Shared experiment checkout and its newer microbenchmark changes are preserved.
+- **Boundaries:** scheduler first batch send-start (before payload encoding),
+  detokenizer receive, detokenizer forward-start, API socket receive, and API
+  handler entry. API request state latches the first packet so later/final
+  scheduler snapshots cannot overwrite it. These are CPU boundaries, not CUDA
+  completion or visible SSE content timestamps. Existing `first_output_ts`
+  retains its original meaning.
+- **Exact join:** the adapter captures the existing SSE `id`, matching exported
+  metrics `id`. Missing/unstable IDs fail diagnostic coverage, without changing
+  response-validity rules. Raw prompts are not copied into diagnostic records.
+- **Acceptance:** local transport/serialization/adapter checks, then real module
+  CPU checks inside the VDI image before GPUQ allocation. GPU records must have
+  unique IDs and complete ordered boundary stamps for joined completed requests;
+  report missing coverage and failed responses separately. Infer no missing
+  boundary. Require at least 200 joined post-180-second records per mode before
+  drawing a mode comparison; otherwise the decision is inconclusive.
+- **Stop:** two jobs only, each requests four GPUs from GPUQ. No automatic GPU
+  retry, no image rebuild, no Modal launch. Jobs own their server and stop it on
+  exit. A failed preflight consumes no GPU allocation. GPUQ queue time is not
+  part of the run window.
+- **Rollback:** unset `FRONTEND_DIAGNOSTICS`; the new timestamp path is disabled.
+  Keep the instrumentation until this attribution decision is recorded. Any
+  threading/batching optimization needs a separate correctness and timing gate.
+
+`diagnose.sh` owns this experiment's CPU preflight and GPUQ submission and calls
+the existing `serve.sh` / `bench-lswb.sh`; it does not replace the replay runner.
+Its output stays under ignored `logs/frontend-first-output-*` and normal
+`results/lswb-replay/` directories. It requires the existing local dataset and
+manifest via `REPLAY_DATASET` and `REPLAY_MANIFEST`, and a committed clean source.
+
+On the VDI, after pulling the committed parent and synchronizing clean forks:
+
+```bash
+export REPLAY_DATASET=/home/jovyan/wenyuhong/benchmarks/datasets/h20-dsv4pro/longcodebench_openai
+export REPLAY_MANIFEST=/home/jovyan/wenyuhong/benchmarks/cache/official-longswebench/longswebench-openai-v1.json
+bash benchmarks/lswb-replay/frontend-event-loop-20261022/diagnose.sh preflight
+bash benchmarks/lswb-replay/frontend-event-loop-20261022/diagnose.sh submit
+```
+
+Each leg saves `first-output-pipeline.json` next to the normal replay artifacts.
+It uses `first_output_pipeline_diagnostics` in the existing store/decode analyzer,
+keeps failed-response identity diagnostics, and checks the post-180-second sample
+gate separately from response validity and the TTFT SLO. The CPU probe suite now
+also covers timestamp placement/transport through both IPC formats and worker
+loops; the original mechanism measurements in `results.json` retain their original
+source hashes and are not relabeled as instrumented runs.
+
 ## Evidence and rollback
 
 - Canonical aggregate record: `results.json`; includes both invocation commands,

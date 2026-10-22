@@ -1,7 +1,7 @@
 """Reproduce four-run Packed store/decode ablation summaries. Author: Winston Cai.
 
-Consumes the retained metadata only. Server stages are wall-clock spans and
-cannot be joined to client requests because their request IDs differ.
+Consumes retained metadata only. Historical runs lack a verified client/server
+join; instrumented runs can use the explicit first-output pipeline diagnostic.
 """
 from __future__ import annotations
 
@@ -121,6 +121,130 @@ def diagnostic_associations(client: list[dict], server: list[dict]) -> dict:
             }
         result['cohorts'][name] = groups
     return result
+
+
+def first_output_pipeline_diagnostics(
+    client: list[dict], server: list[dict], replay_start: float,
+) -> dict:
+    """Join captured SSE IDs to server metrics and validate first-output spans.
+
+    Every successful client response requires a unique, unambiguous server ID
+    and all pipeline boundaries. Failed-response identity diagnostics remain
+    visible but do not substitute for successful-response coverage. Unmatched
+    server records may belong to failed responses and are counted separately.
+    The after-180s cohort uses server receive time, matching server diagnostics.
+    No missing timestamp or ID is inferred from token counts or nearby events.
+    """
+    finite = lambda value: (
+        isinstance(value, (int, float)) and not isinstance(value, bool)
+        and math.isfinite(value)
+    )
+    if not finite(replay_start) or replay_start <= 0:
+        raise ValueError('First-output pipeline requires a finite positive replay_start')
+
+    errors: list[str] = []
+    identity_errors: list[str] = []
+    client_identity_diagnostics = []
+    client_groups, server_groups = defaultdict(list), defaultdict(list)
+    successful = [record for record in client if record.get('valid') is True]
+    for index, record in enumerate(client):
+        request_id = record.get('server_request_id')
+        diagnostic = record.get('server_request_id_error')
+        if diagnostic is not None or not isinstance(request_id, str) or not request_id.strip():
+            message = f'Client row {index} ({record.get("request_id")!r}): ' + (
+                str(diagnostic) if diagnostic is not None else 'missing_or_invalid_server_request_id'
+            )
+            client_identity_diagnostics.append(message)
+            if record.get('valid') is True:
+                identity_errors.append(message)
+        if isinstance(request_id, str) and request_id.strip():
+            client_groups[request_id].append(record)
+    for index, record in enumerate(server):
+        request_id = record.get('id')
+        if not isinstance(request_id, str) or not request_id.strip():
+            identity_errors.append(f'Server row {index}: missing_or_invalid_id')
+        else:
+            server_groups[request_id].append(record)
+    for source, groups in (('client', client_groups), ('server', server_groups)):
+        for request_id, rows in groups.items():
+            if len(rows) != 1:
+                identity_errors.append(f'Duplicate {source} server ID {request_id!r}: {len(rows)} rows')
+
+    matched = []
+    for index, record in enumerate(client):
+        if record.get('valid') is not True:
+            continue
+        request_id = record.get('server_request_id')
+        if (record.get('server_request_id_error') is not None
+                or not isinstance(request_id, str) or not request_id.strip()
+                or len(client_groups[request_id]) != 1):
+            continue
+        rows = server_groups.get(request_id, [])
+        if not rows:
+            identity_errors.append(f'Successful client row {index}: no server record for {request_id!r}')
+        elif len(rows) == 1:
+            matched.append(rows[0])
+    errors.extend(identity_errors)
+    if not successful:
+        errors.append('No successful client responses for first-output pipeline diagnostics')
+
+    boundaries = (
+        'prefill_finished_time', 'first_output_send_ts', 'detokenizer_recv_ts',
+        'detokenizer_send_ts', 'frontend_recv_ts', 'frontend_handle_ts', 'first_output_ts',
+    )
+    stage_names = (
+        'prefill_to_send_s', 'send_to_detokenizer_recv_s', 'detokenizer_recv_to_send_s',
+        'detokenizer_send_to_frontend_recv_s', 'frontend_recv_to_handle_s',
+        'frontend_handle_to_first_output_s',
+    )
+    valid_rows = []
+    for record in matched:
+        request_id = record['id']
+        required = ('request_received_ts',) + boundaries
+        invalid = [name for name in required
+                   if not finite(record.get(name)) or record[name] <= 0]
+        if invalid:
+            errors.append(f'Server {request_id!r}: missing/nonfinite/nonpositive boundaries {invalid}')
+            continue
+        times = [record[name] for name in required]
+        if any(later < earlier for earlier, later in zip(times, times[1:])):
+            errors.append(f'Server {request_id!r}: out-of-order first-output pipeline boundaries')
+            continue
+        valid_rows.append(record)
+
+    cohorts = {}
+    for name, rows in (
+        ('all', valid_rows),
+        ('after_180s', [record for record in valid_rows
+                        if record['request_received_ts'] >= replay_start + 180]),
+    ):
+        stages = {}
+        if rows:
+            for stage, earlier, later in zip(stage_names, boundaries, boundaries[1:]):
+                stages[stage] = stats([record[later] - record[earlier] for record in rows])
+            stages['post_prefill_to_first_output_s'] = stats([
+                record['first_output_ts'] - record['prefill_finished_time'] for record in rows
+            ])
+        cohorts[name] = {'count': len(rows), 'stages': stages}
+    return {
+        'valid': not errors,
+        'id_verified': bool(successful) and not identity_errors and len(matched) == len(successful),
+        'basis': 'Exact captured SSE server_request_id equals server metrics id; no inferred joins',
+        'cohort_basis': 'Successful exact-ID joins; after_180s uses server request_received_ts',
+        'errors': errors,
+        'client_identity_diagnostics': client_identity_diagnostics,
+        'coverage': {
+            'client_records': len(client),
+            'successful_client_records': len(successful),
+            'client_records_with_server_id': sum(map(len, client_groups.values())),
+            'server_records': len(server),
+            'matched_successful': len(matched),
+            'timing_valid_successful': len(valid_rows),
+            'unmatched_successful': len(successful) - len(matched),
+            'unmatched_server_records': len(server) - len(matched),
+        },
+        'cohorts': cohorts,
+    }
 
 
 def fixed_store_diagnostics(responses: dict[str, dict]) -> dict:

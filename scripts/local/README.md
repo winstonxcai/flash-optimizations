@@ -633,6 +633,13 @@ timestamps, duplicate IDs, exporter errors, or insufficient record counts.
 Count coverage is a lower bound; it does not verify the client/server ID join.
 Keep the client's raw request records to match OpenAI response IDs when available.
 
+For first-output attribution, set `FRONTEND_DIAGNOSTICS=1` together with a fresh
+`REQUEST_METRICS_DIR` before `serve.sh`. The opt-in Python hooks export scheduler
+send-start, detokenizer receive/forward-start, and API receive/handler boundaries;
+the adapter records the existing SSE request ID for exact joins. No scheduler or
+kernel policy changes. The scoped CPU preflight and two-mode GPUQ diagnostic are
+documented in the [experiment record](../../benchmarks/lswb-replay/frontend-event-loop-20261022/README.md#next-diagnostic-locate-first-output-residence-time).
+
 With metrics enabled, the existing exporter supplies `queue_time`,
 `forward_entry_time`, `prefill_finished_time`, `request_received_ts`,
 `request_finished_ts`, and token/cache counts. `first_output_ts` records the

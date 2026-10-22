@@ -4,7 +4,7 @@ Projects can copy this adapter or provide a module with the same
 ``validate_server`` and ``send_request`` functions when their wire protocol or
 payload options differ.
 
-Author: Winston Cai. (Optional queue-inclusive replay timing.)
+Author: Winston Cai. (Replay timing and diagnostic server-request identity.)
 """
 
 from __future__ import annotations
@@ -141,6 +141,8 @@ def _stream_completion(
     done_seen = False
     status: int | None = None
     errors: list[str] = []
+    server_request_id: str | None = None
+    server_request_id_error: str | None = None
     cached_tokens_details: dict[str, Any] | None = None
     response_hash = hashlib.sha256()
     url = options.get("chat_path", "/v1/chat/completions")
@@ -180,6 +182,19 @@ def _stream_completion(
                     if not isinstance(data, dict):
                         errors.append("json_event_not_object")
                         continue
+                    # A stable response ID permits an exact server-metrics join
+                    # without modifying the measured request. Usage-only events
+                    # may omit it. Join diagnostics do not change response validity.
+                    event_request_id = data.get("id")
+                    if isinstance(event_request_id, str) and event_request_id.strip():
+                        if server_request_id is None:
+                            server_request_id = event_request_id
+                        elif event_request_id != server_request_id:
+                            server_request_id_error = "inconsistent_server_request_id"
+                    elif event_request_id is not None:
+                        server_request_id_error = (
+                            server_request_id_error or "invalid_server_request_id"
+                        )
                     if data.get("error") is not None:
                         errors.append(f"error_event:{data['error']!r}")
                     event_cache_details = _cached_tokens_details(data)
@@ -222,6 +237,8 @@ def _stream_completion(
     if first_output is not None and completion_tokens is not None and completion_tokens > 1:
         tpot_ms = (ended - first_output) * 1_000 / (completion_tokens - 1)
     body_hash = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    if server_request_id is None and server_request_id_error is None:
+        server_request_id_error = "missing_server_request_id"
     result = {
         "status": status,
         "valid": not errors,
@@ -237,6 +254,8 @@ def _stream_completion(
         "cached_tokens_details_status": cached_tokens_details_status,
         "request_body_sha256": body_hash,
         "response_stream_sha256": response_hash.hexdigest(),
+        "server_request_id": server_request_id if server_request_id_error is None else None,
+        "server_request_id_error": server_request_id_error,
     }
     if options.get("capture_client_timing"):
         # CPU workers on this host share the monotonic clock. The runner turns

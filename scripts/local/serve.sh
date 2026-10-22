@@ -20,7 +20,7 @@
 #
 # Env overrides (all optional): PORT, GPUS, MASTER_PORT, TP, DECODE_CFG,
 # MEM_FRAC, CTX_LEN, MAX_RUN, CHUNK, SERVER_SEED, REQUEST_METRICS_DIR,
-# C4_KEEP_COUNT, C4_LAYER_KEEP_COUNTS, HICACHE_RATIO (positive CPU-L2/device
+# C4_KEEP_COUNT, C4_LAYER_KEEP_COUNTS, FRONTEND_DIAGNOSTICS (0 or 1), HICACHE_RATIO (positive CPU-L2/device
 # pool ratio; unset disables HiCache). Boot log:
 #   <LOG_HOST>/serve_<native|triton|kernel>.log
 # Server is left RUNNING; use "serve.sh <mode> stop" to tear it down.
@@ -59,6 +59,25 @@ if [ "$ACTION" = stop ]; then
 fi
 
 check_sources || exit 1
+
+case "${FRONTEND_DIAGNOSTICS:-0}" in
+  0|1) ;;
+  *) echo "FRONTEND_DIAGNOSTICS must be 0 or 1" >&2; exit 2 ;;
+esac
+if [ "${FRONTEND_DIAGNOSTICS:-0}" = 1 ]; then
+  [ -n "${REQUEST_METRICS_DIR:-}" ] || {
+    echo "FRONTEND_DIAGNOSTICS=1 requires a fresh REQUEST_METRICS_DIR" >&2; exit 2;
+  }
+  docker exec -e "PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT" \
+    -e SGLANG_FRONTEND_DIAGNOSTICS=1 "$CONTAINER" python3 -c '
+from sglang.srt.observability.req_time_stats import APIServerReqTimeStats, SchedulerReqTimeStats
+api = APIServerReqTimeStats()
+stats = SchedulerReqTimeStats(first_output_send_time=1.0, detokenizer_recv_time=2.0, detokenizer_send_time=3.0)
+api.record_frontend_first_output(stats, 4.0, 5.0)
+assert "frontend_recv_ts" in api.convert_to_output_meta_info(), "mounted source lacks frontend diagnostics"
+assert "first_output_send_time" in stats.__getstate__(), "diagnostic IPC timing is missing"
+' || exit 1
+fi
 
 if [ -n "${HICACHE_RATIO:-}" ]; then
   [[ "$HICACHE_RATIO" =~ ^[0-9]+([.][0-9]+)?$ && -n "${HICACHE_RATIO//[.0]/}" ]] || {
@@ -181,7 +200,7 @@ echo "== serve $MODE on gpus=$GPUS port=$PORT master=$MASTER_PORT (log: $SERVE_L
 ct_script "$TREE" "$GPUS" "$MASTER_PORT" "$MODEL_NAME" "$TP" "$MEM_FRAC" \
   "$CTX_LEN" "$MAX_RUN" "$CHUNK" "$DECODE_CFG" "$SGLANG_PY" "$REPO_CT" \
   "$MODE" "$MODEL_CT" "$PORT" "$SERVE_LOG_CT" "$SERVER_PID_FILE_CT" "$NSYS_OUTPUT_CT" "${NSYS_GRAPH_TRACE:-node}" \
-  "${SERVER_SEED:-}" "$REQUEST_METRICS_DIR_CT" "${STORE_IMPLEMENTATION:-}" "${C4_KEEP_COUNT:-}" "${C4_LAYER_KEEP_COUNTS:-}" "${HICACHE_RATIO:-}" <<'BASH'
+  "${SERVER_SEED:-}" "$REQUEST_METRICS_DIR_CT" "${STORE_IMPLEMENTATION:-}" "${C4_KEEP_COUNT:-}" "${C4_LAYER_KEEP_COUNTS:-}" "${HICACHE_RATIO:-}" "${FRONTEND_DIAGNOSTICS:-0}" <<'BASH'
 set -u
 tree=$1
 gpus=$2
@@ -208,6 +227,7 @@ store_implementation=${22}
 c4_keep_count=${23}
 c4_layer_keep_counts=${24}
 hicache_ratio=${25}
+frontend_diagnostics=${26}
 
 cd -- "$tree"
 export CUDA_VISIBLE_DEVICES="$gpus" MASTER_PORT="$master_port"
@@ -219,6 +239,7 @@ export SERVER_SEED="$server_seed" REQUEST_METRICS_DIR="$request_metrics_dir"
 export STORE_IMPLEMENTATION="$store_implementation"
 export C4_KEEP_COUNT="$c4_keep_count" C4_LAYER_KEEP_COUNTS="$c4_layer_keep_counts"
 export HICACHE_RATIO="$hicache_ratio"
+export SGLANG_FRONTEND_DIAGNOSTICS="$frontend_diagnostics"
 export PYTHONPATH="/opt/sglang-runtime-fixes:$sglang_py:$repo_ct"
 export NCCL_IB_DISABLE=1 NCCL_SOCKET_IFNAME=lo NCCL_P2P_LEVEL=NVL NCCL_PROTO=Simple NCCL_ALGO=Ring
 # All TP workers are local; keep Gloo off hostname-selected external interfaces.

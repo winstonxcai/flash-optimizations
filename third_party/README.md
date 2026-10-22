@@ -53,7 +53,7 @@ selected by `--dsv4-c4-cache-format remnant`.
 | Direct attention | FlashMLA `csrc/sm90/decode/sparse_fp8/splitkv_mla.cuh` | Read Packed records inside attention; output/LSE, edge and graph tests |
 | Host cache | SGLang `srt/mem_cache/memory_pool_host.py`, `hybrid_cache/hybrid_pool_assembler.py` | Coordinated value/bitmap/scale transfers; 256 survivors only |
 | Capture and replay | SGLang `srt/remnant/capture.py`, `benchmark/remnant/calibrate.py` under `python/sglang/` | Opt-in owner-only capture, audited TP payloads, strict source hashes |
-| Profiling and request timing | SGLang `srt/utils/nvtx_utils.py`, scheduler, graph runner, request statistics | Gated built-in PyTorch NVTX; tokenizer first-output timestamp |
+| Profiling and request timing | SGLang `srt/utils/nvtx_utils.py`, scheduler, graph runner, request statistics | Gated built-in PyTorch NVTX; tokenizer first-output timestamp; opt-in first-output IPC boundaries |
 | Measurements | SGLang `benchmark/remnant/microbench.py` | Shared decode/store and prefill-read fixtures; [protocol and commands](sglang/benchmark/remnant/README.md) |
 
 ### SGLang file map
@@ -89,6 +89,17 @@ files within them, not every upstream file in that directory.
   `python/sglang/srt/model_executor/runner/decode_cuda_graph_runner.py` and
   `python/sglang/srt/observability/req_time_stats.py` own batch/rank/step markers,
   padded graph sizes and first-output metadata. No external `nvtx` package is required.
+  `managers/scheduler_components/output_streamer.py`, `detokenizer_manager.py`,
+  `multi_tokenizer_mixin.py` and `tokenizer_manager.py` additionally carry
+  first-output transport stamps when `SGLANG_FRONTEND_DIAGNOSTICS=1` at startup.
+  The local launcher exposes `FRONTEND_DIAGNOSTICS=1`, requires timing export,
+  and preflights the mounted Python implementation before replacing a server.
+  Stamps bracket CPU payload serialization/IPC/handling, not GPU completion or
+  visible SSE content. API state latches the first packet across later snapshots;
+  unset fields stay absent. Disabling the flag preserves normal dispatch.
+  The [frontend diagnostic](../benchmarks/lswb-replay/frontend-event-loop-20261022/README.md)
+  records CPU coverage and the bounded VDI/GPUQ attribution protocol. Its source
+  is isolated from newer local microbenchmark changes; native binaries are unchanged.
 - **Benchmarks and calibration:** `benchmark/remnant/` owns the maintained CLI,
   protocol and harness tests. `python/sglang/benchmark/remnant/` owns shared case
   definitions, seeds, statistics, JSON/CSV and profile-export checks, capture

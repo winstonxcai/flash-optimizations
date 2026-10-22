@@ -93,6 +93,8 @@ def ipc_definitions():
             "BaseBatchReq",
             "PickleWrapper",
             "BatchStrOutput",
+            "BatchTokenIDOutput",
+            "wrap_as_pickle",
             "unwrap_from_pickle",
             "async_sock_recv",
             "sock_send",
@@ -163,13 +165,14 @@ def frontend_definitions():
         dataclasses=dataclasses,
         time=time,
         real_time=time.time,
+        monotonic_time=time.perf_counter,
+        SGLANG_FRONTEND_DIAGNOSTICS=False,
         HEALTH_CHECK_RID_PREFIX="health-check-",
         logger=logging.getLogger(__name__),
     )
     # These types cannot occur in this text-only, non-finished output fixture.
     ns.update(
         BatchEmbeddingOutput=type("BatchEmbeddingOutput", (), {}),
-        BatchTokenIDOutput=type("BatchTokenIDOutput", (), {}),
         GenerateReqInput=type("GenerateReqInput", (), {}),
     )
     source_definitions("srt/managers/tokenizer_manager.py", {"ReqState"}, ns)
@@ -579,11 +582,336 @@ class ProbeContractTests(unittest.TestCase):
         self.assertEqual(message.output_ids, [array("q", [1])])
         self.assertEqual(message.finished_reasons, [None])
 
+    def test_detokenizer_transport_preserves_pickle_and_msgpack_wrappers(self):
+        ipc = ipc_definitions()
+        ns = dict(vars(ipc))
+        source_definitions(
+            "srt/managers/detokenizer_manager.py",
+            {"_record_output_transport_time"},
+            ns,
+            "DetokenizerManager",
+        )
+        stamp = ns["_record_output_transport_time"]
+        for use_pickle in (True, False):
+            with self.subTest(pickle_ipc=use_pickle):
+                ipc._USE_PICKLE_IPC = use_pickle
+                # The extracted helper must use the real wrapper's globals.
+                message = first_output(ipc, "transport")
+                message.time_stats = ipc.wrap_as_pickle([
+                    types.SimpleNamespace(first_output_send_time=1.0), None
+                ])
+                stamp(None, message, "detokenizer_recv_time", 2.0)
+                stamp(None, message, "detokenizer_send_time", 3.0)
+                if not use_pickle:
+                    self.assertIsInstance(message.time_stats, ipc.PickleWrapper)
+                record, missing = ipc.unwrap_from_pickle(message.time_stats)
+                self.assertEqual(record.first_output_send_time, 1.0)
+                self.assertEqual(record.detokenizer_recv_time, 2.0)
+                self.assertEqual(record.detokenizer_send_time, 3.0)
+                self.assertIsNone(missing)
+                message.time_stats = None
+                stamp(None, message, "detokenizer_recv_time", 4.0)
+                self.assertIsNone(message.time_stats)
+
+    def test_scheduler_stamps_included_rows_before_payload_serialization(self):
+        packets = []
+
+        class Accumulator:
+            def __init__(self, **kwargs):
+                self.time_stats = []
+
+            def accept(self, *, req):
+                if req.include:
+                    self.time_stats.append(req.time_stats)
+
+            def to_payload(self, **kwargs):
+                # Inspect the boundary before actual transport serialization.
+                return [stats.first_output_send_time for stats in self.time_stats]
+
+        ns = dict(
+            _GenerationStreamAccumulator=Accumulator,
+            SGLANG_FRONTEND_DIAGNOSTICS=True,
+            monotonic_time=lambda: 12.0,
+            get_serving=lambda: types.SimpleNamespace(stream_interval=1),
+            DEFAULT_FORCE_STREAM_INTERVAL=50,
+        )
+        source_definitions(
+            "srt/managers/scheduler_components/output_streamer.py",
+            {"_stream_output_generation"}, ns, "SchedulerOutputStreamer",
+        )
+        owner = types.SimpleNamespace(
+            spec_algorithm=None, disaggregation_mode=None,
+            get_cached_tokens_details=lambda req: None, rust_server=None,
+            _maybe_log_time_stats=lambda **kwargs: None,
+            ps=types.SimpleNamespace(dp_rank=0),
+            send_to_detokenizer=types.SimpleNamespace(send_output=packets.append),
+        )
+        def request(first, include=True):
+            return types.SimpleNamespace(
+                return_hidden_states=False, return_routed_experts=False,
+                return_indexer_topk=False, return_sampling_mask=False,
+                finished=lambda: False, include=include,
+                time_stats=types.SimpleNamespace(first_output_send_time=first),
+            )
+        fresh, later, suppressed = request(0), request(7), request(0, False)
+        ns["_stream_output_generation"](owner, [fresh, later, suppressed], False)
+        self.assertEqual(packets, [[12.0, 7]])
+        self.assertEqual(suppressed.time_stats.first_output_send_time, 0)
+        ns["SGLANG_FRONTEND_DIAGNOSTICS"] = False
+        ns["monotonic_time"] = lambda: self.fail("disabled diagnostics read clock")
+        off = request(0)
+        ns["_stream_output_generation"](owner, [off], False)
+        self.assertEqual(off.time_stats.first_output_send_time, 0)
+
+    def test_detokenizer_receive_decode_send_boundaries_in_both_worker_loops(self):
+        ipc = ipc_definitions()
+        for multi_worker in (False, True):
+            with self.subTest(multi_http_worker=multi_worker):
+                packet = first_output(ipc, "boundaries")
+                packet.http_worker_ipcs = ["worker-zero"]
+                packet.time_stats = [types.SimpleNamespace(first_output_send_time=1.0)]
+                received = iter([packet])
+                sent = []
+                class EndLoop(Exception):
+                    pass
+                def receive(socket):
+                    try:
+                        return next(received)
+                    except StopIteration:
+                        raise EndLoop
+                def dispatch(message):
+                    self.assertEqual(message.time_stats[0].detokenizer_recv_time, 2.0)
+                    return message
+                ns = dict(vars(ipc), SGLANG_FRONTEND_DIAGNOSTICS=True,
+                          monotonic_time=iter([2.0, 3.0]).__next__, sock_recv=receive,
+                          sock_send=lambda socket, output: sent.append(output),
+                          BaseReq=type("BaseReq", (), {}),
+                          BatchEmbeddingOutput=type("BatchEmbeddingOutput", (), {}))
+                source_definitions("srt/managers/detokenizer_manager.py",
+                                   {"event_loop", "_record_output_transport_time"},
+                                   ns, "DetokenizerManager")
+                if multi_worker:
+                    source_definitions(
+                        "srt/managers/multi_tokenizer_mixin.py",
+                        {"_extract_field_by_index", "_handle_output_by_index"}, ns,
+                    )
+                    source_definitions("srt/managers/multi_tokenizer_mixin.py",
+                                       {"multi_http_worker_event_loop"}, ns,
+                                       "MultiHttpWorkerDetokenizerMixin")
+                    ns["SocketMapping"] = lambda: types.SimpleNamespace(
+                        send_output=lambda ipc_name, output, **kwargs: sent.append(output)
+                    )
+                owner = types.SimpleNamespace(
+                    soft_watchdog=types.SimpleNamespace(
+                        disable=nullcontext, feed=lambda: None
+                    ),
+                    recv_from_scheduler=None, send_to_tokenizer=None,
+                    _request_dispatcher=dispatch,
+                    _record_output_transport_time=lambda *args: ns[
+                        "_record_output_transport_time"
+                    ](None, *args),
+                )
+                loop_name = "multi_http_worker_event_loop" if multi_worker else "event_loop"
+                loop = ns[loop_name]
+                with self.assertRaises(EndLoop):
+                    loop(owner)
+                self.assertEqual(len(sent), 1)
+                stats = ipc.unwrap_from_pickle(sent[0].time_stats)[0]
+                self.assertEqual(
+                    (stats.first_output_send_time, stats.detokenizer_recv_time,
+                     stats.detokenizer_send_time),
+                    (1.0, 2.0, 3.0),
+                )
+                self.assertEqual(sent[0].rids, ["boundaries"])
+
+    def test_frontend_loop_captures_receive_before_watchdog_exit_and_handler(self):
+        _, Manager, _, _, ipc = frontend_definitions()
+        ns = Manager.handle_loop.__globals__
+        message = first_output(ipc, "receive")
+        phases, received = [], iter([message])
+        class EndLoop(Exception):
+            pass
+        class Guard:
+            def __enter__(self):
+                phases.append("waiting")
+            def __exit__(self, *args):
+                phases.append("watchdog-exit")
+        async def receive(socket):
+            try:
+                return next(received)
+            except StopIteration:
+                raise EndLoop
+        def now():
+            self.assertEqual(phases[-1], "waiting")
+            phases.append("received")
+            return 5.0
+        async def handle(packet, *, recv_time):
+            self.assertIs(packet, message)
+            self.assertEqual(recv_time, 5.0)
+            self.assertEqual(phases[-1], "watchdog-exit")
+            phases.append("handler")
+        ns.update(SGLANG_FRONTEND_DIAGNOSTICS=True, async_sock_recv=receive,
+                  monotonic_time=now)
+        manager = Manager()
+        manager.soft_watchdog = types.SimpleNamespace(disable=Guard, feed=lambda: None)
+        manager.recv_from_detokenizer = None
+        manager._handle_batch_output = handle
+        with self.assertRaises(EndLoop):
+            asyncio.run(manager.handle_loop())
+        self.assertEqual(
+            phases[:4], ["waiting", "received", "watchdog-exit", "handler"]
+        )
+
+    def test_frontend_latches_receive_and_per_row_stages_from_first_packet(self):
+        _, Manager, ReqState, _, ipc = frontend_definitions()
+        ns = Manager._handle_batch_output.__globals__
+        ns.update(SGLANG_FRONTEND_DIAGNOSTICS=True,
+                  monotonic_time=iter([10.0, 20.0]).__next__,
+                  get_spec=lambda: types.SimpleNamespace(speculative_algorithm=None))
+        stat_ns = dict(time=time, SGLANG_FRONTEND_DIAGNOSTICS=True,
+                       convert_time_to_realtime=lambda value: value)
+        method_names = {
+            "record_frontend_first_output", "set_first_token_time",
+            "set_finished_time", "get_e2e_latency", "get_decode_latency",
+            "convert_to_output_meta_info",
+        }
+        source_definitions("srt/observability/req_time_stats.py", method_names,
+                           stat_ns, "APIServerReqTimeStats")
+        Stats = type("TestStats", (), {name: stat_ns[name] for name in method_names})
+        stats = Stats()
+        for name in ("first_token_time", "finished_time", "first_output_send_time",
+                     "detokenizer_recv_time", "detokenizer_send_time",
+                     "frontend_recv_time", "frontend_handle_time",
+                     "api_server_dispatch_finish_time", "response_sent_to_client_time"):
+            setattr(stats, name, 0.0)
+        stats.created_time = 1.0
+        stats.trace_ctx = types.SimpleNamespace(tracing_enable=False)
+        stats._frontend_diagnostics_recorded = False
+        state = ReqState([], False, asyncio.Event(),
+                         types.SimpleNamespace(stream=True, return_logprob=False,
+                                               log_metrics=False), stats)
+        manager = Manager()
+        manager.server_args = types.SimpleNamespace(batch_notify_size=1)
+        manager.config_value = lambda name: "probe"
+        manager.rid_to_state = {"one": state}
+        manager.enable_metrics = manager.enable_lora = False
+        manager.incremental_streaming_output = False
+        manager.dump_requests_folder = manager.crash_dump_folder = ""
+        first = first_output(ipc, "one")
+        first.time_stats = [types.SimpleNamespace(
+            first_output_send_time=2.0, detokenizer_recv_time=3.0,
+            detokenizer_send_time=4.0)]
+        asyncio.run(manager._handle_batch_output(first, recv_time=9.0))
+        token_stamp = stats.first_token_time
+        self.assertEqual((stats.first_output_send_time, stats.detokenizer_recv_time,
+                          stats.detokenizer_send_time, stats.frontend_recv_time,
+                          stats.frontend_handle_time), (2.0, 3.0, 4.0, 9.0, 10.0))
+        # A final packet has a new scheduler snapshot, but must not replace the
+        # original transport stages or the existing first-output timestamp.
+        final = first_output(ipc, "one")
+        final.finished_reasons = [{"type": "length", "length": 2}]
+        final.completion_tokens = [2]
+        final.time_stats = [types.SimpleNamespace(
+            first_output_send_time=2.0, detokenizer_recv_time=30.0,
+            detokenizer_send_time=40.0)]
+        asyncio.run(manager._handle_batch_output(final, recv_time=19.0))
+        self.assertEqual(stats.first_token_time, token_stamp)
+        self.assertEqual(stats.frontend_recv_time, 9.0)
+        self.assertEqual(stats.frontend_handle_time, 10.0)
+        self.assertEqual(stats.detokenizer_recv_time, 3.0)
+        self.assertEqual(stats.detokenizer_send_time, 4.0)
+        self.assertEqual(state.out_list[-1]["meta_info"]["frontend_recv_ts"], 9.0)
+
     def test_missing_source_definition_rejected(self):
         with self.assertRaises(ValueError):
             source_definitions(
                 "srt/managers/io_struct.py", {"nonexistent_probe_function"}, {}
             )
+
+    @staticmethod
+    def pipeline_fixture():
+        import importlib.util
+
+        path = (ROOT / "benchmarks/lswb-replay/"
+                "c24-packed256-store-decode-ablation-n1-20261014/analyze.py")
+        spec = importlib.util.spec_from_file_location("pipeline_analysis", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        start = 1_800_000_000.0
+        clients, servers = [], []
+        fields = ("prefill_finished_time", "first_output_send_ts", "detokenizer_recv_ts",
+                  "detokenizer_send_ts", "frontend_recv_ts", "frontend_handle_ts",
+                  "first_output_ts")
+        for request_id, offset, step in (("a", 10, 1), ("b", 190, 2)):
+            clients.append(dict(request_id="data-" + request_id, valid=True,
+                                server_request_id=request_id, server_request_id_error=None))
+            record = dict(id=request_id, request_received_ts=start + offset)
+            record.update({name: start + offset + index * step + 1
+                           for index, name in enumerate(fields)})
+            servers.append(record)
+        return module.first_output_pipeline_diagnostics, start, clients, servers
+
+    def test_pipeline_exact_join_stage_arithmetic_and_received_time_cohort(self):
+        diagnose, start, clients, servers = self.pipeline_fixture()
+        result = diagnose(clients, servers, start)
+        self.assertTrue(result["valid"] and result["id_verified"])
+        self.assertEqual(result["coverage"]["matched_successful"], 2)
+        self.assertEqual(result["cohorts"]["all"]["count"], 2)
+        self.assertEqual(result["cohorts"]["after_180s"]["count"], 1)
+        stages = result["cohorts"]["all"]["stages"]
+        self.assertEqual(stages["post_prefill_to_first_output_s"]["mean"], 9)
+        for stage in stages.keys() - {"post_prefill_to_first_output_s"}:
+            self.assertEqual(stages[stage]["mean"], 1.5)
+        self.assertEqual(result["cohorts"]["after_180s"]["stages"]
+                         ["post_prefill_to_first_output_s"]["mean"], 12)
+        shifted = [{key: value + 1000 if key != "id" else value
+                    for key, value in record.items()} for record in servers]
+        self.assertEqual(diagnose(clients, shifted, start + 1000)["cohorts"],
+                         result["cohorts"])
+        servers[0]["detokenizer_recv_ts"] = servers[0]["first_output_send_ts"]
+        self.assertTrue(diagnose(clients, servers, start)["valid"])
+
+    def test_pipeline_missing_nonfinite_or_misordered_boundaries_rejected(self):
+        diagnose, start, clients, servers = self.pipeline_fixture()
+        cases = []
+        for field in servers[0].keys() - {"id"}:
+            missing = copy.deepcopy(servers)
+            del missing[0][field]
+            cases.append(missing)
+        for value in (float("nan"), float("inf"), 0, -1, True, None):
+            invalid = copy.deepcopy(servers)
+            invalid[0]["frontend_recv_ts"] = value
+            cases.append(invalid)
+        misordered = copy.deepcopy(servers)
+        misordered[0]["detokenizer_send_ts"] = servers[0]["first_output_send_ts"] - 1
+        cases.append(misordered)
+        for index, candidate in enumerate(cases):
+            with self.subTest(case=index):
+                result = diagnose(clients, candidate, start)
+                self.assertFalse(result["valid"])
+                self.assertTrue(result["errors"])
+                self.assertEqual(result["coverage"]["timing_valid_successful"], 1)
+
+    def test_pipeline_duplicate_or_unmatched_ids_rejected(self):
+        diagnose, start, clients, servers = self.pipeline_fixture()
+        for candidate_clients, candidate_servers in (
+            (clients + [copy.deepcopy(clients[0])], servers),
+            (clients, servers + [copy.deepcopy(servers[0])]),
+            (clients, []),
+            ([dict(clients[0], server_request_id=None,
+                   server_request_id_error="missing_server_request_id")], servers),
+            ([dict(clients[0], server_request_id_error="inconsistent_server_request_id")], servers),
+        ):
+            with self.subTest(clients=candidate_clients, server_count=len(candidate_servers)):
+                result = diagnose(candidate_clients, candidate_servers, start)
+                self.assertFalse(result["valid"] or result["id_verified"])
+                self.assertTrue(result["errors"])
+        failed = dict(valid=False, server_request_id=None,
+                      server_request_id_error="missing_server_request_id")
+        result = diagnose(clients + [failed], servers + [dict(servers[0], id="failed")], start)
+        self.assertTrue(result["valid"])
+        self.assertEqual(result["coverage"]["unmatched_server_records"], 1)
+        self.assertEqual(len(result["client_identity_diagnostics"]), 1)
 
 
 def main():
