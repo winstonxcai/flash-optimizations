@@ -12,6 +12,23 @@ machines or Modal. On shared machines, run GPU commands inside your GPUQ job or
 active lease. Bare serving/capture examples below assume you already hold an
 allocation. Build the image and prepare inputs before queueing GPU work.
 
+## CPU-L2 HiCache screening
+
+Set `HICACHE_RATIO=2` before `serve.sh native` to enable CPU-L2 HiCache with
+twice the device-pool page capacity, `write_through`, `kernel` transfers and
+`layer_first` layout. Unset `HICACHE_RATIO` for the control. This adds no disk
+storage. DeepSeek V4 supports ratio-based host sizing, not `--hicache-size`.
+Check available host RAM and actual allocated pool bytes before measurement;
+the ratio alone does not specify total host memory across all companion pools.
+
+The first screen compares Native off/on at LongSWE original replay C40
+(P=C40), MF0.88, TP4 H100 and 1,200 seconds, n=1 each. Use the same allocation,
+fresh servers, seed, image and source for both legs. Record successful requests/s,
+output tokens/s, TTFT p90, E2E, device/host cache hits, uncached prefill and
+failures. Investigate host hits replacing recomputation before repeating or
+sweeping concurrency; a C40 SLO miss is not evidence of a passing capacity.
+Stop expansion if L2 sees no useful reuse or transfer costs outweigh savings.
+
 ## Isolated latent-KV capture
 
 Capture reuses the **same `remnant:v0.5.18` image as serving**, but starts a

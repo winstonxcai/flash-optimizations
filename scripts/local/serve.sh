@@ -20,7 +20,8 @@
 #
 # Env overrides (all optional): PORT, GPUS, MASTER_PORT, TP, DECODE_CFG,
 # MEM_FRAC, CTX_LEN, MAX_RUN, CHUNK, SERVER_SEED, REQUEST_METRICS_DIR,
-# C4_KEEP_COUNT, C4_LAYER_KEEP_COUNTS. Boot log:
+# C4_KEEP_COUNT, C4_LAYER_KEEP_COUNTS, HICACHE_RATIO (positive CPU-L2/device
+# pool ratio; unset disables HiCache). Boot log:
 #   <LOG_HOST>/serve_<native|triton|kernel>.log
 # Server is left RUNNING; use "serve.sh <mode> stop" to tear it down.
 # =====================================================================
@@ -58,6 +59,19 @@ if [ "$ACTION" = stop ]; then
 fi
 
 check_sources || exit 1
+
+if [ -n "${HICACHE_RATIO:-}" ]; then
+  [[ "$HICACHE_RATIO" =~ ^[0-9]+([.][0-9]+)?$ && -n "${HICACHE_RATIO//[.0]/}" ]] || {
+    echo "HICACHE_RATIO must be a positive finite decimal; unset it to disable HiCache" >&2; exit 2;
+  }
+  docker exec -e "PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT" "$CONTAINER" python3 -c '
+from sglang.srt.server_args import ServerArgs
+for field in ("enable_hierarchical_cache", "hicache_ratio", "hicache_write_policy",
+              "hicache_io_backend", "hicache_mem_layout"):
+    if field not in ServerArgs.__dataclass_fields__:
+        raise RuntimeError(f"Active SGLang source lacks HiCache option {field}")
+' || exit 1
+fi
 
 case "${STORE_IMPLEMENTATION:-}" in
   ""|triton|kernel) ;;
@@ -167,7 +181,7 @@ echo "== serve $MODE on gpus=$GPUS port=$PORT master=$MASTER_PORT (log: $SERVE_L
 ct_script "$TREE" "$GPUS" "$MASTER_PORT" "$MODEL_NAME" "$TP" "$MEM_FRAC" \
   "$CTX_LEN" "$MAX_RUN" "$CHUNK" "$DECODE_CFG" "$SGLANG_PY" "$REPO_CT" \
   "$MODE" "$MODEL_CT" "$PORT" "$SERVE_LOG_CT" "$SERVER_PID_FILE_CT" "$NSYS_OUTPUT_CT" "${NSYS_GRAPH_TRACE:-node}" \
-  "${SERVER_SEED:-}" "$REQUEST_METRICS_DIR_CT" "${STORE_IMPLEMENTATION:-}" "${C4_KEEP_COUNT:-}" "${C4_LAYER_KEEP_COUNTS:-}" <<'BASH'
+  "${SERVER_SEED:-}" "$REQUEST_METRICS_DIR_CT" "${STORE_IMPLEMENTATION:-}" "${C4_KEEP_COUNT:-}" "${C4_LAYER_KEEP_COUNTS:-}" "${HICACHE_RATIO:-}" <<'BASH'
 set -u
 tree=$1
 gpus=$2
@@ -193,6 +207,7 @@ request_metrics_dir=${21}
 store_implementation=${22}
 c4_keep_count=${23}
 c4_layer_keep_counts=${24}
+hicache_ratio=${25}
 
 cd -- "$tree"
 export CUDA_VISIBLE_DEVICES="$gpus" MASTER_PORT="$master_port"
@@ -203,6 +218,7 @@ export NSYS_GRAPH_TRACE="$nsys_graph_trace"
 export SERVER_SEED="$server_seed" REQUEST_METRICS_DIR="$request_metrics_dir"
 export STORE_IMPLEMENTATION="$store_implementation"
 export C4_KEEP_COUNT="$c4_keep_count" C4_LAYER_KEEP_COUNTS="$c4_layer_keep_counts"
+export HICACHE_RATIO="$hicache_ratio"
 export PYTHONPATH="/opt/sglang-runtime-fixes:$sglang_py:$repo_ct"
 export NCCL_IB_DISABLE=1 NCCL_SOCKET_IFNAME=lo NCCL_P2P_LEVEL=NVL NCCL_PROTO=Simple NCCL_ALGO=Ring
 # All TP workers are local; keep Gloo off hostname-selected external interfaces.
