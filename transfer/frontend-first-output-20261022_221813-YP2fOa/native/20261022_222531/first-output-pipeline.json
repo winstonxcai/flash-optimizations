@@ -1,0 +1,130 @@
+{
+  "valid": true,
+  "id_verified": true,
+  "basis": "Exact captured SSE server_request_id equals server metrics id; no inferred joins",
+  "cohort_basis": "Successful exact-ID joins; after_180s uses server request_received_ts",
+  "errors": [],
+  "client_identity_diagnostics": [],
+  "coverage": {
+    "client_records": 1360,
+    "successful_client_records": 1346,
+    "client_records_with_server_id": 1360,
+    "server_records": 1360,
+    "matched_successful": 1346,
+    "timing_valid_successful": 1346,
+    "unmatched_successful": 0,
+    "unmatched_server_records": 14
+  },
+  "cohorts": {
+    "all": {
+      "count": 1346,
+      "stages": {
+        "prefill_to_send_s": {
+          "count": 1346,
+          "mean": 0.023318521512387235,
+          "p50": 0.010077953338623047,
+          "p90": 0.03566896915435791,
+          "p95": 0.1192549467086792
+        },
+        "send_to_detokenizer_recv_s": {
+          "count": 1346,
+          "mean": 0.00039179062949601466,
+          "p50": 0.0003426074981689453,
+          "p90": 0.0005899667739868164,
+          "p95": 0.0007495880126953125
+        },
+        "detokenizer_recv_to_send_s": {
+          "count": 1346,
+          "mean": 0.00021463446595870723,
+          "p50": 0.00017571449279785156,
+          "p90": 0.0003170967102050781,
+          "p95": 0.0005152225494384766
+        },
+        "detokenizer_send_to_frontend_recv_s": {
+          "count": 1346,
+          "mean": 6.0369725818974125,
+          "p50": 6.98632550239563,
+          "p90": 10.309587478637695,
+          "p95": 11.093432009220123
+        },
+        "frontend_recv_to_handle_s": {
+          "count": 1346,
+          "mean": 3.7462006352100115e-05,
+          "p50": 5.0067901611328125e-06,
+          "p90": 2.9087066650390625e-05,
+          "p95": 0.0003085136413574219
+        },
+        "frontend_handle_to_first_output_s": {
+          "count": 1346,
+          "mean": 2.3015009524386494e-05,
+          "p50": 1.8358230590820312e-05,
+          "p90": 3.528594970703125e-05,
+          "p95": 7.206201553344727e-05
+        },
+        "post_prefill_to_first_output_s": {
+          "count": 1346,
+          "mean": 6.0609580055211305,
+          "p50": 6.996222734451294,
+          "p90": 10.319993257522583,
+          "p95": 11.109947144985199
+        }
+      }
+    },
+    "after_180s": {
+      "count": 1314,
+      "stages": {
+        "prefill_to_send_s": {
+          "count": 1314,
+          "mean": 0.018887644851951657,
+          "p50": 0.009982466697692871,
+          "p90": 0.02166950702667239,
+          "p95": 0.06710557937622064
+        },
+        "send_to_detokenizer_recv_s": {
+          "count": 1314,
+          "mean": 0.00038726471330477225,
+          "p50": 0.0003412961959838867,
+          "p90": 0.0005583047866821295,
+          "p95": 0.0007495880126953125
+        },
+        "detokenizer_recv_to_send_s": {
+          "count": 1314,
+          "mean": 0.00021371358787269535,
+          "p50": 0.00017499923706054688,
+          "p90": 0.0003109931945800789,
+          "p95": 0.0005152225494384766
+        },
+        "detokenizer_send_to_frontend_recv_s": {
+          "count": 1314,
+          "mean": 6.183137233035931,
+          "p50": 7.048833131790161,
+          "p90": 10.324281024932862,
+          "p95": 11.133580327033995
+        },
+        "frontend_recv_to_handle_s": {
+          "count": 1314,
+          "mean": 3.7727290636872594e-05,
+          "p50": 5.0067901611328125e-06,
+          "p90": 3.476142883300818e-05,
+          "p95": 0.00031059980392456044
+        },
+        "frontend_handle_to_first_output_s": {
+          "count": 1314,
+          "mean": 2.1542043990740492e-05,
+          "p50": 1.8358230590820312e-05,
+          "p90": 3.116130828857423e-05,
+          "p95": 4.029273986816406e-05
+        },
+        "post_prefill_to_first_output_s": {
+          "count": 1314,
+          "mean": 6.202685125523688,
+          "p50": 7.059785485267639,
+          "p90": 10.334375405311585,
+          "p95": 11.145206427574156
+        }
+      }
+    }
+  },
+  "post_180s_sample_gate": true,
+  "response_summary_valid": false
+}

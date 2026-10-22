@@ -1,0 +1,23 @@
+usage: gpuq run [-h] [--user USER] --project PROJECT --gpus GPUS
+                [--gpu-ids GPU_IDS] [--cwd CWD] [--env KEY=VALUE]
+                [--output OUTPUT] [--workload-key WORKLOAD_KEY]
+                [--expected-duration EXPECTED_DURATION] [--timeout TIMEOUT]
+                [--priority PRIORITY] [--detach]
+
+options:
+  -h, --help            show this help message and exit
+  --user USER
+  --project PROJECT
+  --gpus GPUS
+  --gpu-ids GPU_IDS
+  --cwd CWD
+  --env KEY=VALUE
+  --output OUTPUT
+  --workload-key WORKLOAD_KEY
+                        stable workload label used to build historical
+                        duration estimates
+  --expected-duration EXPECTED_DURATION
+                        expected execution duration, for example 90m
+  --timeout TIMEOUT
+  --priority PRIORITY
+  --detach
