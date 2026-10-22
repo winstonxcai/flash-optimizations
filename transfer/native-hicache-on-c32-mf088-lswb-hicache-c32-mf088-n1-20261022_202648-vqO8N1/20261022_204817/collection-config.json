@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "mode": "native",
+  "server_seed": 20260919,
+  "metrics_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/lswb-hicache-c32-mf088-n1-20261022_202648-vqO8N1/native/request-metrics",
+  "server_log": "/home/jovyan/winstonxcai/flash-optimizations/logs/lswb-hicache-c32-mf088-n1-20261022_202648-vqO8N1/native/serve_native.log"
+}
