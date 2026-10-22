@@ -1,0 +1,504 @@
+{
+  "schema_version": 1,
+  "decision": "blocking mechanism demonstrated in source-isolated CPU fixture; production mode attribution unmeasured",
+  "dataset": "cached OpenHands coding trajectories, not LongSWE",
+  "issues": 3,
+  "prefixes": 9,
+  "invocations": 2,
+  "measured_trials": 216,
+  "during_trials": 54,
+  "during_encoding": 54,
+  "gpu_hours": 0,
+  "modal_compute_usd": 0,
+  "raw_directory": "raw/frontend-event-loop",
+  "audit": "source hashes, raw sample hashes, identity coverage, token stability, all timestamp orderings and aggregates independently recomputed",
+  "summary": [
+    {
+      "fraction": 0.25,
+      "mean_tokens": 33109,
+      "token_range": [
+        26289,
+        42027
+      ],
+      "during_samples": 18,
+      "preparation_ms": 117.72516222222222,
+      "tokenization_ms": 115.38021994444445,
+      "send_to_handler_ms": 105.648308,
+      "send_to_client_ms": 105.91523616666666,
+      "post_preparation_handler_ms": 0.33251166666666665,
+      "controls_send_to_client_ms": {
+        "idle": 0.5345834444444444,
+        "before": 0.43926383333333335,
+        "after": 0.661662
+      }
+    },
+    {
+      "fraction": 0.5,
+      "mean_tokens": 55628,
+      "token_range": [
+        52292,
+        62209
+      ],
+      "during_samples": 18,
+      "preparation_ms": 197.6570671111111,
+      "tokenization_ms": 193.26485416666668,
+      "send_to_handler_ms": 185.71455777777777,
+      "send_to_client_ms": 185.98097694444445,
+      "post_preparation_handler_ms": 0.33679627777777776,
+      "controls_send_to_client_ms": {
+        "idle": 0.5579722222222222,
+        "before": 0.49475005555555557,
+        "after": 0.6585578333333333
+      }
+    },
+    {
+      "fraction": 1,
+      "mean_tokens": 123069.33333333333,
+      "token_range": [
+        120584,
+        127551
+      ],
+      "during_samples": 18,
+      "preparation_ms": 466.33173850000003,
+      "tokenization_ms": 457.3778633888889,
+      "send_to_handler_ms": 454.23035655555555,
+      "send_to_client_ms": 454.50554172222223,
+      "post_preparation_handler_ms": 0.34359494444444444,
+      "controls_send_to_client_ms": {
+        "idle": 0.5785093888888889,
+        "before": 0.49175694444444445,
+        "after": 0.6740647777777777
+      }
+    }
+  ],
+  "runs": [
+    {
+      "run_id": "uvloop-20261022-003",
+      "result_sha256": "f4f41777e0d8c7628b64cb28a35d656530d52e6df1a2568003e752d5b7f582b3",
+      "valid": true,
+      "samples": 108,
+      "issues": 3,
+      "warmup_samples": 1,
+      "samples_sha256": "7ba6de3087f48320c2d62639a8747ab56653d73b48439dc15990af8562ee69cc",
+      "independent_serving_runs": 0,
+      "provenance": {
+        "git_sources": {
+          "parent": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations",
+            "commit": "21992f048d2cdcd2978046f95979cdcd05ea20bf"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/third_party/sglang",
+            "expected_commit": "bf3e538c5cca7a2adb42dc02592abb701a2b4d75",
+            "commit": "bf3e538c5cca7a2adb42dc02592abb701a2b4d75",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/third_party/flashmla/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/third_party/flashmla",
+            "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+            "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+            "override": false,
+            "dirty": false
+          }
+        },
+        "probe_sha256": "8240657d2553a54601f29bc878a2c6a9d3dab1fadcb0e16b8315e4a2b95da853",
+        "source_sha256": {
+          "third_party/sglang/python/sglang/srt/entrypoints/openai/serving_chat.py": "ac0bbdf37a86b49c9df0d513ba44b0c06feb23a28ffcde0b730500e560604ab1",
+          "third_party/sglang/python/sglang/srt/entrypoints/openai/protocol.py": "c9aa0b5551bf5761c6e283391d70aebadb6708b69ba998cf21e00f05d2e3299f",
+          "third_party/sglang/python/sglang/srt/entrypoints/openai/encoding_dsv4.py": "764dcfb28a57c3196975475747cb525ccacb4110556e3d9d35f038d6283ca527",
+          "third_party/sglang/python/sglang/srt/parser/jinja_template_utils.py": "27759425d3b5856095de117e1c431645d4e61e548cec3517be8f237cf0de65be",
+          "third_party/sglang/python/sglang/srt/managers/tokenizer_manager.py": "8102242c5094f8d444ac47232d3ae6113a70133a016791d9157864dada2fdad5",
+          "third_party/sglang/python/sglang/srt/managers/io_struct.py": "cc022f58fe2468fb6231c1e65a41106cbc0d73fe1bd784d6f57df94a412564a9",
+          "third_party/sglang/python/sglang/srt/observability/req_time_stats.py": "8b6d48dddf3ae16e2dd44c7a31550273cf5b1f8ee06f94221400ac57772aa9e5",
+          "third_party/sglang/python/sglang/srt/environ.py": "e64b24813f8dc9af30644ce348642adbfb4fe6365a7d6e0044347439e5ecd1ed"
+        },
+        "requests_sha256": "088f2c92ef24f4233926fc9b49cddd298fc417a7990cc8854408128282c41621",
+        "tokenizer_sha256": {
+          "tokenizer.json": "8f9f37ca37fdc4f5fd36d5cf4d3b0e8392edb4e894fd10cc0d70b4957c8633cf",
+          "tokenizer_config.json": "6ac8c8dc065ed118161d02dd532749ae3f52c243deac27872134fae2f50d8547"
+        },
+        "platform": "macOS-27.0-x86_64-i386-64bit-Mach-O",
+        "python": "3.13.0 | packaged by conda-forge | (main, Nov 27 2024, 19:22:59) [Clang 18.1.8 ]",
+        "packages": {
+          "transformers": "5.5.1",
+          "tokenizers": "0.22.1",
+          "pyzmq": "27.1.0",
+          "msgspec": "0.22.0",
+          "pydantic": "2.11.7",
+          "openai": "2.31.0"
+        },
+        "event_loop": "uvloop",
+        "uvloop_version": "0.21.0",
+        "command": [
+          "benchmarks/lswb-replay/frontend-event-loop-20261022/probe.py",
+          "--requests",
+          "/Users/poohthewinnie/.cache/remnant/attention-pruning/openhands-0731-cohort10-20261005/requests.jsonl",
+          "--tokenizer",
+          "/Users/poohthewinnie/.cache/huggingface/hub/models--deepseek-ai--DeepSeek-V4-Flash-0731/snapshots/7872f01b1d1fe23eabc4c98b48bffcef5a386062",
+          "--output",
+          "raw/frontend-event-loop/uvloop-20261022-003"
+        ],
+        "ipc": "pickle (fork default)",
+        "scope": "source-isolated template/tokenization + real output handler; synthetic loopback sink"
+      },
+      "aggregates": [
+        {
+          "fraction": 0.25,
+          "placement": "idle",
+          "samples": 9,
+          "mean_tokens": 0,
+          "preparation_ms": 0.000611,
+          "tokenization_ms": 0,
+          "send_to_handler_ms": 0.3615417777777778,
+          "send_to_client_ms": 0.5353892222222222
+        },
+        {
+          "fraction": 0.25,
+          "placement": "before",
+          "samples": 9,
+          "mean_tokens": 33109,
+          "preparation_ms": 115.820176,
+          "tokenization_ms": 113.51726388888889,
+          "send_to_handler_ms": 0.2834905555555555,
+          "send_to_client_ms": 0.44159722222222225
+        },
+        {
+          "fraction": 0.25,
+          "placement": "during",
+          "samples": 9,
+          "mean_tokens": 33109,
+          "preparation_ms": 117.72160655555555,
+          "tokenization_ms": 115.39311111111111,
+          "send_to_handler_ms": 105.48754633333334,
+          "send_to_client_ms": 105.756875
+        },
+        {
+          "fraction": 0.25,
+          "placement": "after",
+          "samples": 9,
+          "mean_tokens": 33109,
+          "preparation_ms": 117.53118500000001,
+          "tokenization_ms": 115.21545377777778,
+          "send_to_handler_ms": 0.47030577777777777,
+          "send_to_client_ms": 0.662625
+        },
+        {
+          "fraction": 0.5,
+          "placement": "idle",
+          "samples": 9,
+          "mean_tokens": 0,
+          "preparation_ms": 0.0005881111111111111,
+          "tokenization_ms": 0,
+          "send_to_handler_ms": 0.395102,
+          "send_to_client_ms": 0.5814491111111111
+        },
+        {
+          "fraction": 0.5,
+          "placement": "before",
+          "samples": 9,
+          "mean_tokens": 55628,
+          "preparation_ms": 199.66811111111113,
+          "tokenization_ms": 195.33962044444445,
+          "send_to_handler_ms": 0.3078843333333333,
+          "send_to_client_ms": 0.48114366666666664
+        },
+        {
+          "fraction": 0.5,
+          "placement": "during",
+          "samples": 9,
+          "mean_tokens": 55628,
+          "preparation_ms": 199.32649088888888,
+          "tokenization_ms": 194.94809266666667,
+          "send_to_handler_ms": 187.55456488888888,
+          "send_to_client_ms": 187.82799544444444
+        },
+        {
+          "fraction": 0.5,
+          "placement": "after",
+          "samples": 9,
+          "mean_tokens": 55628,
+          "preparation_ms": 200.35259733333334,
+          "tokenization_ms": 195.99855555555555,
+          "send_to_handler_ms": 0.4679398888888889,
+          "send_to_client_ms": 0.6611435555555556
+        },
+        {
+          "fraction": 1,
+          "placement": "idle",
+          "samples": 9,
+          "mean_tokens": 0,
+          "preparation_ms": 0.0004952222222222222,
+          "tokenization_ms": 0,
+          "send_to_handler_ms": 0.37527777777777777,
+          "send_to_client_ms": 0.5827178888888889
+        },
+        {
+          "fraction": 1,
+          "placement": "before",
+          "samples": 9,
+          "mean_tokens": 123069.33333333333,
+          "preparation_ms": 461.7887358888889,
+          "tokenization_ms": 452.85492155555556,
+          "send_to_handler_ms": 0.32126844444444447,
+          "send_to_client_ms": 0.4915
+        },
+        {
+          "fraction": 1,
+          "placement": "during",
+          "samples": 9,
+          "mean_tokens": 123069.33333333333,
+          "preparation_ms": 462.3286806666667,
+          "tokenization_ms": 453.4608842222222,
+          "send_to_handler_ms": 450.040014,
+          "send_to_client_ms": 450.31620844444444
+        },
+        {
+          "fraction": 1,
+          "placement": "after",
+          "samples": 9,
+          "mean_tokens": 123069.33333333333,
+          "preparation_ms": 463.42790722222225,
+          "tokenization_ms": 454.82540744444447,
+          "send_to_handler_ms": 0.46371744444444446,
+          "send_to_client_ms": 0.690449
+        }
+      ],
+      "checks": {
+        "placement_and_clock_order": true,
+        "stable_token_ids": true,
+        "exact_output_identity_and_text": true,
+        "first_token_stamp_inside_handler": true,
+        "during_handler_after_preparation": true,
+        "source_unchanged": true
+      },
+      "limitations": [
+        "Not the full HTTP server or OpenAI streaming formatter",
+        "No GPU/scheduler work or completion-driven load simulated",
+        "Cannot attribute a Triton/Kernel TTFT difference",
+        "Prefix fractions are message-count fractions, not token fractions"
+      ]
+    },
+    {
+      "run_id": "uvloop-20261022-004",
+      "result_sha256": "aea5f7df05cfaaba92c0c58ebc99b7e4ea70ea285b391ce4fe8865d0a95ded98",
+      "valid": true,
+      "samples": 108,
+      "issues": 3,
+      "warmup_samples": 1,
+      "samples_sha256": "c2a9868babf7b3550c3c954d0a12d0567179c57890f3f126aea44229a022df11",
+      "independent_serving_runs": 0,
+      "provenance": {
+        "git_sources": {
+          "parent": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations",
+            "commit": "21992f048d2cdcd2978046f95979cdcd05ea20bf"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/third_party/sglang",
+            "expected_commit": "bf3e538c5cca7a2adb42dc02592abb701a2b4d75",
+            "commit": "bf3e538c5cca7a2adb42dc02592abb701a2b4d75",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/third_party/flashmla/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/third_party/flashmla",
+            "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+            "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+            "override": false,
+            "dirty": false
+          }
+        },
+        "probe_sha256": "8240657d2553a54601f29bc878a2c6a9d3dab1fadcb0e16b8315e4a2b95da853",
+        "source_sha256": {
+          "third_party/sglang/python/sglang/srt/entrypoints/openai/serving_chat.py": "ac0bbdf37a86b49c9df0d513ba44b0c06feb23a28ffcde0b730500e560604ab1",
+          "third_party/sglang/python/sglang/srt/entrypoints/openai/protocol.py": "c9aa0b5551bf5761c6e283391d70aebadb6708b69ba998cf21e00f05d2e3299f",
+          "third_party/sglang/python/sglang/srt/entrypoints/openai/encoding_dsv4.py": "764dcfb28a57c3196975475747cb525ccacb4110556e3d9d35f038d6283ca527",
+          "third_party/sglang/python/sglang/srt/parser/jinja_template_utils.py": "27759425d3b5856095de117e1c431645d4e61e548cec3517be8f237cf0de65be",
+          "third_party/sglang/python/sglang/srt/managers/tokenizer_manager.py": "8102242c5094f8d444ac47232d3ae6113a70133a016791d9157864dada2fdad5",
+          "third_party/sglang/python/sglang/srt/managers/io_struct.py": "cc022f58fe2468fb6231c1e65a41106cbc0d73fe1bd784d6f57df94a412564a9",
+          "third_party/sglang/python/sglang/srt/observability/req_time_stats.py": "8b6d48dddf3ae16e2dd44c7a31550273cf5b1f8ee06f94221400ac57772aa9e5",
+          "third_party/sglang/python/sglang/srt/environ.py": "e64b24813f8dc9af30644ce348642adbfb4fe6365a7d6e0044347439e5ecd1ed"
+        },
+        "requests_sha256": "088f2c92ef24f4233926fc9b49cddd298fc417a7990cc8854408128282c41621",
+        "tokenizer_sha256": {
+          "tokenizer.json": "8f9f37ca37fdc4f5fd36d5cf4d3b0e8392edb4e894fd10cc0d70b4957c8633cf",
+          "tokenizer_config.json": "6ac8c8dc065ed118161d02dd532749ae3f52c243deac27872134fae2f50d8547"
+        },
+        "platform": "macOS-27.0-x86_64-i386-64bit-Mach-O",
+        "python": "3.13.0 | packaged by conda-forge | (main, Nov 27 2024, 19:22:59) [Clang 18.1.8 ]",
+        "packages": {
+          "transformers": "5.5.1",
+          "tokenizers": "0.22.1",
+          "pyzmq": "27.1.0",
+          "msgspec": "0.22.0",
+          "pydantic": "2.11.7",
+          "openai": "2.31.0"
+        },
+        "event_loop": "uvloop",
+        "uvloop_version": "0.21.0",
+        "command": [
+          "benchmarks/lswb-replay/frontend-event-loop-20261022/probe.py",
+          "--requests",
+          "/Users/poohthewinnie/.cache/remnant/attention-pruning/openhands-0731-cohort10-20261005/requests.jsonl",
+          "--tokenizer",
+          "/Users/poohthewinnie/.cache/huggingface/hub/models--deepseek-ai--DeepSeek-V4-Flash-0731/snapshots/7872f01b1d1fe23eabc4c98b48bffcef5a386062",
+          "--output",
+          "raw/frontend-event-loop/uvloop-20261022-004"
+        ],
+        "ipc": "pickle (fork default)",
+        "scope": "source-isolated template/tokenization + real output handler; synthetic loopback sink"
+      },
+      "aggregates": [
+        {
+          "fraction": 0.25,
+          "placement": "idle",
+          "samples": 9,
+          "mean_tokens": 0,
+          "preparation_ms": 0.0005416666666666666,
+          "tokenization_ms": 0,
+          "send_to_handler_ms": 0.3581897777777778,
+          "send_to_client_ms": 0.5337776666666667
+        },
+        {
+          "fraction": 0.25,
+          "placement": "before",
+          "samples": 9,
+          "mean_tokens": 33109,
+          "preparation_ms": 117.53018988888888,
+          "tokenization_ms": 115.19379622222222,
+          "send_to_handler_ms": 0.2839813333333333,
+          "send_to_client_ms": 0.43693044444444445
+        },
+        {
+          "fraction": 0.25,
+          "placement": "during",
+          "samples": 9,
+          "mean_tokens": 33109,
+          "preparation_ms": 117.72871788888888,
+          "tokenization_ms": 115.36732877777777,
+          "send_to_handler_ms": 105.80906966666667,
+          "send_to_client_ms": 106.07359733333334
+        },
+        {
+          "fraction": 0.25,
+          "placement": "after",
+          "samples": 9,
+          "mean_tokens": 33109,
+          "preparation_ms": 115.95145833333333,
+          "tokenization_ms": 113.63138411111112,
+          "send_to_handler_ms": 0.4603982222222222,
+          "send_to_client_ms": 0.660699
+        },
+        {
+          "fraction": 0.5,
+          "placement": "idle",
+          "samples": 9,
+          "mean_tokens": 0,
+          "preparation_ms": 0.0005415555555555555,
+          "tokenization_ms": 0,
+          "send_to_handler_ms": 0.36118055555555556,
+          "send_to_client_ms": 0.5344953333333333
+        },
+        {
+          "fraction": 0.5,
+          "placement": "before",
+          "samples": 9,
+          "mean_tokens": 55628,
+          "preparation_ms": 197.8893611111111,
+          "tokenization_ms": 193.47011566666666,
+          "send_to_handler_ms": 0.34101844444444446,
+          "send_to_client_ms": 0.5083564444444445
+        },
+        {
+          "fraction": 0.5,
+          "placement": "during",
+          "samples": 9,
+          "mean_tokens": 55628,
+          "preparation_ms": 195.98764333333335,
+          "tokenization_ms": 191.58161566666666,
+          "send_to_handler_ms": 183.87455066666666,
+          "send_to_client_ms": 184.13395844444446
+        },
+        {
+          "fraction": 0.5,
+          "placement": "after",
+          "samples": 9,
+          "mean_tokens": 55628,
+          "preparation_ms": 196.27148144444445,
+          "tokenization_ms": 191.89647200000002,
+          "send_to_handler_ms": 0.44944455555555557,
+          "send_to_client_ms": 0.6559721111111111
+        },
+        {
+          "fraction": 1,
+          "placement": "idle",
+          "samples": 9,
+          "mean_tokens": 0,
+          "preparation_ms": 0.0005092222222222222,
+          "tokenization_ms": 0,
+          "send_to_handler_ms": 0.386801,
+          "send_to_client_ms": 0.5743008888888889
+        },
+        {
+          "fraction": 1,
+          "placement": "before",
+          "samples": 9,
+          "mean_tokens": 123069.33333333333,
+          "preparation_ms": 466.8491528888889,
+          "tokenization_ms": 457.9684952222222,
+          "send_to_handler_ms": 0.32855555555555555,
+          "send_to_client_ms": 0.4920138888888889
+        },
+        {
+          "fraction": 1,
+          "placement": "during",
+          "samples": 9,
+          "mean_tokens": 123069.33333333333,
+          "preparation_ms": 470.3347963333333,
+          "tokenization_ms": 461.29484255555553,
+          "send_to_handler_ms": 458.4206991111111,
+          "send_to_client_ms": 458.694875
+        },
+        {
+          "fraction": 1,
+          "placement": "after",
+          "samples": 9,
+          "mean_tokens": 123069.33333333333,
+          "preparation_ms": 466.8129908888889,
+          "tokenization_ms": 458.0715371111111,
+          "send_to_handler_ms": 0.4560602222222222,
+          "send_to_client_ms": 0.6576805555555555
+        }
+      ],
+      "checks": {
+        "placement_and_clock_order": true,
+        "stable_token_ids": true,
+        "exact_output_identity_and_text": true,
+        "first_token_stamp_inside_handler": true,
+        "during_handler_after_preparation": true,
+        "source_unchanged": true
+      },
+      "limitations": [
+        "Not the full HTTP server or OpenAI streaming formatter",
+        "No GPU/scheduler work or completion-driven load simulated",
+        "Cannot attribute a Triton/Kernel TTFT difference",
+        "Prefix fractions are message-count fractions, not token fractions"
+      ]
+    }
+  ]
+}
