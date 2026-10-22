@@ -172,6 +172,21 @@ also covers timestamp placement/transport through both IPC formats and worker
 loops; the original mechanism measurements in `results.json` retain their original
 source hashes and are not relabeled as instrumented runs.
 
+After **both saved GPUQ jobs are terminal**, prepare their transfer packet:
+
+```bash
+bash benchmarks/lswb-replay/frontend-event-loop-20261022/diagnose.sh collect \
+  /path/to/repository/logs/frontend-first-output-<batch-id>
+```
+
+This creates a fresh `transfer/<batch-id>/` containing whitelisted metadata,
+responses, full request timings, logs, source/image identities, saved job records,
+and `SHA256SUMS`. Failed jobs and missing artifacts remain explicit; collection
+does not retry jobs or declare a benchmark valid. Raw prompts, request payloads,
+and binaries are excluded. Inspect the packet before explicitly staging,
+committing and pushing it. Do not pull collector changes onto the VDI while a
+diagnostic job is queued or running: its launch sources are frozen.
+
 VDI CPU qualification on `6f87576` / SGLang `7a95ce8231`: real serving-image
 request-time tests **10/10 passed**, host replay tests **19/19 passed**, with
 exact clean fork pins. No image rebuild or GPU allocation was needed. Initial
@@ -181,6 +196,39 @@ the launcher now passes an argument vector and saves the CPU log and CLI help
 with every batch. Instrumented full-model coverage remains pending.
 
 ## Evidence and rollback
+
+### Follow-up candidate: keep chat preparation off the receive loop
+
+The first completed Native diagnostic locates its multi-second output residence
+between detokenizer forward-start and API receive. The Packed leg and exact joined
+comparison remain pending; this observation does not establish a Kernel-specific
+regression. Together with the source-isolated blocking reproduction, it motivates
+one reversible candidate rather than an attention-kernel change.
+
+- **Question:** can the API receive already-produced output promptly while a long
+  DSV4 chat request is being rendered/tokenized, preserving the exact converted
+  request and all preparation/queue time in client TTFT?
+- **Changed mechanism:** opt-in `SGLANG_DSV4_ASYNC_PREPARATION`, default off.
+  Offload the existing text-chat converter to one owned worker; bound admission
+  and retain ownership until its actual work finishes, including cancellation.
+  Preserve receive timestamps, errors, token IDs, tools, reasoning and sampling.
+- **Baseline policy:** finish and transfer both instrumented baseline legs before
+  changing VDI source. Compare the candidate using the identical C40/TP4/MF0.88/
+  HiCache-ratio-2/900-second protocol, with source and image identities recorded.
+  Apply the same frontend change to Native and Packed. No GPU retry is automatic.
+- **Local gates:** exact synchronous/async conversion parity, default-path parity,
+  exception handling, queued/running cancellation, no overlapping conversions,
+  no late scheduler dispatch, responsive output handling and explicit shutdown.
+  Qualify the actual image on CPU before allocating GPUs.
+- **Acceptance:** ordered exact-ID diagnostic coverage and the existing sample
+  gate; materially reduce the detokenizer-to-API residence time without moving
+  receive timestamps or hiding preparation wait. Report failures, client TTFT,
+  TPOT, E2E and request throughput together. A stage improvement alone is not a
+  throughput claim or validation of all tokenizer-consuming endpoints.
+- **Stop/rollback:** reject or retain as inconclusive if correctness/coverage
+  fails, or if another stage dominates the remaining discrepancy. Disable the
+  startup switch to restore synchronous conversion. Keep the candidate isolated
+  until these gates and independent review pass; preserve baseline evidence.
 
 - Canonical aggregate record: `results.json`; includes both invocation commands,
   package versions and source/input/tokenizer hashes. Raw trial records remain

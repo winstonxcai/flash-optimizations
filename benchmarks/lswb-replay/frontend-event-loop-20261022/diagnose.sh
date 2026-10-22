@@ -62,6 +62,169 @@ case "${1:-}" in
     done
     echo "Diagnostic batch: $ROOT"
     ;;
+  collect)
+    [ "$#" -eq 2 ] || { echo "usage: bash $SCRIPT collect <batch-directory>" >&2; exit 2; }
+    python3 - "$REPO" "$2" <<'PY_COLLECT'
+import datetime
+import hashlib
+import json
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+repo = Path(sys.argv[1]).resolve()
+argument = Path(sys.argv[2])
+if argument.is_absolute():
+    batch = argument.resolve()
+elif argument.parent == Path("."):
+    batch = (repo / "logs" / argument).resolve()
+else:
+    batch = (repo / argument).resolve()
+if batch.parent != (repo / "logs").resolve() or not batch.name.startswith("frontend-first-output-"):
+    raise SystemExit(f"Unexpected diagnostic batch directory: {batch}")
+if not batch.is_dir():
+    raise SystemExit(f"Diagnostic batch does not exist: {batch}")
+
+# Query only; collection never starts, cancels, or retries a GPU job.
+snapshot = json.loads(subprocess.check_output(
+    ["gpuq", "jobs", "--all", "--user", "winstonxcai"], text=True, timeout=30,
+))
+jobs = snapshot["jobs"] if isinstance(snapshot, dict) else snapshot
+if not isinstance(jobs, list):
+    raise SystemExit("GPUQ jobs response must contain a list")
+terminal = {"succeeded", "failed", "cancelled", "canceled", "timed_out", "timeout"}
+selected = {}
+for mode in ("native", "kernel"):
+    submission = batch / f"job-{mode}.txt"
+    if not submission.is_file() or submission.is_symlink():
+        raise SystemExit(f"Missing or unsafe saved submission: {submission}")
+    ids = set(re.findall(r"\bjob-\d{8}-\d{6}-[0-9a-f]{8}\b", submission.read_text()))
+    if len(ids) != 1:
+        raise SystemExit(f"Expected one saved {mode} job ID in {submission}, got {sorted(ids)}")
+    job_id = ids.pop()
+    matches = [job for job in jobs if job.get("id") == job_id]
+    if len(matches) != 1:
+        raise SystemExit(f"Expected one GPUQ record for {mode} {job_id}, got {len(matches)}")
+    job = matches[0]
+    status = job.get("status", job.get("state"))
+    if status not in terminal:
+        raise SystemExit(f"Refusing collection: {mode} {job_id} is {status!r}, not terminal")
+    expected = f"frontend-first-output-{mode}-{batch.name}"
+    if job.get("workload_key") != expected:
+        raise SystemExit(f"Job identity mismatch for {job_id}: expected workload_key {expected!r}")
+    selected[mode] = job
+if len({job["id"] for job in selected.values()}) != 2:
+    raise SystemExit("Native and Kernel submissions must identify two distinct jobs")
+
+transfer = repo / "transfer" / batch.name
+if transfer.exists():
+    raise SystemExit(f"Transfer already exists; refusing overwrite: {transfer}")
+transfer.parent.mkdir(parents=True, exist_ok=True)
+missing = []
+collected = []
+runs = []
+
+def digest(path: Path) -> str:
+    result = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            result.update(chunk)
+    return result.hexdigest()
+
+
+with tempfile.TemporaryDirectory(prefix=f".{batch.name}-", dir=transfer.parent) as temporary:
+    staging = Path(temporary) / "payload"
+    staging.mkdir()
+
+    def copy_artifact(source: Path, relative: str) -> None:
+        if not source.is_file():
+            missing.append(str(source.relative_to(repo)))
+            return
+        if source.is_symlink() or not source.resolve().is_relative_to(repo):
+            raise RuntimeError(f"Refusing symlink or external artifact: {source}")
+        before = source.stat()
+        destination = staging / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, destination)
+        after = source.stat()
+        if (before.st_size, before.st_mtime_ns, before.st_ino) != (
+            after.st_size, after.st_mtime_ns, after.st_ino
+        ) or digest(source) != digest(destination):
+            raise RuntimeError(f"Artifact changed while collecting: {source}")
+        collected.append(relative)
+
+    for name in (
+        "parent-commit.txt", "image-id.txt", "launcher-sha256.txt", "source-manifest.json",
+        "cpu-preflight.log", "gpuq-run-help.txt", "job-native.txt", "job-kernel.txt",
+    ):
+        copy_artifact(batch / name, name)
+    for mode, job in selected.items():
+        for name in (
+            f"serve_{mode}.log", "server-info.json", "assigned-gpus.txt",
+            "replay-exit-code.txt", "source-manifest.json", "gc-freeze.log",
+            "host-memory-before.txt", "host-memory-after.txt",
+        ):
+            copy_artifact(batch / mode / name, f"{mode}/boot/{name}")
+        for name in ("stdout.log", "stderr.log", "stdout", "stderr", "run.log", "job.json"):
+            source = batch / f"gpuq-{mode}" / name
+            if source.exists():
+                copy_artifact(source, f"{mode}/gpuq/{name}")
+
+        tag = f"{mode}-frontend-first-output-c40-hicache-mf088-{batch.name}"
+        root = repo / "results" / "lswb-replay" / tag
+        found = sorted(path for path in root.glob("20*") if path.is_dir())
+        if len(found) > 1:
+            raise RuntimeError(f"Ambiguous diagnostic results under {root}: {found}")
+        run = found[0] if found else None
+        record = {"mode": mode, "job_id": job["id"], "status": job.get("status", job.get("state")),
+                  "exit_code": job.get("exit_code"), "original_run": None, "transfer_path": None}
+        if run is None:
+            missing.append(str(root.relative_to(repo)) + "/<run-directory>")
+        else:
+            relative = f"{mode}/{run.name}"
+            record.update(original_run=str(run.relative_to(repo)), transfer_path=relative)
+            # Explicit metadata whitelist: no requests.jsonl, raw prompts/tools,
+            # model weights, compiled artifacts, or unfiltered request dumps.
+            for name in (
+                "client/REPORT.md", "client/summary.json", "client/manifest.json",
+                "client/dataset_manifest.json", "client/done.json", "client/responses.jsonl",
+                "client.log", "cache-flush.log", "gpu-samples.csv", "server-info.json",
+                "server.log", "replay-window.json", "request-timings.jsonl",
+                "request-timing-validation.json", "collection-config.json",
+                "first-output-pipeline.json",
+            ):
+                copy_artifact(run / name, f"{relative}/{name}")
+        runs.append(record)
+
+    (staging / "jobs.json").write_text(json.dumps({"jobs": list(selected.values())}, indent=2) + "\n")
+    manifest = {
+        "schema_version": 1, "batch": batch.name,
+        "collected_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "description": "Native/Packed Kernel-256 C40 HiCache first-output diagnostic, MF0.88, n=1 each",
+        "classification": "Transferred diagnostic evidence; failures preserved, qualification pending",
+        "expected_jobs": 2, "terminal_jobs": len(selected),
+        "collected_runs": sum(record["original_run"] is not None for record in runs),
+        "runs": runs, "copied_artifacts": collected, "missing_artifacts": missing,
+        "collection_commit": subprocess.check_output(
+            ["git", "-C", str(repo), "rev-parse", "HEAD"], text=True, timeout=30,
+        ).strip(),
+    }
+    (staging / "transfer-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    files = sorted(path for path in staging.rglob("*") if path.is_file())
+    (staging / "SHA256SUMS").write_text("".join(
+        f"{digest(path)}  {path.relative_to(staging)}\n" for path in files
+    ))
+    if transfer.exists():
+        raise RuntimeError(f"Transfer destination appeared during collection: {transfer}")
+    staging.rename(transfer)
+print(f"Collected {len(files)} checksummed files: {transfer}")
+print(f"Missing artifacts: {len(missing)} (retained in transfer-manifest.json; not a success claim)")
+print("Collection only: inspect the transfer before explicitly staging, committing and pushing it.")
+PY_COLLECT
+    ;;
   run)
     MODE=${2:?missing mode} ROOT=${3:?missing batch directory}
     export PORT=${4:?missing port} MASTER_PORT=${5:?missing master port}
@@ -172,5 +335,5 @@ if not result["valid"] or not result["post_180s_sample_gate"]:
 PY_ANALYZE
     exit "$replay_status"
     ;;
-  *) echo "usage: bash $SCRIPT <preflight|submit> [dataset manifest], or run mode batch port master" >&2; exit 2 ;;
+  *) echo "usage: bash $SCRIPT <preflight|submit> [dataset manifest], collect batch-directory, or run mode batch port master" >&2; exit 2 ;;
 esac
