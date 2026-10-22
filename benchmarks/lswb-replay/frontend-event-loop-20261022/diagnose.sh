@@ -36,8 +36,8 @@ preflight() {
   if [ "$DSV4_ASYNC_PREPARATION" = 1 ]; then
     timeout --foreground 120 docker exec -e "PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT" \
       -e SGLANG_DSV4_ASYNC_PREPARATION=1 -e PYTHONDONTWRITEBYTECODE=1 \
-      -w "$SGLANG_ROOT_CT" "$CONTAINER" python3 -m unittest \
-      test.registered.unit.entrypoints.openai.test_serving_chat.AsyncInputPreparationTests -v
+      -w "$SGLANG_ROOT_CT" "$CONTAINER" python3 \
+      test/registered/unit/entrypoints/openai/test_serving_chat.py AsyncInputPreparationTests -v
   fi
   timeout --foreground 120 python3 -m unittest discover -s scripts/local/business_replay -p 'test_*.py' -v
   echo "CPU source, timing and replay preflight PASS; no GPU job allocated"
