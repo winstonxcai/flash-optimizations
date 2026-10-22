@@ -193,16 +193,17 @@ exact clean fork pins. No image rebuild or GPU allocation was needed. Initial
 submission exposed a GPUQ CLI mismatch: this host accepts the command after
 `--`, without a `--bash` option. Submission stopped before creating a job;
 the launcher now passes an argument vector and saves the CPU log and CLI help
-with every batch. Instrumented full-model coverage remains pending.
+with every batch. Both instrumented full-model legs completed; see the baseline evidence below.
 
 ## Evidence and rollback
 
 ### Follow-up candidate: keep chat preparation off the receive loop
 
-The first completed Native diagnostic locates its multi-second output residence
-between detokenizer forward-start and API receive. The Packed leg and exact joined
-comparison remain pending; this observation does not establish a Kernel-specific
-regression. Together with the source-isolated blocking reproduction, it motivates
+Both completed baseline legs locate multi-second output residence between
+detokenizer forward-start and API receive: post-180-second means are 6.183 s
+Native and 5.713 s Packed Kernel. All successful responses join exactly to ordered
+server boundaries (1,346 Native; 1,279 Packed). This pair does not reproduce a
+Kernel-specific regression. Together with the source-isolated blocking reproduction, it motivates
 one reversible candidate rather than an attention-kernel change.
 
 - **Question:** can the API receive already-produced output promptly while a long
@@ -244,3 +245,34 @@ one reversible candidate rather than an attention-kernel change.
   annotations; the actual default pickle send/receive functions are unchanged.
 - No production service was started or modified. Removing this study only removes
   reproduction code/evidence; it does not change serving behavior.
+
+
+### Candidate execution and scope
+
+The startup launcher knob is `DSV4_ASYNC_PREPARATION=1`. The diagnostic freezes
+its value in `async-preparation.txt`, forwards it to GPUQ, checks the activation
+log, and runs the maintained `AsyncInputPreparationTests` inside the actual
+serving image before GPU allocation. The source-isolated probe passes 20 tests.
+The cached-tokenizer CPU evidence in `results.json` retains its original source
+hashes; subsequent formatting/logging edits do not relabel that evidence.
+
+```bash
+DSV4_ASYNC_PREPARATION=1 bash benchmarks/lswb-replay/frontend-event-loop-20261022/diagnose.sh submit \
+  /home/jovyan/wenyuhong/benchmarks/datasets/h20-dsv4pro/longcodebench_openai \
+  /home/jovyan/wenyuhong/benchmarks/cache/official-longswebench/longswebench-openai-v1.json
+```
+
+This candidate is scoped to DSV4 text chat. Other tokenizer-consuming endpoints
+share the tokenizer and are outside this gate; mixed-endpoint concurrency is
+not qualified. One worker preserves converter serialization and output-loop
+responsiveness, not additional tokenization capacity. Cancellation retains the
+slot until the actual worker finishes; shutdown drains owned work, and no
+cancelled request is dispatched late. Default off creates no worker.
+
+Baseline packet: `transfer/frontend-first-output-20261022_221813-YP2fOa`,
+parent `ae822c5`, SGLang `7a95ce8231`, FlashMLA `97f3faa58450`; both legs ran
+sequentially on the same assigned four GPUs and stopped their own servers.
+The 900-second diagnostic has 14/1,360 Native and 13/1,292 Packed missing-output
+responses, narrowly failing the 99% response-validity rule. Timing coverage passes
+independently; neither is an accepted throughput benchmark. Preserve these failures
+when interpreting the candidate.

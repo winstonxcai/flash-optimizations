@@ -100,6 +100,16 @@ files within them, not every upstream file in that directory.
   The [frontend diagnostic](../benchmarks/lswb-replay/frontend-event-loop-20261022/README.md)
   records CPU coverage and the bounded VDI/GPUQ attribution protocol. Its source
   is isolated from newer local microbenchmark changes; native binaries are unchanged.
+- **DSV4 input preparation:** `python/sglang/srt/entrypoints/openai/serving_base.py`,
+  `serving_chat.py`, `entrypoints/http_server.py` and `environ.py` own the opt-in
+  `SGLANG_DSV4_ASYNC_PREPARATION` text-chat worker. The local launcher exposes
+  `DSV4_ASYNC_PREPARATION=1` and checks the actual mounted implementation on CPU
+  before replacing a server. One worker serializes conversion while the API loop
+  receives outputs; cancellation retains admission until conversion completes,
+  and shutdown drains owned work. Default off creates no worker. The controlled
+  chat-only diagnostic is qualified separately from mixed-endpoint tokenizer use;
+  no kernel, cache, token IDs or sampling change is intended. Regression checks
+  are in the existing serving-chat unit suite.
 - **Benchmarks and calibration:** `benchmark/remnant/` owns the maintained CLI,
   protocol and harness tests. `python/sglang/benchmark/remnant/` owns shared case
   definitions, seeds, statistics, JSON/CSV and profile-export checks, capture

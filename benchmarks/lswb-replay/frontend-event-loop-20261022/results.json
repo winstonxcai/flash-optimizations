@@ -500,5 +500,665 @@
         "Prefix fractions are message-count fractions, not token fractions"
       ]
     }
-  ]
+  ],
+  "candidate_cpu_preparation": {
+    "schema_version": 1,
+    "author": "Winston Cai",
+    "scope": "Source-isolated candidate CPU converter parity; OpenHands cohort, not LongSWE serving",
+    "source_sha256": {
+      "benchmarks/lswb-replay/frontend-event-loop-20261022/probe.py": "3e21b7cd061cfbe5996e0b1582744d69585f09877dc13245f7cfb9fbbbc5119f",
+      "third_party/sglang/python/sglang/srt/entrypoints/openai/serving_base.py": "83604812266dafcf68c99243bedb997fc4034319cebc11639b5afc90e3f29efc",
+      "third_party/sglang/python/sglang/srt/entrypoints/openai/serving_chat.py": "6fdfc8e81b4483991437386629247169884d3cf8e8a73143659436d3bf462b7e",
+      "third_party/sglang/python/sglang/srt/environ.py": "48cde95855298dd30da9cd4e4dcf92f778112b517b92e5b91d85772f81517d12"
+    },
+    "request_file_sha256": "088f2c92ef24f4233926fc9b49cddd298fc417a7990cc8854408128282c41621",
+    "tokenizer_sha256": {
+      "tokenizer.json": "8f9f37ca37fdc4f5fd36d5cf4d3b0e8392edb4e894fd10cc0d70b4957c8633cf",
+      "tokenizer_config.json": "6ac8c8dc065ed118161d02dd532749ae3f52c243deac27872134fae2f50d8547"
+    },
+    "packages": {
+      "transformers": "5.5.1",
+      "tokenizers": "0.22.1",
+      "anyio": "4.10.0"
+    },
+    "rows": [
+      {
+        "instance_id": "keras-team__keras-nlp-131",
+        "tokens": 127551,
+        "token_ids_sha256": "fe46c906801a52b6b1d12c29453e378a53896141a07ec7c4dbb713ac89971e67",
+        "exact_converter_parity": true,
+        "async_preparation_s": 0.5154470420093276,
+        "heartbeat_samples": 89,
+        "max_heartbeat_gap_s": 0.014083916961681098
+      },
+      {
+        "instance_id": "ml31415__numpy-groupies-48",
+        "tokens": 121073,
+        "token_ids_sha256": "3459a90c780b5e86e42e2bbfbb8e012edbc369dac5baabf68611110306c2588e",
+        "exact_converter_parity": true,
+        "async_preparation_s": 0.5466377499978989,
+        "heartbeat_samples": 94,
+        "max_heartbeat_gap_s": 0.01625587500166148
+      },
+      {
+        "instance_id": "aesara-devs__aesara-549",
+        "tokens": 120584,
+        "token_ids_sha256": "a9d279d501e717bd210db15041241d9a09120f779c65833ca5557f5c128a8cd9",
+        "exact_converter_parity": true,
+        "async_preparation_s": 0.44160312501480803,
+        "heartbeat_samples": 76,
+        "max_heartbeat_gap_s": 0.01395058399066329
+      }
+    ],
+    "gpu_jobs": 0,
+    "limitations": [
+      "CPU AST source execution; full imported SGLang/image runtime and model serving unqualified",
+      "No throughput, latency SLO, or quality claim"
+    ]
+  },
+  "baseline_diagnostic": {
+    "schema_version": 1,
+    "source_transfer": "transfer/frontend-first-output-20261022_221813-YP2fOa",
+    "collection_commit": "b03c3caebd6e250ebfefae40a751df63360da1c6",
+    "source_manifest": {
+      "parent": {
+        "path": "/home/jovyan/winstonxcai/flash-optimizations",
+        "commit": "ae822c5ddeef54d91375efb21ec0588ed9c928bd"
+      },
+      "sglang": {
+        "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang",
+        "expected_commit": "7a95ce8231a608fae5403feff688a7d616ff9e13",
+        "commit": "7a95ce8231a608fae5403feff688a7d616ff9e13",
+        "override": false,
+        "dirty": false
+      },
+      "flashmla/csrc/cutlass": {
+        "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla/csrc/cutlass",
+        "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+        "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+        "override": false,
+        "dirty": false
+      },
+      "flashmla": {
+        "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla",
+        "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+        "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+        "override": false,
+        "dirty": false
+      }
+    },
+    "image_id": "sha256:09dfea18bd2c4168481710dcb1830a2c2efdb8e8f45f9d1ad7bb85a1b7ff48ab",
+    "checksums": {
+      "verified_files": 50,
+      "all_passed": true
+    },
+    "missing_transfer_artifacts": [
+      "logs/frontend-first-output-20261022_221813-YP2fOa/native/source-manifest.json",
+      "logs/frontend-first-output-20261022_221813-YP2fOa/native/gc-freeze.log",
+      "logs/frontend-first-output-20261022_221813-YP2fOa/native/host-memory-before.txt",
+      "logs/frontend-first-output-20261022_221813-YP2fOa/native/host-memory-after.txt",
+      "logs/frontend-first-output-20261022_221813-YP2fOa/kernel/source-manifest.json",
+      "logs/frontend-first-output-20261022_221813-YP2fOa/kernel/gc-freeze.log",
+      "logs/frontend-first-output-20261022_221813-YP2fOa/kernel/host-memory-before.txt",
+      "logs/frontend-first-output-20261022_221813-YP2fOa/kernel/host-memory-after.txt"
+    ],
+    "protocol": "Original fixed-active-user-pool LongSWE; C40, TP4, MF0.88, CPU L2 HiCache ratio 2, 900s dispatch window, n=1 per mode",
+    "job_allocation": "Native then Kernel sequentially on GPUQ-assigned GPUs 0,1,2,5; both exited 1 because response validity missed the unchanged 99% gate",
+    "modes": {
+      "native": {
+        "original_run": "results/lswb-replay/native-frontend-first-output-c40-hicache-mf088-frontend-first-output-20261022_221813-YP2fOa/20261022_222531",
+        "client_summary": {
+          "valid": false,
+          "counts": {
+            "attempted": 1360,
+            "completion_tokens": 191878,
+            "failed": 14,
+            "not_started_due_to_duration": 3556,
+            "prompt_tokens": 182833199,
+            "selected": 4916,
+            "successful": 1346,
+            "users_completed": 12,
+            "users_selected": 92,
+            "users_started": 49
+          },
+          "duration_s": 914.3249882813543,
+          "success_rate": 0.9897058823529412,
+          "request_throughput": 1.4721242635291638,
+          "completion_token_throughput": 209.8575478732904,
+          "ttft_ms": {
+            "count": 1346,
+            "max": 207239.2906099558,
+            "mean": 10845.433936750496,
+            "min": 744.0220164135098,
+            "p50": 9071.664477698505,
+            "p90": 12314.028766006231,
+            "p95": 14813.99348936975,
+            "p99": 93439.97805286199,
+            "stddev": 16447.21043406312
+          },
+          "tpot_ms": {
+            "count": 1346,
+            "max": 5370.778816972712,
+            "mean": 113.7073896045168,
+            "min": 0.014241123872418557,
+            "p50": 29.29791865651222,
+            "p90": 113.86393788734297,
+            "p95": 246.7872840840192,
+            "p99": 2533.432649305879,
+            "stddev": 472.11040304121957
+          },
+          "latency_ms": {
+            "count": 1346,
+            "max": 337551.9016664475,
+            "mean": 21513.636306870623,
+            "min": 1571.172165684402,
+            "p50": 12655.925197526813,
+            "p90": 25947.689509019256,
+            "p95": 37722.0935607329,
+            "p99": 306264.13430366665,
+            "stddev": 41717.463224915715
+          }
+        },
+        "pipeline": {
+          "valid": true,
+          "id_verified": true,
+          "basis": "Exact captured SSE server_request_id equals server metrics id; no inferred joins",
+          "cohort_basis": "Successful exact-ID joins; after_180s uses server request_received_ts",
+          "errors": [],
+          "client_identity_diagnostics": [],
+          "coverage": {
+            "client_records": 1360,
+            "successful_client_records": 1346,
+            "client_records_with_server_id": 1360,
+            "server_records": 1360,
+            "matched_successful": 1346,
+            "timing_valid_successful": 1346,
+            "unmatched_successful": 0,
+            "unmatched_server_records": 14
+          },
+          "cohorts": {
+            "all": {
+              "count": 1346,
+              "stages": {
+                "prefill_to_send_s": {
+                  "count": 1346,
+                  "mean": 0.023318521512387235,
+                  "p50": 0.010077953338623047,
+                  "p90": 0.03566896915435791,
+                  "p95": 0.1192549467086792
+                },
+                "send_to_detokenizer_recv_s": {
+                  "count": 1346,
+                  "mean": 0.00039179062949601466,
+                  "p50": 0.0003426074981689453,
+                  "p90": 0.0005899667739868164,
+                  "p95": 0.0007495880126953125
+                },
+                "detokenizer_recv_to_send_s": {
+                  "count": 1346,
+                  "mean": 0.00021463446595870723,
+                  "p50": 0.00017571449279785156,
+                  "p90": 0.0003170967102050781,
+                  "p95": 0.0005152225494384766
+                },
+                "detokenizer_send_to_frontend_recv_s": {
+                  "count": 1346,
+                  "mean": 6.0369725818974125,
+                  "p50": 6.98632550239563,
+                  "p90": 10.309587478637695,
+                  "p95": 11.093432009220123
+                },
+                "frontend_recv_to_handle_s": {
+                  "count": 1346,
+                  "mean": 3.7462006352100115e-05,
+                  "p50": 5.0067901611328125e-06,
+                  "p90": 2.9087066650390625e-05,
+                  "p95": 0.0003085136413574219
+                },
+                "frontend_handle_to_first_output_s": {
+                  "count": 1346,
+                  "mean": 2.3015009524386494e-05,
+                  "p50": 1.8358230590820312e-05,
+                  "p90": 3.528594970703125e-05,
+                  "p95": 7.206201553344727e-05
+                },
+                "post_prefill_to_first_output_s": {
+                  "count": 1346,
+                  "mean": 6.0609580055211305,
+                  "p50": 6.996222734451294,
+                  "p90": 10.319993257522583,
+                  "p95": 11.109947144985199
+                }
+              }
+            },
+            "after_180s": {
+              "count": 1314,
+              "stages": {
+                "prefill_to_send_s": {
+                  "count": 1314,
+                  "mean": 0.018887644851951657,
+                  "p50": 0.009982466697692871,
+                  "p90": 0.02166950702667239,
+                  "p95": 0.06710557937622064
+                },
+                "send_to_detokenizer_recv_s": {
+                  "count": 1314,
+                  "mean": 0.00038726471330477225,
+                  "p50": 0.0003412961959838867,
+                  "p90": 0.0005583047866821295,
+                  "p95": 0.0007495880126953125
+                },
+                "detokenizer_recv_to_send_s": {
+                  "count": 1314,
+                  "mean": 0.00021371358787269535,
+                  "p50": 0.00017499923706054688,
+                  "p90": 0.0003109931945800789,
+                  "p95": 0.0005152225494384766
+                },
+                "detokenizer_send_to_frontend_recv_s": {
+                  "count": 1314,
+                  "mean": 6.183137233035931,
+                  "p50": 7.048833131790161,
+                  "p90": 10.324281024932862,
+                  "p95": 11.133580327033995
+                },
+                "frontend_recv_to_handle_s": {
+                  "count": 1314,
+                  "mean": 3.7727290636872594e-05,
+                  "p50": 5.0067901611328125e-06,
+                  "p90": 3.476142883300818e-05,
+                  "p95": 0.00031059980392456044
+                },
+                "frontend_handle_to_first_output_s": {
+                  "count": 1314,
+                  "mean": 2.1542043990740492e-05,
+                  "p50": 1.8358230590820312e-05,
+                  "p90": 3.116130828857423e-05,
+                  "p95": 4.029273986816406e-05
+                },
+                "post_prefill_to_first_output_s": {
+                  "count": 1314,
+                  "mean": 6.202685125523688,
+                  "p50": 7.059785485267639,
+                  "p90": 10.334375405311585,
+                  "p95": 11.145206427574156
+                }
+              }
+            }
+          }
+        },
+        "post_180s_sample_gate": true,
+        "client_server_token_parity": true,
+        "failure_audit": {
+          "count": 14,
+          "failure_reasons": {
+            "missing_output_event": 14
+          },
+          "completion_token_histogram": {
+            "7": 1,
+            "16": 12,
+            "36": 1
+          },
+          "all_http_200": true,
+          "all_stop_with_server_stop_token_1": true,
+          "all_reasoning_tokens_zero": true,
+          "all_exact_ids_and_ordered_pipeline": true,
+          "all_failed_client_ttft_missing": true,
+          "interpretation": "Positive completion tokens and normal stop, but no observable content/reasoning/tool-call event. No raw SSE/text retained to distinguish control-only generation from parser suppression. Response-validity rules remain unchanged.",
+          "prior_uninstrumented_c40_comparison": {
+            "response_file": "raw/lswb-native-c40-hicache-n1-20261022/native-hicache-on-c40-mf088-native-hicache-parallel-c40-mf088-20261022_185741-B824lv/20261022_192817/client/responses.jsonl",
+            "response_file_sha256": "2e241c1eda989b2aa9a8c2197958d683744cbb024ae793d0e2a1c2550e9336f2",
+            "current_failures_with_prior_record": 14,
+            "also_failed_in_prior": 10,
+            "previously_valid": 4,
+            "interpretation": "Most current failing dataset requests also failed without diagnostic instrumentation. Not evidence that all failure differences are caused by the instrument; no raw output retained."
+          }
+        }
+      },
+      "kernel": {
+        "original_run": "results/lswb-replay/kernel-frontend-first-output-c40-hicache-mf088-frontend-first-output-20261022_221813-YP2fOa/20261022_224549",
+        "client_summary": {
+          "valid": false,
+          "counts": {
+            "attempted": 1292,
+            "completion_tokens": 178625,
+            "failed": 13,
+            "not_started_due_to_duration": 3624,
+            "prompt_tokens": 173411103,
+            "selected": 4916,
+            "successful": 1279,
+            "users_completed": 9,
+            "users_selected": 92,
+            "users_started": 48
+          },
+          "duration_s": 908.14835959021,
+          "success_rate": 0.989938080495356,
+          "request_throughput": 1.408360194117547,
+          "completion_token_throughput": 196.691430550623,
+          "ttft_ms": {
+            "count": 1279,
+            "max": 230822.55131937563,
+            "mean": 12359.3354560879,
+            "min": 775.7264096289873,
+            "p50": 8867.965158075094,
+            "p90": 11687.428790144622,
+            "p95": 16793.153576552868,
+            "p99": 118215.49952216446,
+            "stddev": 21386.867973190536
+          },
+          "tpot_ms": {
+            "count": 1279,
+            "max": 6013.85807128329,
+            "mean": 108.45858073276783,
+            "min": 0.014611102383712242,
+            "p50": 29.54294076854629,
+            "p90": 83.63591188624981,
+            "p95": 170.402998205375,
+            "p99": 1925.048337790223,
+            "stddev": 503.5954911052649
+          },
+          "latency_ms": {
+            "count": 1279,
+            "max": 376903.9873527363,
+            "mean": 22008.13522887146,
+            "min": 1589.6448381245136,
+            "p50": 11822.645225562155,
+            "p90": 25510.792094282806,
+            "p95": 54369.08544693142,
+            "p99": 239550.63336901367,
+            "stddev": 40903.813592564074
+          }
+        },
+        "pipeline": {
+          "valid": true,
+          "id_verified": true,
+          "basis": "Exact captured SSE server_request_id equals server metrics id; no inferred joins",
+          "cohort_basis": "Successful exact-ID joins; after_180s uses server request_received_ts",
+          "errors": [],
+          "client_identity_diagnostics": [],
+          "coverage": {
+            "client_records": 1292,
+            "successful_client_records": 1279,
+            "client_records_with_server_id": 1292,
+            "server_records": 1292,
+            "matched_successful": 1279,
+            "timing_valid_successful": 1279,
+            "unmatched_successful": 0,
+            "unmatched_server_records": 13
+          },
+          "cohorts": {
+            "all": {
+              "count": 1279,
+              "stages": {
+                "prefill_to_send_s": {
+                  "count": 1279,
+                  "mean": 0.031118138308073973,
+                  "p50": 0.010401248931884766,
+                  "p90": 0.08087859153747567,
+                  "p95": 0.20884766578674313
+                },
+                "send_to_detokenizer_recv_s": {
+                  "count": 1279,
+                  "mean": 0.00042329308015466946,
+                  "p50": 0.00034356117248535156,
+                  "p90": 0.0007193088531494141,
+                  "p95": 0.0007863044738769531
+                },
+                "detokenizer_recv_to_send_s": {
+                  "count": 1279,
+                  "mean": 0.00024312655379569,
+                  "p50": 0.00017309188842773438,
+                  "p90": 0.0005495548248291016,
+                  "p95": 0.0006291866302490234
+                },
+                "detokenizer_send_to_frontend_recv_s": {
+                  "count": 1279,
+                  "mean": 5.571127660764764,
+                  "p50": 7.250636339187622,
+                  "p90": 9.05949363708496,
+                  "p95": 9.436950254440308
+                },
+                "frontend_recv_to_handle_s": {
+                  "count": 1279,
+                  "mean": 6.066848748917688e-05,
+                  "p50": 5.245208740234375e-06,
+                  "p90": 0.0002734661102294923,
+                  "p95": 0.0004450082778930663
+                },
+                "frontend_handle_to_first_output_s": {
+                  "count": 1279,
+                  "mean": 2.4067787009351787e-05,
+                  "p50": 1.8596649169921875e-05,
+                  "p90": 3.695487976074219e-05,
+                  "p95": 7.562637329101558e-05
+                },
+                "post_prefill_to_first_output_s": {
+                  "count": 1279,
+                  "mean": 5.602996954981287,
+                  "p50": 7.26207160949707,
+                  "p90": 9.06952042579651,
+                  "p95": 9.446901535987854
+                }
+              }
+            },
+            "after_180s": {
+              "count": 1247,
+              "stages": {
+                "prefill_to_send_s": {
+                  "count": 1247,
+                  "mean": 0.02665116467663261,
+                  "p50": 0.010353565216064453,
+                  "p90": 0.05954914093017584,
+                  "p95": 0.16207573413848897
+                },
+                "send_to_detokenizer_recv_s": {
+                  "count": 1247,
+                  "mean": 0.0004184641834249856,
+                  "p50": 0.0003421306610107422,
+                  "p90": 0.0007193088531494141,
+                  "p95": 0.0007863044738769531
+                },
+                "detokenizer_recv_to_send_s": {
+                  "count": 1247,
+                  "mean": 0.00024274299884664602,
+                  "p50": 0.00017261505126953125,
+                  "p90": 0.0005495548248291016,
+                  "p95": 0.0006291866302490234
+                },
+                "detokenizer_send_to_frontend_recv_s": {
+                  "count": 1247,
+                  "mean": 5.713272525294839,
+                  "p50": 7.288101673126221,
+                  "p90": 9.07265419960022,
+                  "p95": 9.446480011940002
+                },
+                "frontend_recv_to_handle_s": {
+                  "count": 1247,
+                  "mean": 6.158311747510431e-05,
+                  "p50": 5.0067901611328125e-06,
+                  "p90": 0.0002784729003906252,
+                  "p95": 0.00044674873352050786
+                },
+                "frontend_handle_to_first_output_s": {
+                  "count": 1247,
+                  "mean": 2.2470998878754324e-05,
+                  "p50": 1.8596649169921875e-05,
+                  "p90": 3.34739685058594e-05,
+                  "p95": 4.172325134277344e-05
+                },
+                "post_prefill_to_first_output_s": {
+                  "count": 1247,
+                  "mean": 5.740668951270097,
+                  "p50": 7.300098657608032,
+                  "p90": 9.08442406654358,
+                  "p95": 9.45955936908722
+                }
+              }
+            }
+          }
+        },
+        "post_180s_sample_gate": true,
+        "client_server_token_parity": true,
+        "failure_audit": {
+          "count": 13,
+          "failure_reasons": {
+            "missing_output_event": 13
+          },
+          "completion_token_histogram": {
+            "7": 2,
+            "16": 10,
+            "36": 1
+          },
+          "all_http_200": true,
+          "all_stop_with_server_stop_token_1": true,
+          "all_reasoning_tokens_zero": true,
+          "all_exact_ids_and_ordered_pipeline": true,
+          "all_failed_client_ttft_missing": true,
+          "interpretation": "Positive completion tokens and normal stop, but no observable content/reasoning/tool-call event. No raw SSE/text retained to distinguish control-only generation from parser suppression. Response-validity rules remain unchanged.",
+          "prior_uninstrumented_c40_comparison": {
+            "response_file": "raw/lswb-packed256-c40-hicache-n1-20261022/kernel-k256-hicache-on-c40-mf088-packed256-hicache-c40-mf088-20261022_194921-AdIosS/20261022_195333/client/responses.jsonl",
+            "response_file_sha256": "77a26ef80cbad2ebf41a1b6a7760fd89a7fc115f9c0b08ff2a6e630174ee7982",
+            "current_failures_with_prior_record": 13,
+            "also_failed_in_prior": 9,
+            "previously_valid": 4,
+            "interpretation": "Most current failing dataset requests also failed without diagnostic instrumentation. Not evidence that all failure differences are caused by the instrument; no raw output retained."
+          }
+        }
+      }
+    },
+    "matched_successful_requests": {
+      "all": {
+        "count": 1273,
+        "body_hash_and_prompt_token_parity": true,
+        "means_s": {
+          "native": {
+            "received_to_forward_s": 3.443286922721533,
+            "prefill_span_s": 0.600761748633793,
+            "prefill_to_first_output_s": 6.018394411968043,
+            "first_output_to_response_sent_s": 0.015041757547658723,
+            "scheduler_queue_s": 3.0280335790419897,
+            "prefill_to_send_s": 0.023359662795385223,
+            "send_to_detokenizer_recv_s": 0.00038842094852899997,
+            "detokenizer_recv_to_send_s": 0.0002127484084112103,
+            "detokenizer_send_to_frontend_recv_s": 5.994375705531706,
+            "frontend_recv_to_handle_s": 3.4788510786297745e-05,
+            "frontend_handle_to_first_output_s": 2.3085773225291358e-05,
+            "post_prefill_to_first_output_s": 6.018394411968043,
+            "client_ttft_s": 10.871627744983732,
+            "client_e2e_s": 21.942078045367438,
+            "client_residual_s": 0.8091846616603638
+          },
+          "kernel": {
+            "received_to_forward_s": 5.268953622089814,
+            "prefill_span_s": 0.7466679994084192,
+            "prefill_to_first_output_s": 5.588621646891592,
+            "first_output_to_response_sent_s": 0.014320486470272667,
+            "scheduler_queue_s": 4.826994267019435,
+            "prefill_to_send_s": 0.031222963370587633,
+            "send_to_detokenizer_recv_s": 0.0004237724492986279,
+            "detokenizer_recv_to_send_s": 0.00024351152208782235,
+            "detokenizer_send_to_frontend_recv_s": 5.55664637232988,
+            "frontend_recv_to_handle_s": 6.092765250734148e-05,
+            "frontend_handle_to_first_output_s": 2.4099567230536258e-05,
+            "post_prefill_to_first_output_s": 5.588621646891592,
+            "client_ttft_s": 12.370794722473121,
+            "client_e2e_s": 22.034957570872486,
+            "client_residual_s": 0.7665514540832961
+          }
+        },
+        "kernel_minus_native_s": {
+          "received_to_forward_s": 1.825666699368281,
+          "prefill_span_s": 0.14590625077462627,
+          "prefill_to_first_output_s": -0.4297727650764509,
+          "first_output_to_response_sent_s": -0.0007212710773860567,
+          "scheduler_queue_s": 1.7989606879774453,
+          "prefill_to_send_s": 0.00786330057520241,
+          "send_to_detokenizer_recv_s": 3.535150076962795e-05,
+          "detokenizer_recv_to_send_s": 3.0763113676612045e-05,
+          "detokenizer_send_to_frontend_recv_s": -0.43772933320182617,
+          "frontend_recv_to_handle_s": 2.6139141721043736e-05,
+          "frontend_handle_to_first_output_s": 1.0137940052448998e-06,
+          "post_prefill_to_first_output_s": -0.4297727650764509,
+          "client_ttft_s": 1.4991669774893897,
+          "client_e2e_s": 0.09287952550504741,
+          "client_residual_s": -0.04263320757706779
+        }
+      },
+      "after_180s_both": {
+        "count": 1241,
+        "body_hash_and_prompt_token_parity": true,
+        "means_s": {
+          "native": {
+            "received_to_forward_s": 1.5838191962645574,
+            "prefill_span_s": 0.429029331775945,
+            "prefill_to_first_output_s": 6.167360891170025,
+            "first_output_to_response_sent_s": 0.014854345083428812,
+            "scheduler_queue_s": 1.1731635146713564,
+            "prefill_to_send_s": 0.018669207186395368,
+            "send_to_detokenizer_recv_s": 0.000383541912536867,
+            "detokenizer_recv_to_send_s": 0.00021172472779353138,
+            "detokenizer_send_to_frontend_recv_s": 6.148039888893761,
+            "frontend_recv_to_handle_s": 3.500046219007321e-05,
+            "frontend_handle_to_first_output_s": 2.1527987348754783e-05,
+            "post_prefill_to_first_output_s": 6.167360891170025,
+            "client_ttft_s": 8.924688072675519,
+            "client_e2e_s": 15.503631595225732,
+            "client_residual_s": 0.7444786534649916
+          },
+          "kernel": {
+            "received_to_forward_s": 3.3228351024732197,
+            "prefill_span_s": 0.559467445545673,
+            "prefill_to_first_output_s": 5.726588584452651,
+            "first_output_to_response_sent_s": 0.01411591529077719,
+            "scheduler_queue_s": 2.8849145436267714,
+            "prefill_to_send_s": 0.026737095750598155,
+            "send_to_detokenizer_recv_s": 0.0004189325666158647,
+            "detokenizer_recv_to_send_s": 0.00024313603938346329,
+            "detokenizer_send_to_frontend_recv_s": 5.699105070830352,
+            "frontend_recv_to_handle_s": 6.185338729624783e-05,
+            "frontend_handle_to_first_output_s": 2.2495878405574827e-05,
+            "post_prefill_to_first_output_s": 5.726588584452651,
+            "client_ttft_s": 10.306294715928782,
+            "client_e2e_s": 16.243649723514835,
+            "client_residual_s": 0.6974035834572386
+          }
+        },
+        "kernel_minus_native_s": {
+          "received_to_forward_s": 1.7390159062086623,
+          "prefill_span_s": 0.13043811376972797,
+          "prefill_to_first_output_s": -0.4407723067173741,
+          "first_output_to_response_sent_s": -0.0007384297926516219,
+          "scheduler_queue_s": 1.711751028955415,
+          "prefill_to_send_s": 0.008067888564202787,
+          "send_to_detokenizer_recv_s": 3.539065407899767e-05,
+          "detokenizer_recv_to_send_s": 3.1411311589931904e-05,
+          "detokenizer_send_to_frontend_recv_s": -0.4489348180634094,
+          "frontend_recv_to_handle_s": 2.6852925106174614e-05,
+          "frontend_handle_to_first_output_s": 9.678910568200442e-07,
+          "post_prefill_to_first_output_s": -0.4407723067173741,
+          "client_ttft_s": 1.3816066432532637,
+          "client_e2e_s": 0.740018128289103,
+          "client_residual_s": -0.04707507000775302
+        }
+      }
+    },
+    "shared_failed_dataset_request_ids": [
+      "20260709151205708712970j5JxUJBI",
+      "20260709151238933863987rGj11iAx",
+      "20260709151340554097515smqopSxl",
+      "202607091513438278242328djeKzsZ",
+      "20260709152324578010998oL4qdtM9",
+      "20260709152429567173954HWzYkLzY",
+      "20260709152609846157645R8V1GmIK",
+      "2026070915294441540355va7nx0Xi"
+    ],
+    "decision": "First-output residence time is overwhelmingly between detokenizer send-start and frontend socket receive in both modes. Earlier Native/Packed delay difference is not stable across diagnostic runs. Candidate intervention pending; no throughput or response-validity acceptance.",
+    "limitations": [
+      "API receive interval includes detokenizer serialization, IPC queueing, event-loop read scheduling and receive-side unpickling; it is not pure tokenization time or proof that tokenization caused all delay.",
+      "Boundary stamps are CPU events, not CUDA completion or client-visible first-content delivery. Client TTFT residual contains both pre-API and post-first-output components.",
+      "Matched rows have exact per-mode SSE/server ID joins and cross-mode dataset ID, body hash and prompt-token parity; not equal generation trajectories or independent repeats.",
+      "900s instrumented n=1 diagnostic does not replace uninstrumented 1200s throughput/SLO acceptance; both response success rates remain below 99%.",
+      "Eight per-mode source/GC/memory sidecars were not transferred. Shared source manifest, boot server information and measured timing records were retained."
+    ]
+  }
 }

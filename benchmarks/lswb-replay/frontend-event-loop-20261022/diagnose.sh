@@ -7,6 +7,8 @@ SCRIPT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/diagnose.sh
 REPO=$(cd -- "$(dirname -- "$SCRIPT")/../../.." && pwd)
 cd -- "$REPO"
 export PYTHONDONTWRITEBYTECODE=1
+export DSV4_ASYNC_PREPARATION=${DSV4_ASYNC_PREPARATION:-0}
+case "$DSV4_ASYNC_PREPARATION" in 0|1) ;; *) echo "DSV4_ASYNC_PREPARATION must be 0 or 1" >&2; exit 2 ;; esac
 # GPUQ executes as its runner account; trust only this experiment's four trees.
 export GIT_CONFIG_COUNT=4
 trees=("$REPO" "$REPO/third_party/sglang" "$REPO/third_party/flashmla" "$REPO/third_party/flashmla/csrc/cutlass")
@@ -31,6 +33,12 @@ preflight() {
     -e SGLANG_FRONTEND_DIAGNOSTICS=1 -e PYTHONDONTWRITEBYTECODE=1 \
     -w "$SGLANG_ROOT_CT" "$CONTAINER" python3 \
     test/registered/unit/observability/test_req_time_stats.py
+  if [ "$DSV4_ASYNC_PREPARATION" = 1 ]; then
+    timeout --foreground 120 docker exec -e "PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT" \
+      -e SGLANG_DSV4_ASYNC_PREPARATION=1 -e PYTHONDONTWRITEBYTECODE=1 \
+      -w "$SGLANG_ROOT_CT" "$CONTAINER" python3 -m unittest \
+      test.registered.unit.entrypoints.openai.test_serving_chat.AsyncInputPreparationTests -v
+  fi
   timeout --foreground 120 python3 -m unittest discover -s scripts/local/business_replay -p 'test_*.py' -v
   echo "CPU source, timing and replay preflight PASS; no GPU job allocated"
 }
@@ -39,11 +47,12 @@ case "${1:-}" in
   preflight) preflight ;;
   submit)
     command -v gpuq >/dev/null
-    ROOT=$(mktemp -d "$REPO/logs/frontend-first-output-$(date +%Y%m%d_%H%M%S)-XXXXXX")
+    ROOT=$(mktemp -d "$REPO/logs/frontend-first-output-asyncprep$DSV4_ASYNC_PREPARATION-$(date +%Y%m%d_%H%M%S)-XXXXXX")
     chgrp gpuq "$ROOT"
     chmod 2775 "$ROOT"
     preflight 2>&1 | tee "$ROOT/cpu-preflight.log"
     gpuq run --help > "$ROOT/gpuq-run-help.txt"
+    printf '%s\n' "$DSV4_ASYNC_PREPARATION" > "$ROOT/async-preparation.txt"
     git rev-parse HEAD > "$ROOT/parent-commit.txt"
     docker inspect "$CONTAINER" --format '{{.Image}}' > "$ROOT/image-id.txt"
     sha256sum "$SCRIPT" scripts/local/{serve,run-server,env,eval-env,bench-lswb}.sh \
@@ -55,6 +64,7 @@ case "${1:-}" in
       gpuq run --user winstonxcai --project flash-optimizations --gpus 4 \
         --cwd "$REPO" --env "REPLAY_DATASET=$REPLAY_DATASET" \
         --env "REPLAY_MANIFEST=$REPLAY_MANIFEST" --env "CONTAINER=$CONTAINER" \
+        --env "DSV4_ASYNC_PREPARATION=$DSV4_ASYNC_PREPARATION" \
         --output "$ROOT/gpuq-$mode" --workload-key "frontend-first-output-$mode-$(basename "$ROOT")" \
         --expected-duration 30m --timeout 2400 --detach \
         -- bash "$SCRIPT" run "$mode" "$ROOT" "$port" "$master" \
@@ -157,7 +167,7 @@ with tempfile.TemporaryDirectory(prefix=f".{batch.name}-", dir=transfer.parent) 
         collected.append(relative)
 
     for name in (
-        "parent-commit.txt", "image-id.txt", "launcher-sha256.txt", "source-manifest.json",
+        "parent-commit.txt", "async-preparation.txt", "image-id.txt", "launcher-sha256.txt", "source-manifest.json",
         "cpu-preflight.log", "gpuq-run-help.txt", "job-native.txt", "job-kernel.txt",
     ):
         copy_artifact(batch / name, name)
@@ -204,6 +214,7 @@ with tempfile.TemporaryDirectory(prefix=f".{batch.name}-", dir=transfer.parent) 
         "schema_version": 1, "batch": batch.name,
         "collected_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "description": "Native/Packed Kernel-256 C40 HiCache first-output diagnostic, MF0.88, n=1 each",
+        "async_preparation": int((batch / "async-preparation.txt").read_text().strip()) if (batch / "async-preparation.txt").is_file() else 0,
         "classification": "Transferred diagnostic evidence; failures preserved, qualification pending",
         "expected_jobs": 2, "terminal_jobs": len(selected),
         "collected_runs": sum(record["original_run"] is not None for record in runs),
@@ -240,6 +251,9 @@ PY_COLLECT
     [ "$(docker inspect "$CONTAINER" --format '{{.Image}}')" = "$(cat "$ROOT/image-id.txt")" ] || {
       echo "Container image changed after submission" >&2; exit 1;
     }
+    [ "$DSV4_ASYNC_PREPARATION" = "$(cat "$ROOT/async-preparation.txt" 2>/dev/null || echo 0)" ] || {
+      echo "Preparation mode changed after submission" >&2; exit 1;
+    }
     check_sources
     : "${CUDA_VISIBLE_DEVICES:?GPUQ must assign the devices}"
     IFS=, read -r -a assigned <<< "$CUDA_VISIBLE_DEVICES"
@@ -272,6 +286,11 @@ PY_COLLECT
     trap 'exit 130' INT
     trap 'exit 143' TERM
     bash scripts/local/serve.sh "$MODE"
+    if [ "$DSV4_ASYNC_PREPARATION" = 1 ]; then
+      grep -q 'DSV4 asynchronous input preparation enabled' "$LOG_HOST/serve_$MODE.log" || {
+        echo "Candidate input preparation activation is missing from the server log" >&2; exit 1;
+      }
+    fi
     curl -fsS --max-time 30 "http://127.0.0.1:$PORT/server_info" > "$LOG_HOST/server-info.json"
     python3 - "$LOG_HOST/server-info.json" "$MODE" <<'PY_CONFIG'
 import json

@@ -707,6 +707,73 @@ with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')
 
 
 class LocalScriptTests(unittest.TestCase):
+    def test_async_preparation_knob_validates_before_server_replacement(self):
+        """Author: Winston Cai. Exercise the real shell boundary without Docker."""
+        with tempfile.TemporaryDirectory(prefix="remnant-input-preparation-") as temporary:
+            root = Path(temporary)
+            tools = root / "tools"
+            tools.mkdir()
+            calls = root / "docker-calls.jsonl"
+            docker = tools / "docker"
+            docker.write_text(
+                f"#!{sys.executable}\n"
+                "import json, os, sys\n"
+                "with open(os.environ['DOCKER_CALLS'], 'a') as handle:\n"
+                "    handle.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+                "raise SystemExit(77)\n"
+            )
+            docker.chmod(0o755)
+            for name, body in (
+                ("python3", "exit 0"),
+                ("sleep", "exit 0"),
+                ("timeout", 'shift; exec "$@"'),
+            ):
+                tool = tools / name
+                tool.write_text("#!/bin/sh\n" + body + "\n")
+                tool.chmod(0o755)
+            environment = {
+                **{key: value for key, value in os.environ.items() if key not in (
+                    "C4_KEEP_COUNT", "C4_LAYER_KEEP_COUNTS", "STORE_IMPLEMENTATION",
+                    "REQUEST_METRICS_DIR", "SERVER_SEED", "HICACHE_RATIO",
+                )},
+                "PATH": str(tools) + os.pathsep + os.environ["PATH"],
+                "HOST_REPO": str(root), "LOG_HOST": str(root / "logs"),
+                "DOCKER_CALLS": str(calls), "FRONTEND_DIAGNOSTICS": "0",
+                "SGLANG_PY": "/fixture/selected-source/python",
+            }
+            script = kernels.REPO_ROOT / "scripts/local/serve.sh"
+            for value in ("yes", "2", "-1", "1; exit 0"):
+                with self.subTest(value=value):
+                    result = subprocess.run(
+                        ["bash", str(script), "native"], capture_output=True,
+                        text=True, timeout=10,
+                        env={**environment, "DSV4_ASYNC_PREPARATION": value},
+                    )
+                    self.assertEqual(result.returncode, 2)
+                    self.assertIn("DSV4_ASYNC_PREPARATION must be 0 or 1", result.stderr)
+                    self.assertFalse(calls.exists())
+            # Unsupported imported source must fail before kill_port's -i call.
+            result = subprocess.run(
+                ["bash", str(script), "native"], capture_output=True, text=True,
+                timeout=10, env={**environment, "DSV4_ASYNC_PREPARATION": "1"},
+            )
+            self.assertEqual(result.returncode, 1)
+            invocation = json.loads(calls.read_text())
+            self.assertIn("SGLANG_DSV4_ASYNC_PREPARATION=1", invocation)
+            self.assertNotIn("-i", invocation)
+            self.assertIn("async def preflight", invocation[-2])
+            self.assertEqual(invocation[-1], environment["SGLANG_PY"])
+            calls.unlink()
+            # Default-off does not import or activate the candidate preflight.
+            result = subprocess.run(
+                ["bash", str(script), "native"], capture_output=True, text=True,
+                timeout=10, env={**environment, "DSV4_ASYNC_PREPARATION": "0"},
+            )
+            invocation = json.loads(calls.read_text())
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("-i", invocation)
+            self.assertNotIn("SGLANG_DSV4_ASYNC_PREPARATION=1", invocation)
+
     def test_raw_jsonl_prepares_for_existing_session_replay(self):
         from scripts.local.business_replay import runner
 

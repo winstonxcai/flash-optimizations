@@ -914,6 +914,66 @@ class ProbeContractTests(unittest.TestCase):
         self.assertEqual(len(result["client_identity_diagnostics"]), 1)
 
 
+
+def async_preparation_contract_tests():
+    """Run maintained async-conversion unit contracts without importing CUDA.
+
+    The real converter, request schema and unit-test class are executed intact.
+    The fixture's independent byte tokenizer keeps this CPU check model-free.
+    """
+    from abc import ABC, abstractmethod
+    from concurrent.futures import ThreadPoolExecutor
+    from http import HTTPStatus
+    from unittest.mock import AsyncMock, Mock, patch
+    import contextvars
+    import threading
+    import orjson
+    from fastapi import HTTPException, Request
+    from fastapi.responses import ORJSONResponse
+
+    source_packages()
+    from sglang.srt.entrypoints.openai import chat_encoding, encoding_dsv4, protocol
+    from sglang.srt.entrypoints.openai.encoding_dsv32 import DS32EncodingError
+    from sglang.srt.environ import envs
+
+    module_name = "_frontend_preparation_contracts"
+    module = types.ModuleType(module_name)
+    sys.modules[module_name] = module
+    ns = module.__dict__
+    ns.update(vars(protocol))
+    ns.update(
+        __name__=module_name, ABC=ABC, abstractmethod=abstractmethod,
+        asyncio=asyncio, contextvars=contextvars, copy=copy,
+        dataclass=dataclasses.dataclass, field=dataclasses.field,
+        dataclasses=dataclasses, Enum=Enum, HTTPStatus=HTTPStatus,
+        HTTPException=HTTPException, Request=Request, ORJSONResponse=ORJSONResponse,
+        DS32EncodingError=DS32EncodingError, ThreadPoolExecutor=ThreadPoolExecutor,
+        SimpleNamespace=types.SimpleNamespace, Mock=Mock, AsyncMock=AsyncMock,
+        patch=patch, unittest=unittest, threading=threading, time=time,
+        monotonic_time=time.perf_counter, json=json, orjson=orjson,
+        envs=envs, encoding_dsv4=encoding_dsv4, chat_encoding=chat_encoding,
+        logger=logging.getLogger(__name__), ServerArgs=type("ServerArgs", (), {}),
+        EmbeddingReqInput=type("EmbeddingReqInput", (), {}),
+    )
+    source_definitions("srt/managers/io_struct.py", {"GenerateReqInput"}, ns)
+    source_definitions("srt/parser/jinja_template_utils.py",
+                       {"process_content_for_template_format"}, ns)
+    source_definitions("srt/entrypoints/openai/serving_base.py", {"OpenAIServingBase"}, ns)
+    source_definitions("srt/entrypoints/openai/serving_chat.py", {
+        "ThinkingMode", "parse_tool_call_arguments", "normalize_tool_content",
+        "normalize_assistant_tool_call_arguments", "_extract_max_dynamic_patch",
+        "OpenAIServingChat",
+    }, ns)
+    source_definitions("../../test/registered/unit/entrypoints/openai/test_serving_chat.py",
+                       {"AsyncInputPreparationTests"}, ns)
+    return ns["AsyncInputPreparationTests"]
+
+
+def load_tests(loader, tests, pattern):
+    tests.addTests(loader.loadTestsFromTestCase(async_preparation_contract_tests()))
+    return tests
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--requests", type=Path, required=True)

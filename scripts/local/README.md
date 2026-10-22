@@ -640,6 +640,28 @@ the adapter records the existing SSE request ID for exact joins. No scheduler or
 kernel policy changes. The scoped CPU preflight and two-mode GPUQ diagnostic are
 documented in the [experiment record](../../benchmarks/lswb-replay/frontend-event-loop-20261022/README.md#next-diagnostic-locate-first-output-residence-time).
 
+For the scoped DSV4 text-chat input-preparation candidate, set
+`DSV4_ASYNC_PREPARATION=1` before `serve.sh`; leave it unset or set it to `0`
+for the unchanged synchronous control. The launcher validates the value and
+executes a CPU check against the actual selected SGLang Python source before
+stopping an existing server. It exports `SGLANG_DSV4_ASYNC_PREPARATION` into the
+container. Select the updated mounted Python fork with `SGLANG_PY`; this Python
+change does not require rebuilding kernels or the existing compatible image.
+
+```bash
+DSV4_ASYNC_PREPARATION=1 bash scripts/local/serve.sh kernel
+```
+
+The candidate runs unchanged DSV4 text-chat conversion on one owned CPU worker,
+with one admitted conversion at a time. Preparation waiting remains included in
+TTFT; cancellation cannot dispatch a completed result later or release the
+worker slot early. Server shutdown drains the worker. Pretokenized requests and
+other model paths keep their current execution. Use the same switch for Native
+and Packed comparisons. Full-model qualification and shared-tokenizer behavior
+with other API endpoints remain experimental; this does not alter cache formats,
+kernels, request payloads or replay scheduling. A startup log confirms when the
+worker is enabled. See the same experiment record for the qualification gate.
+
 With metrics enabled, the existing exporter supplies `queue_time`,
 `forward_entry_time`, `prefill_finished_time`, `request_received_ts`,
 `request_finished_ts`, and token/cache counts. `first_output_ts` records the

@@ -13,6 +13,21 @@ records rather than this milestone log.
 
 ## Unreleased
 
+### 2026-10-22 — Bounded DSV4 chat preparation candidate
+
+Parent follows `b5d340d`; SGLang `63291eba61`; FlashMLA `97f3faa58450`.
+
+- **Added:** default-off DSV4 text-chat conversion worker, bounded admission with
+  cancellation ownership, unchanged receive timestamp and explicit shutdown drain.
+  The local launcher preflights actual mounted Python source before server stop.
+- **Validation:** 20 source-isolated CPU contracts and four local-launcher tests
+  pass, including converter parity, native/AnyIO cancellation, errors, queue time
+  and cleanup. Fresh-context runtime and launcher reviews found no scoped blocker.
+  Actual-image CPU and instrumented full-model validation are pending; this entry
+  is not promotion or a throughput claim. Native extensions are unchanged.
+- **Scope/rollback:** controlled DSV4 text-chat only; other tokenizer-consuming
+  endpoints are not qualified. Unset `DSV4_ASYNC_PREPARATION` to restore sync mode.
+
 ## 2026-10-22 — Opt-in first-output attribution
 
 Parent `524207f`; SGLang `7a95ce8231`; FlashMLA `97f3faa58450`.
