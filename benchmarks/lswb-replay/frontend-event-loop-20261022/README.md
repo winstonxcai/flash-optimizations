@@ -172,6 +172,14 @@ also covers timestamp placement/transport through both IPC formats and worker
 loops; the original mechanism measurements in `results.json` retain their original
 source hashes and are not relabeled as instrumented runs.
 
+VDI CPU qualification on `6f87576` / SGLang `7a95ce8231`: real serving-image
+request-time tests **10/10 passed**, host replay tests **19/19 passed**, with
+exact clean fork pins. No image rebuild or GPU allocation was needed. Initial
+submission exposed a GPUQ CLI mismatch: this host accepts the command after
+`--`, without a `--bash` option. Submission stopped before creating a job;
+the launcher now passes an argument vector and saves the CPU log and CLI help
+with every batch. Instrumented full-model coverage remains pending.
+
 ## Evidence and rollback
 
 - Canonical aggregate record: `results.json`; includes both invocation commands,

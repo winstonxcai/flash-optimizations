@@ -22,9 +22,9 @@ Parent `524207f`; SGLang `7a95ce8231`; FlashMLA `97f3faa58450`.
   pickle/msgpack. The replay adapter captures the existing SSE ID for exact
   client/server timing joins. No kernel, scheduling or cache-policy change.
 - **Validation:** 13 source-isolated CPU transport/analysis tests and 19 replay
-  tests pass; timing tests pass with unrelated imports isolated. Full local
-  SGLang import is blocked by unavailable Triton on macOS. Actual VDI-image CPU
-  import/tests remain a mandatory gate before the two bounded GPUQ jobs.
+  tests pass. Full local SGLang import is blocked by unavailable Triton on macOS;
+  actual VDI-image CPU import and all 10 timing tests subsequently passed,
+  together with 19 replay tests. Instrumented full-model coverage remains pending.
 - **Scope:** diagnostics are disabled by default. The recorded C40 HiCache
   experiment is attribution evidence, not throughput acceptance or production
   qualification. Existing binaries are unchanged; mounted Python source is

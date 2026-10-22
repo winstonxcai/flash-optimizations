@@ -27,22 +27,23 @@ preflight() {
   [ -z "$(git status --porcelain --untracked-files=no)" ] || {
     echo "Commit tracked parent changes before this diagnostic" >&2; return 1;
   }
-  docker exec -e "PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT" \
+  timeout --foreground 120 docker exec -e "PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT" \
     -e SGLANG_FRONTEND_DIAGNOSTICS=1 -e PYTHONDONTWRITEBYTECODE=1 \
     -w "$SGLANG_ROOT_CT" "$CONTAINER" python3 \
     test/registered/unit/observability/test_req_time_stats.py
-  python3 -m unittest discover -s scripts/local/business_replay -p 'test_*.py' -v
+  timeout --foreground 120 python3 -m unittest discover -s scripts/local/business_replay -p 'test_*.py' -v
   echo "CPU source, timing and replay preflight PASS; no GPU job allocated"
 }
 
 case "${1:-}" in
   preflight) preflight ;;
   submit)
-    preflight
     command -v gpuq >/dev/null
     ROOT=$(mktemp -d "$REPO/logs/frontend-first-output-$(date +%Y%m%d_%H%M%S)-XXXXXX")
     chgrp gpuq "$ROOT"
     chmod 2775 "$ROOT"
+    preflight 2>&1 | tee "$ROOT/cpu-preflight.log"
+    gpuq run --help > "$ROOT/gpuq-run-help.txt"
     git rev-parse HEAD > "$ROOT/parent-commit.txt"
     docker inspect "$CONTAINER" --format '{{.Image}}' > "$ROOT/image-id.txt"
     sha256sum "$SCRIPT" scripts/local/{serve,run-server,env,eval-env,bench-lswb}.sh \
@@ -51,12 +52,12 @@ case "${1:-}" in
     check_sources > "$ROOT/source-manifest.json"
     for mode in native kernel; do
       if [ "$mode" = native ]; then port=30631; master=30031; else port=30632; master=30032; fi
-      printf -v command 'bash %q run %q %q %q %q' "$SCRIPT" "$mode" "$ROOT" "$port" "$master"
       gpuq run --user winstonxcai --project flash-optimizations --gpus 4 \
         --cwd "$REPO" --env "REPLAY_DATASET=$REPLAY_DATASET" \
         --env "REPLAY_MANIFEST=$REPLAY_MANIFEST" --env "CONTAINER=$CONTAINER" \
         --output "$ROOT/gpuq-$mode" --workload-key "frontend-first-output-$mode-$(basename "$ROOT")" \
-        --expected-duration 30m --timeout 2400 --detach --bash "$command" \
+        --expected-duration 30m --timeout 2400 --detach \
+        -- bash "$SCRIPT" run "$mode" "$ROOT" "$port" "$master" \
         | tee "$ROOT/job-$mode.txt"
     done
     echo "Diagnostic batch: $ROOT"
