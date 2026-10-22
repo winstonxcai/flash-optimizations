@@ -13,7 +13,22 @@ records rather than this milestone log.
 
 ## Unreleased
 
-No pending integration milestones recorded.
+## 2026-10-22 — Opt-in first-output attribution
+
+Parent `524207f`; SGLang `7a95ce8231`; FlashMLA `97f3faa58450`.
+
+- **Added:** startup-gated scheduler send, detokenizer receive/forward and API
+  receive/handler stamps, with first-packet latching and clock rebasing through
+  pickle/msgpack. The replay adapter captures the existing SSE ID for exact
+  client/server timing joins. No kernel, scheduling or cache-policy change.
+- **Validation:** 13 source-isolated CPU transport/analysis tests and 19 replay
+  tests pass; timing tests pass with unrelated imports isolated. Full local
+  SGLang import is blocked by unavailable Triton on macOS. Actual VDI-image CPU
+  import/tests remain a mandatory gate before the two bounded GPUQ jobs.
+- **Scope:** diagnostics are disabled by default. The recorded C40 HiCache
+  experiment is attribution evidence, not throughput acceptance or production
+  qualification. Existing binaries are unchanged; mounted Python source is
+  preflighted before replacing a server. See the frontend experiment record.
 
 ## 2026-10-19 — Recorded-request serving benchmark client
 
