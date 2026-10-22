@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "mode": "native",
+  "server_seed": 20260919,
+  "metrics_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/native-original-mf086-c22-gccontrol-20261022_014947/request-metrics",
+  "server_log": "/home/jovyan/winstonxcai/flash-optimizations/logs/native-original-mf086-c22-gccontrol-20261022_014947/serve_native.log"
+}
