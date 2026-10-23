@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "mode": "native",
+  "server_seed": 20260919,
+  "metrics_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/frontend-first-output-asyncprep1-20261022_234403-D4SLp1/native/request-metrics",
+  "server_log": "/home/jovyan/winstonxcai/flash-optimizations/logs/frontend-first-output-asyncprep1-20261022_234403-D4SLp1/native/serve_native.log"
+}

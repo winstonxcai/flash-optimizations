@@ -1,0 +1,130 @@
+{
+  "valid": true,
+  "id_verified": true,
+  "basis": "Exact captured SSE server_request_id equals server metrics id; no inferred joins",
+  "cohort_basis": "Successful exact-ID joins; after_180s uses server request_received_ts",
+  "errors": [],
+  "client_identity_diagnostics": [],
+  "coverage": {
+    "client_records": 1603,
+    "successful_client_records": 1588,
+    "client_records_with_server_id": 1603,
+    "server_records": 1603,
+    "matched_successful": 1588,
+    "timing_valid_successful": 1588,
+    "unmatched_successful": 0,
+    "unmatched_server_records": 15
+  },
+  "cohorts": {
+    "all": {
+      "count": 1588,
+      "stages": {
+        "prefill_to_send_s": {
+          "count": 1588,
+          "mean": 0.018494268358504443,
+          "p50": 0.009592056274414062,
+          "p90": 0.016178607940673828,
+          "p95": 0.03501429557800286
+        },
+        "send_to_detokenizer_recv_s": {
+          "count": 1588,
+          "mean": 0.0003573151319393283,
+          "p50": 0.0003311634063720703,
+          "p90": 0.00042939186096191406,
+          "p95": 0.0005549788475036617
+        },
+        "detokenizer_recv_to_send_s": {
+          "count": 1588,
+          "mean": 0.0002024208268230448,
+          "p50": 0.00018107891082763672,
+          "p90": 0.00024008750915527344,
+          "p95": 0.0002853870391845703
+        },
+        "detokenizer_send_to_frontend_recv_s": {
+          "count": 1588,
+          "mean": 0.0019339908580635898,
+          "p50": 0.0005533695220947266,
+          "p90": 0.0014388561248779297,
+          "p95": 0.00681067705154417
+        },
+        "frontend_recv_to_handle_s": {
+          "count": 1588,
+          "mean": 3.371761187498155e-05,
+          "p50": 1.6450881958007812e-05,
+          "p90": 2.8681755065917958e-05,
+          "p95": 0.00013794898986816198
+        },
+        "frontend_handle_to_first_output_s": {
+          "count": 1588,
+          "mean": 5.080447689411922e-05,
+          "p50": 4.482269287109375e-05,
+          "p90": 8.0108642578125e-05,
+          "p95": 8.670091629028317e-05
+        },
+        "post_prefill_to_first_output_s": {
+          "count": 1588,
+          "mean": 0.021072517264099505,
+          "p50": 0.01092231273651123,
+          "p90": 0.024861431121826157,
+          "p95": 0.06067581176757807
+        }
+      }
+    },
+    "after_180s": {
+      "count": 1556,
+      "stages": {
+        "prefill_to_send_s": {
+          "count": 1556,
+          "mean": 0.014691552496814482,
+          "p50": 0.009511351585388184,
+          "p90": 0.014832735061645508,
+          "p95": 0.023581206798553467
+        },
+        "send_to_detokenizer_recv_s": {
+          "count": 1556,
+          "mean": 0.0003540235497344735,
+          "p50": 0.00032973289489746094,
+          "p90": 0.0004140138626098633,
+          "p95": 0.0005051493644714355
+        },
+        "detokenizer_recv_to_send_s": {
+          "count": 1556,
+          "mean": 0.00020313707292846052,
+          "p50": 0.00018143653869628906,
+          "p90": 0.00024044513702392578,
+          "p95": 0.00028634071350097656
+        },
+        "detokenizer_send_to_frontend_recv_s": {
+          "count": 1556,
+          "mean": 0.0019585766032299834,
+          "p50": 0.0005431175231933594,
+          "p90": 0.0014388561248779297,
+          "p95": 0.007111489772796631
+        },
+        "frontend_recv_to_handle_s": {
+          "count": 1556,
+          "mean": 3.37805110568559e-05,
+          "p50": 1.5735626220703125e-05,
+          "p90": 2.8371810913085938e-05,
+          "p95": 0.0001469254493713379
+        },
+        "frontend_handle_to_first_output_s": {
+          "count": 1556,
+          "mean": 4.987928125729598e-05,
+          "p50": 4.38690185546875e-05,
+          "p90": 7.832050323486328e-05,
+          "p95": 8.541345596313477e-05
+        },
+        "post_prefill_to_first_output_s": {
+          "count": 1556,
+          "mean": 0.017290949515021553,
+          "p50": 0.0108565092086792,
+          "p90": 0.021125197410583496,
+          "p95": 0.035759031772613525
+        }
+      }
+    }
+  },
+  "post_180s_sample_gate": true,
+  "response_summary_valid": true
+}
