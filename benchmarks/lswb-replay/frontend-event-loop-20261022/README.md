@@ -393,3 +393,116 @@ original validity decision. Do not increase caps or count empty output as succes
 This follow-up and mixed-endpoint checks remain unrun. No new GPU jobs or runtime
 changes were made during this analysis. Rollback: `DSV4_ASYNC_PREPARATION=0`
 (the default).
+
+## Packed C28 Triton/Kernel off/on comparison — 2026-10-23
+
+**The receive stall is removed in both modes; Kernel's TTFT disadvantage is only
+partly resolved.** Its remaining delay is principally preparation/admission and
+scheduler waiting. This record does not establish slower Kernel prefill or an
+SLO throughput improvement.
+
+Protocol: Packed-256, C28, TP4 H100, MF0.88, HiCache off, original session-owned
+LongSWE replay, 1,200-second dispatch window followed by request drain, n=1 per
+cell. Each mode ran sync preparation then the worker with a fresh server/cache.
+The modes ran concurrently on disjoint TP4 allocations on one host: Triton GPUs
+0–3, Kernel GPUs 4–7. Shared CPU contention and fixed off/on order are uncontrolled.
+Source is parent `d41a30e44e5c`, SGLang `63291eba6137`, FlashMLA `97f3faa58450`,
+with the same image as the C40 comparison. Both store and decode match the named
+mode. The pool is 4,536,832 slots in every cell.
+
+### Full-run client results
+
+Canonical replay summaries, including cold requests and request drain:
+
+| Mode | Preparation | Successful req/s | Output tok/s | TTFT mean / p90 (s) | E2E mean (s) | TPOT mean (ms) | Failed / attempted |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Packed Triton | Sync | 1.8344 | 275.13 | 7.872 / 9.822 | 14.989 | 65.33 | 15 / 2,231 |
+| Packed Triton | Worker | 1.9711 | 295.10 | 5.718 / 10.632 | 13.986 | 70.94 | 17 / 2,398 |
+| Packed Kernel | Sync | 1.6652* | 246.68* | 8.979 / 11.140 | 15.333 | 60.99 | 20 / 2,186 |
+| Packed Kernel | Worker | 1.9896 | 301.02 | 6.302 / 11.551 | 13.837 | 63.90 | 18 / 2,439 |
+
+Only Triton sync passes the **full-run TTFT-p90 <10 s** requirement. All four
+pass the unchanged 99% response-success gate, but their missing-output failures
+remain. Device hit rates are nearly identical, **97.14–97.20%**.
+
+With the worker enabled in both, Kernel delivers **0.93% more requests/s** and
+**2.01% more output tokens/s** than Triton. Its mean TTFT is 584 ms higher, while
+mean E2E is 148 ms lower. These are descriptive n=1 results, not established
+kernel speedups. Earlier observable first output also changes the interval used
+by client TPOT; TPOT is not an isolated GPU decode measurement.
+
+*Kernel sync has an anomalous denominator: summary duration is **1,300.719 s**,
+but its last response completes at **1,208.544 s**. The unexplained **92.176 s**
+post-response tail is not a long request drain. Other cells have only 8–28 ms
+between last response and summary duration. Preserve the canonical results;
+do not headline the apparent +19.48% requests/s / +22.03% output improvement for
+Kernel without this qualification. As a separate sensitivity calculation,
+dividing each cell's counts by its own last response time gives Kernel sync
+**1.7922 req/s / 265.49 output tok/s** and worker **1.9896 / 301.03**: changes of
+**+11.01% / +13.38%**. These alternate rates do not replace the replay protocol.
+The cause of the tail is unresolved; its activity JSONL is absent from the pulled
+packet. Fixed-1,200-second completion counts/rates are also retained in JSON as
+a separately labeled sensitivity, excluding drain.
+
+### What changed in the first-output path?
+
+Successful exact-ID joins, received after each run's own first 180 seconds:
+
+| Mode | Sync detokenizer-send → API-receive mean | Worker mean | Sync / worker samples |
+|---|---:|---:|---:|
+| Packed Triton | 3,837 ms | 2.62 ms | 2,188 / 2,342 |
+| Packed Kernel | 4,954 ms | 1.77 ms | 2,138 / 2,380 |
+
+Kernel's additional receive residence disappears. On the **same 2,111 dataset
+requests** successful after 180 seconds in all four cells, the mean client TTFT
+gap shrinks from **1.095 s** with sync preparation to **0.615 s** with the worker
+(about 44%). Their body hashes and prompt counts match. Generated lengths and
+arrival times are not held fixed by this closed-loop replay.
+
+A stricter worker-only cohort contains **1,917** successful request IDs with
+identical bodies, prompt counts, generated token counts and cached token counts,
+received after 180 seconds in both runs. Mean seconds:
+
+| Stage | Triton worker | Kernel worker | Kernel − Triton |
+|---|---:|---:|---:|
+| API receive → dispatch | 3.349 | 3.800 | +0.451 |
+| Dispatch → first forward | 1.039 | 1.255 | +0.216 |
+| Prefill | 0.384 | 0.385 | +0.001 |
+| Prefill end → API first output | 0.026 | 0.028 | +0.001 |
+| Client/server first-output residual | 0.039 | 0.034 | −0.005 |
+| **Client TTFT** | **4.837** | **5.501** | **+0.665** |
+| Client E2E | 10.395 | 10.411 | +0.016 |
+
+API receive→dispatch includes worker admission, conversion and dispatch, not
+isolated tokenization. Scheduler queue means are 0.986 / 1.202 s, already inside
+dispatch→forward; do not add them again. The measured prefill difference is only
+1.4 ms on this cohort. After-first-output→server-finish is 650 ms shorter for
+Kernel, offsetting its higher TTFT. A closed-loop trace still does not identify
+whether the remaining upstream wait is caused by mode-dependent arrivals,
+shared CPU contention or another scheduling effect.
+
+### Evidence, decision and next diagnostic
+
+- Packet: `transfer/packed-c28-frontend-parallel-20261023_141754-kEe2l9`, commit
+  `70347da19726`; **100/100 SHA256 checks pass**, no missing collection artifacts.
+  Both GPUQ jobs succeeded and stopped their servers.
+- Recomputed first-output pipelines exactly reproduce all four saved records.
+  Every successful response joins to complete ordered server boundaries; all
+  attempted client/server prompt and completion counts agree. No duplicates or
+  retractions. Dataset, runner, adapter and measurement policies match.
+- All failures are HTTP 200 with normal EOS token 1 and positive completion
+  usage but no observable output event. This intervention does not resolve them.
+  Candidate audit still lacks `profile_identity`; no official comparison claim.
+- Canonical JSON: `results.json` → `packed_c28_frontend_comparison`. It retains
+  original summaries, exact source/image identities, joins, cohort ID hashes,
+  nearest-rank client statistics, stage distributions and denominator sensitivity.
+  It reuses `first_output_pipeline_diagnostics`, `client_stats` and `stats` in
+  `../c24-packed256-store-decode-ablation-n1-20261014/analyze.py`.
+- **Decision:** retain the opt-in preparation worker as the validated remedy for
+  receive-loop blocking. Keep default off pending broader qualification. The
+  Triton/Kernel TTFT discrepancy is partly addressed, not closed.
+- **Next:** split preparation admission wait, actual worker execution and
+  dispatch; control CPU contention and request arrivals before attributing the
+  remaining mode difference. Resolve the client duration anomaly before a
+  throughput acceptance rerun. No new GPU jobs or runtime edits were made for
+  this local analysis. Rollback remains `DSV4_ASYNC_PREPARATION=0`.
