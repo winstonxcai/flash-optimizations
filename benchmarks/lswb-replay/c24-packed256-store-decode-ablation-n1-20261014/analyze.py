@@ -124,7 +124,11 @@ def diagnostic_associations(client: list[dict], server: list[dict]) -> dict:
 
 
 def first_output_pipeline_diagnostics(
-    client: list[dict], server: list[dict], replay_start: float,
+    client: list[dict],
+    server: list[dict],
+    replay_start: float,
+    *,
+    include_preparation: bool = False,
 ) -> dict:
     """Join captured SSE IDs to server metrics and validate first-output spans.
 
@@ -197,6 +201,25 @@ def first_output_pipeline_diagnostics(
         'detokenizer_send_to_frontend_recv_s', 'frontend_recv_to_handle_s',
         'frontend_handle_to_first_output_s',
     )
+    if include_preparation:
+        boundaries = (
+            "request_received_ts",
+            "input_preparation_queued_ts",
+            "input_preparation_start_ts",
+            "input_preparation_finish_ts",
+            "input_preparation_resume_ts",
+            "api_server_dispatch_finish_ts",
+            "forward_entry_time",
+        ) + boundaries
+        stage_names = (
+            "initial_api_handling_s",
+            "preparation_wait_s",
+            "preparation_execution_s",
+            "preparation_resume_s",
+            "post_preparation_dispatch_s",
+            "dispatch_to_forward_s",
+            "prefill_span_s",
+        ) + stage_names
     valid_rows = []
     for record in matched:
         request_id = record['id']

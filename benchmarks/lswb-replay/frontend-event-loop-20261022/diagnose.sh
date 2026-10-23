@@ -17,7 +17,7 @@ for index in 0 1 2 3; do
 done
 export SGLANG_ROOT_CT="/mnt/host_root$REPO/third_party/sglang"
 export SGLANG_PY="$SGLANG_ROOT_CT/python"
-if [[ "${1:-}" = preflight || "${1:-}" = submit ]] && [ "$#" -eq 3 ]; then
+if [[ "${1:-}" = preflight || "${1:-}" = submit || "${1:-}" = submit-workers ]] && [ "$#" -eq 3 ]; then
   export REPLAY_DATASET=$2 REPLAY_MANIFEST=$3
 fi
 . scripts/local/env.sh
@@ -35,7 +35,8 @@ preflight() {
     test/registered/unit/observability/test_req_time_stats.py
   if [ "$DSV4_ASYNC_PREPARATION" = 1 ]; then
     timeout --foreground 120 docker exec -e "PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT" \
-      -e SGLANG_DSV4_ASYNC_PREPARATION=1 -e PYTHONDONTWRITEBYTECODE=1 \
+      -e SGLANG_DSV4_ASYNC_PREPARATION=1 \
+      -e "SGLANG_DSV4_PREPARATION_WORKERS=${DSV4_PREPARATION_WORKERS:-1}" -e PYTHONDONTWRITEBYTECODE=1 \
       -w "$SGLANG_ROOT_CT" "$CONTAINER" python3 \
       test/registered/unit/entrypoints/openai/test_serving_chat.py AsyncInputPreparationTests -v
   fi
@@ -44,6 +45,153 @@ preflight() {
 }
 
 case "${1:-}" in
+  submit-workers)
+    # One allocation runs the four fresh-server cells sequentially. Parallel
+    # TP4 jobs would confound this CPU-concurrency diagnostic.
+    export DSV4_ASYNC_PREPARATION=1 DSV4_PREPARATION_WORKERS=2
+    export REPLAY_RUNNER="$REPO/scripts/local/business_replay/runner.py"
+    export REPLAY_ADAPTER="$REPO/scripts/local/business_replay/adapters/openai_sse.py"
+    command -v gpuq >/dev/null
+    ROOT=$(mktemp -d "$REPO/logs/frontend-preparation-workers-$(date +%Y%m%d_%H%M%S)-XXXXXX")
+    chgrp gpuq "$ROOT"
+    chmod 2775 "$ROOT"
+    preflight 2>&1 | tee "$ROOT/cpu-preflight.log"
+    git rev-parse HEAD > "$ROOT/parent-commit.txt"
+    docker inspect "$CONTAINER" --format '{{.Image}}' > "$ROOT/image-id.txt"
+    check_sources > "$ROOT/source-manifest.json"
+    sha256sum "$SCRIPT" scripts/local/{serve,run-server,env,eval-env,bench-lswb}.sh \
+      scripts/local/business_replay/{runner,request_slots}.py \
+      scripts/local/business_replay/adapters/openai_sse.py \
+      benchmarks/lswb-replay/c24-packed256-store-decode-ablation-n1-20261014/analyze.py \
+      > "$ROOT/launcher-sha256.txt"
+    printf '%s\n' "$ROOT" > "$REPO/logs/frontend-preparation-workers-current.txt"
+    gpuq run --user winstonxcai --project flash-optimizations --gpus 4 \
+      --cwd "$REPO" --env "CONTAINER=$CONTAINER" \
+      --env "REPLAY_DATASET=$REPLAY_DATASET" --env "REPLAY_MANIFEST=$REPLAY_MANIFEST" \
+      --output "$ROOT/gpuq" --workload-key "$(basename "$ROOT")" \
+      --expected-duration 120m --timeout 14400 --detach \
+      -- bash "$SCRIPT" run-workers "$ROOT" | tee "$ROOT/job.txt"
+    echo "Preparation-worker diagnostic: $ROOT"
+    ;;
+  run-workers)
+    ROOT=${2:?missing preparation-worker batch directory}
+    case "$ROOT" in "$REPO"/logs/frontend-preparation-workers-*) ;; *) exit 2 ;; esac
+    : "${CUDA_VISIBLE_DEVICES:?GPUQ must assign four devices}"
+    IFS=, read -r -a devices <<< "$CUDA_VISIBLE_DEVICES"
+    [ "${#devices[@]}" -eq 4 ] || { echo "Expected four assigned GPUs" >&2; exit 2; }
+    export GPUS="$CUDA_VISIBLE_DEVICES" TP=4 MEM_FRAC=0.88 SERVER_SEED=20260919
+    export PORT=30671 MASTER_PORT=30071 CTX_LEN=1048576 MAX_RUN=256 CHUNK=8192
+    export DECODE_CFG="$DECODE_CFG_EXT" C4_KEEP_COUNT=256 FRONTEND_DIAGNOSTICS=1
+    export DSV4_ASYNC_PREPARATION=1 REPLAY_SCHEDULER=fixed-active-user-pool
+    export REPLAY_RUNNER="$REPO/scripts/local/business_replay/runner.py"
+    export REPLAY_ADAPTER="$REPO/scripts/local/business_replay/adapters/openai_sse.py"
+    unset HICACHE_RATIO C4_LAYER_KEEP_COUNTS REPLAY_SESSION_POPULATION REPLAY_DRAIN_TIMEOUT REPLAY_TTFT_SLO_MS
+    unset NSYS_OUTPUT REMNANT_CAPTURE_DIR
+    require_replay_config
+    printf '%s\n' "$CUDA_VISIBLE_DEVICES" > "$ROOT/assigned-gpus.txt"
+    active= failed=0
+    cleanup_workers() {
+      local status=$?
+      trap - EXIT INT TERM
+      if [ -n "$active" ]; then
+        bash scripts/local/serve.sh "$active" stop || status=1
+      fi
+      exit "$status"
+    }
+    trap cleanup_workers EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    # Reverse mode order for the second worker count to reduce a fixed-order bias.
+    for cell in native:1 kernel:1 kernel:2 native:2; do
+      MODE=${cell%:*}
+      export DSV4_PREPARATION_WORKERS=${cell#*:}
+      CELL="$MODE-c24-w$DSV4_PREPARATION_WORKERS"
+      export LOG_HOST="$ROOT/$CELL" REQUEST_METRICS_DIR="$ROOT/$CELL/request-metrics"
+      export SERVER_PID_FILE_CT="/tmp/remnant-$(basename "$ROOT")-$CELL.pid"
+      mkdir "$LOG_HOST"
+      [ "$(git rev-parse HEAD)" = "$(cat "$ROOT/parent-commit.txt")" ] || {
+        echo "Parent commit changed after submission" >&2; exit 1;
+      }
+      [ -z "$(git status --porcelain --untracked-files=no)" ] || {
+        echo "Tracked parent source changed after submission" >&2; exit 1;
+      }
+      sha256sum -c "$ROOT/launcher-sha256.txt"
+      check_sources > "$LOG_HOST/source-manifest.json"
+      [ "$(docker inspect "$CONTAINER" --format '{{.Image}}')" = "$(cat "$ROOT/image-id.txt")" ] || {
+        echo "Container image changed after submission" >&2; exit 1;
+      }
+      if curl -fsS --max-time 3 "http://127.0.0.1:$PORT/health" >/dev/null 2>&1; then
+        echo "Port $PORT already serves another process" >&2; exit 1;
+      fi
+      unset STORE_IMPLEMENTATION
+      if [ "$MODE" = kernel ]; then export STORE_IMPLEMENTATION=kernel; fi
+      printf '%s\n' "$DSV4_PREPARATION_WORKERS" > "$LOG_HOST/preparation-workers.txt"
+      active=$MODE
+      bash scripts/local/serve.sh "$MODE"
+      grep -Fq "DSV4 asynchronous input preparation enabled: $DSV4_PREPARATION_WORKERS CPU worker(s)" \
+        "$LOG_HOST/serve_$MODE.log" || { echo "Preparation count activation missing" >&2; exit 1; }
+      curl -fsS --max-time 30 "http://127.0.0.1:$PORT/server_info" > "$LOG_HOST/server-info.json"
+      python3 - "$LOG_HOST/server-info.json" "$MODE" <<'PY_WORKER_CONFIG'
+import json
+import sys
+from pathlib import Path
+info = json.loads(Path(sys.argv[1]).read_text())
+expected = dict(dsv4_c4_cache_format="native" if sys.argv[2] == "native" else "remnant",
+    tp_size=4, mem_fraction_static=.88, enable_hierarchical_cache=False,
+    random_seed=20260919, chunked_prefill_size=8192, max_running_requests=256,
+    tokenizer_worker_num=1, detokenizer_worker_num=1, dsv4_c4_cache_keep_count=256,
+    dsv4_c4_cache_layer_keep_counts=None)
+if sys.argv[2] == "kernel":
+    expected.update(dsv4_c4_cache_implementation="kernel", dsv4_c4_cache_store_implementation="kernel")
+for key, value in expected.items():
+    if key not in info or info[key] != value:
+        raise SystemExit(f"{key}: expected {value!r}, got {info.get(key)!r}")
+PY_WORKER_CONFIG
+      curl --fail-with-body -sS --max-time 30 -X POST "http://127.0.0.1:$PORT/freeze_gc" > "$LOG_HOST/gc-freeze.log"
+      TAG="$CELL-mf088-$(basename "$ROOT")"
+      printf '%s\n' "$RESULTS_HOST/lswb-replay/$TAG" > "$LOG_HOST/result-root.txt"
+      set +e
+      timeout --foreground --kill-after=60 1800 \
+        bash scripts/local/bench-lswb.sh "$TAG" "$PORT" 24 1200
+      status=$?
+      set -e
+      printf '%s\n' "$status" > "$LOG_HOST/replay-exit-code.txt"
+      if [ "$status" -ne 0 ]; then failed=1; fi
+      if ! python3 - "$RESULTS_HOST/lswb-replay/$TAG" "$REPO" <<'PY_WORKER_ANALYSIS'
+import importlib.util
+import json
+import sys
+from pathlib import Path
+tag, repo = map(Path, sys.argv[1:])
+runs = list(tag.glob("*/replay-window.json"))
+if len(runs) != 1:
+    raise SystemExit(f"Expected one worker diagnostic replay under {tag}, got {len(runs)}")
+run = runs[0].parent
+path = repo / "benchmarks/lswb-replay/c24-packed256-store-decode-ablation-n1-20261014/analyze.py"
+spec = importlib.util.spec_from_file_location("replay_analysis", path)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+summary = module.read(run / "client/summary.json")
+result = module.first_output_pipeline_diagnostics(
+    module.lines(run / "client/responses.jsonl"), module.lines(run / "request-timings.jsonl"),
+    module.read(run / "replay-window.json")["started_at"], include_preparation=True,
+)
+result["post_180s_sample_gate"] = result["cohorts"]["after_180s"]["count"] >= 200
+result["response_summary_valid"] = summary["valid"]
+result["full_run_ttft_p90_s"] = summary["ttft_ms"]["p90"] / 1000
+result["full_run_slo_pass"] = summary["ttft_ms"]["p90"] < 10000
+(run / "preparation-pipeline.json").write_text(json.dumps(result, indent=2) + "\n")
+print(f"Preparation pipeline: {run}")
+print(json.dumps(result["cohorts"], indent=2))
+if not result["valid"] or not result["post_180s_sample_gate"]:
+    raise SystemExit("Preparation coverage failed; evidence retained")
+PY_WORKER_ANALYSIS
+      then failed=1; fi
+      bash scripts/local/serve.sh "$MODE" stop
+      active=
+    done
+    exit "$failed"
+    ;;
   preflight) preflight ;;
   submit)
     command -v gpuq >/dev/null
@@ -354,5 +502,5 @@ if not result["valid"] or not result["post_180s_sample_gate"]:
 PY_ANALYZE
     exit "$replay_status"
     ;;
-  *) echo "usage: bash $SCRIPT <preflight|submit> [dataset manifest], collect batch-directory, or run mode batch port master" >&2; exit 2 ;;
+  *) echo "usage: bash $SCRIPT <preflight|submit|submit-workers> [dataset manifest], collect batch-directory, or run mode batch port master" >&2; exit 2 ;;
 esac

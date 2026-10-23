@@ -104,7 +104,11 @@ files within them, not every upstream file in that directory.
   `serving_chat.py`, `entrypoints/http_server.py` and `environ.py` own the opt-in
   `SGLANG_DSV4_ASYNC_PREPARATION` text-chat worker. The local launcher exposes
   `DSV4_ASYNC_PREPARATION=1` and checks the actual mounted implementation on CPU
-  before replacing a server. One worker serializes conversion while the API loop
+  before replacing a server. `DSV4_PREPARATION_WORKERS=1|2|4` bounds conversion
+  admission and executor size (default 1); counts above one need full-model
+  qualification. Opt-in frontend diagnostics also separate preparation
+  queue/start/finish/API-resume stamps, carried by `managers/io_struct.py`
+  through `tokenizer_manager.py` to `req_time_stats.py`. The API loop
   receives outputs; cancellation retains admission until conversion completes,
   and shutdown drains owned work. Default off creates no worker. The controlled
   chat-only diagnostic is qualified separately from mixed-endpoint tokenizer use;

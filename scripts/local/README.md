@@ -652,8 +652,11 @@ change does not require rebuilding kernels or the existing compatible image.
 DSV4_ASYNC_PREPARATION=1 bash scripts/local/serve.sh kernel
 ```
 
-The candidate runs unchanged DSV4 text-chat conversion on one owned CPU worker,
-with one admitted conversion at a time. Preparation waiting remains included in
+The candidate defaults to one owned CPU preparation worker. Set
+`DSV4_PREPARATION_WORKERS=1|2|4` at startup to bound both executor size and
+admitted conversions; counts above one remain diagnostic candidates.
+`FRONTEND_DIAGNOSTICS=1` additionally exports preparation queued/start/finish/
+resume timestamps through the existing request exporter. Preparation waiting remains included in
 TTFT; cancellation cannot dispatch a completed result later or release the
 worker slot early. Server shutdown drains the worker. Pretokenized requests and
 other model paths keep their current execution. Use the same switch for Native

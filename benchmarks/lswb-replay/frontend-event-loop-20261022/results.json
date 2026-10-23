@@ -5185,5 +5185,70 @@
     ],
     "next_step": "For an SLO ceiling, screen a lower Native concurrency with the worker and freeze image/source/protocol; do not interpret current failing C24/C28 cells as accepted SLO goodput. Matched C24 Packed worker controls remain unrun.",
     "rollback": "DSV4_ASYNC_PREPARATION=0 disables the worker. Analysis changes no runtime/defaults and launches no GPU jobs."
+  },
+  "preparation_worker_concurrency_readiness": {
+    "decision": "CPU-ready opt-in diagnostic; full-model qualification pending",
+    "baseline_sglang_commit": "63291eba61378ce1910a413a73e836d6fbfe22c6",
+    "flashmla_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "worker_counts_accepted": [
+      1,
+      2,
+      4
+    ],
+    "default_workers": 1,
+    "matrix": [
+      {
+        "mode": "native",
+        "concurrency": 24,
+        "preparation_workers": 1,
+        "repeats": 1
+      },
+      {
+        "mode": "kernel",
+        "concurrency": 24,
+        "preparation_workers": 1,
+        "repeats": 1
+      },
+      {
+        "mode": "kernel",
+        "concurrency": 24,
+        "preparation_workers": 2,
+        "repeats": 1
+      },
+      {
+        "mode": "native",
+        "concurrency": 24,
+        "preparation_workers": 2,
+        "repeats": 1
+      }
+    ],
+    "config": {
+      "tp": 4,
+      "mem_fraction_static": 0.88,
+      "hicache": false,
+      "dispatch_window_s": 1200,
+      "scheduling": "fixed-active-user-pool",
+      "preparation_offload": true,
+      "frontend_diagnostics": true
+    },
+    "cpu_validation": {
+      "command": "python -B -m unittest discover -s benchmarks/lswb-replay/frontend-event-loop-20261022 -p probe.py -v",
+      "tests": 27,
+      "passed": 27,
+      "failed": 0,
+      "scope": "Source-isolated actual definitions; synthetic tokenizer and shared fast-tokenizer backend; model-free",
+      "shell_syntax": "PASS",
+      "python_syntax": "PASS",
+      "gpu_jobs": 0
+    },
+    "entry_point": "bash benchmarks/lswb-replay/frontend-event-loop-20261022/diagnose.sh submit-workers",
+    "rollback": "DSV4_PREPARATION_WORKERS=1 or DSV4_ASYNC_PREPARATION=0",
+    "limits": [
+      "Actual-image CPU preflight required before allocation",
+      "No full-model or production-checkpoint tokenizer qualification",
+      "No speedup, task-quality or SLO claim",
+      "Existing missing-output failures remain failures"
+    ],
+    "sglang_commit": "6687a7c36c"
   }
 }

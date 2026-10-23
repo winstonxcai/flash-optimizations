@@ -784,6 +784,7 @@ class ProbeContractTests(unittest.TestCase):
                      "frontend_recv_time", "frontend_handle_time",
                      "api_server_dispatch_finish_time", "response_sent_to_client_time"):
             setattr(stats, name, 0.0)
+        stats.input_preparation_times = None
         stats.created_time = 1.0
         stats.trace_ctx = types.SimpleNamespace(tracing_enable=False)
         stats._frontend_diagnostics_recorded = False
@@ -913,6 +914,109 @@ class ProbeContractTests(unittest.TestCase):
         self.assertEqual(result["coverage"]["unmatched_server_records"], 1)
         self.assertEqual(len(result["client_identity_diagnostics"]), 1)
 
+    def test_preparation_pipeline_splits_wait_execution_and_resume(self):
+        diagnose, start, clients, servers = self.pipeline_fixture()
+        for record in servers:
+            entry = record["request_received_ts"]
+            # Explicit synthetic times; their adjacent differences are the reference.
+            record.update(
+                input_preparation_queued_ts=entry + 1 / 64,
+                input_preparation_start_ts=entry + 3 / 64,
+                input_preparation_finish_ts=entry + 6 / 64,
+                input_preparation_resume_ts=entry + 10 / 64,
+                api_server_dispatch_finish_ts=entry + 15 / 64,
+                forward_entry_time=entry + 21 / 64,
+            )
+        result = diagnose(clients, servers, start, include_preparation=True)
+        self.assertTrue(result["valid"], result["errors"])
+        stages = result["cohorts"]["all"]["stages"]
+        for name, expected in (
+            ("initial_api_handling_s", 1 / 64),
+            ("preparation_wait_s", 2 / 64),
+            ("preparation_execution_s", 3 / 64),
+            ("preparation_resume_s", 4 / 64),
+            ("post_preparation_dispatch_s", 5 / 64),
+            ("dispatch_to_forward_s", 6 / 64),
+        ):
+            self.assertAlmostEqual(stages[name]["mean"], expected)
+        del servers[0]["input_preparation_start_ts"]
+        self.assertFalse(
+            diagnose(clients, servers, start, include_preparation=True)["valid"]
+        )
+        # Historical packets still use the unchanged default boundary set.
+        self.assertTrue(diagnose(clients, servers, start)["valid"])
+
+    def test_preparation_timing_export_and_manager_handoff(self):
+        ns = dict(
+            SGLANG_FRONTEND_DIAGNOSTICS=True,
+            convert_time_to_realtime=lambda value: value + 1000,
+        )
+        source_definitions(
+            "srt/observability/req_time_stats.py",
+            {"convert_to_output_meta_info"},
+            ns,
+            "APIServerReqTimeStats",
+        )
+
+        class Stats:
+            def __init__(self, **kwargs):
+                for name in (
+                    "created_time",
+                    "first_token_time",
+                    "api_server_dispatch_finish_time",
+                    "response_sent_to_client_time",
+                    "finished_time",
+                    "first_output_send_time",
+                    "detokenizer_recv_time",
+                    "detokenizer_send_time",
+                    "frontend_recv_time",
+                    "frontend_handle_time",
+                ):
+                    setattr(self, name, 0.0)
+                self.input_preparation_times = None
+
+            def set_created_time(self, value):
+                self.created_time = value
+
+            def get_decode_latency(self):
+                return 0.0
+
+        times = (10.0, 11.0, 12.0, 13.0)
+        ns.update(
+            APIServerReqTimeStats=Stats,
+            asyncio=asyncio,
+            ReqState=lambda *args: types.SimpleNamespace(time_stats=args[-1]),
+        )
+        source_definitions(
+            "srt/managers/tokenizer_manager.py",
+            {"_init_req_state"},
+            ns,
+            "TokenizerManager",
+        )
+        manager = types.SimpleNamespace(
+            enable_trace=False, rid_to_state={}, disaggregation_mode=None
+        )
+        request = types.SimpleNamespace(
+            rid="x", received_time=9.0, is_single=True, input_preparation_times=times
+        )
+        ns["_init_req_state"](manager, request)
+        stats = manager.rid_to_state["x"].time_stats
+        self.assertEqual(stats.input_preparation_times, times)
+        metadata = ns["convert_to_output_meta_info"](stats)
+        self.assertEqual(
+            metadata,
+            dict(
+                request_received_ts=1009.0,
+                input_preparation_queued_ts=1010.0,
+                input_preparation_start_ts=1011.0,
+                input_preparation_finish_ts=1012.0,
+                input_preparation_resume_ts=1013.0,
+            ),
+        )
+        ns["SGLANG_FRONTEND_DIAGNOSTICS"] = False
+        self.assertEqual(
+            ns["convert_to_output_meta_info"](stats), {"request_received_ts": 1009.0}
+        )
 
 
 def async_preparation_contract_tests():
@@ -942,17 +1046,38 @@ def async_preparation_contract_tests():
     ns = module.__dict__
     ns.update(vars(protocol))
     ns.update(
-        __name__=module_name, ABC=ABC, abstractmethod=abstractmethod,
-        asyncio=asyncio, contextvars=contextvars, copy=copy,
-        dataclass=dataclasses.dataclass, field=dataclasses.field,
-        dataclasses=dataclasses, Enum=Enum, HTTPStatus=HTTPStatus,
-        HTTPException=HTTPException, Request=Request, ORJSONResponse=ORJSONResponse,
-        DS32EncodingError=DS32EncodingError, ThreadPoolExecutor=ThreadPoolExecutor,
-        SimpleNamespace=types.SimpleNamespace, Mock=Mock, AsyncMock=AsyncMock,
-        patch=patch, unittest=unittest, threading=threading, time=time,
-        monotonic_time=time.perf_counter, json=json, orjson=orjson,
-        envs=envs, encoding_dsv4=encoding_dsv4, chat_encoding=chat_encoding,
-        logger=logging.getLogger(__name__), ServerArgs=type("ServerArgs", (), {}),
+        __name__=module_name,
+        ABC=ABC,
+        abstractmethod=abstractmethod,
+        asyncio=asyncio,
+        contextvars=contextvars,
+        copy=copy,
+        dataclass=dataclasses.dataclass,
+        field=dataclasses.field,
+        dataclasses=dataclasses,
+        Enum=Enum,
+        HTTPStatus=HTTPStatus,
+        HTTPException=HTTPException,
+        Request=Request,
+        ORJSONResponse=ORJSONResponse,
+        DS32EncodingError=DS32EncodingError,
+        ThreadPoolExecutor=ThreadPoolExecutor,
+        SimpleNamespace=types.SimpleNamespace,
+        Mock=Mock,
+        AsyncMock=AsyncMock,
+        patch=patch,
+        unittest=unittest,
+        threading=threading,
+        time=time,
+        monotonic_time=time.perf_counter,
+        json=json,
+        orjson=orjson,
+        envs=envs,
+        encoding_dsv4=encoding_dsv4,
+        chat_encoding=chat_encoding,
+        SGLANG_FRONTEND_DIAGNOSTICS=False,
+        logger=logging.getLogger(__name__),
+        ServerArgs=type("ServerArgs", (), {}),
         EmbeddingReqInput=type("EmbeddingReqInput", (), {}),
     )
     source_definitions("srt/managers/io_struct.py", {"GenerateReqInput"}, ns)

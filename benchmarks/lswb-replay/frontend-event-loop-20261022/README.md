@@ -596,3 +596,84 @@ no SLO throughput advantage is established. For the next SLO probe, reduce Nativ
 concurrency with worker/source/image/protocol frozen; matched C24 Packed worker
 controls remain unrun. No runtime edits or GPU jobs were made during analysis.
 Rollback remains `DSV4_ASYNC_PREPARATION=0`.
+
+
+## Preparation-worker concurrency screen — planned 2026-10-23
+
+**Question:** does bounded parallel conversion reduce preparation queueing and
+E2E while retaining prompt identity, output reception and cancellation ownership?
+**Changed mechanism:** startup preparation workers 1 versus 2, with an equally
+bounded semaphore. Async preparation remains opt-in, default count 1. Counts
+1/2/4 are accepted; this initial screen does not launch 4 workers.
+
+**Matrix:** Native C24/W1, Packed Kernel-256 C24/W1, Packed Kernel-256 C24/W2,
+Native C24/W2, in that order, n=1 each. One GPUQ job requests four H100s by
+count and runs all cells sequentially, with fresh servers/cache per cell.
+MF0.88, TP4, HiCache off, original fixed-active-user-pool replay, seed 20260919,
+1,200-second dispatch windows, no warm-up, frozen GC, extended decode graphs.
+Both modes now use the same C24; historical C24/C28 records are context only.
+The source remains this isolated frontend worktree; the shared kernel checkout
+is untouched. Select the exact committed mounted fork; no native rebuild.
+
+**Timing:** opt-in API-local perf_counter stamps before admission, at worker
+start/finish and at API resumption. The existing API receive/dispatch and
+scheduler forward stamps then separate initial handling, preparation waiting,
+conversion execution, API resumption, remaining dispatch and scheduler admission.
+The existing first-output analyzer adds `include_preparation=True`, requiring
+complete finite ordered boundaries for every successful exact-ID join; absent
+coverage is a diagnostic failure, never a zero-duration measurement.
+
+**Acceptance/stopping:** CPU concurrency, cancellation, actual-converter token
+parity and timestamp arithmetic checks precede submission. Actual-image CPU
+contracts run before allocation. Save all four whole-run summaries and stage
+distributions, plus the separately labeled post-180 cohort. At least 200 joined
+post-180 requests per cell are required. Preserve missing-output failures and
+the 99% response gate; full-run TTFT p90 <10 s is a separate serving gate.
+Stop after four cells without automatic GPU retries. A failed response gate is
+retained and does not suppress later cells; startup/source/teardown failure stops
+the job. Compare W1/W2 within each mode before interpreting relative throughput.
+A promising screen needs n=3; Packed C28 and 4 workers are follow-ups.
+
+**Run on the VDI after publishing these commits and synchronizing clean pins:**
+
+```bash
+export REPLAY_DATASET=/home/jovyan/wenyuhong/benchmarks/datasets/h20-dsv4pro/longcodebench_openai
+export REPLAY_MANIFEST=/home/jovyan/wenyuhong/benchmarks/cache/official-longswebench/longswebench-openai-v1.json
+bash benchmarks/lswb-replay/frontend-event-loop-20261022/diagnose.sh submit-workers
+```
+
+The job records source/image identities and hashes, GPU assignment, worker count,
+per-cell result-root pointers, request timings, and `preparation-pipeline.json`.
+Its batch pointer is `logs/frontend-preparation-workers-current.txt`. The old
+`collect` command is for the C40 two-job protocol; it does not collect this
+four-cell screen. Existing server stop ownership is reused on every exit.
+Rollback: use `DSV4_PREPARATION_WORKERS=1`, or disable async preparation entirely
+with `DSV4_ASYNC_PREPARATION=0`. Full-model worker-count evidence is pending.
+
+
+### Local readiness
+
+Candidate SGLang `6687a7c36c`; unchanged FlashMLA `97f3faa58450`.
+
+- **Purpose:** distinguish preparation wait, execution and dispatch and screen
+  bounded worker concurrency using the existing serving/replay entry points.
+- **Risk:** shared tokenizer/encoder concurrency and displaced scheduler waiting;
+  retain startup opt-in and count 1 by default. Cancellation retains capacity
+  until its concurrent future actually finishes, including with two workers.
+- **Evidence:** 27 source-isolated model-free CPU checks pass, including an
+  actual fast-tokenizer backend with concurrent conversion, request isolation,
+  cancellation, shutdown, exact-ID timing joins and exporter handoff. Modified
+  Python parses, both shell scripts pass `bash -n`, and scoped Ruff and whitespace
+  checks pass. Existing tolerances are unchanged; synthetic epoch timing inputs
+  use exact binary fractions rather than a relaxed arithmetic assertion.
+- **Limitations:** local checks do not import the full CUDA-dependent server,
+  use the production checkpoint tokenizer, or establish serving speed/quality.
+  Actual-image CPU checks run before GPUQ allocation. Full-model qualification,
+  repeatability, mixed endpoints, C28, and four workers remain unrun.
+- **Rollback:** `DSV4_PREPARATION_WORKERS=1`; async preparation remains default-off.
+
+Local CPU reproduction uses the existing `probe.py` unittest entry point; the
+runtime is an isolated macOS CPython 3.11 environment with CPU test dependencies.
+Command: `python -B -m unittest discover -s
+benchmarks/lswb-replay/frontend-event-loop-20261022 -p probe.py -v`.
+No GPU/Modal jobs, image builds, pushes or VDI source changes were performed.
