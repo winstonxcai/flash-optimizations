@@ -1,0 +1,130 @@
+{
+  "valid": true,
+  "id_verified": true,
+  "basis": "Exact captured SSE server_request_id equals server metrics id; no inferred joins",
+  "cohort_basis": "Successful exact-ID joins; after_180s uses server request_received_ts",
+  "errors": [],
+  "client_identity_diagnostics": [],
+  "coverage": {
+    "client_records": 2231,
+    "successful_client_records": 2216,
+    "client_records_with_server_id": 2231,
+    "server_records": 2231,
+    "matched_successful": 2216,
+    "timing_valid_successful": 2216,
+    "unmatched_successful": 0,
+    "unmatched_server_records": 15
+  },
+  "cohorts": {
+    "all": {
+      "count": 2216,
+      "stages": {
+        "prefill_to_send_s": {
+          "count": 2216,
+          "mean": 0.03306817965387007,
+          "p50": 0.01094973087310791,
+          "p90": 0.1172858476638794,
+          "p95": 0.1942492127418518
+        },
+        "send_to_detokenizer_recv_s": {
+          "count": 2216,
+          "mean": 0.0004653493850239778,
+          "p50": 0.00039267539978027344,
+          "p90": 0.0007240772247314453,
+          "p95": 0.0008325576782226562
+        },
+        "detokenizer_recv_to_send_s": {
+          "count": 2216,
+          "mean": 0.00027011243444917865,
+          "p50": 0.00019848346710205078,
+          "p90": 0.0005812644958496094,
+          "p95": 0.0006468296051025391
+        },
+        "detokenizer_send_to_frontend_recv_s": {
+          "count": 2216,
+          "mean": 3.7895035420944545,
+          "p50": 4.638801693916321,
+          "p90": 6.734851598739624,
+          "p95": 7.199875175952911
+        },
+        "frontend_recv_to_handle_s": {
+          "count": 2216,
+          "mean": 7.308368648432653e-05,
+          "p50": 5.245208740234375e-06,
+          "p90": 0.0003472566604614258,
+          "p95": 0.00046950578689575195
+        },
+        "frontend_handle_to_first_output_s": {
+          "count": 2216,
+          "mean": 2.3849174003738787e-05,
+          "p50": 1.9311904907226562e-05,
+          "p90": 3.743171691894531e-05,
+          "p95": 4.750490188598633e-05
+        },
+        "post_prefill_to_first_output_s": {
+          "count": 2216,
+          "mean": 3.8234041164282857,
+          "p50": 4.6512991189956665,
+          "p90": 6.748828887939453,
+          "p95": 7.211501359939575
+        }
+      }
+    },
+    "after_180s": {
+      "count": 2188,
+      "stages": {
+        "prefill_to_send_s": {
+          "count": 2188,
+          "mean": 0.03120243178861015,
+          "p50": 0.010859012603759766,
+          "p90": 0.10310189723968499,
+          "p95": 0.18256489038467413
+        },
+        "send_to_detokenizer_recv_s": {
+          "count": 2188,
+          "mean": 0.0004634327600817358,
+          "p50": 0.0003917217254638672,
+          "p90": 0.0007283687591552728,
+          "p95": 0.0008325576782226562
+        },
+        "detokenizer_recv_to_send_s": {
+          "count": 2188,
+          "mean": 0.000269645746708788,
+          "p50": 0.0001971721649169922,
+          "p90": 0.0005812644958496094,
+          "p95": 0.0006468296051025391
+        },
+        "detokenizer_send_to_frontend_recv_s": {
+          "count": 2188,
+          "mean": 3.8371411949886483,
+          "p50": 4.6756356954574585,
+          "p90": 6.744440698623658,
+          "p95": 7.20194149017334
+        },
+        "frontend_recv_to_handle_s": {
+          "count": 2188,
+          "mean": 7.370108878154859e-05,
+          "p50": 5.245208740234375e-06,
+          "p90": 0.0003485679626464844,
+          "p95": 0.00047055482864379885
+        },
+        "frontend_handle_to_first_output_s": {
+          "count": 2188,
+          "mean": 2.314196644143169e-05,
+          "p50": 1.9311904907226562e-05,
+          "p90": 3.552436828613281e-05,
+          "p95": 4.3785572052001975e-05
+        },
+        "post_prefill_to_first_output_s": {
+          "count": 2188,
+          "mean": 3.8691735483392717,
+          "p50": 4.685391545295715,
+          "p90": 6.757627630233764,
+          "p95": 7.219859325885773
+        }
+      }
+    }
+  },
+  "post_180s_sample_gate": true,
+  "response_summary_valid": true
+}
