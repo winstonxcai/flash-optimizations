@@ -13,6 +13,28 @@ records rather than this milestone log.
 
 ## Unreleased
 
+### 2026-10-23 — Preparation concurrency and queue attribution diagnostic
+
+Parent `34e7339`; SGLang `6687a7c36c`; FlashMLA `97f3faa58450`.
+
+- **Added:** startup-bounded DSV4 text-chat preparation worker counts 1/2/4
+  (default 1, async off by default), matching semaphore/executor capacity,
+  and opt-in queued/start/finish/API-resume timestamps. Cancellation retains
+  the worker slot until its concurrent future finishes. Native kernels and
+  packing contracts are unchanged.
+- **Integration:** `serve.sh` preflights the selected mounted implementation and
+  worker count. The existing frontend diagnostic adds a sequential four-cell
+  Native/Packed Kernel C24 W1/W2 GPUQ screen, with exact-ID timing validation,
+  source/image checks and owned server cleanup.
+- **Validation:** 27 source-isolated model-free CPU checks pass, including
+  synchronized shared fast-tokenizer conversion, request isolation, cancellation,
+  shutdown and timing export/arithmetic. Scoped Ruff, Python/embedded-Python
+  syntax, shell syntax and whitespace checks pass. Actual-image CPU checks run
+  before GPU allocation; full-model worker-count qualification is pending.
+  No GPU/Modal jobs, image rebuilds or pushes were performed for this change.
+- **Rollback:** restore `DSV4_PREPARATION_WORKERS=1` or disable async preparation
+  with `DSV4_ASYNC_PREPARATION=0`. Counts above one remain diagnostic candidates.
+
 ### 2026-10-22 — Bounded DSV4 chat preparation candidate
 
 Parent `a64b9c0` (preflight correction `8c6e3e1`); SGLang `63291eba61`;
