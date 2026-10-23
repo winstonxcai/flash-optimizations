@@ -15,7 +15,8 @@ records rather than this milestone log.
 
 ### 2026-10-22 — Bounded DSV4 chat preparation candidate
 
-Parent follows `b5d340d`; SGLang `63291eba61`; FlashMLA `97f3faa58450`.
+Parent `a64b9c0` (preflight correction `8c6e3e1`); SGLang `63291eba61`;
+FlashMLA `97f3faa58450`.
 
 - **Added:** default-off DSV4 text-chat conversion worker, bounded admission with
   cancellation ownership, unchanged receive timestamp and explicit shutdown drain.
@@ -23,8 +24,14 @@ Parent follows `b5d340d`; SGLang `63291eba61`; FlashMLA `97f3faa58450`.
 - **Validation:** 20 source-isolated CPU contracts and four local-launcher tests
   pass, including converter parity, native/AnyIO cancellation, errors, queue time
   and cleanup. Fresh-context runtime and launcher reviews found no scoped blocker.
-  Actual-image CPU and instrumented full-model validation are pending; this entry
-  is not promotion or a throughput claim. Native extensions are unchanged.
+  Actual-image timing 10/10, async preparation 7/7 and replay 19/19 CPU tests
+  subsequently passed. C40/TP4/MF0.88/HiCache n=1 evidence transferred in
+  `640b852a` shows post-180-second detokenizer→API mean delay fall from 6.183 s
+  to 1.96 ms Native, 5.713 s to 20.89 ms Packed. Both now deliver about
+  1.729 req/s; this is not a Packed speedup. Both full-run TTFT-p90 values exceed
+  10 s and Packed misses 99% response validity (missing-output events). Retain
+  default off; mixed endpoints and response failures remain unqualified. Native
+  extensions are unchanged; see the frontend experiment record.
 - **Scope/rollback:** controlled DSV4 text-chat only; other tokenizer-consuming
   endpoints are not qualified. Unset `DSV4_ASYNC_PREPARATION` to restore sync mode.
 

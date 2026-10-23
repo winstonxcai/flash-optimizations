@@ -276,3 +276,120 @@ The 900-second diagnostic has 14/1,360 Native and 13/1,292 Packed missing-output
 responses, narrowly failing the 99% response-validity rule. Timing coverage passes
 independently; neither is an accepted throughput benchmark. Preserve these failures
 when interpreting the candidate.
+
+### Candidate image preflight — 2026-10-22
+
+VDI parent `8c6e3e1`, SGLang `63291eba61`, unchanged FlashMLA/image:
+actual imported request-time tests **10/10**, maintained async preparation tests
+**7/7**, and host replay tests **19/19** passed before submission. The first
+candidate invocation hit the stdlib `test` namespace; the maintained test is now
+invoked by its source-file path. A subsequent host replay preflight failed its
+hard-drain wall-clock check (14.7 s versus a 10 s bound); an unchanged full retry
+passed. No tolerance or success rule changed, and neither failed preflight
+allocated a GPU. Treat this as host scheduling sensitivity, not erased evidence.
+
+Candidate batch `frontend-first-output-asyncprep1-20261022_234403-D4SLp1`:
+Native `job-20261022-154455-ccb64602`, Packed Kernel
+`job-20261022-154455-611f2faa`. Both request four devices by count through GPUQ;
+queue time is excluded from the 900-second window. Both jobs are now terminal;
+the packet was transferred in parent `640b852a`.
+
+
+### Candidate full-model outcome — 2026-10-23
+
+**Keep default off for controlled chat qualification.** Offloading the unchanged
+converter largely removes the multi-second API receive stall. This establishes a
+shared frontend bottleneck; it does not establish a Packed throughput advantage.
+Missing-output responses remain unresolved.
+
+Candidate parent `8c6e3e1`, SGLang `63291eba61`; baseline parent `ae822c5d`,
+SGLang `7a95ce8231`. Both use FlashMLA `97f3faa58450`, image
+`sha256:09dfea18bd2c4168481710dcb1830a2c2efdb8e8f45f9d1ad7bb85a1b7ff48ab`
+and C40/TP4/MF0.88/HiCache-ratio-2/900-second original replay. Candidate legs ran
+sequentially on GPUQ-assigned GPUs 2,5,6,7; baseline used 0,1,2,5. These are n=1
+runs at different times, not randomized throughput estimates. Both candidate jobs
+terminated with teardown signals in their logs. Kernel exit 1 reflects the
+response-validity gate, not a server crash during replay.
+
+Whole-run client results include cold requests and final request drain:
+
+| Mode | Preparation | Successful req/s | Output tok/s | TTFT mean / p90 (s) | E2E mean (s) | TPOT mean (ms) | Failed / attempted |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Native | Sync | 1.4721 | 209.86 | 10.845 / 12.314 | 21.514 | 113.71 | 14 / 1,360 |
+| Native | Worker | 1.7289 | 248.47 | 6.166 / 10.130 | 18.167 | 114.01 | 15 / 1,603 |
+| Packed Kernel | Sync | 1.4084 | 196.69 | 12.359 / 11.687 | 22.008 | 108.46 | 13 / 1,292 |
+| Packed Kernel | Worker | 1.7285 | 243.40 | 6.391 / 10.264 | 18.255 | 114.75 | 17 / 1,596 |
+
+Within-mode requests/s rises **17.45% Native / 22.73% Packed**; output tokens/s
+rises **18.40% / 23.75%**. These are descriptive changes, not accepted speedup
+claims. With the fix in both, Packed requests/s is **0.026% lower** and output
+throughput **2.04% lower** than Native. Both full-run TTFT-p90 values miss 10 s.
+Native response success is 99.064%; Packed 98.935%, below the unchanged 99% gate.
+A selected post-startup cohort cannot replace the full-run SLO population.
+
+First-output residence, successful exact-ID joins received at least 180 seconds
+after each run's own start:
+
+| Mode | Sync mean / p90 | Worker mean / p90 | Worker samples |
+|---|---:|---:|---:|
+| Native | 6,183 / 10,324 ms | 1.96 / 1.44 ms | 1,556 |
+| Packed Kernel | 5,713 / 9,073 ms | 20.89 / 3.09 ms | 1,547 |
+
+Mean above p90 reflects rare delays. Packed still has eight successful first
+packets over 1 s, maximum 6.214 s, concentrated in a brief interval. These records
+do not identify that residual tail's cause; not every delay is fixed.
+
+**Check displaced waiting.** The following 1,238 dataset IDs are successful in
+all four runs, have identical body hashes/prompt counts, and server receive times
+after 180 s in every run. Mean seconds:
+
+| Stage | Native sync | Native worker | Packed sync | Packed worker |
+|---|---:|---:|---:|---:|
+| API receive → dispatch | 0.354 | 2.938 | 0.357 | 3.141 |
+| Dispatch → first forward | 1.233 | 1.464 | 2.973 | 1.276 |
+| Prefill | 0.430 | 0.409 | 0.560 | 0.436 |
+| Detokenizer send → API receive | 6.146 | 0.002 | 5.697 | 0.025 |
+| Client TTFT | 8.926 | 4.872 | 10.310 | 4.952 |
+| Client E2E | 15.514 | 13.478 | 16.253 | 13.579 |
+
+Worker admission/conversion wait remains charged to TTFT. It rises before
+dispatch, but client TTFT and E2E improve on the same requests, so this is not
+only a renamed timing stage. API receive→dispatch includes admission, conversion
+and dispatch, not isolated tokenizer execution. Earlier first output lengthens
+the visible stream interval; increased client TPOT alone does not prove slower
+GPU decode. Generated lengths also differ between Native and Packed.
+
+**Failure audit.** All candidate failures are HTTP 200, normal EOS token 1 with
+positive completion usage but no observable output. Native: 13×16 tokens, 1×34,
+1×36; Packed: 15×16, 1×7, 1×36. Among common attempted IDs, nine Native and ten
+Packed failures also fail with sync preparation. Four previously valid requests
+fail in each worker run; five Native / three Packed failures become valid.
+Offloading does not eliminate the existing response problem. Without raw SSE or
+generated token strings, control-only generation and tool-parser suppression
+cannot be distinguished. Keep every failure in the validity gate.
+
+**Evidence:** candidate SHA256SUMS **51/51** pass; baseline 50/50. Recomputing
+`first_output_pipeline_diagnostics(client JSONL, server JSONL, replay start)`
+from the existing store/decode `analyze.py` exactly reproduces all four retained
+pipeline records. Successful joins are 1,588/1,588 Native and 1,579/1,579 Packed,
+with ordered stamps; all attempted client/server prompt and completion counts
+agree. No retractions. All common off/on attempts have equal body hashes/prompt
+counts. Exported serving arguments differ only in startup timings and metrics
+output paths; logs confirm worker activation (the environment switch is not
+an exported argument). Missing packet sidecars are boot source/GC/host-memory
+records, not measured requests or pipeline records.
+
+Canonical `results.json` → `candidate_serving_validation` retains source identity,
+checks, raw summaries, recomputed stages, off/on and four-way common-ID cohorts,
+nearest-rank client percentiles, failure transitions and whole-run deltas.
+Cross-run joins use dataset `request_id`; within-run joins use captured SSE ID.
+Post-180 cohorts require every compared server receive time ≥ its own start+180.
+Shared analysis functions: `first_output_pipeline_diagnostics` and `client_stats`
+in `../c24-packed256-store-decode-ablation-n1-20261014/analyze.py`.
+
+**Next diagnostic:** capture full SSE and generated token strings for a small,
+frozen failing-ID set, original payload/caps/EOS, explicit logprobs. Preserve the
+original validity decision. Do not increase caps or count empty output as success.
+This follow-up and mixed-endpoint checks remain unrun. No new GPU jobs or runtime
+changes were made during this analysis. Rollback: `DSV4_ASYNC_PREPARATION=0`
+(the default).
