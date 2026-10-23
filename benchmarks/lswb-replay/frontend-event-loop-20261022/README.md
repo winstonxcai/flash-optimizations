@@ -407,8 +407,9 @@ cell. Each mode ran sync preparation then the worker with a fresh server/cache.
 The modes ran concurrently on disjoint TP4 allocations on one host: Triton GPUs
 0–3, Kernel GPUs 4–7. Shared CPU contention and fixed off/on order are uncontrolled.
 Source is parent `d41a30e44e5c`, SGLang `63291eba6137`, FlashMLA `97f3faa58450`,
-with the same image as the C40 comparison. Both store and decode match the named
-mode. The pool is 4,536,832 slots in every cell.
+with image `sha256:51ed908c159139e522c2254b13c2713bf2fa5c51182f21cfec908252d2831972`
+(the C40 comparison used a different image). Both store and decode match the
+named mode. The pool is 4,536,832 slots in every cell.
 
 ### Full-run client results
 
@@ -506,3 +507,92 @@ shared CPU contention or another scheduling effect.
   remaining mode difference. Resolve the client duration anomaly before a
   throughput acceptance rerun. No new GPU jobs or runtime edits were made for
   this local analysis. Rollback remains `DSV4_ASYNC_PREPARATION=0`.
+
+
+## Native C24 with preparation worker — 2026-10-23
+
+**Native reaches 2.0156 successful requests/s, but narrowly misses the full-run
+10-second TTFT-p90 SLO.** The worker-enabled Packed C28 runs remain near the same
+throughput plateau. Their extra offered concurrency does not demonstrate more
+throughput than this Native reference.
+
+Source: transfer commit `988884b8`, packet
+`transfer/native-c24-mf088-worker-20261023_155916`. Original run:
+`results/lswb-replay/native-c24-mf088-worker-20261023_155916/20261023_162509`.
+Native, TP4 H100, MF0.88, HiCache off, original fixed-active-user-pool replay,
+C24, 1,200-second dispatch window, no warm-up, fresh cache and frozen GC, n=1.
+Worker activation is present in the boot log. Parent `70347da19726`, clean pinned
+SGLang `63291eba6137`, FlashMLA `97f3faa58450`; image `sha256:51ed908c159139e522c2254b13c2713bf2fa5c51182f21cfec908252d2831972`.
+The Native and Packed C28 worker runs use the same recorded image, fork pins,
+dataset hash, adapter/runner content hashes and payload/measurement options.
+Parent commits differ because of evidence-only additions. Loads and run times differ.
+
+### Full-run comparison
+
+All cells have the preparation worker enabled; each is n=1:
+
+| Mode / load | Successful req/s | Output tok/s | TTFT mean / p90 (s) | E2E mean (s) | TPOT mean (ms) | Device hits |
+|---|---:|---:|---:|---:|---:|---:|
+| Native C24 | **2.0156** | **307.88** | **4.762 / 10.287** | **11.746** | **56.71** | 97.305% |
+| Packed Triton C28 | 1.9711 | 295.10 | 5.718 / 10.632 | 13.986 | 70.94 | 97.178% |
+| Packed Kernel C28 | 1.9896 | 301.02 | 6.302 / 11.551 | 13.837 | 63.90 | 97.160% |
+
+Relative to Native C24, Packed Triton requests/s is -2.21% and output tok/s
+-4.15%; Packed Kernel is -1.29% / -2.23%. These small descriptive differences
+are not a statistically established Native advantage. This is also not a
+matched-concurrency overhead comparison. **All three full-run p90s exceed 10 s.**
+Native exceeds the threshold by 286.5 ms; 11.20% of successful requests exceed
+10 s. Do not round the result into a passing SLO point.
+
+Historical Native C24 n=3 means versus this worker n=1:
+
+| Metric | Historical mean | Worker | Descriptive change |
+|---|---:|---:|---:|
+| Successful req/s | 1.8125 | 2.0156 | +11.21% |
+| Output tok/s | 278.20 | 307.88 | +10.67% |
+| TTFT mean | 7.356 s | 4.762 s | -35.27% |
+| TTFT p90 | 9.339 s | 10.287 s | +10.14% |
+| E2E mean | 13.051 s | 11.746 s | -10.00% |
+| TPOT mean | 50.97 ms | 56.71 ms | +11.25% |
+
+Historical values come from `../c24-native-packed256-n3-20261018/summary.csv`;
+the p90 entry is a mean of run p90s, not a pooled percentile. Their recorded
+image matches, but source/run dates differ; this is not a paired attribution of
+all changes to the worker. Lower mean TTFT with higher p90/TPOT is compatible
+with changed closed-loop arrivals and first-output visibility; no isolated GPU
+decode regression follows from client TPOT.
+
+### Validation and pipeline
+
+- 2,459 attempts, **2,437 successful / 22 failed**, response success **99.1053%**:
+  passes the unchanged 99% gate. All failures are HTTP 200, normal EOS token 1,
+  positive completion usage, no observable output. They remain failures.
+- Client counts, token totals, throughput and latency distributions recompute.
+  All 2,459 attempts join to unique server IDs with equal prompt/completion
+  counts. All 2,437 successful first-output pipelines are complete and ordered;
+  no retractions. The existing analyzer establishes stronger coverage than the
+  original count-based validation sidecar.
+- Post-180 cohort: 2,403 successful exact-ID joins. Detokenizer-send to API-receive
+  mean **2.11 ms**, p90 **1.14 ms**; total post-prefill to frontend first output
+  mean **25.13 ms**. The shared multi-second receive stall is absent here.
+- Duration **1,209.063 s**; last response at 1,209.011 s, last activity at
+  1,209.038 s. Only **51 ms** follows the final response, so the anomalous
+  92-second tail seen in Kernel sync is not present.
+- The three worker runs share 2,280 successful body/prompt-matched request IDs
+  received after 180 s. A stricter 1,773-request cohort also matches output and
+  cached counts; Native mean TTFT/E2E is 4.154/8.590 s, Triton C28 4.801/10.044 s,
+  Kernel C28 5.463/10.118 s. These remain different-load, different-arrival
+  comparisons and cannot establish per-operation overhead or accepted SLO goodput.
+- Minimal transfer includes no original SHA256 manifest or terminal GPUQ snapshot.
+  Local artifact hashes are saved for future reproduction, not relabeled as
+  verification against VDI originals. The saved GPUQ job file is a queued
+  submission snapshot; client completion, replay exit 0 and shutdown logs supply
+  run-completion evidence. Candidate audit lacks `profile_identity`.
+
+Canonical record: `results.json` → `native_c24_worker_validation`, reusing the
+same existing analysis functions as C28. **Decision:** evidence supports a shared
+frontend improvement and near-neutral relative Packed throughput in these runs;
+no SLO throughput advantage is established. For the next SLO probe, reduce Native
+concurrency with worker/source/image/protocol frozen; matched C24 Packed worker
+controls remain unrun. No runtime edits or GPU jobs were made during analysis.
+Rollback remains `DSV4_ASYNC_PREPARATION=0`.
