@@ -187,3 +187,29 @@ CPU preflight and all numerical/sanitizer gates without skips or suppression.
 Current reported cumulative task compute is $2.00366166 before billing lag.
 With no competing allocations, the same bounded CPU build/preflight plus
 1800s H100 worker projects less than $4 additional work, below the $13 work cap.
+
+
+## Independent oracle placement refinement
+
+Attempt010 (`08c75c0`, SGLang `55660d7f`, FlashMLA `91463e0`) passed native
+build, CPU preflight and37 ordinary GPU tests in39.40s. Strict synccheck reached
+26 completed cases with no reported errors, but CPU-heavy instrumentation also
+covered repeated independent GPU FP32 torch/cuBLAS oracle operations. The app
+`ap-0KsEd3K9DvX4uXW4fmtzXJ` was stopped at2026-10-24T18:54:27Z and verified
+released. This incomplete sanitizer run is not a pass. Native image
+`im-O64c12Igt3h0QxPZunBTGU`, CPU image `im-qe56FQ27sUhO3vKpL7ct78`.
+
+Changed mechanism: run only the independent attention oracle on CPU in FP32,
+cast expected output toBF16, compare actual CPU copies with unchanged tolerances,
+and reuse one expected tuple per replay. Native/Packed Direct, both Adapter
+length variants, reconstruction, graph/stream and all32 sanitizer cases remain
+on GPU. No sanitizer coverage is removed. Fresh-context source review found no
+blocker; CPU/GPU reduction order may differ, so ordinary parity must pass again
+without loosening tolerances. The same full matrix and stopping rule apply.
+
+Attempt011 uses the same canonical command with run ID
+`v41-fp4-20261025-attempt011`, `REMNANT_VALIDATION_TIMEOUT_S=2700` and
+`--max-seconds 2640`.
+At reported cumulative compute $4.04479708 before lag, CPU preflight <=$1.2688,
+one45-minute H100 worker <=$3.6303 and CPU image build allowance <$0.10 project
+under$9.05 cumulative work. This preserves the$13 work cap and$2 reserve.

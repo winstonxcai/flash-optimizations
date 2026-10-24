@@ -9,8 +9,8 @@
     "max_projected_work_usd": 13,
     "account": "wpooh1579",
     "baseline_compute_usd": 18.51013772,
-    "latest_compute_usd": 20.51379938,
-    "incremental_compute_usd": 2.00366166,
+    "latest_compute_usd": 22.5549348,
+    "incremental_compute_usd": 4.04479708,
     "billing_lag": true,
     "cpu_core_hour_usd": 0.0473,
     "memory_gib_hour_usd": 0.008,
@@ -190,6 +190,34 @@
       "status": "unqualified",
       "reason": "Inherited stock BF16 sparse prefill divergent aligned named barriers; CUDA719/Xid43. Separate opt-in FP4 prefill specialization required.",
       "stopped_at": "2026-10-24T17:51:23Z"
+    },
+    {
+      "id": "attempt010",
+      "account": "wpooh1579",
+      "app_id": "ap-0KsEd3K9DvX4uXW4fmtzXJ",
+      "source_parent": "08c75c0",
+      "sglang": "55660d7f6d36029d9cc713867a63fa490c03f172",
+      "flashmla": "91463e004ec99762f39a173cd687f9ab98d3628d",
+      "cpu_native_image": "im-O64c12Igt3h0QxPZunBTGU",
+      "cpu_image": "im-qe56FQ27sUhO3vKpL7ct78",
+      "cpu_preflight": "passed",
+      "gpu_tests": {
+        "passed": 37,
+        "failed": 0,
+        "seconds": 39.4
+      },
+      "status": "stopped_incomplete_sanitizer",
+      "sanitizers": {
+        "synccheck": {
+          "completed_cases": 26,
+          "live_errors_reported": 0,
+          "status": "incomplete_not_qualified"
+        },
+        "racecheck": "not_run",
+        "memcheck": "not_run"
+      },
+      "reason": "CPU-heavy sanitizer instrumentation also covered repeated independent GPU torch/cuBLAS oracle operations. Stopped existing allocation; reviewed CPU-only oracle correction preserves all32 cases and tolerances.",
+      "stopped_at": "2026-10-24T18:54:27Z"
     }
   ],
   "review": {
@@ -271,5 +299,9 @@
     "status": "no_blocking_findings",
     "scope": "FP4-only unaligned CUTLASS named barrier policy, raw/AOT entry points, C0/C1/C2 production dispatch, length/no-length Adapter and graph fixtures",
     "validation": "source review only; compilation/sanitizers remain required"
+  },
+  "oracle_review": {
+    "status": "no_blocking_findings",
+    "scope": "Independent FP32/BF16 CPU attention oracle, unchanged tolerances/negative controls/full32 sanitizer matrix, GPU production graph ordering"
   }
 }
