@@ -10,6 +10,7 @@ import inspect
 import io
 import json
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -1299,9 +1300,8 @@ class LocalScriptTests(unittest.TestCase):
             invocation = json.loads(calls.read_text())
             self.assertIn("SGLANG_DSV4_ASYNC_PREPARATION=1", invocation)
             self.assertNotIn("-i", invocation)
-            self.assertIn("async def preflight", invocation[-3])
-            self.assertEqual(invocation[-2], environment["SGLANG_PY"])
-            self.assertEqual(invocation[-1], "1")
+            self.assertIn("async def preflight", invocation[invocation.index("-c") + 1])
+            self.assertEqual(invocation[-2:], [environment["SGLANG_PY"], "1"])
             calls.unlink()
             # Default-off does not import or activate the candidate preflight.
             result = subprocess.run(
@@ -2033,6 +2033,377 @@ class PrefillReadLauncherTests(unittest.TestCase):
             {(r["case"], r["mode"]) for r in record["runs"]},
             {(name, mode) for name in names for mode in contract.PREFILL_VARIANTS},
         )
+
+
+
+class LswbSweepTests(unittest.TestCase):
+    """Author: Winston Cai. Replay and server boundaries are CPU-only fakes."""
+
+    def setUp(self):
+        from scripts.local.business_replay import sweep
+        self.sweep = sweep
+        temporary = tempfile.TemporaryDirectory(prefix="lswb-sweep-")
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.image = "sha256:" + "1" * 64
+        self.env = {
+            "HOST_REPO": str(self.root), "RESULTS_HOST": str(self.root / "results"),
+            "CONTAINER": "fixture", "PORT": "30381", "MASTER_PORT": "29781", "TP": "4",
+            "MEM_FRAC": ".88", "MAX_RUN": "256", "DECODE_CFG": json.dumps({"decode": {"backend": "full", "bs": [4, 8, 32]}}),
+            "CTX_LEN": "1048576", "CHUNK": "8192", "MODEL_CT": "/model", "MODEL_NAME": "fixture",
+            "REPLAY_RUNNER": str(self.root / "runner.py"), "REPLAY_ADAPTER": str(self.root / "adapter.py"),
+            "REPLAY_MANIFEST": str(self.root / "dataset.json"), "REPLAY_DATASET": str(self.root / "data"),
+            "CUDA_VISIBLE_DEVICES": "4,5,6,7", "GPUS": "4,5,6,7", "REMNANT_INTEGRATION": "v0.5.18",
+        }
+        self.sources = {"parent": {"commit": "parent"}, "sglang": {"commit": "fork", "dirty": False}}
+        self.info = {
+            "model_path": "/model", "served_model_name": "fixture", "export_metrics_to_file": True, "enable_metrics": True,
+            "tp_size": 4, "mem_fraction_static": .88, "random_seed": 20260919,
+            "chunked_prefill_size": 8192, "context_length": 1048576, "max_running_requests": 256,
+            "enable_hierarchical_cache": False, "dsv4_c4_cache_format": "remnant",
+            "dsv4_c4_cache_implementation": "kernel", "dsv4_c4_cache_store_implementation": "kernel",
+            "dsv4_c4_cache_keep_count": 256, "dsv4_c4_cache_layer_keep_counts": None,
+            "cuda_graph_config": json.loads(self.env["DECODE_CFG"]), "max_total_num_tokens": 4536832,
+        }
+
+    def args(self, *extra):
+        return self.sweep.parse_args(["kernel", "--concurrencies", "2,3", "--tag", "screen",
+                                      "--expected-image-id", self.image, *extra])
+
+    def manifest(self, args):
+        return {"points": [{"concurrency": c, "repeat": r} for c in args.concurrencies
+                           for r in range(1, args.repeats + 1)],
+                "settings": dict(self.env), "protocol": self.sweep.runner.PROTOCOL,
+                "duration_s": args.duration_s, "minimum_success_rate": args.minimum_success_rate,
+                "ttft_slo_ms": args.ttft_slo_ms, "source_hashes": {self.env["REPLAY_MANIFEST"]: "dataset-hash"}}
+
+    def fixture(self, path, point, manifest, *, fifo=False):
+        """Independent tiny raw workload, summarized by the existing replay owner."""
+        runner = self.sweep.runner
+        path.mkdir(parents=True)
+        (path / "client").mkdir()
+        records = [runner.Record(str(i), "user", 1, Path(f"{i}.json"), "sha", 1, 2) for i in range(2)]
+        clients = [dict(request_id="0", user_id="user", valid=True, errors=[], prompt_tokens=1,
+                        completion_tokens=2, ttft_ms=10000., latency_ms=12000., tpot_ms=2000.,
+                        cached_tokens_details={"device": 0, "host": 0, "storage": 0},
+                        cached_tokens_details_status="requested_zero_hit", completed_offset_s=12.,
+                        dispatch_offset_s=0., ready_ttft_ms=10000., ready_latency_ms=12000.),
+                   dict(request_id="1", user_id="user", valid=False, errors=["missing_output_event"],
+                        completed_offset_s=13., dispatch_offset_s=12.)]
+        activity = [{"event": "user_activate", "user_id": "user", "active": 1, "active_users": 1},
+                    {"event": "ready", "request_id": "0", "user_sequence": 0,
+                     "ready_offset_s": 0., "session_slot_id": 0},
+                    {"event": "ready", "request_id": "1", "user_sequence": 1,
+                     "ready_offset_s": 12., "session_slot_id": 0}]
+        if fifo:
+            slots = runner.request_slots
+            outcome = slots.ReplayOutcome(manifest["duration_s"], 13., activity=activity)
+            outcome.states = [slots.RequestState(r, i, float(i * 12), 0, float(i * 12), c)
+                              for i, (r, c) in enumerate(zip(records, clients))]
+            summary = slots.summarize(outcome, records, manifest["minimum_success_rate"],
+                                      manifest["ttft_slo_ms"], runner.summarize, runner.distribution)
+        else:
+            summary = runner.summarize(records, clients, activity, manifest["duration_s"], manifest["minimum_success_rate"])
+        record_rows = [{**r.__dict__, "path": str(r.path)} for r in records]
+        for relative, data in {
+            "client/summary.json": summary,
+            "client/done.json": {"valid": summary["valid"], "protocol": manifest["protocol"]},
+            "request-timing-validation.json": {"complete": True, "partial": False, "errors": [], "records": 2},
+            "replay-window.json": {"started_at": 100., "ended_at": 100. + manifest["duration_s"]},
+            "client/dataset_manifest.json": {"records": record_rows, "source_manifest_sha256": "dataset-hash"},
+            "client/manifest.json": {"replay": {"max_concurrency": point["concurrency"], "max_duration_s": manifest["duration_s"]}},
+        }.items():
+            (path / relative).write_text(json.dumps(data))
+        for relative, data in (("client/responses.jsonl", clients), ("client/active_requests.jsonl", activity)):
+            (path / relative).write_text("".join(json.dumps(row) + "\n" for row in data))
+        (path / "cache-flush.log").write_text("Cache flushed.\n")
+        (path / "request-timings.jsonl").write_text('{"id":"server-0"}\n{"id":"server-1"}\n')
+        for relative in ("client.log", "server.log"):
+            (path / relative).write_text("fixture\n")
+        (path / "server-info.json").write_text(json.dumps(self.info))
+        return 0 if summary["valid"] else 1
+
+    def test_defaults_and_invalid_arguments(self):
+        args = self.args()
+        self.assertEqual((args.duration_s, args.repeats, args.point_timeout_s), (1200, 1, 2100))
+        for extra in (("--concurrencies", "2,2"), ("--concurrencies", "2,,3"),
+                      ("--duration-s", "0"), ("--repeats", "-1"), ("--tag", "../bad"),
+                      ("--expected-image-id", "latest"), ("--ttft-slo-ms", "nan"),
+                      ("--minimum-success-rate", "1.1"), ("--point-timeout-s", "1200")):
+            with self.subTest(extra=extra), patch("sys.stderr"), self.assertRaises(SystemExit):
+                self.args(*extra)
+
+    def test_help_requires_no_docker_or_data(self):
+        script = kernels.REPO_ROOT / "scripts/local/sweep-lswb.sh"
+        result = subprocess.run(["bash", str(script), "--help"], capture_output=True, text=True,
+                                env={"PATH": os.environ["PATH"], "PYTHON": sys.executable}, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("--expected-image-id", result.stdout)
+
+    def prepare_mocks(self, args, env=None, image=None):
+        env = env or self.env
+        container = [{"Image": image or self.image, "State": {"Running": True}}]
+        return patch.multiple(self.sweep, helper=MagicMock(return_value=""),
+                              source_identity=MagicMock(return_value=self.sources),
+                              source_hashes=MagicMock(return_value={}), check_ports=MagicMock(),
+                              check_owner_record=MagicMock(),
+                              command=MagicMock(return_value=subprocess.CompletedProcess([], 0, json.dumps(container))))
+
+    def test_preflight_freezes_order_and_defaults(self):
+        args = self.args("--repeats", "3")
+        with self.prepare_mocks(args), patch.object(self.sweep.runner, "load_dataset_manifest", return_value=([], 0)):
+            manifest, env = self.sweep.prepare(args, self.env)
+        self.assertEqual(manifest["points"], [dict(concurrency=c, repeat=r) for c in (2, 3) for r in (1, 2, 3)])
+        self.assertEqual(env["GPUS"], "4,5,6,7")
+        self.assertEqual(env["SERVER_SEED"], "20260919")
+        self.assertNotIn("DSV4_ASYNC_PREPARATION", env)
+        self.assertNotIn("HICACHE_RATIO", env)
+
+    def test_image_mismatch_and_source_failure_prevent_startup(self):
+        args = self.args()
+        with self.prepare_mocks(args, image="sha256:" + "2" * 64), self.assertRaisesRegex(ValueError, "image mismatch"):
+            self.sweep.prepare(args, self.env)
+        with self.prepare_mocks(args):
+            with patch.object(self.sweep, "source_identity", side_effect=RuntimeError("dirty fork")), self.assertRaisesRegex(RuntimeError, "dirty fork"):
+                self.sweep.prepare(args, self.env)
+
+    def test_gpuq_assignment_required_except_dry_run(self):
+        env = {k: v for k, v in self.env.items() if k != "CUDA_VISIBLE_DEVICES"}
+        with self.assertRaisesRegex(ValueError, "GPUQ"):
+            self.sweep.prepare(self.args(), env)
+        args = self.args("--dry-run")
+        with self.prepare_mocks(args), patch.object(self.sweep.runner, "load_dataset_manifest", return_value=([], 0)):
+            _, resolved = self.sweep.prepare(args, env)
+        self.assertNotIn("CUDA_VISIBLE_DEVICES", resolved)
+
+    def test_occupied_port_and_ownership_record(self):
+        import socket
+        with socket.socket() as occupied:
+            occupied.bind(("0.0.0.0", 0))
+            env = {**self.env, "PORT": str(occupied.getsockname()[1])}
+            with self.assertRaisesRegex(RuntimeError, "occupied"):
+                self.sweep.check_ports(env)
+        with patch.object(self.sweep, "command", return_value=subprocess.CompletedProcess([], 0, "")), self.assertRaisesRegex(RuntimeError, "ownership record"):
+            self.sweep.check_owner_record(self.env)
+
+    def test_hicache_requires_bound_reset_evidence(self):
+        env = {**self.env, "HICACHE_RATIO": "2", "SWEEP_MODE": "kernel"}
+        with self.assertRaisesRegex(ValueError, "HICACHE_RESET_RECEIPT"):
+            self.sweep.validate_hicache_receipt(env, self.image, self.sources)
+        evidence = self.root / "reset.json"
+        evidence.write_text("GPU reset observation")
+        receipt = {"image_id": self.image, "integration": "v0.5.18", "mode": "kernel", "hicache_ratio": 2.,
+                   "fork_commits": {"sglang": "fork"}, "checks": {key: True for key in (
+                       "gpu_cache_empty", "host_cache_empty", "transfers_drained")},
+                   "evidence_path": str(evidence), "evidence_sha256": self.sweep.sha256(evidence)}
+        path = self.root / "receipt.json"
+        path.write_text(json.dumps(receipt))
+        env["HICACHE_RESET_RECEIPT"] = str(path)
+        self.assertIsNotNone(self.sweep.validate_hicache_receipt(env, self.image, self.sources))
+        evidence.write_text("changed")
+        with self.assertRaisesRegex(ValueError, "matching SHA256"):
+            self.sweep.validate_hicache_receipt(env, self.image, self.sources)
+
+    def test_gate_boundaries_and_recomputed_values(self):
+        args = self.args("--minimum-success-rate", "0.5")
+        manifest, point = self.manifest(args), dict(concurrency=2, repeat=1)
+        path = self.root / "point"
+        code = self.fixture(path, point, manifest)
+        row = self.sweep.collect_point(path, point, manifest, code)
+        self.assertTrue(row["measurement_complete"])
+        self.assertTrue(row["response_success_pass"])
+        self.assertFalse(row["ttft_slo_pass"])  # Exactly 10,000 ms is a failure.
+        self.assertEqual(row["request_throughput"], 1 / 1200)
+        self.assertEqual(row["completion_token_throughput"], 2 / 1200)
+        path_summary = path / "client/summary.json"
+        summary = json.loads(path_summary.read_text())
+        summary["request_throughput"] += 1
+        path_summary.write_text(json.dumps(summary))
+        with self.assertRaisesRegex(ValueError, "raw records"):
+            self.sweep.collect_point(path, point, manifest, code)
+
+    def test_fifo_uses_existing_accounting_and_ready_slo(self):
+        args = self.args()
+        manifest = self.manifest(args)
+        manifest["protocol"] = self.sweep.runner.request_slots.PROTOCOL
+        point, path = dict(concurrency=2, repeat=1), self.root / "fifo"
+        code = self.fixture(path, point, manifest, fifo=True)
+        row = self.sweep.collect_point(path, point, manifest, code)
+        self.assertFalse(row["response_success_pass"])
+        self.assertFalse(row["ttft_slo_pass"])
+
+    def run_sweep(self, failure=None):
+        args = self.args("--repeats", "2")
+        manifest = self.manifest(args)
+        env = {**self.env, "SERVER_SEED": "20260919"}
+        calls = []
+        def fake_command(arguments, environment, **kwargs):
+            calls.append(arguments)
+            if "bench-lswb.sh" in str(arguments):
+                path = Path(environment["LSWB_RUN_ROOT"])
+                if failure:
+                    raise failure
+                point = {"concurrency": int(arguments[-2]), "repeat": int(path.name.rsplit("-", 1)[1])}
+                code = self.fixture(path, point, manifest)
+                return subprocess.CompletedProcess(arguments, code, "")
+            return subprocess.CompletedProcess(arguments, 0, "gpu0,H100\n")
+        with (patch.object(self.sweep, "command", side_effect=fake_command),
+              patch.object(self.sweep, "check_ports"), patch.object(self.sweep, "check_owner_record"),
+              patch.object(self.sweep, "server_info", return_value=self.info),
+              patch.object(self.sweep, "check_frozen"), patch("builtins.print")):
+            if failure:
+                with self.assertRaisesRegex(RuntimeError, "Sweep failed"):
+                    self.sweep.execute(args, manifest, env)
+                root = next((Path(env["RESULTS_HOST"]) / "lswb-replay").iterdir())
+            else:
+                root = self.sweep.execute(args, manifest, env)
+        return root, calls
+
+    def test_one_boot_cleanup_repeat_order_and_continue_measured_failures(self):
+        root, calls = self.run_sweep()
+        serve = [c for c in calls if "serve.sh" in str(c)]
+        self.assertEqual([c[-1] for c in serve], ["kernel", "stop"])
+        rows = json.loads((root / "summary.json").read_text())["points"]
+        self.assertEqual([(r["concurrency"], r["repeat"]) for r in rows], [(2, 1), (2, 2), (3, 1), (3, 2)])
+        self.assertTrue(all(r["measurement_complete"] for r in rows))
+        self.assertTrue(all(not r["response_success_pass"] and not r["ttft_slo_pass"] for r in rows))
+        self.assertEqual(len({r["artifact_path"] for r in rows}), 4)
+        self.assertEqual(json.loads((root / "summary.json").read_text())["status"], "complete")
+
+    def test_timeout_and_health_failure_stop_and_cleanup(self):
+        root, calls = self.run_sweep(subprocess.TimeoutExpired("replay", 2100))
+        self.assertEqual(sum("bench-lswb.sh" in str(c) for c in calls), 1)
+        self.assertEqual(calls[-1][-1], "stop")
+        self.assertEqual(json.loads((root / "summary.json").read_text())["status"], "failed")
+
+    def test_interruption_stops_remaining_points_and_cleans_up(self):
+        root, calls = self.run_sweep(InterruptedError("interrupt"))
+        self.assertEqual(sum("bench-lswb.sh" in str(c) for c in calls), 1)
+        self.assertEqual(calls[-1][-1], "stop")
+        self.assertEqual(json.loads((root / "summary.json").read_text())["status"], "failed")
+
+    def test_local_command_timeout_terminates_its_process_group(self):
+        with self.assertRaises(subprocess.TimeoutExpired):
+            self.sweep.command([sys.executable, "-c", "import time; time.sleep(60)"],
+                               self.env, timeout=1)
+
+    def test_startup_failure_and_missing_artifacts_cleanup(self):
+        args = self.args()
+        for boot_fails in (True, False):
+            with self.subTest(boot_fails=boot_fails):
+                calls = []
+                def fake(arguments, env, **kwargs):
+                    calls.append(arguments)
+                    if boot_fails and str(arguments[-1]) == "kernel":
+                        raise RuntimeError("startup failed")
+                    return subprocess.CompletedProcess(arguments, 0, "")
+                with (patch.object(self.sweep, "command", side_effect=fake),
+                      patch.object(self.sweep, "check_ports"), patch.object(self.sweep, "check_owner_record"),
+                      patch.object(self.sweep, "check_frozen"), patch.object(self.sweep, "server_info", return_value=self.info),
+                      patch("builtins.print"), self.assertRaisesRegex(RuntimeError, "Sweep failed")):
+                    self.sweep.execute(args, self.manifest(args), {**self.env, "SERVER_SEED": "20260919"})
+                self.assertEqual(calls[-1][-1], "stop")
+
+    def test_changed_server_or_source_is_operational_failure(self):
+        with patch.object(self.sweep, "source_identity", return_value={"sglang": {"commit": "changed"}}), self.assertRaisesRegex(RuntimeError, "Frozen source"):
+            self.sweep.check_frozen({"sources": self.sources, "source_hashes": {}}, self.env)
+        for change in ({"tp_size": 2}, {"enable_hierarchical_cache": True}, {"dsv4_c4_cache_implementation": "triton"}):
+            with self.subTest(change=change), self.assertRaisesRegex(ValueError, "Server configuration mismatch"):
+                self.sweep.check_server({**self.info, **change}, {**self.env, "SERVER_SEED": "20260919"}, "kernel", 3)
+
+    def test_dry_run_does_not_execute_or_create_results(self):
+        args = self.args("--dry-run")
+        with (patch.object(self.sweep, "parse_args", return_value=args),
+              patch.object(self.sweep, "prepare", return_value=({}, self.env)),
+              patch.object(self.sweep, "execute") as execute, patch("builtins.print")):
+            self.assertEqual(self.sweep.main(), 0)
+        execute.assert_not_called()
+        self.assertFalse(Path(self.env["RESULTS_HOST"]).exists())
+
+    def test_health_failure_stops_before_first_replay_and_cleans_up(self):
+        args = self.args()
+        calls = []
+        def fake(arguments, env, **kwargs):
+            calls.append(arguments)
+            return subprocess.CompletedProcess(arguments, 0, "gpu,H100\n")
+        with (patch.object(self.sweep, "command", side_effect=fake),
+              patch.object(self.sweep, "check_ports"), patch.object(self.sweep, "check_owner_record"),
+              patch.object(self.sweep, "server_info", side_effect=OSError("unhealthy")),
+              patch("builtins.print"), self.assertRaisesRegex(RuntimeError, "unhealthy")):
+            self.sweep.execute(args, self.manifest(args), {**self.env, "SERVER_SEED": "20260919"})
+        self.assertEqual(calls[-1][-1], "stop")
+        self.assertFalse(any("bench-lswb.sh" in str(c) for c in calls))
+
+    def test_incomplete_and_inconsistent_artifacts_are_rejected(self):
+        args = self.args()
+        manifest, point = self.manifest(args), dict(concurrency=2, repeat=1)
+        for issue in ("timing", "missing", "exit", "dataset"):
+            with self.subTest(issue=issue):
+                path = self.root / issue
+                code = self.fixture(path, point, manifest)
+                if issue == "timing":
+                    (path / "request-timing-validation.json").write_text('{"complete":false}')
+                elif issue == "missing":
+                    (path / "request-timings.jsonl").unlink()
+                elif issue == "dataset":
+                    target = path / "client/dataset_manifest.json"
+                    data = json.loads(target.read_text())
+                    data["source_manifest_sha256"] = "changed"
+                    target.write_text(json.dumps(data))
+                else:
+                    code = 0
+                with self.assertRaises(ValueError):
+                    self.sweep.collect_point(path, point, manifest, code)
+
+    def test_standalone_replay_output_and_response_threshold(self):
+        """Run the real replay shell with a fake HTTP endpoint and client, no GPUs."""
+        repo = self.root / "standalone"
+        local = repo / "scripts/local"
+        local.mkdir(parents=True)
+        (local / "bench-lswb.sh").write_text((kernels.REPO_ROOT / "scripts/local/bench-lswb.sh").read_text())
+        fake_runner = repo / "client.py"
+        fake_runner.write_text(
+            "import json, pathlib, sys\n"
+            "args=sys.argv[1:]; root=pathlib.Path(args[args.index('--result-root')+1])\n"
+            "(root/'args.json').write_text(json.dumps(args))\n"
+            "(root/'summary.json').write_text(json.dumps({'counts':{'successful':1}}))\n"
+        )
+        info = {"cuda_graph_config": {"decode": {"backend": "full", "bs": [32]}},
+                "dsv4_c4_cache_format": "native", "export_metrics_to_file": False}
+        tools = repo / "tools"
+        tools.mkdir()
+        curl = tools / "curl"
+        curl.write_text("#!/bin/sh\ncase \"$*\" in\n*server_info*) cat <<'JSON'\n" + json.dumps(info) + "\nJSON\n;;\n*flush_cache*) [ \"${FAIL_FLUSH:-0}\" != 1 ] || exit 22; echo 'Cache flushed.';;\nesac\n")
+        curl.chmod(0o755)
+        (local / "env.sh").write_text(
+            f"HOST_REPO={shlex.quote(str(repo))}\nRESULTS_HOST=$HOST_REPO/results\n"
+            "REPO_CT=/mnt/host_root$HOST_REPO\nLOG_HOST=$HOST_REPO/logs\nPORT=30381\nMODEL_NAME=fixture\n"
+            "check_sources() { return 0; }\nts() { echo 20260101_000000; }\n"
+        )
+        (local / "eval-env.sh").write_text(f"REPLAY_RUNNER={shlex.quote(str(fake_runner))}\nREPLAY_ADAPTER=$REPLAY_RUNNER\nREPLAY_DATASET=$HOST_REPO\nREPLAY_MANIFEST=$REPLAY_RUNNER\nrequire_replay_config() {{ return 0; }}\n")
+        environment = {"PATH": str(tools) + os.pathsep + os.environ["PATH"], "PYTHON": sys.executable}
+        output = repo / "results/lswb-replay/explicit"
+        for explicit in (False, True):
+            with self.subTest(explicit=explicit):
+                env = {**environment, **({"LSWB_RUN_ROOT": str(output), "REPLAY_MINIMUM_SUCCESS_RATE": ".5"} if explicit else {})}
+                result = subprocess.run(["bash", str(local / "bench-lswb.sh"), "tag", "30381", "2", "1"], env=env,
+                                        capture_output=True, text=True, timeout=15)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                root = output if explicit else repo / "results/lswb-replay/tag/20260101_000000"
+                arguments = json.loads((root / "client/args.json").read_text())
+                self.assertEqual(arguments[arguments.index("--minimum-success-rate") + 1], ".5" if explicit else "0.99")
+        result = subprocess.run(["bash", str(local / "bench-lswb.sh"), "tag"],
+                                env={**environment, "LSWB_RUN_ROOT": str(output)}, capture_output=True, text=True, timeout=10)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("must be fresh", result.stderr)
+        failed_root = repo / "results/lswb-replay/failed-flush"
+        result = subprocess.run(["bash", str(local / "bench-lswb.sh"), "failed", "30381", "2", "1"],
+                                env={**environment, "LSWB_RUN_ROOT": str(failed_root), "FAIL_FLUSH": "1"},
+                                capture_output=True, text=True, timeout=10)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("prefix cache flush failed", result.stderr)
+        self.assertFalse((failed_root / "client/args.json").exists())
+
 
 
 if __name__ == "__main__":
