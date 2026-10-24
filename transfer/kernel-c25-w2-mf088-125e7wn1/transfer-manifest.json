@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "description": "Packed Kernel256 C25 W2 TP4 MF0.88 HiCache-off original replay1200s n1",
+  "original_run": null,
+  "missing_artifacts": [
+    "logs/kernel-c25-w2-mf088-125e7wn1/source-at-start.json",
+    "logs/kernel-c25-w2-mf088-125e7wn1/assigned-gpus.txt",
+    "logs/kernel-c25-w2-mf088-125e7wn1/result-root.txt",
+    "logs/kernel-c25-w2-mf088-125e7wn1/job-exit-code.txt",
+    "logs/kernel-c25-w2-mf088-125e7wn1/boot/serve_kernel.log",
+    "logs/kernel-c25-w2-mf088-125e7wn1/boot/server-info.json",
+    "logs/kernel-c25-w2-mf088-125e7wn1/boot/gc-freeze.log",
+    "logs/kernel-c25-w2-mf088-125e7wn1/boot/replay-exit-code.txt",
+    "No replay directory; boot and job failure diagnostics retained"
+  ],
+  "classification": "Screening evidence; response and timing qualification pending",
+  "baseline": "frontend-preparation-workers-20261023_213929-RtkRUV/native-c24-w2"
+}

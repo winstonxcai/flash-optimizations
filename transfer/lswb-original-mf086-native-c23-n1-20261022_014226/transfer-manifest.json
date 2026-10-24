@@ -1,0 +1,59 @@
+{
+  "status": "Transferred evidence; pending benchmark review",
+  "protocol": "business-user-replay-v2",
+  "memory_fraction": 0.86,
+  "requested_duration_s": 1200,
+  "runs": [
+    {
+      "mode": "native",
+      "concurrency": 23,
+      "repeat": 1,
+      "original_run": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/native-original-mf086-c23-gccontrol-20261022_003644/20261022_004103",
+      "job": {
+        "id": "job-20261021-163645-75f40ab6",
+        "status": "failed",
+        "state": null,
+        "exit_code": 1,
+        "error": "command exited with status 1",
+        "failure_reason": null,
+        "workload_key": "native-original-mf086-c23-gccontrol-20261022_003644",
+        "argv": [
+          "bash",
+          "-lc",
+          "\nset -euo pipefail\n\nexport GIT_CONFIG_COUNT=4\nexport GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0=\"$PWD\"\nexport GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1=\"$PWD/third_party/sglang\"\nexport GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2=\"$PWD/third_party/flashmla\"\nexport GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3=\"$PWD/third_party/flashmla/csrc/cutlass\"\n\nexport GPUS=\"${CUDA_VISIBLE_DEVICES:?GPUQ did not assign GPUs}\"\nIFS=, read -r -a assigned <<< \"$GPUS\"\n[ \"${#assigned[@]}\" -eq 4 ]\n\nexport CONTAINER=remnant\n[ \"$(git rev-parse HEAD)\" = \"$EXPECTED_PARENT\" ]\n[ \"$(docker inspect \"$CONTAINER\" --format \"{{.Image}}\")\" = \"$EXPECTED_IMAGE\" ]\n\nexport SGLANG_ROOT_CT=\"/mnt/host_root$PWD/third_party/sglang\"\nexport SGLANG_PY=\"$SGLANG_ROOT_CT/python\"\nexport TP=4 MEM_FRAC=0.86 SERVER_SEED=20260919\nexport CHUNK=8192 MAX_RUN=256 CTX_LEN=1048576\nunset DECODE_CFG SERVER_PID_FILE_CT\nunset C4_KEEP_COUNT C4_LAYER_KEEP_COUNTS STORE_IMPLEMENTATION\n\nexport REPLAY_DIR=/home/jovyan/wenyuhong/benchmarks\nexport REPLAY_DATASET=\"$REPLAY_DIR/datasets/h20-dsv4pro/longcodebench_openai\"\nexport REPLAY_MANIFEST=\"$REPLAY_DIR/cache/official-longswebench/longswebench-openai-v1.json\"\nexport REPLAY_RUNNER=\"$PWD/scripts/local/business_replay/runner.py\"\nexport REPLAY_ADAPTER=\"$PWD/scripts/local/business_replay/adapters/openai_sse.py\"\nexport REPLAY_SCHEDULER=fixed-active-user-pool\nunset REPLAY_SESSION_POPULATION REPLAY_DRAIN_TIMEOUT REPLAY_TTFT_SLO_MS\n\nexport RESULTS_HOST=\"$PWD/results\"\nexport LOG_HOST=\"$PWD/logs/$TAG\"\nexport REQUEST_METRICS_DIR=\"$LOG_HOST/request-metrics\"\n\nsource scripts/local/eval-env.sh\nrequire_replay_config\npython3 scripts/sources.py \"$PWD\" > \"$LOG_HOST/source-manifest.json\"\nprintf \"%s\\n\" \"$EXPECTED_IMAGE\" > \"$LOG_HOST/image-id.txt\"\nprintf \"%s\\n\" \"$GPUS\" > \"$LOG_HOST/gpus.txt\"\nsha256sum scripts/local/serve.sh scripts/local/run-server.sh \\\n  scripts/local/bench-lswb.sh > \"$LOG_HOST/launcher-sha256.txt\"\n\ncleanup() {\n  rc=$?\n  trap - EXIT INT TERM\n  bash scripts/local/serve.sh \"$MODE\" stop || rc=1\n  exit \"$rc\"\n}\ntrap cleanup EXIT\ntrap \"exit 130\" INT\ntrap \"exit 143\" TERM\n\nbash scripts/local/serve.sh \"$MODE\"\n\ncurl --fail-with-body --silent --show-error --max-time 60 \\\n  -X POST \"http://127.0.0.1:$PORT/freeze_gc\" \\\n  > \"$LOG_HOST/gc-freeze.log\"\ncat \"$LOG_HOST/gc-freeze.log\"\n\nrc=0\nbash scripts/local/bench-lswb.sh \\\n  \"$TAG\" \"$PORT\" \"$CONCURRENCY\" 1200 || rc=$?\n\nshopt -s nullglob\nruns=(\"$RESULTS_HOST/lswb-replay/$TAG\"/20*)\n[ \"${#runs[@]}\" -eq 1 ]\nrun=\"${runs[0]}\"\n\nmkdir -p \"$run/server\"\ncp \"$LOG_HOST/serve_${MODE}.log\" \\\n   \"$LOG_HOST/source-manifest.json\" \\\n   \"$LOG_HOST/image-id.txt\" \\\n   \"$LOG_HOST/gpus.txt\" \\\n   \"$LOG_HOST/launcher-sha256.txt\" \\\n   \"$LOG_HOST/gc-freeze.log\" \"$run/server/\"\n\nbash scripts/local/lswb-row.sh \"$run\"\nprintf \"Results: %s\\n\" \"$run\"\nexit \"$rc\"\n"
+        ],
+        "cwd": "/home/jovyan/winstonxcai/flash-optimizations",
+        "created_at": "2026-10-21T16:36:45.277275+00:00",
+        "started_at": "2026-10-21T16:36:48.472134+00:00",
+        "finished_at": "2026-10-21T17:01:36.044763+00:00",
+        "allocated_gpu_ids": [
+          3,
+          4,
+          5,
+          6
+        ],
+        "output_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/native-original-mf086-c23-gccontrol-20261022_003644-gpuq",
+        "log_dir": "/var/lib/gpuq/jobs/job-20261021-163645-75f40ab6"
+      },
+      "missing_files": [],
+      "metadata_errors": [],
+      "summary_valid": false,
+      "counts": {
+        "attempted": 1945,
+        "completion_tokens": 297766,
+        "failed": 20,
+        "not_started_due_to_duration": 2971,
+        "prompt_tokens": 273919922,
+        "selected": 4916,
+        "successful": 1925,
+        "users_completed": 25,
+        "users_selected": 92,
+        "users_started": 48
+      },
+      "failure_reasons": {
+        "missing_output_event": 20
+      },
+      "request_throughput": 1.5975654142335654
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "allocated_gpu_ids": null,
+  "argv": [
+    "bash",
+    "/home/jovyan/winstonxcai/flash-optimizations/logs/kernel-c26-w1-mf088-4yrpv7vy/run.sh",
+    "/home/jovyan/winstonxcai/flash-optimizations",
+    "/home/jovyan/winstonxcai/flash-optimizations/logs/kernel-c26-w1-mf088-4yrpv7vy"
+  ],
+  "created_at": "2026-10-24T05:35:32.879826+00:00",
+  "cwd": "/home/jovyan/winstonxcai/flash-optimizations",
+  "error": null,
+  "exit_code": null,
+  "expected_duration_seconds": 2100,
+  "finished_at": null,
+  "gpu_count": 4,
+  "id": "job-20261024-053532-d4c7c54b",
+  "lease_id": null,
+  "log_dir": "/var/lib/gpuq/jobs/job-20261024-053532-d4c7c54b",
+  "output_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/kernel-c26-w1-mf088-4yrpv7vy/gpuq",
+  "pgid": null,
+  "pid": null,
+  "priority": 50,
+  "project": "flash-optimizations",
+  "release_lease_on_exit": false,
+  "requested_gpu_ids": null,
+  "started_at": null,
+  "status": "queued",
+  "timeout_seconds": 3600,
+  "user_name": "winstonxcai",
+  "workload_key": "kernel-c26-w1-mf088-4yrpv7vy"
+}

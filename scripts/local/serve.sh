@@ -20,7 +20,10 @@
 #
 # Env overrides (all optional): PORT, GPUS, MASTER_PORT, TP, DECODE_CFG,
 # MEM_FRAC, CTX_LEN, MAX_RUN, CHUNK, SERVER_SEED, REQUEST_METRICS_DIR,
-# C4_KEEP_COUNT, C4_LAYER_KEEP_COUNTS. Boot log:
+# C4_KEEP_COUNT, C4_LAYER_KEEP_COUNTS, FRONTEND_DIAGNOSTICS (0 or 1),
+# DSV4_ASYNC_PREPARATION (0 or 1; default off),
+# DSV4_PREPARATION_WORKERS (1, 2 or 4; default 1), HICACHE_RATIO (positive
+# CPU-L2/device pool ratio; unset disables HiCache). Boot log:
 #   <LOG_HOST>/serve_<native|triton|kernel>.log
 # Server is left RUNNING; use "serve.sh <mode> stop" to tear it down.
 # =====================================================================
@@ -58,7 +61,99 @@ if [ "$ACTION" = stop ]; then
 fi
 
 check_sources || exit 1
+
+case "${FRONTEND_DIAGNOSTICS:-0}" in
+  0|1) ;;
+  *) echo "FRONTEND_DIAGNOSTICS must be 0 or 1" >&2; exit 2 ;;
+esac
+case "${DSV4_ASYNC_PREPARATION:-0}" in
+  0|1) ;;
+  *) echo "DSV4_ASYNC_PREPARATION must be 0 or 1" >&2; exit 2 ;;
+esac
+case "${DSV4_PREPARATION_WORKERS:-1}" in
+  1|2|4) ;;
+  *) echo "DSV4_PREPARATION_WORKERS must be 1, 2 or 4" >&2; exit 2 ;;
+esac
 check_container_sources || exit 1
+if [ "${DSV4_ASYNC_PREPARATION:-0}" = 1 ]; then
+  # Exercise the actual mounted coroutine on CPU before replacing a server.
+  timeout 60 docker exec \
+    -e "PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT" \
+    -e SGLANG_DSV4_ASYNC_PREPARATION=1 -e SGLANG_FRONTEND_DIAGNOSTICS=0 \
+    -e "SGLANG_DSV4_PREPARATION_WORKERS=${DSV4_PREPARATION_WORKERS:-1}" "$CONTAINER" python3 -c '
+import asyncio
+import inspect
+import sys
+import threading
+from pathlib import Path
+from types import SimpleNamespace
+from sglang.srt.entrypoints.openai.serving_base import OpenAIServingBase
+from sglang.srt.entrypoints.openai.serving_chat import OpenAIServingChat
+from sglang.srt.environ import envs
+
+expected_root = Path(sys.argv[1]).resolve()
+for cls in (OpenAIServingBase, OpenAIServingChat):
+    source = Path(inspect.getfile(cls)).resolve()
+    if not source.is_relative_to(expected_root):
+        raise RuntimeError(f"Unexpected preparation source: {source}; expected {expected_root}")
+    if not inspect.iscoroutinefunction(getattr(cls, "_convert_to_internal_request_async", None)):
+        raise RuntimeError(f"Active source lacks async conversion hook: {source}")
+flag = getattr(envs, "SGLANG_DSV4_ASYNC_PREPARATION", None)
+if flag is None or not flag.get():
+    raise RuntimeError("Active source lacks the DSV4 asynchronous preparation switch")
+
+async def preflight():
+    serving = object.__new__(OpenAIServingChat)
+    serving.chat_encoding_spec = "dsv4"
+    serving.tokenizer_manager = SimpleNamespace(model_config=SimpleNamespace(is_multimodal=False))
+    serving._init_input_preparation()
+    try:
+        expected_workers = int(sys.argv[2])
+        if serving._input_preparation_workers != expected_workers:
+            raise RuntimeError(f"Active source preparation worker count mismatch: expected {expected_workers}")
+        if serving._input_preparation_executor is None:
+            raise RuntimeError("Active source did not create the DSV4 preparation worker")
+        serving._convert_to_internal_request = lambda request, raw: threading.get_ident()
+        thread = await serving._convert_to_internal_request_async(SimpleNamespace(input_ids=None))
+        if thread == threading.get_ident():
+            raise RuntimeError("Active DSV4 preparation still blocks the API event loop")
+    finally:
+        await serving.aclose()
+
+asyncio.run(preflight())
+print("DSV4 asynchronous preparation CPU preflight PASS:", inspect.getfile(OpenAIServingChat))
+' "$SGLANG_PY" "${DSV4_PREPARATION_WORKERS:-1}" || exit 1
+fi
+
+if [ "${FRONTEND_DIAGNOSTICS:-0}" = 1 ]; then
+  [ -n "${REQUEST_METRICS_DIR:-}" ] || {
+    echo "FRONTEND_DIAGNOSTICS=1 requires a fresh REQUEST_METRICS_DIR" >&2; exit 2;
+  }
+  docker exec -e "PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT" \
+    -e SGLANG_FRONTEND_DIAGNOSTICS=1 "$CONTAINER" python3 -c '
+from sglang.srt.observability.req_time_stats import APIServerReqTimeStats, SchedulerReqTimeStats
+api = APIServerReqTimeStats()
+api.input_preparation_times = (1., 2., 3., 4.)
+assert "input_preparation_start_ts" in api.convert_to_output_meta_info(), "mounted source lacks preparation timing"
+stats = SchedulerReqTimeStats(first_output_send_time=1.0, detokenizer_recv_time=2.0, detokenizer_send_time=3.0)
+api.record_frontend_first_output(stats, 4.0, 5.0)
+assert "frontend_recv_ts" in api.convert_to_output_meta_info(), "mounted source lacks frontend diagnostics"
+assert "first_output_send_time" in stats.__getstate__(), "diagnostic IPC timing is missing"
+' || exit 1
+fi
+
+if [ -n "${HICACHE_RATIO:-}" ]; then
+  [[ "$HICACHE_RATIO" =~ ^[0-9]+([.][0-9]+)?$ && -n "${HICACHE_RATIO//[.0]/}" ]] || {
+    echo "HICACHE_RATIO must be a positive finite decimal; unset it to disable HiCache" >&2; exit 2;
+  }
+  docker exec -e "PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT" "$CONTAINER" python3 -c '
+from sglang.srt.server_args import ServerArgs
+for field in ("enable_hierarchical_cache", "hicache_ratio", "hicache_write_policy",
+              "hicache_io_backend", "hicache_mem_layout"):
+    if not hasattr(ServerArgs, field):
+        raise RuntimeError(f"Active SGLang source lacks HiCache option {field}")
+' || exit 1
+fi
 
 case "${STORE_IMPLEMENTATION:-}" in
   ""|triton|kernel) ;;
@@ -168,7 +263,7 @@ echo "== serve $MODE on gpus=$GPUS port=$PORT master=$MASTER_PORT (log: $SERVE_L
 ct_script "$TREE" "$GPUS" "$MASTER_PORT" "$MODEL_NAME" "$TP" "$MEM_FRAC" \
   "$CTX_LEN" "$MAX_RUN" "$CHUNK" "$DECODE_CFG" "$SGLANG_PY" "$REPO_CT" \
   "$MODE" "$MODEL_CT" "$PORT" "$SERVE_LOG_CT" "$SERVER_PID_FILE_CT" "$NSYS_OUTPUT_CT" "${NSYS_GRAPH_TRACE:-node}" \
-  "${SERVER_SEED:-}" "$REQUEST_METRICS_DIR_CT" "${STORE_IMPLEMENTATION:-}" "${C4_KEEP_COUNT:-}" "${C4_LAYER_KEEP_COUNTS:-}" <<'BASH'
+  "${SERVER_SEED:-}" "$REQUEST_METRICS_DIR_CT" "${STORE_IMPLEMENTATION:-}" "${C4_KEEP_COUNT:-}" "${C4_LAYER_KEEP_COUNTS:-}" "${HICACHE_RATIO:-}" "${FRONTEND_DIAGNOSTICS:-0}" "${DSV4_ASYNC_PREPARATION:-0}" "${DSV4_PREPARATION_WORKERS:-1}" <<'BASH'
 set -u
 tree=$1
 gpus=$2
@@ -194,6 +289,10 @@ request_metrics_dir=${21}
 store_implementation=${22}
 c4_keep_count=${23}
 c4_layer_keep_counts=${24}
+hicache_ratio=${25}
+frontend_diagnostics=${26}
+dsv4_async_preparation=${27}
+dsv4_preparation_workers=${28}
 
 cd -- "$tree"
 export CUDA_VISIBLE_DEVICES="$gpus" MASTER_PORT="$master_port"
@@ -204,6 +303,10 @@ export NSYS_GRAPH_TRACE="$nsys_graph_trace"
 export SERVER_SEED="$server_seed" REQUEST_METRICS_DIR="$request_metrics_dir"
 export STORE_IMPLEMENTATION="$store_implementation"
 export C4_KEEP_COUNT="$c4_keep_count" C4_LAYER_KEEP_COUNTS="$c4_layer_keep_counts"
+export HICACHE_RATIO="$hicache_ratio"
+export SGLANG_FRONTEND_DIAGNOSTICS="$frontend_diagnostics"
+export SGLANG_DSV4_ASYNC_PREPARATION="$dsv4_async_preparation"
+export SGLANG_DSV4_PREPARATION_WORKERS="$dsv4_preparation_workers"
 export PYTHONPATH="/opt/sglang-runtime-fixes:$sglang_py:$repo_ct"
 export NCCL_IB_DISABLE=1 NCCL_SOCKET_IFNAME=lo NCCL_P2P_LEVEL=NVL NCCL_PROTO=Simple NCCL_ALGO=Ring
 # All TP workers are local; keep Gloo off hostname-selected external interfaces.

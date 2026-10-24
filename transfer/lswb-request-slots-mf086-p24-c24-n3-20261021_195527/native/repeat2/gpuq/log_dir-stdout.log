@@ -1,0 +1,80 @@
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "53792072b241214ba4ec84bf935e66ec6445db4c"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang",
+    "expected_commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla",
+    "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "override": false,
+    "dirty": false
+  }
+}
+Request timing source: /mnt/host_root/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang/python/sglang/srt/observability/req_time_stats.py
+== serve native on gpus=0,1,2,3 port=30521 master=29921 (log: /home/jovyan/winstonxcai/flash-optimizations/logs/native-mf086-p24-sweep-20261021_184122-1442878-repeat2/serve_native.log) ==
+launched pid 128325
+  health OK after ~175s
+  pool(max_total_num_tokens)=3529984
+  max_total_num_tokens=3529984
+  is fired up and ready
+serve native UP on port 30521 -- leave running, tear down with: scripts/local/serve.sh native stop
+
+Starting native-mf086-p24-c24-20261021_184122-1442878-repeat2
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "53792072b241214ba4ec84bf935e66ec6445db4c"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang",
+    "expected_commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "commit": "921cc2e03f61a0105cf50f0d3175a296c5e2fbb6",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla",
+    "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "override": false,
+    "dirty": false
+  }
+}
+[lswb] decode graph preflight OK: c24, captured sizes=[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 15, 16, 18, 20, 24, 28, 32, 34, 40, 48, 56, 64, 68, 80, 96, 112, 120, 136]
+[lswb] waiting for idle server and flushing prefix cache
+Cache flushed.
+Please check backend logs for more details. (When there are running or waiting requests, the operation will not be performed.)
+== lswb replay tag=native-mf086-p24-c24-20261021_184122-1442878-repeat2 port=30521 c24 @ 1200s -> /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/native-mf086-p24-c24-20261021_184122-1442878-repeat2/20261021_184507 ==
+[lswb] request timing: 1351 records, 1351 valid, complete=True
+[lswb] client rc=1
+==== client.log ====
+{"attempted":1351,"completed_during_drain":24,"completed_in_window":1327,"completion_tokens":191377,"drain_timeouts":0,"failed":14,"not_started_due_to_duration":3565,"prompt_tokens":182881422,"ready_not_dispatched":0,"selected":4916,"successful":1337,"successful_in_window":1313,"users_completed":16,"users_selected":92,"users_started":39,"valid":false}
+[lswb] artifacts at /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/native-mf086-p24-c24-20261021_184122-1442878-repeat2/20261021_184507
+Cell complete: valid= False SLO= pass req/s= 1.0941666666666667
+dir=20261021_184507
+ttft_basis=ready_to_first_output slo_status=pass threshold_ms=10000.0 censored=0
+slo=FAIL valid=False done=1313 ttft_p90=9.62s e2e_p90=44.75s l1=0.9384 l2=0.0000 uncached=11272590 succ=0.9896
+Results: /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/native-mf086-p24-c24-20261021_184122-1442878-repeat2/20261021_184507
+stopped native server on port 30521

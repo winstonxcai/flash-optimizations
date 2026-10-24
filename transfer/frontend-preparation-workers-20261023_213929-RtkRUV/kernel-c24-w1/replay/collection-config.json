@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "mode": "kernel",
+  "server_seed": 20260919,
+  "metrics_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/frontend-preparation-workers-20261023_213929-RtkRUV/kernel-c24-w1/request-metrics",
+  "server_log": "/home/jovyan/winstonxcai/flash-optimizations/logs/frontend-preparation-workers-20261023_213929-RtkRUV/kernel-c24-w1/serve_kernel.log"
+}

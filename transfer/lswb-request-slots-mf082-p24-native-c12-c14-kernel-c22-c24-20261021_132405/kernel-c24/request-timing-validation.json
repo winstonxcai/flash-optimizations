@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "complete": true,
+  "server_seed": 20260919,
+  "mode": "kernel",
+  "records": 2169,
+  "valid_timing_records": 2169,
+  "client_successful": 2151,
+  "errors": [],
+  "coverage_basis": "count lower bound; not a verified per-request client/server join",
+  "client_join_verified": false,
+  "partial": false
+}

@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "mode": "kernel",
+  "server_seed": 20260919,
+  "metrics_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/kernel-c25-w1-mf088-vrkgzksm/boot/request-metrics",
+  "server_log": "/home/jovyan/winstonxcai/flash-optimizations/logs/kernel-c25-w1-mf088-vrkgzksm/boot/serve_kernel.log"
+}

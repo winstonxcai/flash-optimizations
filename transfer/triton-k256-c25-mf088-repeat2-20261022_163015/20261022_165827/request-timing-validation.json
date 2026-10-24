@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "complete": true,
+  "server_seed": 20260919,
+  "mode": "triton",
+  "records": 1705,
+  "valid_timing_records": 1705,
+  "client_successful": 1690,
+  "errors": [],
+  "coverage_basis": "count lower bound; not a verified per-request client/server join",
+  "client_join_verified": false,
+  "partial": false
+}

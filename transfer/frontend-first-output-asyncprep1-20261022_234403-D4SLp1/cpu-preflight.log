@@ -1,0 +1,85 @@
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "8c6e3e1da9fa7e53a292a2c3dce096afe288d2fc"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang",
+    "expected_commit": "63291eba61378ce1910a413a73e836d6fbfe22c6",
+    "commit": "63291eba61378ce1910a413a73e836d6fbfe22c6",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla",
+    "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "override": false,
+    "dirty": false
+  }
+}
+......[CI Test Method] TestFirstOutputMetadata.test_first_output_uses_existing_stamp_for_single_token
+[CI Test Method] TestFirstOutputMetadata.test_rebased_scheduler_stamps_share_export_clock
+[CI Test Method] TestFirstOutputMetadata.test_unset_first_output_is_absent
+[CI Test Method] TestFrontendFirstOutputDiagnostics.test_disabled_preserves_serialization_and_metadata
+[CI Test Method] TestFrontendFirstOutputDiagnostics.test_enabled_serializes_without_metrics
+[CI Test Method] TestFrontendFirstOutputDiagnostics.test_enabled_unset_fields_are_absent_from_output
+[CI Test Method] TestFrontendFirstOutputDiagnostics.test_first_packet_is_latched_independently_of_later_snapshots
+[CI Test Method] TestFrontendFirstOutputDiagnostics.test_missing_first_packet_timing_is_not_filled_from_later_packet
+.[CI Test Method] TestFrontendFirstOutputDiagnostics.test_two_hops_rebase_stamped_fields_and_preserve_zero
+..[CI Test Method] TestSetstatePreservesUnsetTimeSentinels.test_two_hop_round_trip
+.
+----------------------------------------------------------------------
+Ran 10 tests in 0.001s
+
+OK
+test_actual_dsv4_converter_preserves_ids_tools_reasoning_and_options (__main__.AsyncInputPreparationTests.test_actual_dsv4_converter_preserves_ids_tools_reasoning_and_options) ... /mnt/host_root/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang/python/sglang/srt/entrypoints/openai/protocol.py:1035: DeprecationWarning: max_tokens is deprecated in favor of the max_completion_tokens field
+  "max_new_tokens": self.max_completion_tokens or self.max_tokens,
+ok
+test_anyio_cancellation_retains_worker_slot (__main__.AsyncInputPreparationTests.test_anyio_cancellation_retains_worker_slot) ... ok
+test_close_drains_responsively_without_late_dispatch (__main__.AsyncInputPreparationTests.test_close_drains_responsively_without_late_dispatch) ... /mnt/host_root/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang/python/sglang/srt/entrypoints/openai/serving_base.py:113: FastAPIDeprecationWarning: ORJSONResponse is deprecated, FastAPI now serializes data directly to JSON bytes via Pydantic when a return type or response model is set, which is faster and doesn't need a custom response class. Read more in the FastAPI docs: https://fastapi.tiangolo.com/advanced/custom-response/#orjson-or-response-model and https://fastapi.tiangolo.com/tutorial/response-model/
+  return self.create_error_response(
+ok
+test_conversion_errors_retain_http_400_and_release_admission (__main__.AsyncInputPreparationTests.test_conversion_errors_retain_http_400_and_release_admission) ... /mnt/host_root/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang/python/sglang/srt/entrypoints/openai/serving_base.py:117: FastAPIDeprecationWarning: ORJSONResponse is deprecated, FastAPI now serializes data directly to JSON bytes via Pydantic when a return type or response model is set, which is faster and doesn't need a custom response class. Read more in the FastAPI docs: https://fastapi.tiangolo.com/advanced/custom-response/#orjson-or-response-model and https://fastapi.tiangolo.com/tutorial/response-model/
+  return self.create_error_response(
+ok
+test_disabled_and_other_models_create_no_executor (__main__.AsyncInputPreparationTests.test_disabled_and_other_models_create_no_executor) ... ok
+test_native_cancellation_retains_worker_slot_and_never_dispatches (__main__.AsyncInputPreparationTests.test_native_cancellation_retains_worker_slot_and_never_dispatches) ... ok
+test_pretokenized_request_and_contextvars (__main__.AsyncInputPreparationTests.test_pretokenized_request_and_contextvars) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.167s
+
+OK
+test_adapter_timing_is_opt_in_and_wire_body_unchanged (test_request_slots.AccountingTests.test_adapter_timing_is_opt_in_and_wire_body_unchanged) ... ok
+test_censored_requests_cannot_silently_pass (test_request_slots.AccountingTests.test_censored_requests_cannot_silently_pass) ... ok
+test_missing_and_nonmonotonic_timing_fail_measurement (test_request_slots.AccountingTests.test_missing_and_nonmonotonic_timing_fail_measurement) ... ok
+test_policy_rejects_unsupported_combinations (test_request_slots.AccountingTests.test_policy_rejects_unsupported_combinations) ... ok
+test_slo_includes_queue_and_strict_boundary (test_request_slots.AccountingTests.test_slo_includes_queue_and_strict_boundary) ... ok
+test_window_and_drain_counts_are_separate (test_request_slots.AccountingTests.test_window_and_drain_counts_are_separate) ... ok
+test_existing_response_failures_are_preserved (test_request_slots.AdapterRequestIDTests.test_existing_response_failures_are_preserved) ... ok
+test_missing_or_inconsistent_id_only_fails_join_diagnostic (test_request_slots.AdapterRequestIDTests.test_missing_or_inconsistent_id_only_fails_join_diagnostic) ... ok
+test_stable_id_is_captured_without_changing_payload_or_hashes (test_request_slots.AdapterRequestIDTests.test_stable_id_is_captured_without_changing_payload_or_hashes) ... ok
+test_usage_only_event_can_omit_id (test_request_slots.AdapterRequestIDTests.test_usage_only_event_can_omit_id) ... ok
+test_blocked_http_workers_do_not_extend_drain (test_request_slots.RunnerProcessTests.test_blocked_http_workers_do_not_extend_drain) ... ok
+test_drain_only_run_reports_zero_without_row_crash (test_request_slots.RunnerProcessTests.test_drain_only_run_reports_zero_without_row_crash) ... ok
+test_real_runner_and_spawn_workers (test_request_slots.RunnerProcessTests.test_real_runner_and_spawn_workers) ... ok
+test_worker_import_failure_cleans_up_pool (test_request_slots.RunnerProcessTests.test_worker_import_failure_cleans_up_pool) ... ok
+test_bounds_serial_order_and_replacement (test_request_slots.SchedulingTests.test_bounds_serial_order_and_replacement) ... ok
+test_cutoff_stops_dispatch_and_drain_cancels (test_request_slots.SchedulingTests.test_cutoff_stops_dispatch_and_drain_cancels) ... ok
+test_exception_releases_request_slot (test_request_slots.SchedulingTests.test_exception_releases_request_slot) ... ok
+test_fifo_yields_each_turn (test_request_slots.SchedulingTests.test_fifo_yields_each_turn) ... ok
+test_legacy_keeps_session_until_exhausted (test_request_slots.SchedulingTests.test_legacy_keeps_session_until_exhausted) ... ok
+
+----------------------------------------------------------------------
+Ran 19 tests in 12.544s
+
+OK
+CPU source, timing and replay preflight PASS; no GPU job allocated

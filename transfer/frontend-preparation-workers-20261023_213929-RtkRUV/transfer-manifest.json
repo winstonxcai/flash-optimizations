@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "batch": "frontend-preparation-workers-20261023_213929-RtkRUV",
+  "description": "C24 TP4 MF0.88 HiCache-off preparation-worker diagnostic",
+  "runs": [
+    {
+      "cell": "native-c24-w1",
+      "original_run": "results/lswb-replay/native-c24-w1-mf088-frontend-preparation-workers-20261023_213929-RtkRUV/20261023_214426"
+    },
+    {
+      "cell": "kernel-c24-w1",
+      "original_run": "results/lswb-replay/kernel-c24-w1-mf088-frontend-preparation-workers-20261023_213929-RtkRUV/20261023_220854"
+    },
+    {
+      "cell": "kernel-c24-w2",
+      "original_run": "results/lswb-replay/kernel-c24-w2-mf088-frontend-preparation-workers-20261023_213929-RtkRUV/20261023_223315"
+    },
+    {
+      "cell": "native-c24-w2",
+      "original_run": "results/lswb-replay/native-c24-w2-mf088-frontend-preparation-workers-20261023_213929-RtkRUV/20261023_225740"
+    }
+  ],
+  "missing_artifacts": []
+}

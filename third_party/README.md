@@ -15,7 +15,7 @@ Folder suffixes identify the SGLang integration pair, not a FlashMLA release.
 
 | Checkout | Exact upstream base | Development branch | Current pin |
 |---|---|---|---|
-| `sglang-v0.5.18/` | `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` | `921cc2e` |
+| `sglang-v0.5.18/` | `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` | `6687a7c` |
 | `flashmla-v0.5.18/` | `05e26647fe840b8baedae486c2d86d5ce4efeb7c` | `remnant/flashmla-v0518` | `97f3faa` |
 | `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `remnant/v0.5.22` | `7856615` |
 | `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `remnant/flashmla-v0522` | `3eb8594` |
@@ -55,7 +55,11 @@ Parent branch `codex/sglang-v0.5.22` starts from local `main` `6fa18c7` in
 `data/source-snapshots/sglang-v0.5.22/`. It semantically ports only the integration
 delta `88e3b1a..62cb99a`; it does not merge the archived experiment history.
 The original `codex/sglang-v0522-port` worktree remains archived unchanged.
-Main's v0.5.18 fork contents, pins and benchmark defaults are preserved.
+The branch subsequently integrates GitHub main `ffb11cb`, preserving its newer
+v0.5.18 SGLang pin `6687a7c`, frontend diagnostics/preparation controls, HiCache
+launcher options and benchmark defaults. The v0.5.22 pair is unchanged. Main's
+custom asynchronous-preparation controls remain v0.5.18-specific; v0.5.22 keeps
+upstream conversion offload, and unsupported opt-ins fail the CPU preflight.
 
 Target: 0731 on H100/SM90, **V4 584-byte logical Native layout**, not V4.1.
 
@@ -133,7 +137,7 @@ selected by `--dsv4-c4-cache-format remnant`.
 | Direct attention | FlashMLA `csrc/sm90/decode/sparse_fp8/splitkv_mla.cuh` | Read Packed records inside attention; output/LSE, edge and graph tests |
 | Host cache | SGLang `srt/mem_cache/memory_pool_host.py`, `hybrid_cache/hybrid_pool_assembler.py` | Coordinated value/bitmap/scale transfers; 256 survivors only |
 | Capture and replay | SGLang `srt/remnant/capture.py`, `benchmark/remnant/calibrate.py` under `python/sglang/` | Opt-in owner-only capture, audited TP payloads, strict source hashes |
-| Profiling and request timing | SGLang `srt/utils/nvtx_utils.py`, scheduler, graph runner, request statistics | Gated built-in PyTorch NVTX; tokenizer first-output timestamp |
+| Profiling and request timing | SGLang `srt/utils/nvtx_utils.py`, scheduler, graph runner, request statistics | Gated built-in PyTorch NVTX; tokenizer first-output timestamp; opt-in first-output IPC boundaries |
 | Measurements | SGLang `benchmark/remnant/microbench.py` | Shared decode/store and prefill-read fixtures; [protocol and commands](sglang-v0.5.18/benchmark/remnant/README.md) |
 
 ### SGLang file map
@@ -169,6 +173,31 @@ files within them, not every upstream file in that directory.
   `python/sglang/srt/model_executor/runner/decode_cuda_graph_runner.py` and
   `python/sglang/srt/observability/req_time_stats.py` own batch/rank/step markers,
   padded graph sizes and first-output metadata. No external `nvtx` package is required.
+  `managers/scheduler_components/output_streamer.py`, `detokenizer_manager.py`,
+  `multi_tokenizer_mixin.py` and `tokenizer_manager.py` additionally carry
+  first-output transport stamps when `SGLANG_FRONTEND_DIAGNOSTICS=1` at startup.
+  The local launcher exposes `FRONTEND_DIAGNOSTICS=1`, requires timing export,
+  and preflights the mounted Python implementation before replacing a server.
+  Stamps bracket CPU payload serialization/IPC/handling, not GPU completion or
+  visible SSE content. API state latches the first packet across later snapshots;
+  unset fields stay absent. Disabling the flag preserves normal dispatch.
+  The [frontend diagnostic](../benchmarks/lswb-replay/frontend-event-loop-20261022/README.md)
+  records CPU coverage and the bounded VDI/GPUQ attribution protocol. Its source
+  is isolated from newer local microbenchmark changes; native binaries are unchanged.
+- **DSV4 input preparation:** `python/sglang/srt/entrypoints/openai/serving_base.py`,
+  `serving_chat.py`, `entrypoints/http_server.py` and `environ.py` own the opt-in
+  `SGLANG_DSV4_ASYNC_PREPARATION` text-chat worker. The local launcher exposes
+  `DSV4_ASYNC_PREPARATION=1` and checks the actual mounted implementation on CPU
+  before replacing a server. `DSV4_PREPARATION_WORKERS=1|2|4` bounds conversion
+  admission and executor size (default 1); counts above one need full-model
+  qualification. Opt-in frontend diagnostics also separate preparation
+  queue/start/finish/API-resume stamps, carried by `managers/io_struct.py`
+  through `tokenizer_manager.py` to `req_time_stats.py`. The API loop
+  receives outputs; cancellation retains admission until conversion completes,
+  and shutdown drains owned work. Default off creates no worker. The controlled
+  chat-only diagnostic is qualified separately from mixed-endpoint tokenizer use;
+  no kernel, cache, token IDs or sampling change is intended. Regression checks
+  are in the existing serving-chat unit suite.
 - **Benchmarks and calibration:** `benchmark/remnant/` owns the maintained CLI,
   protocol and harness tests. `python/sglang/benchmark/remnant/` owns shared case
   definitions, seeds, statistics, JSON/CSV and profile-export checks, capture

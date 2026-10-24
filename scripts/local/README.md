@@ -22,6 +22,23 @@ machines or Modal. On shared machines, run GPU commands inside your GPUQ job or
 active lease. Bare serving/capture examples below assume you already hold an
 allocation. Build the image and prepare inputs before queueing GPU work.
 
+## CPU-L2 HiCache screening
+
+Set `HICACHE_RATIO=2` before `serve.sh native` to enable CPU-L2 HiCache with
+twice the device-pool page capacity, `write_through`, `kernel` transfers and
+`layer_first` layout. Unset `HICACHE_RATIO` for the control. This adds no disk
+storage. DeepSeek V4 supports ratio-based host sizing, not `--hicache-size`.
+Check available host RAM and actual allocated pool bytes before measurement;
+the ratio alone does not specify total host memory across all companion pools.
+
+The first screen compares Native off/on at LongSWE original replay C40
+(P=C40), MF0.88, TP4 H100 and 1,200 seconds, n=1 each. Use the same allocation,
+fresh servers, seed, image and source for both legs. Record successful requests/s,
+output tokens/s, TTFT p90, E2E, device/host cache hits, uncached prefill and
+failures. Investigate host hits replacing recomputation before repeating or
+sweeping concurrency; a C40 SLO miss is not evidence of a passing capacity.
+Stop expansion if L2 sees no useful reuse or transfer costs outweigh savings.
+
 ## Isolated latent-KV capture
 
 Capture reuses the **same `remnant:v0.5.18` image as serving**, but starts a
@@ -629,6 +646,38 @@ Collection waits up to 30 seconds for asynchronous writes and fails on bad
 timestamps, duplicate IDs, exporter errors, or insufficient record counts.
 Count coverage is a lower bound; it does not verify the client/server ID join.
 Keep the client's raw request records to match OpenAI response IDs when available.
+
+For first-output attribution, set `FRONTEND_DIAGNOSTICS=1` together with a fresh
+`REQUEST_METRICS_DIR` before `serve.sh`. The opt-in Python hooks export scheduler
+send-start, detokenizer receive/forward-start, and API receive/handler boundaries;
+the adapter records the existing SSE request ID for exact joins. No scheduler or
+kernel policy changes. The scoped CPU preflight and two-mode GPUQ diagnostic are
+documented in the [experiment record](../../benchmarks/lswb-replay/frontend-event-loop-20261022/README.md#next-diagnostic-locate-first-output-residence-time).
+
+For the scoped DSV4 text-chat input-preparation candidate, set
+`DSV4_ASYNC_PREPARATION=1` before `serve.sh`; leave it unset or set it to `0`
+for the unchanged synchronous control. The launcher validates the value and
+executes a CPU check against the actual selected SGLang Python source before
+stopping an existing server. It exports `SGLANG_DSV4_ASYNC_PREPARATION` into the
+container. Select the updated mounted Python fork with `SGLANG_PY`; this Python
+change does not require rebuilding kernels or the existing compatible image.
+
+```bash
+DSV4_ASYNC_PREPARATION=1 bash scripts/local/serve.sh kernel
+```
+
+The candidate defaults to one owned CPU preparation worker. Set
+`DSV4_PREPARATION_WORKERS=1|2|4` at startup to bound both executor size and
+admitted conversions; counts above one remain diagnostic candidates.
+`FRONTEND_DIAGNOSTICS=1` additionally exports preparation queued/start/finish/
+resume timestamps through the existing request exporter. Preparation waiting remains included in
+TTFT; cancellation cannot dispatch a completed result later or release the
+worker slot early. Server shutdown drains the worker. Pretokenized requests and
+other model paths keep their current execution. Use the same switch for Native
+and Packed comparisons. Full-model qualification and shared-tokenizer behavior
+with other API endpoints remain experimental; this does not alter cache formats,
+kernels, request payloads or replay scheduling. A startup log confirms when the
+worker is enabled. See the same experiment record for the qualification gate.
 
 With metrics enabled, the existing exporter supplies `queue_time`,
 `forward_entry_time`, `prefill_finished_time`, `request_received_ts`,

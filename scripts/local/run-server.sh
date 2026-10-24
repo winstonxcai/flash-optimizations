@@ -29,6 +29,11 @@ if [ -n "${SERVER_SEED:-}" ]; then
     echo "SERVER_SEED must be an integer in [0, 2147483647]" >&2; exit 2;
   }
 fi
+if [ -n "${HICACHE_RATIO:-}" ]; then
+  [[ "$HICACHE_RATIO" =~ ^[0-9]+([.][0-9]+)?$ && -n "${HICACHE_RATIO//[.0]/}" ]] || {
+    echo "HICACHE_RATIO must be a positive finite decimal; unset it to disable HiCache" >&2; exit 2;
+  }
+fi
 
 # The local-container launcher sets this after starting us in a dedicated
 # session. Record identity before exec so cleanup can recognize this exact
@@ -81,7 +86,12 @@ fi
 if [ -n "${C4_LAYER_KEEP_COUNTS:-}" ]; then
   args+=(--dsv4-c4-cache-layer-keep-counts "$C4_LAYER_KEEP_COUNTS")
 fi
-
+if [ -n "${HICACHE_RATIO:-}" ]; then
+  # CPU L2 only. Keep layout and transfer policy explicit across both formats.
+  args+=(--enable-hierarchical-cache --hicache-ratio "$HICACHE_RATIO"
+    --hicache-write-policy write_through --hicache-io-backend kernel
+    --hicache-mem-layout layer_first)
+fi
 
 if [ -n "${SERVER_SEED:-}" ]; then
   args+=(--random-seed "$SERVER_SEED")

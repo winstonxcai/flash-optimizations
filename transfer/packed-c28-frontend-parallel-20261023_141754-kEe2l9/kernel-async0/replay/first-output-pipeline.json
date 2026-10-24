@@ -1,0 +1,130 @@
+{
+  "valid": true,
+  "id_verified": true,
+  "basis": "Exact captured SSE server_request_id equals server metrics id; no inferred joins",
+  "cohort_basis": "Successful exact-ID joins; after_180s uses server request_received_ts",
+  "errors": [],
+  "client_identity_diagnostics": [],
+  "coverage": {
+    "client_records": 2186,
+    "successful_client_records": 2166,
+    "client_records_with_server_id": 2186,
+    "server_records": 2186,
+    "matched_successful": 2166,
+    "timing_valid_successful": 2166,
+    "unmatched_successful": 0,
+    "unmatched_server_records": 20
+  },
+  "cohorts": {
+    "all": {
+      "count": 2166,
+      "stages": {
+        "prefill_to_send_s": {
+          "count": 2166,
+          "mean": 0.036009471172110855,
+          "p50": 0.010715842247009277,
+          "p90": 0.1373692750930786,
+          "p95": 0.20699208974838257
+        },
+        "send_to_detokenizer_recv_s": {
+          "count": 2166,
+          "mean": 0.0004427358164131256,
+          "p50": 0.0003674030303955078,
+          "p90": 0.0007092952728271484,
+          "p95": 0.0008494853973388672
+        },
+        "detokenizer_recv_to_send_s": {
+          "count": 2166,
+          "mean": 0.00026164149533568546,
+          "p50": 0.00018477439880371094,
+          "p90": 0.0005769729614257812,
+          "p95": 0.0006644725799560547
+        },
+        "detokenizer_send_to_frontend_recv_s": {
+          "count": 2166,
+          "mean": 4.890749783837344,
+          "p50": 6.299407243728638,
+          "p90": 7.974136471748352,
+          "p95": 8.351260542869568
+        },
+        "frontend_recv_to_handle_s": {
+          "count": 2166,
+          "mean": 7.002285422820904e-05,
+          "p50": 5.0067901611328125e-06,
+          "p90": 0.0003203153610229492,
+          "p95": 0.00045686960220336914
+        },
+        "frontend_handle_to_first_output_s": {
+          "count": 2166,
+          "mean": 2.2909097504197506e-05,
+          "p50": 1.8596649169921875e-05,
+          "p90": 3.4332275390625e-05,
+          "p95": 4.482269287109375e-05
+        },
+        "post_prefill_to_first_output_s": {
+          "count": 2166,
+          "mean": 4.927556564272936,
+          "p50": 6.311868190765381,
+          "p90": 7.985304594039917,
+          "p95": 8.367040634155273
+        }
+      }
+    },
+    "after_180s": {
+      "count": 2138,
+      "stages": {
+        "prefill_to_send_s": {
+          "count": 2138,
+          "mean": 0.034033495985090007,
+          "p50": 0.010671615600585938,
+          "p90": 0.12060017585754391,
+          "p95": 0.20266543626785266
+        },
+        "send_to_detokenizer_recv_s": {
+          "count": 2138,
+          "mean": 0.0004408823429032728,
+          "p50": 0.0003662109375,
+          "p90": 0.0007110834121704099,
+          "p95": 0.0008494853973388672
+        },
+        "detokenizer_recv_to_send_s": {
+          "count": 2138,
+          "mean": 0.0002615292346622478,
+          "p50": 0.0001842975616455078,
+          "p90": 0.0006067752838134766,
+          "p95": 0.0006644725799560547
+        },
+        "detokenizer_send_to_frontend_recv_s": {
+          "count": 2138,
+          "mean": 4.953642480165965,
+          "p50": 6.3381311893463135,
+          "p90": 7.977269101142883,
+          "p95": 8.354209661483765
+        },
+        "frontend_recv_to_handle_s": {
+          "count": 2138,
+          "mean": 7.058650784898406e-05,
+          "p50": 5.0067901611328125e-06,
+          "p90": 0.00032241344451904285,
+          "p95": 0.0004584789276123047
+        },
+        "frontend_handle_to_first_output_s": {
+          "count": 2138,
+          "mean": 2.2111371703188034e-05,
+          "p50": 1.8596649169921875e-05,
+          "p90": 3.075599670410156e-05,
+          "p95": 4.2438507080078125e-05
+        },
+        "post_prefill_to_first_output_s": {
+          "count": 2138,
+          "mean": 4.988471085608173,
+          "p50": 6.35284948348999,
+          "p90": 7.990689206123352,
+          "p95": 8.368492305278778
+        }
+      }
+    }
+  },
+  "post_180s_sample_gate": true,
+  "response_summary_valid": true
+}

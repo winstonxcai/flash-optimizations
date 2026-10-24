@@ -45,6 +45,66 @@ Parent integration `0f0dec1`; versioned-path update `a10bc97`, based on local
   all 20 training integration tests pass after updating the capture-image fixture.
   No parent image rebuild or GPU rerun. HiCache GPU, full-model/distributed and
   serving validation remain pending. Historical v0.5.18 results are not relabeled.
+## 2026-10-23 — Preparation concurrency and queue attribution diagnostic
+
+Parent `34e7339`; SGLang `6687a7c36c`; FlashMLA `97f3faa58450`.
+
+- **Added:** startup-bounded DSV4 text-chat preparation worker counts 1/2/4
+  (default 1, async off by default), matching semaphore/executor capacity,
+  and opt-in queued/start/finish/API-resume timestamps. Cancellation retains
+  the worker slot until its concurrent future finishes. Native kernels and
+  packing contracts are unchanged.
+- **Integration:** `serve.sh` preflights the selected mounted implementation and
+  worker count. The existing frontend diagnostic adds a sequential four-cell
+  Native/Packed Kernel C24 W1/W2 GPUQ screen, with exact-ID timing validation,
+  source/image checks and owned server cleanup.
+- **Validation:** 27 source-isolated model-free CPU checks pass, including
+  synchronized shared fast-tokenizer conversion, request isolation, cancellation,
+  shutdown and timing export/arithmetic. Scoped Ruff, Python/embedded-Python
+  syntax, shell syntax and whitespace checks pass. Actual-image CPU checks run
+  before GPU allocation; full-model worker-count qualification is pending.
+  No GPU/Modal jobs, image rebuilds or pushes were performed for this change.
+- **Rollback:** restore `DSV4_PREPARATION_WORKERS=1` or disable async preparation
+  with `DSV4_ASYNC_PREPARATION=0`. Counts above one remain diagnostic candidates.
+
+## 2026-10-22 — Bounded DSV4 chat preparation candidate
+
+Parent `a64b9c0` (preflight correction `8c6e3e1`); SGLang `63291eba61`;
+FlashMLA `97f3faa58450`.
+
+- **Added:** default-off DSV4 text-chat conversion worker, bounded admission with
+  cancellation ownership, unchanged receive timestamp and explicit shutdown drain.
+  The local launcher preflights actual mounted Python source before server stop.
+- **Validation:** 20 source-isolated CPU contracts and four local-launcher tests
+  pass, including converter parity, native/AnyIO cancellation, errors, queue time
+  and cleanup. Fresh-context runtime and launcher reviews found no scoped blocker.
+  Actual-image timing 10/10, async preparation 7/7 and replay 19/19 CPU tests
+  subsequently passed. C40/TP4/MF0.88/HiCache n=1 evidence transferred in
+  `640b852a` shows post-180-second detokenizer→API mean delay fall from 6.183 s
+  to 1.96 ms Native, 5.713 s to 20.89 ms Packed. Both now deliver about
+  1.729 req/s; this is not a Packed speedup. Both full-run TTFT-p90 values exceed
+  10 s and Packed misses 99% response validity (missing-output events). Retain
+  default off; mixed endpoints and response failures remain unqualified. Native
+  extensions are unchanged; see the frontend experiment record.
+- **Scope/rollback:** controlled DSV4 text-chat only; other tokenizer-consuming
+  endpoints are not qualified. Unset `DSV4_ASYNC_PREPARATION` to restore sync mode.
+
+## 2026-10-22 — Opt-in first-output attribution
+
+Parent `524207f`; SGLang `7a95ce8231`; FlashMLA `97f3faa58450`.
+
+- **Added:** startup-gated scheduler send, detokenizer receive/forward and API
+  receive/handler stamps, with first-packet latching and clock rebasing through
+  pickle/msgpack. The replay adapter captures the existing SSE ID for exact
+  client/server timing joins. No kernel, scheduling or cache-policy change.
+- **Validation:** 13 source-isolated CPU transport/analysis tests and 19 replay
+  tests pass. Full local SGLang import is blocked by unavailable Triton on macOS;
+  actual VDI-image CPU import and all 10 timing tests subsequently passed,
+  together with 19 replay tests. Instrumented full-model coverage remains pending.
+- **Scope:** diagnostics are disabled by default. The recorded C40 HiCache
+  experiment is attribution evidence, not throughput acceptance or production
+  qualification. Existing binaries are unchanged; mounted Python source is
+  preflighted before replacing a server. See the frontend experiment record.
 
 ## 2026-10-19 — Recorded-request serving benchmark client
 

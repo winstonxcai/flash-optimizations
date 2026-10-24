@@ -1,0 +1,130 @@
+{
+  "valid": true,
+  "id_verified": true,
+  "basis": "Exact captured SSE server_request_id equals server metrics id; no inferred joins",
+  "cohort_basis": "Successful exact-ID joins; after_180s uses server request_received_ts",
+  "errors": [],
+  "client_identity_diagnostics": [],
+  "coverage": {
+    "client_records": 2398,
+    "successful_client_records": 2381,
+    "client_records_with_server_id": 2398,
+    "server_records": 2398,
+    "matched_successful": 2381,
+    "timing_valid_successful": 2381,
+    "unmatched_successful": 0,
+    "unmatched_server_records": 17
+  },
+  "cohorts": {
+    "all": {
+      "count": 2381,
+      "stages": {
+        "prefill_to_send_s": {
+          "count": 2381,
+          "mean": 0.025775228413850607,
+          "p50": 0.0108489990234375,
+          "p90": 0.05524897575378418,
+          "p95": 0.1548471450805664
+        },
+        "send_to_detokenizer_recv_s": {
+          "count": 2381,
+          "mean": 0.00045182693910819047,
+          "p50": 0.0003933906555175781,
+          "p90": 0.0006952285766601562,
+          "p95": 0.0008189678192138672
+        },
+        "detokenizer_recv_to_send_s": {
+          "count": 2381,
+          "mean": 0.0002492828961932724,
+          "p50": 0.00019598007202148438,
+          "p90": 0.0004911422729492188,
+          "p95": 0.0006358623504638672
+        },
+        "detokenizer_send_to_frontend_recv_s": {
+          "count": 2381,
+          "mean": 0.002599913349976714,
+          "p50": 0.0006158351898193359,
+          "p90": 0.0026412010192871094,
+          "p95": 0.008238554000854492
+        },
+        "frontend_recv_to_handle_s": {
+          "count": 2381,
+          "mean": 7.705285938684303e-05,
+          "p50": 1.9311904907226562e-05,
+          "p90": 0.0002994537353515625,
+          "p95": 0.0004870891571044922
+        },
+        "frontend_handle_to_first_output_s": {
+          "count": 2381,
+          "mean": 5.117107569195052e-05,
+          "p50": 4.363059997558594e-05,
+          "p90": 8.392333984375e-05,
+          "p95": 9.036064147949219e-05
+        },
+        "post_prefill_to_first_output_s": {
+          "count": 2381,
+          "mean": 0.029204475534207578,
+          "p50": 0.012911558151245117,
+          "p90": 0.06922125816345215,
+          "p95": 0.15968704223632812
+        }
+      }
+    },
+    "after_180s": {
+      "count": 2342,
+      "stages": {
+        "prefill_to_send_s": {
+          "count": 2342,
+          "mean": 0.02339554759399388,
+          "p50": 0.01078653335571289,
+          "p90": 0.04559404850006107,
+          "p95": 0.11771475076675406
+        },
+        "send_to_detokenizer_recv_s": {
+          "count": 2342,
+          "mean": 0.0004489012603368849,
+          "p50": 0.00039255619049072266,
+          "p90": 0.0006952285766601562,
+          "p95": 0.000819873809814453
+        },
+        "detokenizer_recv_to_send_s": {
+          "count": 2342,
+          "mean": 0.00024839713978624874,
+          "p50": 0.0001952648162841797,
+          "p90": 0.0004911422729492188,
+          "p95": 0.0006358623504638672
+        },
+        "detokenizer_send_to_frontend_recv_s": {
+          "count": 2342,
+          "mean": 0.0026249526200591753,
+          "p50": 0.0006108283996582031,
+          "p90": 0.002677035331726075,
+          "p95": 0.008263695240020748
+        },
+        "frontend_recv_to_handle_s": {
+          "count": 2342,
+          "mean": 7.742536464987608e-05,
+          "p50": 1.9073486328125e-05,
+          "p90": 0.000301361083984375,
+          "p95": 0.00048754215240478507
+        },
+        "frontend_handle_to_first_output_s": {
+          "count": 2342,
+          "mean": 5.0408121462462805e-05,
+          "p50": 4.315376281738281e-05,
+          "p90": 8.320808410644531e-05,
+          "p95": 8.988380432128906e-05
+        },
+        "post_prefill_to_first_output_s": {
+          "count": 2342,
+          "mean": 0.02684563210028853,
+          "p50": 0.012835025787353516,
+          "p90": 0.05895440578460694,
+          "p95": 0.12500425577163665
+        }
+      }
+    }
+  },
+  "post_180s_sample_gate": true,
+  "response_summary_valid": true
+}

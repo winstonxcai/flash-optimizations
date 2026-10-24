@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "mode": "kernel",
+  "server_seed": 20260919,
+  "metrics_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/packed256-hicache-c40-mf088-20261022_194921-AdIosS/on/request-metrics",
+  "server_log": "/home/jovyan/winstonxcai/flash-optimizations/logs/packed256-hicache-c40-mf088-20261022_194921-AdIosS/on/serve_kernel.log"
+}

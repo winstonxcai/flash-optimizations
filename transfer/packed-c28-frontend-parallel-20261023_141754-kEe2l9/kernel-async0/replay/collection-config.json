@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "mode": "kernel",
+  "server_seed": 20260919,
+  "metrics_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/packed-c28-frontend-parallel-20261023_141754-kEe2l9/kernel-async0/request-metrics",
+  "server_log": "/home/jovyan/winstonxcai/flash-optimizations/logs/packed-c28-frontend-parallel-20261023_141754-kEe2l9/kernel-async0/serve_kernel.log"
+}

@@ -1,0 +1,29 @@
+{
+  "allocated_gpu_ids": null,
+  "argv": [
+    "bash",
+    "/home/jovyan/winstonxcai/flash-optimizations/logs/native-c24-mf088-worker-20261023_155916/run.sh"
+  ],
+  "created_at": "2026-10-23T07:59:26.080342+00:00",
+  "cwd": "/home/jovyan/winstonxcai/flash-optimizations",
+  "error": null,
+  "exit_code": null,
+  "expected_duration_seconds": 2100,
+  "finished_at": null,
+  "gpu_count": 4,
+  "id": "job-20261023-075926-e576ef2c",
+  "lease_id": null,
+  "log_dir": "/var/lib/gpuq/jobs/job-20261023-075926-e576ef2c",
+  "output_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/native-c24-mf088-worker-20261023_155916/gpuq",
+  "pgid": null,
+  "pid": null,
+  "priority": 50,
+  "project": "flash-optimizations",
+  "release_lease_on_exit": false,
+  "requested_gpu_ids": null,
+  "started_at": null,
+  "status": "queued",
+  "timeout_seconds": 5400,
+  "user_name": "winstonxcai",
+  "workload_key": "native-c24-mf088-worker-20261023_155916"
+}

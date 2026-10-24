@@ -7,6 +7,7 @@ adapter in a temporary directory through the real runner/worker interfaces.
 
 import argparse
 import asyncio
+import hashlib
 import json
 import multiprocessing
 import os
@@ -195,6 +196,86 @@ class AccountingTests(unittest.TestCase):
         self.assertIn("client_timing", new)
         self.assertEqual(old["request_body_sha256"], new["request_body_sha256"])
         self.assertEqual(post.call_args_list[0], post.call_args_list[1])
+
+
+class AdapterRequestIDTests(unittest.TestCase):
+    """Response IDs are diagnostics; request and success contracts stay fixed."""
+
+    def stream(self, ids, *, output="x", status=200):
+        events = [
+            {"choices": [{"delta": {"content": output}, "finish_reason": None}]},
+            {"choices": [{"delta": {}, "finish_reason": "stop"}],
+             "usage": {"prompt_tokens": 10, "completion_tokens": 2}},
+        ]
+        for event, request_id in zip(events, ids):
+            if request_id is not None:
+                event["id"] = request_id
+        lines = [b"data: " + json.dumps(event).encode() for event in events]
+        lines.append(b"data: [DONE]")
+
+        class Response:
+            status_code = status
+            text = "fixture HTTP error"
+            def __enter__(self): return self
+            def __exit__(self, *_): pass
+            def iter_lines(self, **_): return iter(lines)
+
+        payload = {"stream": True, "messages": [{"role": "user", "content": "fixture"}]}
+        headers = {"Content-Type": "application/json"}
+        options = {"base_url": "http://unused", "timeout": 1}
+        with patch.object(openai_sse.requests, "post", return_value=Response()) as post:
+            result = openai_sse._stream_completion(payload, headers, options)
+        self.assertEqual(post.call_args.kwargs["json"], payload)
+        self.assertEqual(post.call_args.kwargs["headers"], headers)
+        self.assertEqual(result["request_body_sha256"], hashlib.sha256(
+            json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest())
+        if status == 200:
+            self.assertEqual(result["response_stream_sha256"], hashlib.sha256(
+                b"".join(line + b"\n" for line in lines)
+            ).hexdigest())
+        return result
+
+    def test_stable_id_is_captured_without_changing_payload_or_hashes(self):
+        result = self.stream(["server-rid", "server-rid"])
+        self.assertEqual(result["server_request_id"], "server-rid")
+        self.assertIsNone(result["server_request_id_error"])
+        self.assertTrue(result["valid"])
+        self.assertEqual(result["errors"], [])
+
+    def test_usage_only_event_can_omit_id(self):
+        for ids in (["server-rid", None], [None, "server-rid"]):
+            with self.subTest(ids=ids):
+                result = self.stream(ids)
+                self.assertEqual(result["server_request_id"], "server-rid")
+                self.assertIsNone(result["server_request_id_error"])
+                self.assertTrue(result["valid"])
+
+    def test_missing_or_inconsistent_id_only_fails_join_diagnostic(self):
+        for ids, error in (
+            ([None, None], "missing_server_request_id"),
+            (["server-a", "server-b"], "inconsistent_server_request_id"),
+            (["server-rid", ""], "invalid_server_request_id"),
+            ([123, "server-rid"], "invalid_server_request_id"),
+            ([" ", None], "invalid_server_request_id"),
+        ):
+            with self.subTest(ids=ids):
+                result = self.stream(ids)
+                self.assertIsNone(result["server_request_id"])
+                self.assertEqual(result["server_request_id_error"], error)
+                self.assertTrue(result["valid"])
+                self.assertEqual(result["errors"], [])
+
+    def test_existing_response_failures_are_preserved(self):
+        result = self.stream(["server-rid", "server-rid"], output="")
+        self.assertEqual(result["server_request_id"], "server-rid")
+        self.assertIsNone(result["server_request_id_error"])
+        self.assertFalse(result["valid"])
+        self.assertEqual(result["errors"], ["missing_output_event"])
+        result = self.stream([None, None], status=503)
+        self.assertFalse(result["valid"])
+        self.assertEqual(result["errors"], ["http_status:503:fixture HTTP error"])
+        self.assertEqual(result["server_request_id_error"], "missing_server_request_id")
 
 
 class RunnerProcessTests(unittest.TestCase):

@@ -1,0 +1,42 @@
+{
+  "triton": {
+    "id": "job-20261023-061853-8c973511",
+    "status": "succeeded",
+    "exit_code": 0,
+    "workload_key": "triton-packed-c28-frontend-parallel-20261023_141754-kEe2l9",
+    "allocated_gpu_ids": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "gpu_count": 4,
+    "created_at": "2026-10-23T06:18:53.050134+00:00",
+    "started_at": "2026-10-23T06:18:54.720003+00:00",
+    "finished_at": "2026-10-23T07:12:13.777814+00:00",
+    "duration_seconds": 3199,
+    "error": null,
+    "log_dir": "/var/lib/gpuq/jobs/job-20261023-061853-8c973511",
+    "output_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/packed-c28-frontend-parallel-20261023_141754-kEe2l9/gpuq-triton"
+  },
+  "kernel": {
+    "id": "job-20261023-061858-38979736",
+    "status": "succeeded",
+    "exit_code": 0,
+    "workload_key": "kernel-packed-c28-frontend-parallel-20261023_141754-kEe2l9",
+    "allocated_gpu_ids": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "gpu_count": 4,
+    "created_at": "2026-10-23T06:18:58.649378+00:00",
+    "started_at": "2026-10-23T06:18:59.492357+00:00",
+    "finished_at": "2026-10-23T07:12:23.108430+00:00",
+    "duration_seconds": 3203,
+    "error": null,
+    "log_dir": "/var/lib/gpuq/jobs/job-20261023-061858-38979736",
+    "output_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/packed-c28-frontend-parallel-20261023_141754-kEe2l9/gpuq-kernel"
+  }
+}

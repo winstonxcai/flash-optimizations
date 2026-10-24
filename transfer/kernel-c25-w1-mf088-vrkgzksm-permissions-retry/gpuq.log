@@ -1,0 +1,85 @@
+/home/jovyan/winstonxcai/flash-optimizations/logs/kernel-c25-w1-mf088-vrkgzksm/run.sh: OK
+/home/jovyan/winstonxcai/flash-optimizations/logs/kernel-c25-w1-mf088-vrkgzksm/transfer.py: OK
+scripts/local/serve.sh: OK
+scripts/local/run-server.sh: OK
+scripts/local/env.sh: OK
+scripts/local/eval-env.sh: OK
+scripts/local/bench-lswb.sh: OK
+scripts/local/business_replay/runner.py: OK
+scripts/local/business_replay/request_slots.py: OK
+scripts/local/business_replay/adapters/openai_sse.py: OK
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "eeb1223389ed163604c5ee806d2700331578ff2e"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang",
+    "expected_commit": "6687a7c36c0ca659665883e486fb6089d617cd4f",
+    "commit": "6687a7c36c0ca659665883e486fb6089d617cd4f",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla",
+    "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "override": false,
+    "dirty": false
+  }
+}
+DSV4 asynchronous preparation CPU preflight PASS: /mnt/host_root/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang/python/sglang/srt/entrypoints/openai/serving_chat.py
+Packed C4 profile: PackedProfile(default_count=256, overrides=(), compression_ratios=(0, 0, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 128, 4, 0, 0, 0))
+Request timing source: /mnt/host_root/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang/python/sglang/srt/observability/req_time_stats.py
+== serve kernel on gpus=4,5,6,7 port=30705 master=30105 (log: /home/jovyan/winstonxcai/flash-optimizations/logs/kernel-c25-w1-mf088-vrkgzksm/boot/serve_kernel.log) ==
+launched pid 52830
+  health OK after ~140s
+  pool(max_total_num_tokens)=4536832
+  max_total_num_tokens=4536832
+  is fired up and ready
+serve kernel UP on port 30705 -- leave running, tear down with: scripts/local/serve.sh kernel stop
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "eeb1223389ed163604c5ee806d2700331578ff2e"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang",
+    "expected_commit": "6687a7c36c0ca659665883e486fb6089d617cd4f",
+    "commit": "6687a7c36c0ca659665883e486fb6089d617cd4f",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla",
+    "expected_commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "commit": "97f3faa58450673c04c2d4a85b395335bac0a3f1",
+    "override": false,
+    "dirty": false
+  }
+}
+[lswb] decode graph preflight OK: c25, captured sizes=[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 15, 16, 18, 20, 24, 28, 32, 34, 40, 48, 56, 64, 68, 80, 96, 112, 120, 136]
+[lswb] waiting for idle server and flushing prefix cache
+Cache flushed.
+Please check backend logs for more details. (When there are running or waiting requests, the operation will not be performed.)
+== lswb replay tag=kernel-c25-w1-mf088-vrkgzksm port=30705 c25 @ 1200s -> /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/kernel-c25-w1-mf088-vrkgzksm/20261024_140441 ==
+[lswb] request timing: 2415 records, 2415 valid, complete=True
+[lswb] client rc=0
+==== client.log ====
+{"attempted":2415,"completion_tokens":362774,"failed":19,"not_started_due_to_duration":2501,"prompt_tokens":341137292,"selected":4916,"successful":2396,"users_completed":37,"users_selected":92,"users_started":62,"valid":true}
+[lswb] artifacts at /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/kernel-c25-w1-mf088-vrkgzksm/20261024_140441
+stopped kernel server on port 30705
