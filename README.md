@@ -9,6 +9,13 @@ Default Packed retains 256 of 512 coordinates: **584 → 328 bytes per C4 record
 token positions into one record; record compression is not total GPU-memory savings.
 Throughput benefits depend on workload, and task-quality equivalence is not established.
 
+**Parallel integration:** v0.5.18 remains the default. Set
+`REMNANT_INTEGRATION=v0.5.22` to select the independent v0.5.22 source pair,
+`Dockerfile.v0.5.22`, image `remnant:v0.5.22` and container `remnant-v0522` in
+the same local/Modal commands below. Its [core model-free qualification](benchmarks/microbench/v0522-qualification-20261023/README.md)
+passed; HiCache GPU, full-model and serving validation remain pending. Historical
+v0.5.18 performance results do not describe v0.5.22.
+
 ## Understand the modes
 
 Native is the default. The two Packed paths use the same default 328-byte format.
@@ -121,6 +128,9 @@ Read [AGENTS.md](AGENTS.md) before editing. Work in the owning repository:
 
 - `third_party/sglang-v0.5.18/`: runtime, packing, allocation and dispatch.
 - `third_party/flashmla-v0.5.18/`: Direct Packed attention kernels.
+- `third_party/sglang-v0.5.22/` and `third_party/flashmla-v0.5.22/`:
+  parallel integration; the suffix identifies the SGLang integration pair,
+  not a FlashMLA release. Do not mix pairs or their compiled binaries.
 - Parent repository: scripts, experiment records and reports.
 
 After fork source or Dockerfile changes, run `bash scripts/local/container.sh rebuild`;

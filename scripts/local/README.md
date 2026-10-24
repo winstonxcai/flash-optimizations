@@ -6,6 +6,16 @@ Run from the repository root on the GPU node. Modes: `native` = Native;
 `triton` = Packed with Triton packing/reconstruction; `kernel` = Packed with
 optimized kernels. All three use the same Docker image.
 
+The default pair is v0.5.18. Export `REMNANT_INTEGRATION=v0.5.22` before the
+same commands to select `third_party/{sglang,flashmla}-v0.5.22/`,
+`Dockerfile.v0.5.22`, image `remnant:v0.5.22` and container `remnant-v0522`.
+Both fork HEADs and nested CUTLASS must exactly match the selected parent pins.
+Container-internal install paths stay unchanged; do not reuse binaries across
+profiles. Override GPU IDs and ports explicitly if running both integrations.
+The v0.5.22 [core model-free qualification](../../benchmarks/microbench/v0522-qualification-20261023/README.md)
+does not establish full-model boot, live HiCache or serving performance, and this
+reorganized parent image has not been built.
+
 **GPUQ is only for queueing jobs on shared GPU servers (including the VDI host).**
 It reserves exclusive GPUs; it is not required for local CPU checks, dedicated
 machines or Modal. On shared machines, run GPU commands inside your GPUQ job or
@@ -16,7 +26,8 @@ allocation. Build the image and prepare inputs before queueing GPU work.
 
 Capture reuses the **same `remnant:v0.5.18` image as serving**, but starts a
 separate, short-lived container; it never runs inside or replaces the production
-`remnant` container. No capture-specific image, tag or label is required.
+`remnant` container. No capture-specific image, tag or label is required, but
+the normal serving image's integration/fork labels must match the selected pins.
 The shell entry point owns all Docker operations: local image/component checks,
 mounts, GPU selection/availability, container launch, timeouts and exact-container
 cleanup. It does not source production environment defaults. It requires Docker,
@@ -41,7 +52,7 @@ not by training/evaluation compatibility checks.
 
 ```bash
 python3 scripts/sources.py .
-CAPTURE_IMAGE=$(docker image inspect --format '{{.Id}}' "${IMAGE:-remnant:v0.5.18}")
+CAPTURE_IMAGE=$(docker image inspect --format '{{.Id}}' "${IMAGE:-remnant:${REMNANT_INTEGRATION:-v0.5.18}}")
 CAPTURE_MODEL=/data/models/DeepSeek-V4-Flash-0731
 CAPTURE_COHORT=/data/pruning/cohort
 CAPTURE_BASE=/data/capture

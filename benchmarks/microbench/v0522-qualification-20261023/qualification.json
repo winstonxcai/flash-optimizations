@@ -1,0 +1,2000 @@
+{
+  "schema": 1,
+  "author": "Winston Cai.",
+  "status": "core_qualified_hicache_deferred",
+  "integration": "v0.5.22",
+  "scope": "Model-free numerical/runtime validity and matched-capacity physical storage only; no performance measurement",
+  "record_structure": "current_core_qualification is the latest source-bound state; other build/gates/execution and continuation sections retain historical baseline results.",
+  "current_core_qualification": {
+    "status": "core_qualified_hicache_deferred",
+    "date": "2026-10-24",
+    "parent_runtime_commit": "e68f9c479695500d649d121ee90e2e8033120193",
+    "source_pair": {
+      "sglang": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+      "flashmla": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+      "flashmla/csrc/cutlass": "147f5673d0c1c3dcf66f78d677fd647e4a020219"
+    },
+    "candidate_commits": [
+      "31877b497603e4b9af2398d243cb0f27b8fdce40",
+      "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8"
+    ],
+    "account_switch_preflight": {
+      "attempt": 31,
+      "account": "poohthewinnie",
+      "compute_usd": "13.28898377",
+      "active_containers": 0,
+      "status": "image_permission_denied_before_sandbox_allocation",
+      "image": "im-vOlukc1AW0gozz9mlAmg1m",
+      "gpu_allocated": false,
+      "cpu_sandbox_allocated": false,
+      "decision": "Do not rebuild or substitute unverified binaries; retain current image and bounded current-account headroom."
+    },
+    "native_is_untouched_upstream": false,
+    "predecessor_evidence": {
+      "flashmla_commit": "31877b497603e4b9af2398d243cb0f27b8fdce40",
+      "attempt": 19,
+      "local_prefix": "raw/v0522-qualification/barrier019-results/core/",
+      "result_sha256": "ff2cde476840612a843e5648535db234dac79e5e40e4d7bcace6b15c9d89128b",
+      "racecheck_log_sha256": "fc17304dab5756e4ec402ec037787f28bbdf637912d688bd3d61759fe881bf51",
+      "direct_numerical_cases": 4,
+      "racecheck_hazards": 208,
+      "racecheck_errors": 208,
+      "racecheck_warnings": 0,
+      "distribution": {
+        "Native H64": 48,
+        "Native H128": 48,
+        "Packed H128": 112
+      },
+      "decision": "Barrier-only candidate remains failed; same four cases pass racecheck only after explicit WG1 acquire."
+    },
+    "mechanism": [
+      "V4 consumer/final rendezvous use unaligned barriers; H128 final cluster handoff uses release/acquire.",
+      "WG1 explicitly acquires local KV readiness, plus remote readiness for H128; counts, arrivals, phase progression, arithmetic and layouts unchanged."
+    ],
+    "execution": {
+      "profile": "winston-85885",
+      "compute_reported_usd": "26.69179635",
+      "latest_continuation_compute_usd": "8.51131934",
+      "billing_as_of_utc": "2026-10-24T12:17:45.402663+00:00",
+      "billing_lag_possible": true,
+      "active_containers_after": 0,
+      "all_gpu_allocations_stopped": true,
+      "full_model_loads": 0,
+      "performance_measurements": 0,
+      "pushed": false
+    },
+    "scope": "Model-free core only; HiCache GPU qualification deferred. One H100 executing one TP4 rank geometry, not distributed execution.",
+    "qualification_image": "im-vOlukc1AW0gozz9mlAmg1m",
+    "build_manifest_sha256": "5e6c9b25060c798cb9bfbead6297b75b5e1448f2a342925af9cb3981663e948d",
+    "source_digests": {
+      "sglang": "876f1aecf777bf86ccdc7b1f316364da52ed101e9687fb54f12df889535665a9",
+      "flashmla": "17beac02a5a2bacab0476a7449aaa045944805d001863ac32b94c54010e803d6"
+    },
+    "binaries": {
+      "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so": "dd32f856f845495e4f6940a89f386ad050126dd62f132a0af144a60658123d56",
+      "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so": "ed3650b9d6949c2d11e6f9fc4493ff875851e2392dfabdb6f4959b7e00e1fc4c",
+      "/opt/remnant-native-store.so": "509edf30ceba9039b384e936758f4dd5b23ba4339fddb570320151400a868f3c"
+    },
+    "binary_architectures": {
+      "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so": [
+        "sm_90"
+      ],
+      "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so": [
+        "sm_90a"
+      ],
+      "/opt/remnant-native-store.so": [
+        "sm_90a"
+      ]
+    },
+    "software": {
+      "torch": "2.14.1+cu130",
+      "cuda": "13.0",
+      "cuda_python": "13.0.3",
+      "cuda_bindings": "13.0.3",
+      "arch": "sm_90a",
+      "nvcc": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:58:59_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0\n"
+    },
+    "sanitizer": {
+      "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+      "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+      "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+      "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+      "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+    },
+    "gates": {
+      "local_cpu": {
+        "status": "passed",
+        "base_cases": 67,
+        "command": "REMNANT_INTEGRATION=v0.5.18 python -m unittest scripts.modal.tests"
+      },
+      "linux_cpu": {
+        "status": "passed",
+        "base_cases": 134,
+        "subtests": 56
+      },
+      "numerical": {
+        "status": "passed",
+        "base_cases": 457,
+        "subtests": 60,
+        "failed": 0,
+        "skipped": 0,
+        "attempt": 21
+      },
+      "allocation": {
+        "status": "passed",
+        "attempt": 21,
+        "sha256": "6fbd2a271f151767aa5c7379b60e69fafa7f2b8327f35bc0f558acb5524da91a",
+        "persistent_bytes": [
+          3775862528,
+          3597632000,
+          3597632000
+        ],
+        "mode_order": [
+          "Native",
+          "Packed Triton",
+          "Packed Kernel"
+        ],
+        "c4_saved_bytes_per_rank": 178230528
+      },
+      "racecheck": {
+        "status": "passed",
+        "base_cases": 58,
+        "required_base_cases": 58,
+        "subtests": 15,
+        "required_subtests": 15,
+        "errors": 0,
+        "identity_definition": "SHA256 of compact JSON sorted owning-repository-relative module::class::test[param] identities; subtests separately audited from source/log labels.",
+        "identity_sha256": "4f4ad0ff5f3c890b1db44ef56a6aa74d3c78204275a919774d53933da38fbb29",
+        "hazards": 0,
+        "warnings": 0
+      },
+      "synccheck": {
+        "status": "passed",
+        "base_cases": 58,
+        "required_base_cases": 58,
+        "subtests": 15,
+        "required_subtests": 15,
+        "errors": 0,
+        "identity_definition": "SHA256 of compact JSON sorted owning-repository-relative module::class::test[param] identities; subtests separately audited from source/log labels.",
+        "identity_sha256": "4f4ad0ff5f3c890b1db44ef56a6aa74d3c78204275a919774d53933da38fbb29"
+      },
+      "memcheck": {
+        "status": "passed",
+        "base_cases": 58,
+        "required_base_cases": 58,
+        "subtests": 15,
+        "required_subtests": 15,
+        "errors": 0,
+        "identity_definition": "SHA256 of compact JSON sorted owning-repository-relative module::class::test[param] identities; subtests separately audited from source/log labels.",
+        "identity_sha256": "4f4ad0ff5f3c890b1db44ef56a6aa74d3c78204275a919774d53933da38fbb29"
+      }
+    },
+    "acceptance": "Completed pytest/JUnit, exact unique identity union, zero skips/failures, one final clean sanitizer summary per accepted checkpoint, identical source/binary/tool manifest. Incomplete later groups do not invalidate earlier completed checkpoints or contribute partial coverage.",
+    "independent_review": "Independent synchronization-contract review and final numerical/all-three-tool evidence audit passed: full base/subtest identities, source/binary/tool/helper hashes, accepted artifact hashes and rejection of incomplete checkpoints independently verified.",
+    "sass_audit": {
+      "attempt": 20,
+      "local_prefix": "raw/v0522-qualification/acquire020-results/sass/",
+      "result_sha256": "7c79e52f9b23e274d197b1b86c217d34310d80d897d52dd1630d08a3cc8ceb0b",
+      "linux_cpu_junit_sha256": "c28d7f06d6551640efcf148717af3125f85926c35094a9fd5935386f4decf4a8",
+      "sparse_functions": 8,
+      "byte_identical_to_31877b4": 5,
+      "unchanged": [
+        "Packed V4 H64",
+        "All four non-V4 sparse functions"
+      ],
+      "no_embedded_ptx": true
+    },
+    "authorization": {
+      "latest_additional_budget_usd": "15",
+      "fresh_start_compute_usd": "18.18047701",
+      "reserve_usd": "2",
+      "account": "winston-85885",
+      "start_account_below_usd": "25",
+      "account_ceiling_usd": "28",
+      "excluded_accounts": [
+        "caiw",
+        "winstoncai",
+        "winstoncai233"
+      ],
+      "platform_retries": 0,
+      "concurrent_h100_allocations_max": 1
+    },
+    "reproduction": {
+      "payload": "raw/v0522-qualification/barrier-probe.py",
+      "payload_sha256": "10becb5993bbd70cf5f31b3770caa4e897ba709ed018c7648637669b5a7f2aa0",
+      "helper_sha256": "609854f9eb8b335e02b06b58ecfc6d8e1c09f630a657a257493a3d87a536a172",
+      "numerical_owner": "scripts/modal/kernels.py maintained validation selection",
+      "sanitizer_argv": [
+        "<manifest sanitizer path>",
+        "--tool",
+        "<tool>",
+        "--error-exitcode",
+        "1",
+        "--print-limit",
+        "0",
+        "/opt/sglang/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "<recorded selection>",
+        "--junitxml=<checkpoint.xml>"
+      ]
+    },
+    "runs": [
+      {
+        "attempt": 21,
+        "app_id": "ap-fGBHGlKD4Z1DdZ8omBKgzc",
+        "volume_prefix": "microbench/v0522-acquire-20261024-attempt021/core/",
+        "local_prefix": "raw/v0522-qualification/acquire021-results/core/",
+        "result_sha256": "fc7c425b69aa16117028408bcd79bc789134051b758f704f2efff2fa619b9046",
+        "root_status": "passed",
+        "started_utc": "2026-10-24T07:21:02.584838+00:00",
+        "seconds": 524.372,
+        "checks": [
+          {
+            "name": "racecheck-direct",
+            "status": "passed",
+            "seconds": 233.569,
+            "max_seconds": 600,
+            "selection": [
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_decode_cuda_graph_replay[8-64]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_decode_cuda_graph_replay[8-128]"
+            ],
+            "base_cases": 4,
+            "subtests": 0,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "874acbcddf1fa935588a74137736e34ea730c45c1e735ffdb4b1ad8a4ee15b14",
+              ".xml": "e46f24960c4105d94ff523523ef487a0e62908b663f87ce2f9c3d24f406361cd",
+              "-collection.log": "a3dbbc256c0254d80f0540fa8babd1db5523d8d99589adf97563574a9224997e"
+            }
+          },
+          {
+            "name": "numerical-runtime",
+            "status": "passed",
+            "seconds": 236.065,
+            "max_seconds": 650,
+            "selection": [
+              "test/registered/unit/test_dsv4_c4_cache_format.py",
+              "test/registered/attention/unittests/dsv4/test_remnant_pool.py",
+              "test/registered/attention/unittests/dsv4/test_remnant_pack.py",
+              "test/registered/attention/unittests/dsv4/test_remnant_backend.py",
+              "test/registered/attention/unittests/dsv4/test_remnant_compressor_store.py",
+              "test/registered/attention/unittests/dsv4/test_remnant_fused_store.py",
+              "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_pack_kernel.py",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py"
+            ],
+            "base_cases": 281,
+            "subtests": 60,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "a6dd76b8f2f8c791de1ff498d9b6038ef715e721220c03c7346ecb97f3d0fb5c",
+              ".xml": "32a6484a28736c2e8d58a79b220e0cc7912e08e108503b89a08e3a036ebba2e6",
+              "-collection.log": "2f12d5c5e0e8985c4b2e0b98e8291ee6ae38ee19fb92cc899a35c5921a35b5e0"
+            }
+          },
+          {
+            "name": "numerical-benchmark-contracts",
+            "status": "passed",
+            "seconds": 46.147,
+            "max_seconds": 450,
+            "selection": [
+              "benchmark/remnant/test_microbench.py"
+            ],
+            "base_cases": 176,
+            "subtests": 0,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "e7cddcc75ba087d938d202ecaeb5b171b590dbee98556465fe97024b26b7fe52",
+              ".xml": "c4368d6f3dce488d9452b5e61ee1dfc7764c08585424c8094d0c745c24a8a24e",
+              "-collection.log": "55594c8e3b80245007ac88a03482a35e981339f9630c5a6fde28a4cf0e9e49ce"
+            }
+          }
+        ]
+      },
+      {
+        "attempt": 22,
+        "app_id": "ap-RWF0Sivmztp9cLaDWmY4qk",
+        "volume_prefix": "microbench/v0522-acquire-20261024-attempt022/race/",
+        "local_prefix": "raw/v0522-qualification/acquire022-results/race/",
+        "result_sha256": "ae0276b8a8d3dede47290719dade5ba0fa9131195e1c3eddfa7c764c715da7c1",
+        "root_status": "failed",
+        "started_utc": "2026-10-24T07:31:13.202788+00:00",
+        "seconds": 1035.382,
+        "checks": [
+          {
+            "name": "racecheck-codec",
+            "status": "passed",
+            "seconds": 663.362,
+            "max_seconds": 900,
+            "selection": [
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_pack_kernel.py::test_remnant_triton_pack_matches_reference"
+            ],
+            "base_cases": 49,
+            "subtests": 0,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "8167695de2fd6374b568153bbbf3e03eb9e89cad5a00fa4a046ed9c8d1ed1502",
+              ".xml": "bff732b21c093fc963dd78fa17e28e8d97b8906d537a6da9a844707accbf0134",
+              "-collection.log": "a4631a8dc9f8692892d724e619029bfc64a9341c44652404154b43fb61f373e0"
+            }
+          },
+          {
+            "name": "racecheck-graphs-store",
+            "status": "failed",
+            "seconds": 360.42,
+            "max_seconds": 500,
+            "selection": [
+              "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py::TestRemnantCudaGraph::test_store_and_native_reconstruction_replays_changed_inputs",
+              "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py::TestRemnantCudaGraph::test_consecutive_mixed_layers_replay_with_stable_buffers",
+              "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py::TestRemnantCudaGraph::test_fused_read_replays_changed_planes_indices_lengths_and_frequencies",
+              "test/registered/attention/unittests/dsv4/test_remnant_fused_store.py::test_graph_replay_with_changed_inputs_and_plans"
+            ],
+            "decision": "Incomplete checkpoint rejected; partial test progress does not count."
+          }
+        ]
+      },
+      {
+        "attempt": 23,
+        "app_id": "ap-xmBhAxjClIeegNNWk3vnlS",
+        "volume_prefix": "microbench/v0522-acquire-20261024-attempt023/race-graphs/",
+        "local_prefix": "raw/v0522-qualification/acquire023-results/race-graphs/",
+        "result_sha256": "c8e5c6c2dc0f17f96d3231d098cd72acf3ac51e9119d2938cbda5925886287af",
+        "root_status": "passed",
+        "started_utc": "2026-10-24T07:49:46.819594+00:00",
+        "seconds": 771.565,
+        "checks": [
+          {
+            "name": "racecheck-store-reconstruction-graph",
+            "status": "passed",
+            "seconds": 598.481,
+            "max_seconds": 1050,
+            "selection": [
+              "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py::TestRemnantCudaGraph::test_store_and_native_reconstruction_replays_changed_inputs"
+            ],
+            "base_cases": 1,
+            "subtests": 8,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "a3886ea27d8ee815f43f263eb58fb5f83924668eede7dd206fca60731e8fde6b",
+              ".xml": "a23c6ad37291a5d8257bef9f03f18e01fcc756da64a609757048c9cf38f6ced1",
+              "-collection.log": "e96445676b3061da743ad72a2274517aba35912d8528d8347f02099cdb7810cd"
+            }
+          },
+          {
+            "name": "racecheck-mixed-layers-graph",
+            "status": "passed",
+            "seconds": 158.978,
+            "max_seconds": 300,
+            "selection": [
+              "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py::TestRemnantCudaGraph::test_consecutive_mixed_layers_replay_with_stable_buffers"
+            ],
+            "base_cases": 1,
+            "subtests": 0,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "2e520956ba3b203e17400fc9904593a6fcfdc3a9fe042099b0d1485399ed616a",
+              ".xml": "f0ff67cb1a53e8938cd80704e4fe92f4a31ec285c765c32866ee363677cc7730",
+              "-collection.log": "b3109001840e47c77f936358dc556c9074a870dd15e615d1253e94118cc7cf7d"
+            }
+          }
+        ]
+      },
+      {
+        "attempt": 24,
+        "app_id": "ap-mS2jW5RxclEdxrLSmn9SwF",
+        "volume_prefix": "microbench/v0522-acquire-20261024-attempt024/race-final/",
+        "local_prefix": "raw/v0522-qualification/acquire024-results/race-final/",
+        "result_sha256": "46b40a27a23536b97500d5de16864a7c71f3552e67538660387470d43bc314e4",
+        "root_status": "passed",
+        "started_utc": "2026-10-24T08:03:15.105870+00:00",
+        "seconds": 343.018,
+        "checks": [
+          {
+            "name": "racecheck-fused-read-graph",
+            "status": "passed",
+            "seconds": 207.267,
+            "max_seconds": 850,
+            "selection": [
+              "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py::TestRemnantCudaGraph::test_fused_read_replays_changed_planes_indices_lengths_and_frequencies"
+            ],
+            "base_cases": 1,
+            "subtests": 7,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "b1241875f539a6ab5fe5c7bfc0788af973e149693475b933b354ee4c27279cd7",
+              ".xml": "5a065e90a82051eb5d8270196b425ab36c10ac6d6d50cdbb89f5516220848f04",
+              "-collection.log": "0d09c9ca9b099370867268aa232594c3aa2ba94f00bc1e43034d79b24da09b8f"
+            }
+          },
+          {
+            "name": "racecheck-cuda-store-graphs",
+            "status": "passed",
+            "seconds": 121.062,
+            "max_seconds": 350,
+            "selection": [
+              "test/registered/attention/unittests/dsv4/test_remnant_fused_store.py::test_graph_replay_with_changed_inputs_and_plans"
+            ],
+            "base_cases": 2,
+            "subtests": 0,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "27eb4f8eb8725d85abdf427fba4ef97a81aa74c0edf0efcdd3c2b771f2b772eb",
+              ".xml": "858c69c062d8dbe304323f007e0aab33177c92f575720085a60c4ec902b43db7",
+              "-collection.log": "725bde877fd9fb7daaea978fcf68f093109144fc36b7fc1de6c33e522f9c9223"
+            }
+          }
+        ]
+      },
+      {
+        "attempt": 25,
+        "app_id": "ap-wDhslEWquHauNgvhYVgyYN",
+        "volume_prefix": "microbench/v0522-acquire-20261024-attempt025/sync-codec/",
+        "local_prefix": "raw/v0522-qualification/acquire025-results/sync-codec/",
+        "result_sha256": "6f33029a8a91adcc8df1bcb7a9c171ebbd9a5dc16da2dc3576a0df5c8359b8c6",
+        "root_status": "passed",
+        "started_utc": "2026-10-24T08:09:53.080885+00:00",
+        "seconds": 326.466,
+        "checks": [
+          {
+            "name": "synccheck-unpack",
+            "status": "passed",
+            "seconds": 154.307,
+            "max_seconds": 800,
+            "selection": [
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference"
+            ],
+            "base_cases": 42,
+            "subtests": 0,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "d55fd705232ac478eecfa38cd998458a0c6d9d1fe85ea2a5bf436855f692cb0f",
+              ".xml": "a6f6a62bfd0c930c7c300af91a66c73527987539b11f8c3ce618dea0c8a5356e",
+              "-collection.log": "00a040b8ad8fce94ab6ca8ca2dd2741d5d90462dd8f704a12a3628475d002aaf"
+            }
+          },
+          {
+            "name": "synccheck-pack",
+            "status": "passed",
+            "seconds": 163.329,
+            "max_seconds": 600,
+            "selection": [
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_pack_kernel.py::test_remnant_triton_pack_matches_reference"
+            ],
+            "base_cases": 7,
+            "subtests": 0,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "d16ddc9b0d89c47e56b353ec192fb22686ddea566c324ab6966a0f31a6f149d6",
+              ".xml": "89dc1d1a1c39e8ef27337ade92e47b0606a8654eb5459536e35692938f1015e9",
+              "-collection.log": "aac6c3539e39d792b86999dff8229487cffb6b1e13ab5ed1e64b675130b6759d"
+            }
+          }
+        ]
+      },
+      {
+        "attempt": 26,
+        "app_id": "ap-kgeCGe0hDuruRXumvWrP3r",
+        "volume_prefix": "microbench/v0522-acquire-20261024-attempt026/sync-graphs/",
+        "local_prefix": "raw/v0522-qualification/acquire026-results/sync-graphs/",
+        "result_sha256": "ce32b30933dfe1326844890ba1090abedbe8ef9669bfc91bdfbfaee34e791877",
+        "root_status": "failed",
+        "started_utc": "2026-10-24T08:17:21.931325+00:00",
+        "seconds": 1625.474,
+        "checks": [
+          {
+            "name": "synccheck-store-reconstruction-graph",
+            "status": "passed",
+            "seconds": 791.879,
+            "max_seconds": 850,
+            "selection": [
+              "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py::TestRemnantCudaGraph::test_store_and_native_reconstruction_replays_changed_inputs"
+            ],
+            "base_cases": 1,
+            "subtests": 8,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "40a91faea268e5a3d06db973918daebba3dc963d2ec2e925868e990e343009ca",
+              ".xml": "9e45ec4d9800c6c80092dbe08f2424b99e99b91a615be23b948977f5eefbd7db",
+              "-collection.log": "a75c67e8f55337be1254c3c4ef9d97ec7d49cbe656abe72fac999ed693c226b8"
+            }
+          },
+          {
+            "name": "synccheck-mixed-layers-graph",
+            "status": "passed",
+            "seconds": 200.144,
+            "max_seconds": 300,
+            "selection": [
+              "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py::TestRemnantCudaGraph::test_consecutive_mixed_layers_replay_with_stable_buffers"
+            ],
+            "base_cases": 1,
+            "subtests": 0,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "010281365fa3f2fb4ab4ea25957258dabd4a71acab9676ed8a17340ade138fc0",
+              ".xml": "0e2474f3a7f0e8642a43337e8b3c1061457c2b190503b40ea305a5804fb6c76f",
+              "-collection.log": "6504815fc9832668e2a283e964a1628314b979e5fa6a833a430cf08e8b11b6b9"
+            }
+          },
+          {
+            "name": "synccheck-fused-read-graph",
+            "status": "passed",
+            "seconds": 172.502,
+            "max_seconds": 450,
+            "selection": [
+              "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py::TestRemnantCudaGraph::test_fused_read_replays_changed_planes_indices_lengths_and_frequencies"
+            ],
+            "base_cases": 1,
+            "subtests": 7,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "5db8cfd2ade2cee3080ccd4105663f71c439ac9ed5d4e207aafce360030f69fa",
+              ".xml": "c64866fb89ac3c712f32fd1c0913bb91110b6d85cc1bf688735e65bcf8f8f173",
+              "-collection.log": "63fc33167cafdcd3703b82e111abf25c5bd3058b20da5d152269d2216502fc8d"
+            }
+          },
+          {
+            "name": "synccheck-direct",
+            "status": "failed",
+            "seconds": 449.181,
+            "max_seconds": 450,
+            "selection": [
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_decode_cuda_graph_replay[8-64]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_decode_cuda_graph_replay[8-128]"
+            ],
+            "decision": "Incomplete checkpoint rejected; partial test progress does not count."
+          }
+        ]
+      },
+      {
+        "attempt": 27,
+        "app_id": "ap-cHkwOlNHm1nPFVOTlVUDMD",
+        "volume_prefix": "microbench/v0522-acquire-20261024-attempt027/sync-final/",
+        "local_prefix": "raw/v0522-qualification/acquire027-results/sync-final/",
+        "result_sha256": "89bc400923572f730c83ed02964da95054503589211813dc30df36463eda6b5d",
+        "root_status": "passed",
+        "started_utc": "2026-10-24T10:47:51.960531+00:00",
+        "seconds": 642.037,
+        "checks": [
+          {
+            "name": "synccheck-direct",
+            "status": "passed",
+            "seconds": 540.826,
+            "max_seconds": 900,
+            "selection": [
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_decode_cuda_graph_replay[8-64]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_decode_cuda_graph_replay[8-128]"
+            ],
+            "base_cases": 4,
+            "subtests": 0,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "e059a59c0b388537f60c9bbc9d47f9c1e014a1756882887ba16b969a1fcd3d0c",
+              ".xml": "63cd92957ad8b3f6fe06485125d51195d440f4232e15982c8f4588fac2b60899",
+              "-collection.log": "b34029ee887db890c030bcb8f011a6d5387563c442002f5eef62ce593e9f68e6"
+            }
+          },
+          {
+            "name": "synccheck-cuda-store-graphs",
+            "status": "passed",
+            "seconds": 92.54,
+            "max_seconds": 350,
+            "selection": [
+              "test/registered/attention/unittests/dsv4/test_remnant_fused_store.py::test_graph_replay_with_changed_inputs_and_plans"
+            ],
+            "base_cases": 2,
+            "subtests": 0,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "a1e7b7af57724468dd9a978fa8a56e8ad447183460b3273c5d1c6b370789f823",
+              ".xml": "a3bbb5b2518ab1a67eb9cf9e55497ec4c2c5186120d66ddfd6752d0fc6317483",
+              "-collection.log": "818e8003975ad8603cb45a829c3b56831c15cf0c6464b6cf8f09ce501c791995"
+            }
+          }
+        ]
+      },
+      {
+        "attempt": 28,
+        "app_id": "ap-PizMfGnveTB3iBSOEY5LZU",
+        "volume_prefix": "microbench/v0522-acquire-20261024-attempt028/mem-codec/",
+        "local_prefix": "raw/v0522-qualification/acquire028-results/mem-codec/",
+        "result_sha256": "211edaad35d3f7b70b44db15c56e54b797b4956c50f5e4f6b653c8b8767914f5",
+        "root_status": "passed",
+        "started_utc": "2026-10-24T10:59:57.687784+00:00",
+        "seconds": 710.882,
+        "checks": [
+          {
+            "name": "memcheck-unpack-none",
+            "status": "passed",
+            "seconds": 240.328,
+            "max_seconds": 700,
+            "selection": [
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[None-False-64]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[None-False-128]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[None-False-192]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[None-False-256]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[None-False-320]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[None-False-384]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[None-False-448]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[None-True-64]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[None-True-128]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[None-True-192]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[None-True-256]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[None-True-320]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[None-True-384]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[None-True-448]"
+            ],
+            "base_cases": 14,
+            "subtests": 0,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "09fa6c61af5b3dfe165b849ee0b8d503a3e1f3645ed39a3af17cea6b5cfafac5",
+              ".xml": "75ef6ab725a0b70d939d0ca1bb18ed27d3e63d6005ed9589e90de2c4fcc0e6e9",
+              "-collection.log": "03b2acad7b727d991a62a1e764e078782825050c36db66ac6d9ed9ef4891b212"
+            }
+          },
+          {
+            "name": "memcheck-unpack-queries",
+            "status": "passed",
+            "seconds": 112.947,
+            "max_seconds": 500,
+            "selection": [
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[queries-False-64]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[queries-False-128]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[queries-False-192]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[queries-False-256]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[queries-False-320]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[queries-False-384]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[queries-False-448]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[queries-True-64]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[queries-True-128]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[queries-True-192]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[queries-True-256]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[queries-True-320]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[queries-True-384]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[queries-True-448]"
+            ],
+            "base_cases": 14,
+            "subtests": 0,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "6a9520f11896e9c1a1d07319fcc9781e9f144ead1870cf08765955ed8b0371a5",
+              ".xml": "ad332632d09f930069530249074d17a1a5cead30e4babfe5d1dee79fc7644ac4",
+              "-collection.log": "fe54923f17121aea8edc87a55b8c97a9abce7719cbaa8962fae79a96aac67501"
+            }
+          },
+          {
+            "name": "memcheck-pack",
+            "status": "passed",
+            "seconds": 346.248,
+            "max_seconds": 450,
+            "selection": [
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_pack_kernel.py::test_remnant_triton_pack_matches_reference"
+            ],
+            "base_cases": 7,
+            "subtests": 0,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "be2de40651b70e670338a36c34600db28b17220eac85a3807861aac0689b5cef",
+              ".xml": "9650c13e3a87c7f9987abbfc6dff18636b17582926e6a91a5915172e67356966",
+              "-collection.log": "494ab85c6802cae5a19bd449097b44ec23f1b06130edb19139a338a5249ea896"
+            }
+          }
+        ]
+      },
+      {
+        "attempt": 29,
+        "app_id": "ap-KLJQ4jpPpfrUyzhK1Be1XE",
+        "volume_prefix": "microbench/v0522-acquire-20261024-attempt029/mem-graphs/",
+        "local_prefix": "raw/v0522-qualification/acquire029-results/mem-graphs/",
+        "result_sha256": "3a53b0ce70e79de49a2af046a47141ce8bf5a1ac3bb1bf96e8a483f3be6a5988",
+        "root_status": "passed",
+        "started_utc": "2026-10-24T11:12:55.751919+00:00",
+        "seconds": 1292.651,
+        "checks": [
+          {
+            "name": "memcheck-unpack-selections",
+            "status": "passed",
+            "seconds": 134.171,
+            "max_seconds": 300,
+            "selection": [
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[selections-False-64]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[selections-False-128]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[selections-False-192]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[selections-False-256]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[selections-False-320]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[selections-False-384]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[selections-False-448]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[selections-True-64]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[selections-True-128]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[selections-True-192]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[selections-True-256]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[selections-True-320]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[selections-True-384]",
+              "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference[selections-True-448]"
+            ],
+            "base_cases": 14,
+            "subtests": 0,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "85675fd8c653794a3ae0773e343f3bc80612f00964c252e77e5fb34fa304f1a0",
+              ".xml": "73a941d3108c8fa7002ac01e9b8ff63c9bd21f497644f3c7ba81058013d5b5c9",
+              "-collection.log": "7f08103c1523135e5a5ee8b5b9be23d7cd1ed48956944630aeb52899a3768d2a"
+            }
+          },
+          {
+            "name": "memcheck-store-reconstruction-graph",
+            "status": "passed",
+            "seconds": 948.518,
+            "max_seconds": 1000,
+            "selection": [
+              "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py::TestRemnantCudaGraph::test_store_and_native_reconstruction_replays_changed_inputs"
+            ],
+            "base_cases": 1,
+            "subtests": 8,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "7f9d32a46f38edad2f50960d71fec9f58579a49d5753e4566cfceed442856927",
+              ".xml": "c86ab0971ff6265024840dd1103b4e5adaf6a9e7bb1514281424a040ff28bd3d",
+              "-collection.log": "b436db09f91ed650dd82ecd793b8c91fe7cc2f1ad2312a44c04b875188ae62ee"
+            }
+          },
+          {
+            "name": "memcheck-mixed-layers-graph",
+            "status": "passed",
+            "seconds": 201.31,
+            "max_seconds": 350,
+            "selection": [
+              "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py::TestRemnantCudaGraph::test_consecutive_mixed_layers_replay_with_stable_buffers"
+            ],
+            "base_cases": 1,
+            "subtests": 0,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "3545b2a707f161aea32791bbbb3cd1c1a0f0693bd31542738090d2b8586b9559",
+              ".xml": "0f40c202871966d7b2da62f7f353c8ad787aeaef71705bf714bf2df84fd9248c",
+              "-collection.log": "fb80dd3aeb3538df2f74fb7682956b39132151ea842f3231b2e06c1404e65ed6"
+            }
+          }
+        ]
+      },
+      {
+        "attempt": 30,
+        "app_id": "ap-hQcEiso74eracewEwdJx1L",
+        "volume_prefix": "microbench/v0522-acquire-20261024-attempt030/mem-final/",
+        "local_prefix": "raw/v0522-qualification/acquire030-results/mem-final/",
+        "result_sha256": "60621391f3397b4189f53eb8b579d21a80b078a456fe3fa4036ec8d062d5908a",
+        "root_status": "failed",
+        "started_utc": "2026-10-24T11:36:31.988575+00:00",
+        "seconds": 907.665,
+        "checks": [
+          {
+            "name": "memcheck-direct",
+            "status": "failed",
+            "seconds": 899.099,
+            "max_seconds": 900,
+            "selection": [
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_decode_cuda_graph_replay[8-64]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_decode_cuda_graph_replay[8-128]"
+            ],
+            "decision": "Incomplete checkpoint rejected; partial test progress does not count."
+          }
+        ]
+      },
+      {
+        "attempt": 32,
+        "app_id": "ap-M6gnudiglMobaV3bdkQBvB",
+        "volume_prefix": "microbench/v0522-acquire-20261024-attempt032/mem-checkpoints/",
+        "local_prefix": "raw/v0522-qualification/acquire032-results/mem-checkpoints/",
+        "result_sha256": "2259d194983ff23d4a417d36b438e1bf7be63b775a77aaae5cf79f32f2664a8c",
+        "root_status": "passed",
+        "started_utc": "2026-10-24T11:59:17.505833+00:00",
+        "seconds": 1047.159,
+        "checks": [
+          {
+            "name": "memcheck-fused-read-graph",
+            "status": "passed",
+            "seconds": 298.919,
+            "max_seconds": 400,
+            "selection": [
+              "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py::TestRemnantCudaGraph::test_fused_read_replays_changed_planes_indices_lengths_and_frequencies"
+            ],
+            "base_cases": 1,
+            "subtests": 7,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "a7bdf8e8edf18f7ea3bb10822fbee0dcd3575857fea8417d6e34f5b6321d220c",
+              ".xml": "f5d5280791d928708a883b07642b645dda39521e6ee88dc9353ee3417a60d48e",
+              "-collection.log": "eae238778b61fa93055bd399d524d4634b08732601483c6347c0300943eea5df"
+            }
+          },
+          {
+            "name": "memcheck-cuda-store-graphs",
+            "status": "passed",
+            "seconds": 106.635,
+            "max_seconds": 250,
+            "selection": [
+              "test/registered/attention/unittests/dsv4/test_remnant_fused_store.py::test_graph_replay_with_changed_inputs_and_plans"
+            ],
+            "base_cases": 2,
+            "subtests": 0,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "15473838268d599e87a73e8eae2aa056b3bea56e510259d671390a94afd789f2",
+              ".xml": "9943f195d482614c940b1ae7c1db9b4c4effad34141a073930696e5159c9ad45",
+              "-collection.log": "24404ee830f753ebefb58eec394fb77d509380801d9a864680deb2b964c7a951"
+            }
+          },
+          {
+            "name": "memcheck-direct-parity",
+            "status": "passed",
+            "seconds": 300.198,
+            "max_seconds": 650,
+            "selection": [
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]"
+            ],
+            "base_cases": 2,
+            "subtests": 0,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "a803c82b252b70e03da07f73301d2214e714d2a3257ad4ec25cc0b2094eed469",
+              ".xml": "8350a427f92f42316dc4c4ae81bd1ad07861da81ddb5870fb75dc52642f7acdf",
+              "-collection.log": "3fcdff9233f28c3876dd461c001640b97c0e6fa2f9e63a91202d003605cde2a4"
+            }
+          },
+          {
+            "name": "memcheck-direct-graphs",
+            "status": "passed",
+            "seconds": 329.599,
+            "max_seconds": 650,
+            "selection": [
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_decode_cuda_graph_replay[8-64]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_decode_cuda_graph_replay[8-128]"
+            ],
+            "base_cases": 2,
+            "subtests": 0,
+            "errors": 0,
+            "failures": 0,
+            "skips": 0,
+            "artifacts_sha256": {
+              ".log": "310d19caf261180489a2a1a72a81e16a2b7d16d1e1ca0c205c165c592904fb07",
+              ".xml": "3d02be9e870c0ab85401a1e7f41e1699b11b53c0b5ce3543ce241381b3b16f79",
+              "-collection.log": "891c29977c0d5df2b4f1502330e53da7b6bc1177e06918c02d8840912f78f519"
+            }
+          }
+        ]
+      }
+    ],
+    "limitations": [
+      "No full-model load, TP4 distributed execution, serving or performance measurement.",
+      "No live HiCache or final-candidate HiCache GPU qualification.",
+      "Sanitizer passes establish the selected fixtures, not every runtime schedule.",
+      "Native synchronization differs from the historical untouched baseline; no speed or task-quality claim."
+    ]
+  },
+  "gates": {
+    "local_launcher_checks": {
+      "status": "passed",
+      "tests": 61,
+      "command": "REMNANT_INTEGRATION=v0.5.18 python -m unittest scripts.modal.tests",
+      "scope": "macOS CPU launcher/source-isolation checks; no remote execution"
+    },
+    "cpu_build_and_preflight": {
+      "status": "passed",
+      "base_tests": 134,
+      "subtests": 56,
+      "junit_testcases": 190,
+      "skipped": 0,
+      "failed": 0
+    },
+    "h100_validity": {
+      "status": "passed",
+      "base_tests": 461,
+      "subtests": 60,
+      "junit_testcases": 521,
+      "skipped": 0,
+      "failed": 0,
+      "latest_attempt": 8
+    },
+    "allocation": {
+      "status": "passed",
+      "matching_attempts": [
+        5,
+        7,
+        8
+      ],
+      "all_snapshots_equal": true,
+      "edge_cases": 56
+    },
+    "sanitizers": {
+      "required_tools": [
+        "memcheck",
+        "racecheck",
+        "synccheck"
+      ],
+      "base_cases_per_complete_tool": 58,
+      "subtests_per_complete_tool": 15,
+      "attempt007": {
+        "version": "2025.3.1",
+        "memcheck": {
+          "status": "passed",
+          "errors": 0,
+          "junit_testcases": 73
+        },
+        "racecheck": {
+          "status": "failed",
+          "grouped_reports": 21,
+          "errors": 9,
+          "warnings": 12,
+          "junit_testcases": 73,
+          "includes_native_and_packed": true
+        },
+        "synccheck": {
+          "status": "not_run"
+        }
+      },
+      "attempt008": {
+        "tool": {
+          "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+          "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+          "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+          "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+          "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+        },
+        "memcheck": {
+          "status": "timeout",
+          "timeout_seconds": 795,
+          "progress_dots": 20,
+          "junit_present": false,
+          "final_summary_present": false,
+          "errors": null
+        },
+        "racecheck": {
+          "status": "not_run"
+        },
+        "synccheck": {
+          "status": "not_run"
+        },
+        "diagnostic_controls_are_not_instrumented_correctness_gates": true
+      },
+      "test_selection": [
+        "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py::test_triton_native_pages_match_independent_reference",
+        "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py::TestRemnantCudaGraph::test_store_and_native_reconstruction_replays_changed_inputs",
+        "python/sglang/test/kernels/deepseek_v4/test_remnant_pack_kernel.py::test_remnant_triton_pack_matches_reference",
+        "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py::TestRemnantCudaGraph::test_consecutive_mixed_layers_replay_with_stable_buffers",
+        "test/registered/attention/unittests/dsv4/test_remnant_cuda_graph.py::TestRemnantCudaGraph::test_fused_read_replays_changed_planes_indices_lengths_and_frequencies",
+        "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+        "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]",
+        "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_decode_cuda_graph_replay[8-64]",
+        "test/registered/attention/unittests/dsv4/test_remnant_fused_store.py::test_graph_replay_with_changed_inputs_and_plans",
+        "test/registered/attention/unittests/dsv4/test_remnant_hicache.py::TestRemnantHiCache::test_backup_restore_preserves_all_planes_across_layers_and_pages"
+      ],
+      "no_suppressions": true,
+      "no_relaxed_tolerances": true
+    }
+  },
+  "fixture": {
+    "model_config": {
+      "revision": "7872f01b1d1fe23eabc4c98b48bffcef5a386062",
+      "sha256": "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731/resolve/7872f01b1d1fe23eabc4c98b48bffcef5a386062/config.json"
+    },
+    "original_token_capacity": 131072,
+    "request_slots": 32,
+    "dummy_slots": 1,
+    "target_layers": 43,
+    "csa_layers": 21,
+    "total_query_heads": 64,
+    "tp_geometry": 4,
+    "executed_gpu_ranks": 1,
+    "c4_rows_usable": 32768,
+    "c4_page_size": 64,
+    "reserved_c4_pages": 4,
+    "c4_pages_physical": 516,
+    "c4_rows_physical_per_layer": 33024,
+    "swa_capacity": 90368,
+    "c128_capacity": 1024,
+    "edge_c4_capacities": [
+      0,
+      1,
+      63,
+      64,
+      65,
+      130,
+      32768
+    ],
+    "triton_survivors": [
+      64,
+      128,
+      192,
+      256,
+      320,
+      384,
+      448
+    ],
+    "cuda_and_hicache_survivors": [
+      256
+    ],
+    "native_logical_row_bytes": 584,
+    "native_physical_row_bytes": 585,
+    "packed256_logical_and_physical_row_bytes": 328,
+    "native_c4_page_padding_total_bytes": 693504,
+    "plane_bytes_packed_all_csa_layers": {
+      "values": 177537024,
+      "bitmaps": 44384256,
+      "scales": 5548032
+    }
+  },
+  "allocation": {
+    "modes": [
+      {
+        "mode": "native",
+        "pool_sizes": {
+          "max_total_num_tokens": 131072,
+          "max_running_requests": 32,
+          "full_max_total_num_tokens": 131072,
+          "swa_max_total_num_tokens": 90368,
+          "unified_memory_pool_bytes": null,
+          "c4_max_total_num_tokens": 32768,
+          "c128_max_total_num_tokens": 1024,
+          "c4_state_pool_size": 2824,
+          "c128_state_pool_size": 4224,
+          "mem_fraction_static": null,
+          "unified_total_bytes": null
+        },
+        "component_bytes": {
+          "swa": 2279646720,
+          "c4": 405699840,
+          "c128": 22118400,
+          "indexer": 91542528,
+          "compressor_state": 976855040
+        },
+        "persistent_bytes": 3775862528,
+        "cuda_before": {
+          "allocated": 0,
+          "reserved": 0,
+          "peak_allocated": 0,
+          "active_requested_bytes": 0
+        },
+        "cuda_after": {
+          "allocated": 3794453504,
+          "reserved": 3963617280,
+          "peak_allocated": 3794453504,
+          "active_requested_bytes": 3775862528
+        }
+      },
+      {
+        "mode": "triton",
+        "pool_sizes": {
+          "max_total_num_tokens": 131072,
+          "max_running_requests": 32,
+          "full_max_total_num_tokens": 131072,
+          "swa_max_total_num_tokens": 90368,
+          "unified_memory_pool_bytes": null,
+          "c4_max_total_num_tokens": 32768,
+          "c128_max_total_num_tokens": 1024,
+          "c4_state_pool_size": 2824,
+          "c128_state_pool_size": 4224,
+          "mem_fraction_static": null,
+          "unified_total_bytes": null
+        },
+        "component_bytes": {
+          "swa": 2279646720,
+          "c4": 227469312,
+          "c128": 22118400,
+          "indexer": 91542528,
+          "compressor_state": 976855040
+        },
+        "persistent_bytes": 3597632000,
+        "cuda_before": {
+          "allocated": 0,
+          "reserved": 0,
+          "peak_allocated": 0,
+          "active_requested_bytes": 0
+        },
+        "cuda_after": {
+          "allocated": 3616217600,
+          "reserved": 3760193536,
+          "peak_allocated": 3616217600,
+          "active_requested_bytes": 3597632000
+        }
+      },
+      {
+        "mode": "kernel",
+        "pool_sizes": {
+          "max_total_num_tokens": 131072,
+          "max_running_requests": 32,
+          "full_max_total_num_tokens": 131072,
+          "swa_max_total_num_tokens": 90368,
+          "unified_memory_pool_bytes": null,
+          "c4_max_total_num_tokens": 32768,
+          "c128_max_total_num_tokens": 1024,
+          "c4_state_pool_size": 2824,
+          "c128_state_pool_size": 4224,
+          "mem_fraction_static": null,
+          "unified_total_bytes": null
+        },
+        "component_bytes": {
+          "swa": 2279646720,
+          "c4": 227469312,
+          "c128": 22118400,
+          "indexer": 91542528,
+          "compressor_state": 976855040
+        },
+        "persistent_bytes": 3597632000,
+        "cuda_before": {
+          "allocated": 0,
+          "reserved": 0,
+          "peak_allocated": 0,
+          "active_requested_bytes": 0
+        },
+        "cuda_after": {
+          "allocated": 3616217600,
+          "reserved": 3760193536,
+          "peak_allocated": 3616217600,
+          "active_requested_bytes": 3597632000
+        }
+      }
+    ],
+    "workspaces": [
+      {
+        "mode": "native",
+        "batch": 8,
+        "selected_k": 512,
+        "storage_bytes": 0,
+        "owner": "one backend, reused across layers"
+      },
+      {
+        "mode": "native",
+        "batch": 24,
+        "selected_k": 512,
+        "storage_bytes": 0,
+        "owner": "one backend, reused across layers"
+      },
+      {
+        "mode": "native",
+        "batch": 32,
+        "selected_k": 512,
+        "storage_bytes": 0,
+        "owner": "one backend, reused across layers"
+      },
+      {
+        "mode": "triton",
+        "batch": 8,
+        "selected_k": 512,
+        "storage_bytes": 6606848,
+        "owner": "one backend, reused across layers"
+      },
+      {
+        "mode": "triton",
+        "batch": 24,
+        "selected_k": 512,
+        "storage_bytes": 19820544,
+        "owner": "one backend, reused across layers"
+      },
+      {
+        "mode": "triton",
+        "batch": 32,
+        "selected_k": 512,
+        "storage_bytes": 26427392,
+        "owner": "one backend, reused across layers"
+      },
+      {
+        "mode": "kernel",
+        "batch": 8,
+        "selected_k": 512,
+        "storage_bytes": 2412544,
+        "owner": "one backend, reused across layers"
+      },
+      {
+        "mode": "kernel",
+        "batch": 24,
+        "selected_k": 512,
+        "storage_bytes": 7237632,
+        "owner": "one backend, reused across layers"
+      },
+      {
+        "mode": "kernel",
+        "batch": 32,
+        "selected_k": 512,
+        "storage_bytes": 9650176,
+        "owner": "one backend, reused across layers"
+      }
+    ],
+    "workspaces_exclude_common_attention_scratch": true,
+    "kernel_workspace_retained": true,
+    "aliases_deduplicated": true,
+    "saved_persistent_bytes_per_rank": 178230528,
+    "c4_physical_reduction_percent": 43.93162393162393,
+    "persistent_fixture_reduction_percent": 4.720259985058439,
+    "cuda_reservation_is_not_tensor_storage": true
+  },
+  "build": {
+    "integration": "v0.5.22",
+    "base_image": "lmsysorg/sglang:v0.5.22",
+    "source_identities": {
+      "parent": {
+        "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/sglang-v0522-port",
+        "commit": "81705d7935ef47173d1539760071e5ae66cdfb58"
+      },
+      "sglang": {
+        "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/sglang-v0522-port/third_party/sglang-v0.5.22",
+        "expected_commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+        "commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+        "override": false,
+        "dirty": false,
+        "integration": "v0.5.22"
+      },
+      "flashmla/csrc/cutlass": {
+        "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/sglang-v0522-port/third_party/flashmla-v0.5.22/csrc/cutlass",
+        "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+        "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+        "override": false,
+        "dirty": false
+      },
+      "flashmla": {
+        "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/sglang-v0522-port/third_party/flashmla-v0.5.22",
+        "expected_commit": "0be0962e1628e27e8f9d8a27995a29ac7dcf8bc2",
+        "commit": "0be0962e1628e27e8f9d8a27995a29ac7dcf8bc2",
+        "override": false,
+        "dirty": false,
+        "integration": "v0.5.22"
+      }
+    },
+    "sources": {
+      "sglang": "876f1aecf777bf86ccdc7b1f316364da52ed101e9687fb54f12df889535665a9",
+      "flashmla": "bdf29ca69685dbac1eb4c00d50a3744441620415b2286d1459115768fe99873a"
+    },
+    "torch": "2.14.1+cu130",
+    "cuda": "13.0",
+    "cuda_python": "13.0.3",
+    "cuda_bindings": "13.0.3",
+    "arch": "sm_90a",
+    "binary_architectures": {
+      "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so": [
+        "sm_90"
+      ],
+      "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so": [
+        "sm_90a"
+      ],
+      "/opt/remnant-native-store.so": [
+        "sm_90a"
+      ]
+    },
+    "native_dtype": "float32",
+    "binaries": {
+      "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so": "dd32f856f845495e4f6940a89f386ad050126dd62f132a0af144a60658123d56",
+      "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so": "cff0578dd97a56327643f07628943bbc1eca2d25c105edfc1698833bf47d6a24",
+      "/opt/remnant-native-store.so": "509edf30ceba9039b384e936758f4dd5b23ba4339fddb570320151400a868f3c"
+    },
+    "nvcc": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:58:59_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0\n"
+  },
+  "identities": {
+    "parent_runtime_commit": "81705d7935ef47173d1539760071e5ae66cdfb58",
+    "serving_image": "im-NDPeINdOTJYhWS8FQFvjwp",
+    "qualification_image": "im-G9PwBndUMVzO1UmkBgVjpV",
+    "driver_version": "610.57.04",
+    "driver_api": 13030,
+    "aot_binaries_match_attempt007": true,
+    "native_store_jit_hash_differs_between_builds": true,
+    "local_source_sha256": {
+      "Dockerfile.v0.5.22": "4de71bcf10372910ba8b83ab0477fe327ccd45c31b663f840ffba1541918685e",
+      "scripts/modal/kernels.py": "1804ef5329815470c86a0c1fe4e2bc3f3838ebdc14946b74f5d6327416952f81",
+      "scripts/modal/tests.py": "524ca82442d142b696cefb5eaf0d0fbe19894c35782e84867768965784d46ee6"
+    },
+    "raw_artifact_sha256": {
+      "raw/v0522-qualification/attempt-003/all-results/validation/result.json": "a838aba90e87a150c6da6858f840195565e72ecc23a0434c3f9a56e7fab363cf",
+      "raw/v0522-qualification/attempt-003/all-results/validation/allocation.json": "df3acac12455e7deada586ea70b840a08ba133b3d2113b43494efcbf5d208694",
+      "raw/v0522-qualification/attempt-003/all-results/validation/build-manifest.json": "9c2a080d87fa5bc03f6065674daff6ea0445e61539c4bf117c63ac7c4bbaf0fd",
+      "raw/v0522-qualification/attempt-003/all-results/validation/validation.xml": "4a07002e36332746e840c8f2028f2a7ffd90dc3beec8ed91df0c848b073e6be0",
+      "raw/v0522-qualification/attempt-003/all-results/validation/validation.log": "79f3d231bd96e4194a30407b089efd49d41f60b5ab7994b87b09f2ceb13560f0",
+      "raw/v0522-qualification/attempt-003/all-results/validation/cpu-preflight/cpu-tests.xml": "0d11f57d8cb2a6df6335c0b5204ebb2c8d82f17ed0a8361820d49b188d0ada71",
+      "raw/v0522-qualification/attempt-003/all-results/validation/cpu-preflight/sanitizer-collection.log": "7c7ae51a650eec3495a4df2cdb94dfece6d601681d26a6e34eba26b336158d1a",
+      "raw/v0522-qualification/attempt-005/all-results/validation/result.json": "576a0ca3953378944086c37303e573a1a8e0455b9a5aee357951465da48efa0c",
+      "raw/v0522-qualification/attempt-005/all-results/validation/allocation.json": "6fbd2a271f151767aa5c7379b60e69fafa7f2b8327f35bc0f558acb5524da91a",
+      "raw/v0522-qualification/attempt-005/all-results/validation/build-manifest.json": "44985afe5e37e813bdcd25c4158f8bc9f9b66cfceac12f08e248b6f2675c7378",
+      "raw/v0522-qualification/attempt-005/all-results/validation/validation.xml": "deb155bfc1bae7c77b6ad3c8f358e94d840b6e4e69943da7d693cac0508a5c91",
+      "raw/v0522-qualification/attempt-005/all-results/validation/validation.log": "f5abd2e1edd9b7f2c2ab25948158f5c56279055745a0b67d877d757d03823ea4",
+      "raw/v0522-qualification/attempt-005/all-results/validation/cpu-preflight/cpu-tests.xml": "8491832db0799505caf2ce39f61a4591948bf64ba1ae476d2f3b0bc72743ac40",
+      "raw/v0522-qualification/attempt-005/all-results/validation/cpu-preflight/sanitizer-collection.log": "09de7774d134248482220a442898fe0bd5f0af44728f58997d87216930b50e7d",
+      "raw/v0522-qualification/attempt-005/all-results/validation/memcheck.log": "a7e5e5ae87e85c6d33d8646b8489492f433c6d889d4bf83035710915ed78b7c9",
+      "raw/v0522-qualification/attempt-005/all-results/validation/memcheck.xml": "b46405eeb1c47ea4669b54c7e8de47dbf41abefe010fe132c229b3e107482731",
+      "raw/v0522-qualification/attempt-007/all-results/validation/result.json": "8bea6313dee1c9f79490773721114f4bf633250cd6646e47c65361511ecba9e9",
+      "raw/v0522-qualification/attempt-007/all-results/validation/allocation.json": "6fbd2a271f151767aa5c7379b60e69fafa7f2b8327f35bc0f558acb5524da91a",
+      "raw/v0522-qualification/attempt-007/all-results/validation/build-manifest.json": "ac3ad770fb46cb9bdd94d9b781cccb3f793f5eacf492181a84896cb12e2d9e05",
+      "raw/v0522-qualification/attempt-007/all-results/validation/validation.xml": "f12bff7933e43ebd7ac985158c5d92e7e551630aaf28428b42a2a0a79d4dd07b",
+      "raw/v0522-qualification/attempt-007/all-results/validation/validation.log": "9d6e95f2022f5d10c3ad8e3c624f11601afcc4e06e6f8280983455c11f655347",
+      "raw/v0522-qualification/attempt-007/all-results/validation/cpu-preflight/cpu-tests.xml": "70559c565353b0434cdba6b0b97a8e35b4acb283cb1a5689eab3211680f100b4",
+      "raw/v0522-qualification/attempt-007/all-results/validation/cpu-preflight/sanitizer-collection.log": "6483ca12e90d9398889912b313b945e334fcab34fca325b118d9aad19439977b",
+      "raw/v0522-qualification/attempt-007/all-results/validation/memcheck.log": "e8b9f91f59b30c8a0c0adcf511a3068bb56fdac817c0a22574c71c2d71cadd7e",
+      "raw/v0522-qualification/attempt-007/all-results/validation/memcheck.xml": "699ebc5db97dea5647cab2de1ea009f287501f691885a6df0f9f90ed9db8c9e0",
+      "raw/v0522-qualification/attempt-007/all-results/validation/racecheck.log": "90fcafaa5239f292a97e2b2659de5d5fa36c8547d6111e31c7df68f29ce90fc3",
+      "raw/v0522-qualification/attempt-007/all-results/validation/racecheck.xml": "3c7121417b7ec0bed3058720704270ee0b98300c6517ab49af466ce78a7cbc50",
+      "raw/v0522-qualification/attempt-008/all-results/validation/result.json": "04c0b76eb714cfa56fd6d3f97a9a235daff9c9c7b2210fcdf3b7680f3137f703",
+      "raw/v0522-qualification/attempt-008/all-results/validation/allocation.json": "6fbd2a271f151767aa5c7379b60e69fafa7f2b8327f35bc0f558acb5524da91a",
+      "raw/v0522-qualification/attempt-008/all-results/validation/build-manifest.json": "0a2855ef9b3c9902e72e76f9e807a1059627389c9ace5c323f0c13bd36d2a309",
+      "raw/v0522-qualification/attempt-008/all-results/validation/validation.xml": "b1ba61567650e970e2a252abec186c5418413a280384bac1c4b17c77a74e2c58",
+      "raw/v0522-qualification/attempt-008/all-results/validation/validation.log": "9b08f2d06dc649d319f6cd5f1d2a36418178b97bbe11b3269ff73c1c2023d430",
+      "raw/v0522-qualification/attempt-008/all-results/validation/cpu-preflight/cpu-tests.xml": "f1417998158b46250e3513490c08681c850d6f93f2d0056b32eb4626679d9c61",
+      "raw/v0522-qualification/attempt-008/all-results/validation/cpu-preflight/sanitizer-collection.log": "2ea51d9b17e272e31baaed3b81fb3d6b839d6ed26b5c9ddbf72e4f4028ba6e8d",
+      "raw/v0522-qualification/attempt-008/all-results/validation/memcheck.log": "c88e3cee1c3ee370a60859c81fbdd3603a48d55e409dae903b56b117633ebba5"
+    }
+  },
+  "execution": {
+    "profile": "winston-85885",
+    "compute_initial_usd": "0",
+    "compute_ceiling_usd": "10",
+    "working_ceiling_usd": "8",
+    "reserve_usd": "2",
+    "compute_reported_usd": "3.85648695",
+    "billing_as_of_utc": "2026-10-23T13:05:00Z",
+    "billing_lag_possible": true,
+    "diagnostic_shells_compute_usd": "0.00604041",
+    "gpu_limit_seconds": 2700,
+    "gpu_allocation_conservative_seconds": 2580,
+    "gpu_allocation_observed_seconds": 2330,
+    "platform_retries": 0,
+    "concurrent_gpu_allocations_max": 1,
+    "active_containers_after": 0,
+    "all_task_apps_stopped": true,
+    "attempts": [
+      {
+        "attempt": 1,
+        "app_id": "ap-DjKuhw0jXgF1txofCcBoY0",
+        "outcome": "stopped before CPU build: literal COPY required",
+        "compute_reported_usd": "0",
+        "gpu_allocation_conservative_seconds": 0
+      },
+      {
+        "attempt": 2,
+        "app_id": "ap-78W3nYsDB8VnJPnqfMfPXu",
+        "outcome": "CPU build failed: C++20 required by Torch",
+        "compute_reported_usd": "0.00426238",
+        "gpu_allocation_conservative_seconds": 0
+      },
+      {
+        "attempt": 3,
+        "app_id": "ap-caA5YnV6OVFf5YqRjogTKV",
+        "outcome": "allocation passed; 25 validity fixture failures",
+        "compute_reported_usd": "0.58673572",
+        "gpu_allocation_conservative_seconds": 360,
+        "gpu_function_seconds": 305.047914386,
+        "observed_gpu_start_utc": "2026-10-23T09:40:22Z",
+        "app_stopped_utc": "2026-10-23T09:45:44Z",
+        "observed_allocation_seconds": 322,
+        "serving_image": "im-K5aP8RvfNDjmdmN7aKkpZQ",
+        "qualification_image": "im-5ooRFimYO3OkhH8jDZnObD"
+      },
+      {
+        "attempt": 4,
+        "app_id": "ap-VmN6Z4KFeueGcVLHEaGFQA",
+        "outcome": "CPU image build externally shut down",
+        "compute_reported_usd": "0.01763094",
+        "gpu_allocation_conservative_seconds": 0
+      },
+      {
+        "attempt": 5,
+        "app_id": "ap-V8MT2rKeUm2Yy2VXG6JSJe",
+        "outcome": "validity/allocation passed; memcheck failed seven binding API calls",
+        "compute_reported_usd": "0.90592083",
+        "gpu_allocation_conservative_seconds": 600,
+        "gpu_function_seconds": 532.116091353,
+        "observed_gpu_start_utc": "2026-10-23T11:05:22Z",
+        "app_stopped_utc": "2026-10-23T11:14:20Z",
+        "observed_allocation_seconds": 538,
+        "serving_image": "im-nnfvJajTS1PDW1rOGTzDaO",
+        "qualification_image": "im-AVgIVGtPhyNxeAp3mbweio"
+      },
+      {
+        "attempt": 6,
+        "app_id": "ap-A3iW2BTpmqTOrFbOhjPhkO",
+        "outcome": "CPU preflight failed inherited whole-image dependency check",
+        "compute_reported_usd": "0.02621654",
+        "gpu_allocation_conservative_seconds": 0,
+        "parent_commit": "d63a12c",
+        "serving_image": "im-RQsPZVxvl3tjm13fXfEhn4"
+      },
+      {
+        "attempt": 7,
+        "app_id": "ap-KGlWslnX3xV9eCiUZZjCs0",
+        "outcome": "validity/allocation/memcheck passed; racecheck failed",
+        "compute_reported_usd": "0.60552006",
+        "gpu_allocation_conservative_seconds": 420,
+        "gpu_function_seconds": 317.551476581,
+        "observed_gpu_start_utc": "2026-10-23T12:14:58Z",
+        "app_stopped_utc": "2026-10-23T12:20:23Z",
+        "observed_allocation_seconds": 325,
+        "parent_commit": "ff67789",
+        "serving_image": "im-NDPeINdOTJYhWS8FQFvjwp",
+        "qualification_image": "im-kYvJg9IP3At5OBpGr7micQ"
+      },
+      {
+        "attempt": 8,
+        "app_id": "ap-z5FfO3oSsMH3E0E0L160EU",
+        "outcome": "validity/allocation passed; newer memcheck timed out",
+        "compute_reported_usd": "1.70416007",
+        "gpu_allocation_conservative_seconds": 1200,
+        "gpu_function_seconds": 1139.1405618160002,
+        "observed_gpu_start_utc": "2026-10-23T12:44:54Z",
+        "app_stopped_utc": "2026-10-23T13:03:59Z",
+        "observed_allocation_seconds": 1145,
+        "parent_commit": "81705d7",
+        "serving_image": "im-NDPeINdOTJYhWS8FQFvjwp",
+        "qualification_image": "im-G9PwBndUMVzO1UmkBgVjpV"
+      }
+    ]
+  },
+  "reproduction": {
+    "cpu_checks": "REMNANT_INTEGRATION=v0.5.18 python -m unittest scripts.modal.tests",
+    "attempt008_command": "MODAL_PROFILE=winston-85885 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_TIMEOUT_S=1200 python -m modal run --detach scripts/modal/kernels.py::validate_kernels --run-id v0522-qualification-20261023-attempt008 --sanitizer --max-seconds 1140",
+    "sanitizer_argv_prefix": [
+      "<manifest sanitizer path>",
+      "--tool",
+      "<tool>",
+      "--error-exitcode",
+      "1",
+      "<image python>",
+      "-m",
+      "pytest",
+      "-q"
+    ],
+    "volume": "remnant-stage2a-results",
+    "volume_prefix": "microbench/v0522-qualification-20261023-attempt<NNN>/validation/",
+    "local_prefix": "raw/v0522-qualification/attempt-<NNN>/all-results/validation/"
+  },
+  "remaining": [
+    "HiCache, full-model startup, distributed execution, live allocator ceiling, performance and task quality remain separate gates."
+  ],
+  "decision": "Core model-free numerical, storage and all-three sanitizer qualification passed; HiCache and full-model/performance gates remain deferred.",
+  "follow_up": {
+    "status": "cpu_audit_complete_gpu_gates_still_incomplete",
+    "baseline_parent_commit": "1510b0bc8bfc1a6e82918bd138f157d6eccb672b",
+    "profile": "winston-85885",
+    "cpu_app_id": "ap-P9RY6o6NkCimZ2awuVL8Xk",
+    "cpu_app_started_utc": "2026-10-23T13:20:42Z",
+    "cpu_app_stopped_utc": "2026-10-23T13:21:04Z",
+    "cpu_command_timeout_seconds": 120,
+    "gpu_seconds_added": 0,
+    "compute_added_reported_usd": "0.00168805",
+    "compute_total_reported_usd": "3.85817500",
+    "billing_lag_possible": true,
+    "inspected_image": "im-G9PwBndUMVzO1UmkBgVjpV",
+    "attention_aot_sha256": "cff0578dd97a56327643f07628943bbc1eca2d25c105edfc1698833bf47d6a24",
+    "sass_artifact": "raw/v0522-qualification/sanitizer-audit009/attention.sass.gz",
+    "sass_artifact_sha256": "f597c4edc60674a7fbb2f2c1b7df11db3783091a1c40636a61fd1fb58cb88932",
+    "volume": "remnant-stage2a-results",
+    "volume_artifact": "microbench/v0522-qualification-20261023-sanitizer-audit009/attention.sass.gz",
+    "disassembly_command": "cuobjdump --dump-sass /opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so | gzip -1 > attention.sass.gz",
+    "race_instruction_pairs": [
+      {
+        "heads": 128,
+        "packed": false,
+        "severity": "error",
+        "grouped_reports": 1,
+        "reported_byte_hazards": 7680,
+        "left_pc": "0x1110",
+        "left_instruction": "LDS.64 R6, [R4+UR8+0x32a80] ;",
+        "right_pc": "0x6770",
+        "right_instruction": "@!P0 STS.64 [R159+UR48+0x32a80], R22 ;",
+        "source_ownership": "sScale warpgroup read/reuse",
+        "source_map_method": "inferred from instruction type, field offset and source use; no debug line information",
+        "compiled_ready_free_handoff": [
+          {
+            "pc": "0x1010",
+            "instruction": "BAR.SYNC.DEFER_BLOCKING 0x8, 0x100 ;"
+          },
+          {
+            "pc": "0x1ba0",
+            "instruction": "@P2 BAR.ARV 0x9, 0x100 ;"
+          },
+          {
+            "pc": "0x59b0",
+            "instruction": "@P0 BAR.SYNC.DEFER_BLOCKING 0x9, 0x100 ;"
+          },
+          {
+            "pc": "0x7500",
+            "instruction": "BAR.ARV 0x8, 0x100 ;"
+          }
+        ]
+      },
+      {
+        "heads": 128,
+        "packed": false,
+        "severity": "warning",
+        "grouped_reports": 1,
+        "reported_byte_hazards": 304,
+        "left_pc": "0x240",
+        "left_instruction": "SYNCS.EXCH.64 URZ, [UR5+0x32c88], UR6 ;",
+        "right_pc": "0x7b0",
+        "right_instruction": "SYNCS.ARRIVE.TRANS64 RZ, [UR56+0x32c88], R4 ;",
+        "source_ownership": "bar_q initialization/arrive_and_expect_tx",
+        "source_map_method": "inferred from instruction type, field offset and source use; no debug line information"
+      },
+      {
+        "heads": 128,
+        "packed": true,
+        "severity": "warning",
+        "grouped_reports": 1,
+        "reported_byte_hazards": 544,
+        "left_pc": "0x240",
+        "left_instruction": "SYNCS.EXCH.64 URZ, [UR5+0x38780], UR6 ;",
+        "right_pc": "0x7b0",
+        "right_instruction": "SYNCS.ARRIVE.TRANS64 RZ, [UR56+0x38780], R4 ;",
+        "source_ownership": "bar_q initialization/arrive_and_expect_tx",
+        "source_map_method": "inferred from instruction type, field offset and source use; no debug line information"
+      },
+      {
+        "heads": 64,
+        "packed": false,
+        "severity": "warning",
+        "grouped_reports": 1,
+        "reported_byte_hazards": 272,
+        "left_pc": "0x230",
+        "left_instruction": "SYNCS.EXCH.64 URZ, [UR10+0x32c88], UR4 ;",
+        "right_pc": "0x780",
+        "right_instruction": "SYNCS.ARRIVE.TRANS64 RZ, [UR56+0x32c88], R4 ;",
+        "source_ownership": "bar_q initialization/arrive_and_expect_tx",
+        "source_map_method": "inferred from instruction type, field offset and source use; no debug line information"
+      },
+      {
+        "heads": 64,
+        "packed": true,
+        "severity": "error",
+        "grouped_reports": 8,
+        "reported_byte_hazards": 147456,
+        "left_pc": "0xaf00",
+        "left_instruction": "LDS.64 R14, [R3+UR6+0x31a40] ;",
+        "right_pc": "0x10a70",
+        "right_instruction": "@!P2 STS.64 [R162+0x31a40], R152 ;",
+        "source_ownership": "sScale warpgroup read/reuse",
+        "source_map_method": "inferred from instruction type, field offset and source use; no debug line information",
+        "compiled_ready_free_handoff": [
+          {
+            "pc": "0xaed0",
+            "instruction": "BAR.SYNC.DEFER_BLOCKING 0x8, 0x100 ;"
+          },
+          {
+            "pc": "0xb910",
+            "instruction": "@P0 BAR.ARV 0x9, 0x100 ;"
+          },
+          {
+            "pc": "0xfb00",
+            "instruction": "BAR.SYNC.DEFER_BLOCKING 0x9, 0x100 ;"
+          },
+          {
+            "pc": "0x10f70",
+            "instruction": "BAR.ARV 0x8, 0x100 ;"
+          }
+        ]
+      },
+      {
+        "heads": 64,
+        "packed": true,
+        "severity": "warning",
+        "grouped_reports": 9,
+        "reported_byte_hazards": 5136,
+        "left_pc": "0x1f0",
+        "left_instruction": "SYNCS.EXCH.64 URZ, [UR10+0x37740], UR6 ;",
+        "right_pc": "0x6e0",
+        "right_instruction": "SYNCS.ARRIVE.TRANS64 RZ, [UR56+0x37740], R4 ;",
+        "source_ownership": "bar_q initialization/arrive_and_expect_tx",
+        "source_map_method": "inferred from instruction type, field offset and source use; no debug line information"
+      }
+    ],
+    "findings": [
+      "All six reported pairs are inside the existing Hopper attention specializations, not packing or HiCache kernels.",
+      "Four pairs involve query-barrier initialization/arrival; two pairs involve shared softmax-scale read/reuse.",
+      "Ready/free handoff barriers are present in both source and SASS; static presence is not a sanitizer pass or complete correctness proof.",
+      "Native H128 and Packed H64 reports remain unresolved; the older checker is not assumed wrong.",
+      "No runtime/kernel/source-pin or numerical-contract changes."
+    ],
+    "launcher_changes": [
+      "v0.5.22 tool order synccheck, racecheck, memcheck; v0.5.18 keeps its previous order.",
+      "Independent tool failures are retained; later tools run only while the original deadline permits. Any failed/not_run tool still fails the complete run.",
+      "Require passing pytest coverage plus a clean final tool summary, no tool warning/error, and actual CUDA instrumentation.",
+      "Same selected cases, default flag values, error-exitcode, source/binary preflights and timeouts."
+    ],
+    "validation": {
+      "launcher_commit": "8d041f0e898efccfee8e680b46933c055861fd74",
+      "local_source_sha256": {
+        "scripts/modal/kernels.py": "b6557b8ca49266ca45d06ff38b0d27f7a0afb55c88d7c2fb0cd6604b99e796a5",
+        "scripts/modal/tests.py": "a5e5d8d0491447e4ca9aa5be7f6418a0bb569e6af30ac26220a5501ed522a45c"
+      },
+      "local_cpu_tests": 65,
+      "local_cpu_command": "REMNANT_INTEGRATION=v0.5.18 python -m unittest scripts.modal.tests",
+      "real_log_classifications": {
+        "attempt007_memcheck": "accepted",
+        "attempt007_racecheck": "rejected",
+        "attempt008_memcheck": "rejected"
+      },
+      "independent_review": "Six PC pairs, 20 quoted SASS instructions, raw hashes, parser regressions and failure/deadline behavior reviewed; CPU/mock/static only",
+      "gpu_validation_of_launcher_follow_up": "not_run"
+    },
+    "remaining_authority": "Original 45-minute aggregate H100 ceiling unchanged: 43 minutes conservative accounting leaves two minutes, less than the measured 309-second validity stage. No GPU retry launched.",
+    "primary_references": [
+      "https://docs.nvidia.com/compute-sanitizer/ReleaseNotes/index.html",
+      "https://docs.nvidia.com/compute-sanitizer/ComputeSanitizer/index.html",
+      "https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-barrier-cluster"
+    ]
+  },
+  "continuation": {
+    "status": "incomplete_sanitizer_qualification",
+    "authorization": {
+      "change": "User approved increasing the aggregate H100 ceiling from 45 to 60 minutes; the compute ceiling and reserve are unchanged",
+      "gpu_limit_seconds": 3600,
+      "compute_ceiling_usd": "10",
+      "working_ceiling_usd": "8",
+      "reserve_usd": "2"
+    },
+    "attempt": 10,
+    "run_id": "v0522-qualification-20261023-attempt010",
+    "profile": "winston-85885",
+    "app_id": "ap-aXaXNcHYq2eG1kUflnKW0r",
+    "parent_commit": "dbf8a050aef79ca5c08ea8a85e0d93f4c9b77643",
+    "launcher_commit": "8d041f0e898efccfee8e680b46933c055861fd74",
+    "sglang_commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "flashmla_commit": "0be0962e1628e27e8f9d8a27995a29ac7dcf8bc2",
+    "cutlass_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "serving_image": "im-NDPeINdOTJYhWS8FQFvjwp",
+    "qualification_image": "im-PsqqhgIHAL7yqBT2xVLHeK",
+    "gpu_container": "ta-01M5MGEE7C87M89QFPAARXSMPR",
+    "gpu_start_utc": "2026-10-23T13:50:49Z",
+    "app_stopped_utc": "2026-10-23T14:05:54Z",
+    "work_deadline_seconds": 900,
+    "platform_timeout_seconds": 960,
+    "platform_retries": 0,
+    "gpu_function_seconds": 899.267910452,
+    "gpu_allocation_conservative_seconds": 960,
+    "observed_allocation_seconds": 905,
+    "cpu_preflight": {
+      "status": "passed",
+      "base_tests": 134,
+      "subtests": 56,
+      "junit_testcases": 190,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 202.104
+    },
+    "h100_validity": {
+      "status": "passed",
+      "base_tests": 461,
+      "subtests": 60,
+      "junit_testcases": 521,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 249.276
+    },
+    "allocation": {
+      "status": "passed",
+      "byte_identical_attempts": [
+        5,
+        7,
+        8,
+        10
+      ],
+      "sha256": "6fbd2a271f151767aa5c7379b60e69fafa7f2b8327f35bc0f558acb5524da91a"
+    },
+    "binary_comparison": {
+      "baseline_attempt": 8,
+      "all_aot_and_native_jit_hashes_equal": true,
+      "new_gpu_compilation": false
+    },
+    "sanitizers": {
+      "version": "2026.2.1.0 (build 38334959)",
+      "driver": "610.57.04",
+      "tool_order": [
+        "synccheck",
+        "racecheck",
+        "memcheck"
+      ],
+      "test_selection_unchanged": true,
+      "synccheck": {
+        "status": "timeout",
+        "progress_dots": 44,
+        "junit_present": false,
+        "final_summary_present": false,
+        "errors": null,
+        "completed_case_coverage": "not established by progress dots alone"
+      },
+      "racecheck": {
+        "status": "not_run"
+      },
+      "memcheck": {
+        "status": "not_run"
+      },
+      "no_suppressions": true,
+      "no_relaxed_tolerances": true
+    },
+    "host_sample": {
+      "method": "py-spy dump, nonblocking Python stack",
+      "fixture": "test_remnant_cuda_graph.py::_check_store_and_reconstruction_graph",
+      "source_line": 145,
+      "expression": "raw.copy_(raw.roll(2, dims=1))",
+      "position": "input preparation before graph.replay() for the sampled iteration",
+      "native_stack_obtained": false,
+      "native_stack_error": "Can't get native stack traces with the --nonblocking option.",
+      "interpretation": "Localizes one mid-run Python frame, not which native operation or pending work accounts for delay. Does not prove deadlock, attention failure or sanitizer defect."
+    },
+    "reporting_edge": {
+      "observed": "After synccheck consumed the deadline, the loop attempted racecheck with less than one whole second. _run_command raised prelaunch TimeoutError; racecheck did not execute. Raw result.json remains unchanged.",
+      "fix": "Match the whole-second command deadline and catch its prelaunch TimeoutError while retaining not_run; the aggregate qualification still fails.",
+      "commit": "57f210a2573fc4dc98fec723cbcc6652c4d033e5",
+      "source_sha256": {
+        "scripts/modal/kernels.py": "786406e9a2369cefb31c73c1482c415a8756aa7e7f2a9b38e4931765a8bf9b4d",
+        "scripts/modal/tests.py": "21d0ab8766c7fc814314aa86ce3b1308530ff5260c6fbad3b2624f64114fc26b"
+      },
+      "local_cpu_tests": 66,
+      "local_cpu_seconds": 55.062,
+      "local_cpu_command": "REMNANT_INTEGRATION=v0.5.18 MODAL_PROFILE=winston-85885 PYTHONPYCACHEPREFIX=/private/tmp/remnant-v0522-qual-pycache /Users/poohthewinnie/miniconda3/bin/python3 -m unittest scripts.modal.tests",
+      "local_python": "3.13",
+      "independent_review": "No findings after the prelaunch timeout catch; clock-advancing regression exercises the real command deadline and verifies no subprocess launches. CPU/static only.",
+      "gpu_retest": "not_run",
+      "scope": "Deadline reporting only; production kernels, fixtures, selected cases, tolerances and fork pins unchanged"
+    },
+    "execution": {
+      "compute_before_usd": "3.85817500",
+      "compute_attempt_reported_usd": "1.37111753",
+      "compute_total_reported_usd": "5.22929253",
+      "billing_as_of_utc": "2026-10-23T14:09:05Z",
+      "billing_lag_possible": true,
+      "aggregate_gpu_allocation_conservative_seconds": 3540,
+      "aggregate_gpu_allocation_observed_seconds": 3235,
+      "remaining_gpu_conservative_seconds": 60,
+      "active_containers_after": 0,
+      "all_task_apps_stopped": true,
+      "cleanup_and_billing_rechecked_utc": "2026-10-23T14:17:47Z"
+    },
+    "command": "MODAL_PROFILE=winston-85885 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_TIMEOUT_S=960 python -m modal run --detach scripts/modal/kernels.py::validate_kernels --run-id v0522-qualification-20261023-attempt010 --sanitizer --max-seconds 900",
+    "local_prefix": "raw/v0522-qualification/attempt-010/all-results/validation/",
+    "volume_prefix": "remnant-stage2a-results/microbench/v0522-qualification-20261023-attempt010/validation/",
+    "artifact_sha256": {
+      "result.json": "4cc04aa1a9dfa83bc11c446e56ebd7f812e912687aed327ef6cd9ca98aaf11f6",
+      "allocation.json": "6fbd2a271f151767aa5c7379b60e69fafa7f2b8327f35bc0f558acb5524da91a",
+      "build-manifest.json": "d3aeee45413ea8ec528d67c02d522da33250a6c8ac3ec0c5e5c348dff01d9924",
+      "validation.xml": "53a91846ae54e0df0fecbf497b67bb360f907c4a0a74333b1a6e30090719f8ef",
+      "validation.log": "4af22efaae13ba13bf258715f2e6eb13e0dca647091722670034c2f7b338147e",
+      "cpu-preflight/cpu-tests.xml": "1eac32cbc7ebab340a6ac400a8d9d974cfb119cb907d914f7ddca25ba5894be5",
+      "cpu-preflight/cpu-tests.log": "1f832613e5006d51288f47b2ccbb1ad9179927e093fc57fc308985319a430f82",
+      "cpu-preflight/sanitizer-collection.log": "00f792b7a77d0591df03607d476bb566ec232f6755bd7d3f31acb928f8513a9a",
+      "sanitizer-version.log": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673",
+      "driver-version.log": "641baa7aef4714d620d9cb838ee74134559d52457e2f5803efc69bd52a40a065",
+      "synccheck.log": "f546b2b4e99c86c2ce7074c5287bb537335dbded5c80e481e9653c7c9a7e6026",
+      "host-stack.txt": "d5d6d01d9fed963c413a46aa9c8b67ddae9b46cacf39c227551aab9476d4aeb0",
+      "host-native-stack.txt": "55c24902f14c6b267dbd41f8d983b489b10e5c23a75c6820b12af5831c42bfc7",
+      "sanitizer-control-empty.log": "fb8d9ea8d2be1a0fc356e4685eab89b230d089597899abc6f9cde9b1b6cc3900",
+      "sanitizer-control-bindings-import.log": "4806c657afdb0ef7bbbb2360916bf4ad14b5d2a0aac0e56710f31a9d1cfecc07",
+      "sanitizer-control-bindings-query.log": "a518617e603ae9e3659eecdf4257ea7eca94fb82a98faf99a78827514ec53fc4"
+    },
+    "evidence_review": "Independent read-only review verified all 16 artifact hashes, JUnit counts, exact allocation/binary comparisons, host-sample limits, unchanged initial record, budget arithmetic and incomplete gate claims. Active source-pair preflight passes; original v0.5.18 pins unchanged.",
+    "decision": "Do not promote. Preserve passing numerical/allocation evidence and unresolved sanitizer failures. No further meaningful GPU retry fits the remaining time allowance; isolate input preparation under separately approved resources before another full-suite run."
+  },
+  "core_verification": {
+    "status": "blocked_on_native_barrier_fix_authority",
+    "date": "2026-10-24",
+    "scope": "Core model-free qualification followed by Native/Triton/Kernel TP4 verification; HiCache explicitly deferred",
+    "authorization": {
+      "total_compute_ceiling_usd": "28",
+      "includes_prior_compute_usd": "5.22929253",
+      "reserve_usd": "2",
+      "additional_single_h100_envelope_seconds": 1800,
+      "tp4_envelope_seconds": 3600,
+      "account_ceiling_usd": "28",
+      "start_account_below_usd": "25",
+      "excluded_accounts": [
+        "caiw",
+        "winstoncai",
+        "winstoncai233"
+      ]
+    },
+    "account": "winston-85885",
+    "source_pair": {
+      "sglang": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+      "flashmla": "0be0962e1628e27e8f9d8a27995a29ac7dcf8bc2",
+      "cutlass": "147f5673d0c1c3dcf66f78d677fd647e4a020219"
+    },
+    "image": "im-PsqqhgIHAL7yqBT2xVLHeK",
+    "attention_aot_sha256": "cff0578dd97a56327643f07628943bbc1eca2d25c105edfc1698833bf47d6a24",
+    "source_audit": {
+      "artifacts": {
+        "source_audit012": "raw/v0522-qualification/source-audit012.json",
+        "source_filter_audit013": "raw/v0522-qualification/source-filter-audit013.json"
+      },
+      "file_inventory_matches": 6918,
+      "shipped_file_count": 6915,
+      "shipped_source_hash_matches": true,
+      "mismatch_cause": "Local nested cutlass/.git pointer was included by the helper but is omitted from Docker; no shipped source differences.",
+      "cpu_failures_retained": [
+        "011: CLI --image interpreted Modal image ID as registry reference; no GPU",
+        "012: file audit completed and persisted, then unnecessary SDK commit lacked sandbox credentials; 013 succeeded without that call"
+      ],
+      "fix_commit": "25c6be9",
+      "local_cpu_tests": 67,
+      "local_cpu_seconds": 59.368,
+      "independent_review": "No findings; excludes exact .git path components, not .gitmodules/.gitignore/.github or CUDA sources",
+      "model_cache": {
+        "revision": "7872f01b1d1fe23eabc4c98b48bffcef5a386062",
+        "shards": 48,
+        "weight_bytes": 166886535336,
+        "all_revision_receipts_verified": true,
+        "weights_downloaded": false
+      }
+    },
+    "diagnostics": [
+      {
+        "attempt": 14,
+        "run_id": "v0522-sanitizer-isolation-20261024-attempt014",
+        "app_id": "ap-DqgbMoTfQ03tuX6u3KoDHM",
+        "sandbox_id": "sb-bY8SyclsmEM7VhdjdkzptY",
+        "platform_cap_seconds": 600,
+        "work_cap_seconds": 540,
+        "gpu_function_seconds": 219.614894227,
+        "compute_reported_usd": "0.41566411",
+        "torch_roll_control": {
+          "tool": "synccheck",
+          "seconds": 3.9710951859999994,
+          "status": "passed",
+          "error_summary": 0,
+          "scope": "Standalone control, not a passing reconstruction/attention gate"
+        },
+        "direct_abc": {
+          "tool": "racecheck",
+          "seconds": 213.04886078700002,
+          "status": "failed",
+          "numerical_tests": 3,
+          "failed_tests": 0,
+          "skipped_tests": 0,
+          "tool_errors": 116,
+          "tool_warnings": 0,
+          "displayed_reports": 100,
+          "default_display_limit": 100,
+          "displayed_report_paths": {
+            "Native H64": 48,
+            "Native H128": 48,
+            "Packed H128": 4
+          },
+          "undisplayed_error_paths": "not assignable from this log"
+        },
+        "local_prefix": "raw/v0522-qualification/isolation014-results/v0522-sanitizer-isolation-20261024-attempt014/",
+        "volume_prefix": "microbench/v0522-sanitizer-isolation-20261024-attempt014/",
+        "artifact_sha256": {
+          "direct-racecheck.log": "01454b9e1b4c2ba7c8ef9594981a9e751e4028f3177ea213d9eaca7384c1ddd9",
+          "result.json": "5f80f4315cb053c2d2704991ea9d8e0eb93097d47466f3afeb1161ee90599faf",
+          "direct-racecheck.xml": "776d1c972680e36a30f53d821fc9e535d1fed5fe29a72b44b241b985716654a4",
+          "torch-roll-synccheck.log": "9d13f08c43b64f1d443416f90fc50e82d8ea230661d7f5b40626d9b6c669ad3a"
+        }
+      },
+      {
+        "attempt": 15,
+        "run_id": "v0522-sanitizer-isolation-20261024-attempt015",
+        "app_id": "ap-V0AcmcQdaNtt74wt7ajmWi",
+        "sandbox_id": "sb-Whv9RCbB1cDAdef9Zx4qyM",
+        "platform_cap_seconds": 300,
+        "work_cap_seconds": 240,
+        "gpu_function_seconds": 183.585927944,
+        "compute_reported_usd": "0.33841735",
+        "direct_abc": {
+          "tool": "synccheck",
+          "seconds": 79.087633361,
+          "status": "failed",
+          "error_summary": 5664,
+          "error_kind": "Divergent thread(s) in block",
+          "reported_kernel": "Native V4 H64",
+          "target_aborted": true,
+          "junit_present": false,
+          "completed_test_coverage": "not established; do not claim all three executed",
+          "representative_pc": "0x1ea0",
+          "sass_instruction": "BAR.SYNC.DEFER_BLOCKING 0xa, 0x100"
+        },
+        "packed64_graph": {
+          "tool": "racecheck",
+          "seconds": 101.702868984,
+          "status": "passed",
+          "numerical_tests": 1,
+          "failed_tests": 0,
+          "skipped_tests": 0,
+          "hazards": 0,
+          "tool_errors": 0,
+          "tool_warnings": 0,
+          "print_limit": 0,
+          "scope": "Only existing Direct graph case [8-64], not full core qualification"
+        },
+        "local_prefix": "raw/v0522-qualification/isolation015-results/v0522-sanitizer-isolation-20261024-attempt015/",
+        "volume_prefix": "microbench/v0522-sanitizer-isolation-20261024-attempt015/",
+        "artifact_sha256": {
+          "direct-synccheck.log": "279d2f1b48242c88e6a115614a627ba7af4d16e7326f9b99053f0ad4634fc9a8",
+          "packed64-racecheck.log": "7d46c5efa575a9fa9b21f2edcebc050978e47c8b93ec909d557f36ee6e4129bd",
+          "result.json": "0b818c89b48750059907e3b856231c93b577726e2fb963668d2c4004bb890c3a",
+          "packed64-racecheck.xml": "46f5c0f0129f5df29cf0dd2691efe3512912c34127b4b064e426c706aae1ad3f"
+        }
+      }
+    ],
+    "interpretation": {
+      "timeout_replaced_by_completed_failures": true,
+      "modern_race_objects": "Aliased shared-memory KV/output union; not simply repeats of old bar_q/sScale report pairs",
+      "standalone_roll_failure": false,
+      "synchronization_contract": "CTA-aligned named barriers occur in partial-CTA divergent consumer branches; confirmed Native H64 synccheck PC maps to 256-consumer barrier.",
+      "proposed_candidate": [
+        "Unaligned 256-consumer named barriers",
+        "Explicit unaligned full-CTA rendezvous for Native H64 (384 threads); preserve existing Packed H64 512-thread handoff",
+        "Release/acquire cluster handoff for H128"
+      ],
+      "candidate_applied": false,
+      "candidate_gpu_tested": false,
+      "native_control_changed": false,
+      "limitation": "Source contract and instrumented failures justify an isolated A/B, but do not establish that the proposed changes resolve every hazard or that observed normal numerical passes imply race safety.",
+      "reference": "https://docs.nvidia.com/cuda/archive/13.0.0/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar"
+    },
+    "execution": {
+      "compute_total_reported_usd": "5.98558599",
+      "billing_lag_possible": true,
+      "all_diagnostic_containers_stopped": true,
+      "new_h100_platform_caps_seconds": 900,
+      "new_h100_function_seconds": 403.200822171,
+      "full_model_loads": 0,
+      "full_model_verification_implemented": false,
+      "source_forks_changed": false,
+      "pushed": false
+    },
+    "decision": "No promotion or TP4 launch. Await requested authority for a minimal Native barrier correction, preserve original Native reference and test candidate A/B before rerunning complete core gates."
+  }
+}

@@ -6,7 +6,8 @@ This repository develops Remnant: training-free sparsification and persistent
 storage of pretrained models' compressed attention states. DeepSeek-V4-Flash-0731
 is the current integration model. The parent repository contains experiment
 records, serving scripts, Modal runners, and the report; production runtime and
-kernel code live in two independent Git submodules.
+kernel code live in two fork repositories, checked out as independently pinned
+v0.5.18 and v0.5.22 integration pairs.
 
 ## Where to work
 
@@ -14,6 +15,7 @@ kernel code live in two independent Git submodules.
 |---|---|
 | SGLang runtime, packing, allocator, and dispatch | `third_party/sglang-v0.5.18/` |
 | FlashMLA direct decode kernel | `third_party/flashmla-v0.5.18/` |
+| Explicit v0.5.22 integration pair | `third_party/sglang-v0.5.22/`, `third_party/flashmla-v0.5.22/` |
 | Fork integration and file map | `third_party/README.md` |
 | Fork integration history | `third_party/CHANGELOG.md` |
 | Local serving and evaluation | `scripts/local/` |
@@ -39,7 +41,10 @@ disagrees with them. Do not treat a recorded branch head as the current checkout
   be safely separated, ask before committing. Report the commit; do not push
   unless explicitly requested.
 - The established branches are parent `remnant`, SGLang `remnant/v0.5.18`, and
-  FlashMLA `remnant/flashmla-v0518`. Do not develop on `main` or switch branches
+  FlashMLA `remnant/flashmla-v0518`. This isolated integration uses parent
+  `codex/sglang-v0.5.22` with fork branches `remnant/v0.5.22` and
+  `remnant/flashmla-v0522`. Select the matching pair explicitly with
+  `REMNANT_INTEGRATION=v0.5.22`; unset it for v0.5.18. Do not develop on `main` or switch branches
   over dirty work. `origin/...` names are remote references, not local branches.
 - Use the checked-out forks in `third_party/` as the default source for edits and
   builds. Do not substitute a GitHub commit, fetch a newer upstream version, or
@@ -229,6 +234,12 @@ of existing files without a scoped request.
 Reuse existing fixtures, references, and runners instead of creating replacement
 validity or benchmark harnesses. Select checks proportional to the requested
 change; preserve independent references and established tolerances.
+
+The entry points below describe the default v0.5.18 pair. The v0.5.22 pair uses
+the corresponding versioned checkout and its adapted upstream interfaces; see
+`third_party/README.md`. Its unchanged fork sources have passed core model-free
+numerical, allocation and sanitizer qualification. HiCache GPU, full-model and
+serving validation remain pending. Reorganized parent packaging has not been rebuilt.
 
 | Purpose | Existing entry point |
 |---|---|
