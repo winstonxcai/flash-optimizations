@@ -2,6 +2,7 @@
 
 Author: Winston Cai.
 
+    modal run scripts/modal/kernels.py::prepare_kernels --model-family glm53
     modal run scripts/modal/kernels.py::validate_kernels --run-id <unique-id>
     modal run scripts/modal/kernels.py::benchmark_kernels --run-id <unique-id>
     modal run scripts/modal/kernels.py::profile_kernels --run-id <unique-id> --cases <cases>
@@ -672,6 +673,16 @@ _GPU = {
     "scaledown_window": 2,
     "volumes": {str(RESULTS_ROOT): results_volume, "/triton-cache": triton_volume},
 }
+
+
+@app.local_entrypoint()
+def prepare_kernels(model_family: str = "dsv4") -> None:
+    """Prepare the selected image on CPU; never call a GPU Function."""
+    if model_family != MODEL_FAMILY:
+        raise ValueError("--model-family must match REMNANT_MODEL_FAMILY")
+    image = kernel_image.build(app)
+    print(json.dumps({"model_family": MODEL_FAMILY, "image_id": image.object_id,
+                      "source_identities": SOURCE_IDENTITIES}, sort_keys=True))
 
 
 # Public workflows.
