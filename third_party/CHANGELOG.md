@@ -246,5 +246,13 @@ SGLang: 7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7; FlashMLA remains
 in the parent tree and canonical GLM qualification JSON. Adds the separate raw
 320-byte codec, producer/pool lifecycle integration, bounded Adapter and TileLang
 Direct, startup guards and model-free GLM fixtures. Local startup contracts pass;
-CPU SM90 compilation and real H100 qualification are pending. This is an opt-in
-candidate, not a measured serving-capacity or quality result.
+CPU SM90 compilation passed. Tested parent `5f4754e3015d2268df4b39175ce4622cd305589d`,
+SGLang `9e42a0d8886dd93944dc6b47ef3bffef4e033b5a`, FlashMLA unchanged
+`3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8`: 90 real-H100 numerical tests and
+11 synccheck tests passed with zero reported synchronization errors. Racecheck
+timed out; memcheck and independent fresh-context review remain unverified.
+Physical Direct storage saves 277,364,736 bytes/rank at 131,072 token slots with
+matched KDA reservation. The 54.39% capacity ratio remains a projection.
+See `benchmarks/microbench/glm53-packed/qualification.json` for exact commands,
+source/artifact identities, costs and failed attempts. Retain as an opt-in
+candidate; rollback is Native or the starting SGLang pin. No serving/quality claim.
