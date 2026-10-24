@@ -12,13 +12,17 @@ set -u
 # ------------------------------ MACHINE CONFIG -------------------------------
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 HOST_REPO=${HOST_REPO:-$(cd -- "$SCRIPT_DIR/../.." && pwd)}
-REMNANT_INTEGRATION=${REMNANT_INTEGRATION:-v0.5.18}
+
+# Build/runtime profile: select one matching source pair, recipe and base image.
+# Set here for local scripts, or export for both local and Modal commands.
+#   REMNANT_INTEGRATION=v0.5.22 bash scripts/local/container.sh rebuild
+REMNANT_INTEGRATION=${REMNANT_INTEGRATION:-v0.5.18}  # v0.5.18 | v0.5.22
 case "$REMNANT_INTEGRATION" in
   v0.5.18)
     SGLANG_SOURCE_RELATIVE=third_party/sglang-v0.5.18
     FLASHMLA_SOURCE_RELATIVE=third_party/flashmla-v0.5.18
     REMNANT_BASE_IMAGE=lmsysorg/sglang:v0.5.18-cu130
-    REMNANT_DOCKERFILE=Dockerfile
+    REMNANT_DOCKERFILE=Dockerfile.v0.5.18
     CONTAINER=${CONTAINER:-remnant} ;;
   v0.5.22)
     SGLANG_SOURCE_RELATIVE=third_party/sglang-v0.5.22
@@ -29,6 +33,7 @@ case "$REMNANT_INTEGRATION" in
   *) echo "Unsupported REMNANT_INTEGRATION=$REMNANT_INTEGRATION" >&2; exit 2 ;;
 esac
 export REMNANT_INTEGRATION
+IMAGE=${IMAGE:-remnant:$REMNANT_INTEGRATION}  # Optional local image-tag override.
 
 # The selected Dockerfile installs the reviewed fork at a stable container path.
 # Native and Packed serving import that installation, not a host checkout.

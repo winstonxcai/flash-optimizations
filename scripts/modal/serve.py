@@ -9,7 +9,7 @@ Commands (each remote run requires budget authorization):
 
 Default benchmark: TP4/4xH100, Native, 32k input, 2048 output, concurrency 8;
 60-minute work limit (not an ETA). Uses the same Bash launcher as local H100s.
-Images use Dockerfile (v0.5.18) or Dockerfile.v0.5.22, selected by
+Images use Dockerfile.v0.5.18 or Dockerfile.v0.5.22, selected by
 REMNANT_INTEGRATION. REMNANT_COMPILED_IMAGE reuses a known
 image only after CPU source verification, before overlaying Python updates.
 Model-free work: kernels.py. Capture: scripts/local/capture-latent.sh.
@@ -98,7 +98,8 @@ def _verify_compiled_sources(expected: str) -> None:
     )
     if actual != expected:
         raise RuntimeError(
-            "Compiled source changed; rebuild Dockerfile instead of reusing this image"
+            "Compiled source changed; rebuild the selected Dockerfile "
+            "instead of reusing this image"
         )
 
 

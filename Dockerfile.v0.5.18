@@ -2,9 +2,9 @@
 # Author: Winston Cai.
 #
 # Build from the repository root:
-#   docker build -t remnant:v0.5.18 -f Dockerfile .
+#   docker build -t remnant:v0.5.18 -f Dockerfile.v0.5.18 .
 #
-# This is the single server image for local and Modal runs. The model weights
+# This is the v0.5.18 server image for local and Modal runs. The model weights
 # remain mounted at runtime; the checked-out fork sources are copied from the
 # third_party submodules in this repository.
 ARG REMNANT_BASE_IMAGE=lmsysorg/sglang:v0.5.18-cu130

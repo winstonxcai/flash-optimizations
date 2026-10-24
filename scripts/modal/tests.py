@@ -90,7 +90,7 @@ class SourcePreflightTests(unittest.TestCase):
     def test_profiles_select_matching_dockerfiles(self):
         from modal._utils.docker_utils import extract_copy_command_patterns
 
-        for version, filename in (("v0.5.18", "Dockerfile"),
+        for version, filename in (("v0.5.18", "Dockerfile.v0.5.18"),
                                   ("v0.5.22", "Dockerfile.v0.5.22")):
             with self.subTest(version=version):
                 profile = integration_profile(version)
@@ -1098,7 +1098,7 @@ with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')
      patch.object(modal.Function, 'spawn', side_effect=AssertionError('launch')), \\
      patch.object(modal.Image, 'from_dockerfile', wraps=modal.Image.from_dockerfile) as recipe:
     from scripts.modal import serve, kernels
-    expected = 'Dockerfile.v0.5.22' if serve.INTEGRATION['version'] == 'v0.5.22' else 'Dockerfile'
+    expected = 'Dockerfile.' + serve.INTEGRATION['version']
     assert Path(recipe.call_args.args[0]).name == expected
     assert recipe.call_args.kwargs['build_args']['REMNANT_INTEGRATION'] == serve.INTEGRATION['version']
     assert 'benchmark_serving' in serve.app.registered_functions
@@ -1165,15 +1165,16 @@ class LocalScriptTests(unittest.TestCase):
             profile = integration_profile(version)
             environment = dict(os.environ, REMNANT_INTEGRATION=version)
             environment.pop("CONTAINER", None)
+            environment.pop("IMAGE", None)
             with self.subTest(version=version):
                 result = subprocess.run(
                     ["bash", "-c",
-                     '. "$1"; printf "%s\\n" "$REMNANT_DOCKERFILE" "$REMNANT_BASE_IMAGE" "$CONTAINER"',
+                     '. "$1"; printf "%s\\n" "$REMNANT_DOCKERFILE" "$REMNANT_BASE_IMAGE" "$CONTAINER" "$IMAGE"',
                      "profile-check", str(kernels.REPO_ROOT / "scripts/local/env.sh")],
                     env=environment, capture_output=True, text=True, check=True, timeout=10,
                 )
                 self.assertEqual(result.stdout.splitlines(),
-                                 [profile["dockerfile"], profile["base_image"], profile["container"]])
+                                 [profile["dockerfile"], profile["base_image"], profile["container"], f"remnant:{version}"])
 
     def test_raw_jsonl_prepares_for_existing_session_replay(self):
         from scripts.local.business_replay import runner

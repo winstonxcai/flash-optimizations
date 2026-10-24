@@ -155,12 +155,15 @@ Update outside running GPUQ jobs. Preserve dirty fork work before synchronizing:
 ```bash
 git pull --ff-only origin remnant
 git submodule update --init --recursive --checkout
+export REMNANT_INTEGRATION=v0.5.18  # or v0.5.22
 bash scripts/local/container.sh rebuild
 ```
 
-Rebuild after Dockerfile or fork source changes. The tag stays
-`remnant:v0.5.18`; successful rebuilds replace the `remnant` container and stop
-its servers. Host script changes need only a pull. To start an existing image:
+`scripts/local/env.sh` selects `Dockerfile.v0.5.18` or `Dockerfile.v0.5.22`
+using `REMNANT_INTEGRATION` (default v0.5.18). It also defines the matching
+`IMAGE` tag, which may be overridden. Rebuild after recipe or fork source changes;
+successful rebuilds replace the selected container and stop its servers.
+Host script changes need only a pull. To start an existing image:
 
 ```bash
 bash scripts/local/container.sh up

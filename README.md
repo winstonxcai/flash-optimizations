@@ -71,6 +71,7 @@ and a local 0731 checkpoint. On shared nodes, reserve four GPUs through GPUQ fir
 select unused GPU IDs and ports. The container does not automatically start a server.
 
 ```bash
+export REMNANT_INTEGRATION=v0.5.18      # v0.5.18 | v0.5.22; selects build and runtime
 export MODEL_PATH=/absolute/path/to/DeepSeek-V4-Flash-0731
 export GPUS=0,1,2,3 PORT=30212 MASTER_PORT=29638
 export MODE=native                    # native | triton | kernel
@@ -83,6 +84,9 @@ bash scripts/local/serve.sh "$MODE" stop  # also stop after a failed benchmark
 ```
 
 The benchmark client uses the running server; it never starts or stops one.
+Build settings live in `scripts/local/env.sh`: the integration selects
+`Dockerfile.v0.5.18` or `Dockerfile.v0.5.22` and a matching image tag. Override
+`IMAGE` only to choose another local tag, not another integration's binaries.
 Random-text serving uses C warm-up requests and 3C measured requests, flushing the
 prefix cache before each phase. C limits simultaneous requests, not total work;
 3C requests are one run, not three independent runs. It may download ShareGPT

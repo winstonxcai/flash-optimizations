@@ -21,7 +21,6 @@ DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 . "$DIR/env.sh"
 
 ACTION=${1:-up}
-IMAGE=${IMAGE:-remnant:$REMNANT_INTEGRATION}
 DOCKERFILE="$HOST_REPO/$REMNANT_DOCKERFILE"
 
 die () { echo "FATAL: $*" >&2; exit 1; }

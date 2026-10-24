@@ -34,7 +34,7 @@ def integration_profile(value: str | None = None) -> dict[str, str]:
             "lmsysorg/sglang:v0.5.22" if newer else "lmsysorg/sglang:v0.5.18-cu130"
         ),
         "container": "remnant-v0522" if newer else "remnant",
-        "dockerfile": "Dockerfile.v0.5.22" if newer else "Dockerfile",
+        "dockerfile": f"Dockerfile.{version}",
     }
 
 

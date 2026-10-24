@@ -13,7 +13,12 @@ records rather than this milestone log.
 
 ## Unreleased
 
-No pending integration milestones recorded.
+- Both root build recipes are version-named (`Dockerfile.v0.5.18` and
+  `Dockerfile.v0.5.22`). Local environment setup owns the integration/image-tag
+  settings; local and Modal launchers select the matching recipe through
+  `REMNANT_INTEGRATION`, retaining v0.5.18 as default. Fork pins are unchanged;
+  70 CPU launcher/source tests pass under each profile. This packaging change
+  has no image-build or GPU qualification.
 
 ## 2026-10-24 — Isolated v0.5.22 integration and versioned paths
 

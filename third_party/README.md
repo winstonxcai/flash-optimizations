@@ -92,7 +92,7 @@ REMNANT_INTEGRATION=v0.5.22 python -m unittest scripts.modal.tests
 ```
 
 Local and Modal launchers resolve the same source pair and base image.
-v0.5.18 uses `Dockerfile`, image `remnant:v0.5.18`, container `remnant`;
+v0.5.18 uses `Dockerfile.v0.5.18`, image `remnant:v0.5.18`, container `remnant`;
 v0.5.22 uses `Dockerfile.v0.5.22`, image `remnant:v0.5.22`, container
 `remnant-v0522`. Container-internal paths stay unchanged. Capture requires matching
 serving-image source/profile labels for either version. Never mix compiled pairs.
