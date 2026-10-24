@@ -9,7 +9,7 @@
   "budget": {
     "authorized_usd": 15,
     "routine_cutoff_usd": 12,
-    "conservative_accrued_usd": 0.6824427474110267,
+    "conservative_accrued_usd": 0.8113763415351372,
     "h100_seconds": 0,
     "accounts": {
       "caiw": {
@@ -188,6 +188,38 @@
         ],
         "compiled_base_image": "im-BSsxuyx2ZEi72yTMnj8o7K",
         "wall_seconds": 871.0766502500046
+      },
+      {
+        "status": "failed",
+        "started_at": "2026-10-24T16:01:50.969376+00:00",
+        "compute_before": {
+          "metered_cost": "26.82332053",
+          "billed_cost": "0E-8",
+          "adjustments": {
+            "credits": "-0.28000000",
+            "network_egress_allowance": "-0.00002119",
+            "reservation_adjustment": "-0E-8",
+            "free_storage": "-26.54329934",
+            "plan_cost": "0E-8"
+          },
+          "metered_cost_breakdown": {
+            "ephemeral_apps": "0.22738484",
+            "volumes": "26.54329934",
+            "network_egress": "0.00002119",
+            "deployed_apps": "0.04856797",
+            "llm_tokens": "0E-8"
+          }
+        },
+        "argv": [
+          "/Users/poohthewinnie/.local/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::prepare_kernels",
+          "--model-family",
+          "glm53"
+        ],
+        "compiled_base_image": "im-lAnmqYqOVFuZw6wg8Qvevs",
+        "error": "CalledProcessError(1, ['/Users/poohthewinnie/.local/bin/modal', 'run', 'scripts/modal/kernels.py::prepare_kernels', '--model-family', 'glm53'])",
+        "wall_seconds": 365.8267172499982
       }
     ]
   },
