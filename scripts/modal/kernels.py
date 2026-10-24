@@ -45,7 +45,9 @@ from scripts.sources import check_sources, integration_profile
 
 INTEGRATION = integration_profile()
 VALIDATION_SUITE = os.environ.get("REMNANT_VALIDATION_SUITE", "v4")
-if VALIDATION_SUITE not in ("v4", "v41-fp4") or (VALIDATION_SUITE == "v41-fp4" and INTEGRATION["version"] != "v0.5.22"):
+if VALIDATION_SUITE not in ("v4", "v41-fp4") or (
+    VALIDATION_SUITE == "v41-fp4" and INTEGRATION["version"] != "v0.5.22"
+):
     raise ValueError("REMNANT_VALIDATION_SUITE must be v4, or v41-fp4 with v0.5.22")
 
 REMOTE_REPO = Path("/opt/flash-optimizations")
@@ -176,12 +178,25 @@ if VALIDATION_SUITE == "v41-fp4":
     fp4_tests = TEST_ROOT + "test_remnant_fp4.py"
     VALIDATION_TESTS = (
         fp4_tests,
-        TEST_MODULES["flashmla_direct"] + "::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
-        TEST_MODULES["flashmla_direct"] + "::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]",
+        TEST_MODULES["flashmla_direct"]
+        + "::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+        TEST_MODULES["flashmla_direct"]
+        + "::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]",
     )
-    CPU_TESTS = (fp4_tests + "::test_fp4_startup_contract", TEST_MODULES["cache_format"])
-    SANITIZER_TESTS = tuple(fp4_tests + "::" + name for name in (
-        "test_fp4_store_and_reader", "test_fp4_direct", "test_fp4_graph_and_stream", "test_fp4_compressor_boundary"))
+    CPU_TESTS = (
+        fp4_tests + "::test_fp4_startup_contract",
+        fp4_tests + "::test_fp4_backend_dispatch",
+        TEST_MODULES["cache_format"],
+    )
+    SANITIZER_TESTS = tuple(
+        fp4_tests + "::" + name
+        for name in (
+            "test_fp4_store_and_reader",
+            "test_fp4_direct",
+            "test_fp4_graph_and_stream",
+            "test_fp4_compressor_boundary",
+        )
+    )
 
 NCU_SECTIONS = [
     "SpeedOfLight",
@@ -452,7 +467,12 @@ for p in (128,256):
         triton.compile(src,target=GPUTarget('cuda',90,32),options={'num_warps':4})
 print('FP4 CPU SM90 precompilation passed')
 """
-        _run_command([sys.executable,"-c",code],build/"fp4-precompile.log",deadline,environment=cpu_environment)
+        _run_command(
+            [sys.executable, "-c", code],
+            build / "fp4-precompile.log",
+            deadline,
+            environment=cpu_environment,
+        )
     # 4. Preflight imports, coverage and profiler availability on CPU.
     _run_command(
         _benchmark_command("--check-imports"),
@@ -497,7 +517,11 @@ print('FP4 CPU SM90 precompilation passed')
     # Profiler tools are not a correctness gate for the serving-image qualification.
     manifest = {
         "validation_suite": VALIDATION_SUITE,
-        "coverage": {"validation": VALIDATION_TESTS, "cpu": CPU_TESTS, "sanitizer": SANITIZER_TESTS},
+        "coverage": {
+            "validation": VALIDATION_TESTS,
+            "cpu": CPU_TESTS,
+            "sanitizer": SANITIZER_TESTS,
+        },
         "integration": INTEGRATION["version"],
         "base_image": INTEGRATION["base_image"],
         "sources": sources,
@@ -751,7 +775,10 @@ def validate_kernels(
     ):
         environment = dict(os.environ)
         record["validation_suite"] = VALIDATION_SUITE
-        record["coverage"] = {"validation": VALIDATION_TESTS, "sanitizer": SANITIZER_TESTS}
+        record["coverage"] = {
+            "validation": VALIDATION_TESTS,
+            "sanitizer": SANITIZER_TESTS,
+        }
         record["sanitizer"] = sanitizer
         if sanitizer:
             record["sanitizer_results"] = {
@@ -862,7 +889,11 @@ def validate_kernels(
             allocation = json.loads((root / "allocation.json").read_text())
             if allocation["status"] != "passed" or {
                 r["mode"] for r in allocation["modes"]
-            } != ({"Native", "Packed"} if VALIDATION_SUITE == "v41-fp4" else {"native", "triton", "kernel"}):
+            } != (
+                {"Native", "Packed"}
+                if VALIDATION_SUITE == "v41-fp4"
+                else {"native", "triton", "kernel"}
+            ):
                 raise RuntimeError("Incomplete real-allocation coverage")
             record["allocation"] = allocation
         if sanitizer:

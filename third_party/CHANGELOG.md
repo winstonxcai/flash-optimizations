@@ -13,6 +13,17 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Experimental V4.1 FP4 integration on parent `f4f21a8` (implementation snapshot
+  `97573d2`), based on `9419d0e`. v0.5.22 pins: SGLang `6ad4413fafa6` /
+  FlashMLA `0e34a09a4f5d`; v0.5.18 and CUTLASS pins unchanged. Adds opt-in
+  Native 288-byte/Packed 224-byte storage, deterministic post-quantization
+  256-coordinate selection, SM90 mixed-SWA Direct dispatch, reconstruction,
+  reserved-page accounting and scoped model-free Modal fixtures. Fresh-context
+  source review found no runtime defect; fixture gaps were addressed separately.
+  CPU build/preflight is in progress. No GPU/sanitizer pass, model-quality,
+  performance or serving claim. Outcome/budget/source receipts live in the
+  [experiment record](../benchmarks/microbench/v41-packed-fp4/README.md).
+
 - Reconciled GitHub main `ffb11cb` in parent merge `814aaa8`, retaining its
   v0.5.18 SGLang `6687a7c36c0c`, FlashMLA `97f3faa58450`, frontend preparation/
   diagnostics and HiCache launcher options. The v0.5.22 pair remains SGLang

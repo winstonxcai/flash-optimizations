@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "status": "unqualified",
+  "experiment": "V4.1 Packed FP4 SM90 engineering validation",
+  "model_load": false,
+  "budget": {
+    "authorized_usd": 15,
+    "reserve_usd": 2,
+    "max_projected_work_usd": 13,
+    "account": "wpooh1579",
+    "baseline_compute_usd": 18.51013772,
+    "latest_compute_usd": 18.54455302,
+    "incremental_compute_usd": 0.0344153,
+    "billing_lag": true,
+    "cpu_core_hour_usd": 0.0473,
+    "memory_gib_hour_usd": 0.008,
+    "h100_hour_usd": 3.95
+  },
+  "attempts": [
+    {
+      "id": "attempt001",
+      "account": "poohthewinniechurchill",
+      "status": "rejected_before_build",
+      "reason": "workspace spend limit",
+      "gpu_allocated": false
+    },
+    {
+      "id": "attempt002",
+      "account": "wpooh1579",
+      "app_id": "ap-HbGInp86LfsFYh4OlB3qy9",
+      "status": "aborted_before_compilation",
+      "reason": "source audit identified empty legacy pool handling",
+      "gpu_allocated": false,
+      "source_parent": "97573d2"
+    },
+    {
+      "id": "attempt003",
+      "account": "wpooh1579",
+      "app_id": "ap-cFImi5E8eq4FX9EP0f2KIz",
+      "status": "assembly_failed",
+      "reason": "runner changed during build; rejected by Modal",
+      "gpu_allocated": false,
+      "source_parent": "f4f21a869ea6c5fae20a2b5a30823d716fe8fc70",
+      "sglang": "f2ba3a07cab55d36b9aac761f86b4e89b580ab87",
+      "flashmla": "4ff78bc9a9c5f87f5a3fc7efa2fd5f2354915086",
+      "compiled_base_image": "im-XUR1C0KC5J1HIUVyDM3i34",
+      "cpu_native_compilation": "passed",
+      "cpu_preflight": "not_run",
+      "gpu_tests": "not_run",
+      "sanitizers": "not_run"
+    }
+  ],
+  "review": {
+    "kind": "fresh-context read-only source review",
+    "runtime_findings": [],
+    "fixture_findings": [
+      "add whole-pool/disjoint ownership checks",
+      "cover real C2 pending state and consumer dispatch",
+      "empty C2 scores use negative infinity"
+    ],
+    "fixture_findings_addressed": true,
+    "executable_validation": false
+  },
+  "limitations": [
+    "no quality evaluation",
+    "no serving or full-model execution",
+    "no performance measurement",
+    "all executable gates remain pending"
+  ]
+}

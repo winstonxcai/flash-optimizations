@@ -52,6 +52,34 @@ The default GPU worker (8 cores, 64 GiB) costs up to $4.8404/hour.
 
 Runtime accounting now deducts the physical reserved SWA/main/indexer pages for
 both explicit FP4 modes. The allocation fixture checks actual pool storage plus
-a fixed BF16 prefill workspace against a 1-GiB budget; this is not serving/SLO
+a fixed BF16 prefill workspace and the measured complete Direct-call temporary/output
+peak against a 1-GiB budget; this is not serving/SLO
 capacity. Its metadata is synthetic and weights are never downloaded.
 Rollback: select auto or restore baseline fork pins. The new modes remain opt-in.
+
+
+Attempt003: app `ap-cFImi5E8eq4FX9EP0f2KIz`, parent `f4f21a8`, SGLang
+`f2ba3a07`, FlashMLA `4ff78bc`. CPU C++/CUDA compilation passed for Native/Packed
+H64/H128 and existing kernels, producing base image `im-XUR1C0KC5J1HIUVyDM3i34`.
+Initialization then failed because the local runner changed during assembly;
+Modal rejected the changed file before CPU preflight/H100 allocation. Preserve
+that failed attempt; freeze submitted files for subsequent builds.
+
+Independent fresh-context source review found no confirmed runtime defect.
+Its fixture findings are addressed: the reference oracle now constructs bitmap
+bytes independently in a vectorized CPU path; allocation checks reconcile the
+whole pool with disjoint storage ownership; real C2 split/in-batch state and
+Native/Packed consumer dispatch are covered. The empty C2 score sentinel is
+`-inf`, not zero. See `qualification.json` for canonical attempt receipts.
+
+Run the frozen snapshot from this worktree:
+
+```bash
+MODAL_PROFILE=wpooh1579 REMNANT_INTEGRATION=v0.5.22 \
+REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_VALIDATION_TIMEOUT_S=1800 \
+modal run scripts/modal/kernels.py::validate_kernels \
+  --run-id v41-fp4-20261024-attempt004 --sanitizer --max-seconds 1600
+```
+
+All executable validation is on Modal. Local work is source preparation and
+formatting only. No changes to submitted files while a build/run depends on them.
