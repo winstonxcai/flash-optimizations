@@ -9,8 +9,8 @@
   "budget": {
     "authorized_usd": 15,
     "routine_cutoff_usd": 12,
-    "conservative_accrued_usd": 0.8113763415351372,
-    "h100_seconds": 0,
+    "conservative_accrued_usd": 1.211113351175804,
+    "h100_seconds": 179.53785545799474,
     "accounts": {
       "caiw": {
         "preparation_preflight": [
@@ -220,6 +220,81 @@
         "compiled_base_image": "im-lAnmqYqOVFuZw6wg8Qvevs",
         "error": "CalledProcessError(1, ['/Users/poohthewinnie/.local/bin/modal', 'run', 'scripts/modal/kernels.py::prepare_kernels', '--model-family', 'glm53'])",
         "wall_seconds": 365.8267172499982
+      },
+      {
+        "status": "passed",
+        "started_at": "2026-10-24T16:15:34.624471+00:00",
+        "compute_before": {
+          "metered_cost": "26.84332179",
+          "billed_cost": "0E-8",
+          "adjustments": {
+            "plan_cost": "0E-8",
+            "credits": "-0.30000000",
+            "free_storage": "-26.54329934",
+            "network_egress_allowance": "-0.00002245",
+            "reservation_adjustment": "-0E-8"
+          },
+          "metered_cost_breakdown": {
+            "network_egress": "0.00002245",
+            "llm_tokens": "0E-8",
+            "ephemeral_apps": "0.25104181",
+            "deployed_apps": "0.04856797",
+            "volumes": "26.54329934"
+          }
+        },
+        "argv": [
+          "/Users/poohthewinnie/.local/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::prepare_kernels",
+          "--model-family",
+          "glm53"
+        ],
+        "compiled_base_image": "im-lAnmqYqOVFuZw6wg8Qvevs",
+        "wall_seconds": 512.2544549160011
+      }
+    ],
+    "h100_allocations": [
+      {
+        "status": "failed",
+        "run_id": "glm53-numerical-20261024T1624Z",
+        "kind": "numerical",
+        "started_at": "2026-10-24T16:24:44.191672+00:00",
+        "compute_before": {
+          "metered_cost": "26.93332279",
+          "billed_cost": "0E-8",
+          "adjustments": {
+            "network_egress_allowance": "-0.00002345",
+            "plan_cost": "0E-8",
+            "free_storage": "-26.54329934",
+            "credits": "-0.39000000",
+            "reservation_adjustment": "-0E-8"
+          },
+          "metered_cost_breakdown": {
+            "ephemeral_apps": "0.33651696",
+            "network_egress": "0.00002345",
+            "llm_tokens": "0E-8",
+            "deployed_apps": "0.04856797",
+            "volumes": "26.54329934"
+          }
+        },
+        "argv": [
+          "/Users/poohthewinnie/.local/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::validate_kernels",
+          "--model-family",
+          "glm53",
+          "--stage",
+          "numerical",
+          "--run-id",
+          "glm53-numerical-20261024T1624Z",
+          "--max-seconds",
+          "2400"
+        ],
+        "worker_hour_rate_usd": 4.3952,
+        "maximum_h100_seconds": 2700,
+        "image_id": "im-FCIjtGo9a7Z9hNW3o32leM",
+        "error": "CalledProcessError(1, ['/Users/poohthewinnie/.local/bin/modal', 'run', 'scripts/modal/kernels.py::validate_kernels', '--model-family', 'glm53', '--stage', 'numerical', '--run-id', 'glm53-numerical-20261024T1624Z', '--max-seconds', '2400'])",
+        "conservative_wall_seconds": 179.53785545799474
       }
     ]
   },

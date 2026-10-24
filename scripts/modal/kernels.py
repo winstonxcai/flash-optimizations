@@ -441,7 +441,7 @@ def _build_image() -> None:
             raise RuntimeError("Pinned GLM configuration content changed")
         Path("/opt/remnant-glm-config.json").write_bytes(payload)
         model_config = {"revision": revision, "sha256": digest, "url": url}
-        _run_command([sys.executable, "-c", f"import runpy; runpy.run_path({str(SGLANG_ROOT / GLM_TEST)!r})['test_allocator_accounting']()"],
+        _run_command([sys.executable, "-c", f"import runpy; tests=runpy.run_path({str(SGLANG_ROOT / GLM_TEST)!r}); tests['test_allocator_accounting'](); tests['test_compiled_launch_contract']()"],
                      build / "glm-allocator-cpu.log", deadline, environment=cpu_environment)
         _run_command([sys.executable, str(SGLANG_ROOT / GLM_TEST), "--compile-only"],
                      build / "glm-sm90-compile.log", deadline, environment=cpu_environment)
@@ -734,7 +734,7 @@ def benchmark_kernels(
         if prefill_reader == "fused":
             for tool in ("memcheck", "racecheck", "synccheck"):
                 prefix = ("compute-sanitizer", "--tool", tool, "--error-exitcode", "1")
-                _run_pytest(selected_tests if stage == "corrective" else SANITIZER_TESTS, root, tool, deadline, prefix=prefix)
+                _run_pytest(SANITIZER_TESTS, root, tool, deadline, prefix=prefix)
             record["sanitizers"] = ["memcheck", "racecheck", "synccheck"]
         options = (
             []
