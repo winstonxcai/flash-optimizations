@@ -1130,6 +1130,70 @@ with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')
 
 
 class LocalScriptTests(unittest.TestCase):
+    def test_container_preflight_uses_selected_argument_layout(self):
+        """Run the real prep action and shell checks; fake Docker only."""
+        with tempfile.TemporaryDirectory(prefix="remnant-container-prep-") as temporary:
+            root = Path(temporary)
+            tools = root / "bin"
+            tools.mkdir()
+            docker = tools / "docker"
+            docker.write_text(
+                f"#!{sys.executable}\n"
+                "import os, subprocess, sys\n"
+                "args = sys.argv[1:]\n"
+                "if args[:2] == ['container', 'inspect']:\n"
+                "    raise SystemExit(0)\n"
+                "if args[0] == 'inspect':\n"
+                "    print(os.environ['IMAGE_SOURCE_LABELS'])\n"
+                "    raise SystemExit(0)\n"
+                "assert args[:2] == ['exec', '-i'], args\n"
+                "assert args[3:6] == ['bash', '-s', '--'], args\n"
+                "raise SystemExit(subprocess.call(args[3:]))\n"
+            )
+            docker.chmod(0o755)
+            for version in ("v0.5.18", "v0.5.22"):
+                profile = integration_profile(version)
+                source = kernels.REPO_ROOT / profile["sglang"] / "python/sglang/srt"
+                installation = root / version
+                srt = installation / "python/sglang/srt"
+                srt.mkdir(parents=True)
+                (srt / "server_args.py").write_bytes((source / "server_args.py").read_bytes())
+                fields = srt / "server_args.py"
+                if version == "v0.5.22":
+                    fields = srt / "arg_groups/fields/model.py"
+                    fields.parent.mkdir(parents=True)
+                    fields.write_bytes((source / "arg_groups/fields/model.py").read_bytes())
+                pins = [subprocess.check_output(
+                    ["git", "-C", str(kernels.REPO_ROOT / profile[name]), "rev-parse", "HEAD"],
+                    text=True, timeout=10,
+                ).strip() for name in ("sglang", "flashmla")]
+                environment = dict(
+                    os.environ, REMNANT_INTEGRATION=version,
+                    HOST_REPO=str(kernels.REPO_ROOT), CONTAINER="fixture",
+                    SGLANG_ROOT_CT=str(installation),
+                    IMAGE_SOURCE_LABELS=" ".join([version, *pins]),
+                    PATH=f"{tools}:{Path(sys.executable).parent}:{os.environ['PATH']}",
+                )
+                def prep():
+                    return subprocess.run(
+                        ["bash", str(kernels.REPO_ROOT / "scripts/local/container.sh"), "prep"],
+                        env=environment, text=True, capture_output=True, timeout=30,
+                    )
+                with self.subTest(version=version):
+                    result = prep()
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertIn("production image ready", result.stdout)
+                    fields.write_text(fields.read_text().replace(
+                        "dsv4_c4_cache_implementation", "missing_implementation_flag"
+                    ))
+                    self.assertNotEqual(prep().returncode, 0)
+                    if version == "v0.5.22":
+                        # A stale legacy declaration cannot replace grouped fields.
+                        fields.unlink()
+                        with (srt / "server_args.py").open("a") as stream:
+                            stream.write("\ndsv4_c4_cache_implementation = 'kernel'\n")
+                        self.assertNotEqual(prep().returncode, 0)
+
     def test_capture_rejects_wrong_image_profile_before_gpu_checks(self):
         with tempfile.TemporaryDirectory(prefix="remnant-capture-image-") as temporary:
             root = Path(temporary)
@@ -1212,6 +1276,7 @@ class LocalScriptTests(unittest.TestCase):
                 "PATH": str(tools) + os.pathsep + os.environ["PATH"],
                 "HOST_REPO": str(root), "LOG_HOST": str(root / "logs"),
                 "DOCKER_CALLS": str(calls), "FRONTEND_DIAGNOSTICS": "0",
+                "DSV4_PREPARATION_WORKERS": "1",
                 "SGLANG_PY": "/fixture/selected-source/python",
             }
             script = kernels.REPO_ROOT / "scripts/local/serve.sh"
@@ -1234,8 +1299,9 @@ class LocalScriptTests(unittest.TestCase):
             invocation = json.loads(calls.read_text())
             self.assertIn("SGLANG_DSV4_ASYNC_PREPARATION=1", invocation)
             self.assertNotIn("-i", invocation)
-            self.assertIn("async def preflight", invocation[-2])
-            self.assertEqual(invocation[-1], environment["SGLANG_PY"])
+            self.assertIn("async def preflight", invocation[-3])
+            self.assertEqual(invocation[-2], environment["SGLANG_PY"])
+            self.assertEqual(invocation[-1], "1")
             calls.unlink()
             # Default-off does not import or activate the candidate preflight.
             result = subprocess.run(

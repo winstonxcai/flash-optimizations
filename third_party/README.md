@@ -111,12 +111,18 @@ HiCache qualification. `REMNANT_ALLOCATION_REPORT` selects the optional allocati
 JSON; constructor-based tests reconcile planes, padding/reserves, unchanged pools
 and workspaces at matched capacity.
 
-**Reorganization checks:** 70 local CPU launcher/source tests passed under each
+**Initial reorganization checks:** 70 local CPU launcher/source tests passed under each
 profile, including mocked image-build arguments, source/image rejection and
 preservation of the distinct default matrices. All 20 training integration tests
 passed; both versioned calibration runners load on CPU. Reproduce with
 `OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 python -m unittest training.tests.test_integration.TrainingIntegrationTests`.
 Syntax/import and exact recursive pin checks are separate from GPU checks.
+After reconciling main `ffb11cb` and fixing container preparation, **72 launcher/
+source tests per profile and 19 replay tests pass** in the existing local Torch
+environment. The new prep regression executes the actual shell checks with
+fake Docker against both source layouts and rejects missing/stale fields.
+The separate lightweight-launcher test's accidental Torch dependency remains
+unresolved; these results do not establish a Modal-only fresh-install check.
 The curated GPU receipts belong to
 parent runtime `e68f9c4` and image `im-vOlukc1AW0gozz9mlAmg1m`, not a new parent
 build. **No image was rebuilt and no GPU run was performed after reorganization.**

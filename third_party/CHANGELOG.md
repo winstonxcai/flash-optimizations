@@ -13,6 +13,16 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Reconciled GitHub main `ffb11cb` in parent merge `814aaa8`, retaining its
+  v0.5.18 SGLang `6687a7c36c0c`, FlashMLA `97f3faa58450`, frontend preparation/
+  diagnostics and HiCache launcher options. The v0.5.22 pair remains SGLang
+  `7856615f3fdf` / FlashMLA `3eb85944fd7d`; the qualified FlashMLA commit is now
+  published on `remnant/flashmla-v0522`. Historical qualification receipts are
+  unchanged. Container preparation checks v0.5.22's grouped model fields rather
+  than assuming the v0.5.18 `server_args.py` layout. Validation: 72 CPU launcher/
+  source tests per profile and 19 replay tests passed, including positive and
+  missing/stale argument-layout fixtures. No image build or GPU run; the separate
+  lightweight Torch-fixture dependency issue remains unresolved.
 - Both root build recipes are version-named (`Dockerfile.v0.5.18` and
   `Dockerfile.v0.5.22`). Local environment setup owns the integration/image-tag
   settings; local and Modal launchers select the matching recipe through

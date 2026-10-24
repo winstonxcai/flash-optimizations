@@ -64,13 +64,20 @@ prep () {
   has_container || die "container $CONTAINER does not exist; run: $0 (no args)"
   check_container_sources || die "container does not match the selected source pair"
   echo "== verify production SGLang fork at $SGLANG_ROOT_CT"
-  ct_script "$SGLANG_ROOT_CT/python/sglang/srt/server_args.py" <<'BASH' \
+  ct_script "$SGLANG_ROOT_CT/python/sglang/srt" "$REMNANT_INTEGRATION" <<'BASH' \
     || die "production SGLang fork is not present or missing C4 cache selection flags"
 set -e
-server_args=$1
+srt=$1
+integration=$2
+server_args="$srt/server_args.py"
+fields=$server_args
+if [ "$integration" = v0.5.22 ]; then
+  fields="$srt/arg_groups/fields/model.py"
+fi
 test -f "$server_args"
+test -f "$fields"
 grep -q _configure_dsv4_c4_cache_format "$server_args"
-grep -q dsv4_c4_cache_implementation "$server_args"
+grep -q dsv4_c4_cache_implementation "$fields"
 BASH
 }
 
