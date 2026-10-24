@@ -68,7 +68,7 @@ Host paths are available under
 ```bash
 export PRUNING_CACHE="$PWD/data/training-cache-001"
 export PRUNING_POLICY=/mnt/host_root/data/pruning/policy.json
-export PRUNING_RUNNER="$PWD/third_party/sglang/python/sglang/benchmark/remnant/calibrate.py"
+export PRUNING_RUNNER="$PWD/third_party/sglang-v0.5.18/python/sglang/benchmark/remnant/calibrate.py"
 export PRUNING_OUTPUT=/mnt/host_root/data/pruning/new-fit
 export PRUNING_RESULTS=/mnt/host_root/data/pruning/new-evaluation
 

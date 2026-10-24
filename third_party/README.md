@@ -9,20 +9,30 @@ proves which binary an existing container loaded.
 
 ## Source identities
 
-| Fork | Upstream base | Development branch |
-|---|---|---|
-| [SGLang](https://github.com/winstonxcai/sglang) | `sgl-project/sglang`, v0.5.18, `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` |
-| [FlashMLA](https://github.com/winstonxcai/FlashMLA) | `sgl-project/FlashMLA`, `05e26647fe840b8baedae486c2d86d5ce4efeb7c` | `remnant/flashmla-v0518` |
+Both versions use the existing [SGLang](https://github.com/winstonxcai/sglang) and
+[FlashMLA](https://github.com/winstonxcai/FlashMLA) repositories, not new forks.
+Folder suffixes identify the SGLang integration pair, not a FlashMLA release.
+
+| Checkout | Exact upstream base | Development branch | Current pin |
+|---|---|---|---|
+| `sglang-v0.5.18/` | `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` | `6687a7c` |
+| `flashmla-v0.5.18/` | `05e26647fe840b8baedae486c2d86d5ce4efeb7c` | `remnant/flashmla-v0518` | `97f3faa` |
+| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `remnant/v0.5.22` | `7856615` |
+| `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `remnant/flashmla-v0522` | `3eb8594` |
+
+Both FlashMLA checkouts pin CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`.
+The default remains v0.5.18; `REMNANT_INTEGRATION=v0.5.22` selects the other pair.
 
 The parent Git links are authoritative for **current pins**. Read them rather
 than copying a branch head from documentation:
 
 ```bash
-git ls-tree HEAD third_party/sglang third_party/flashmla
-git -C third_party/sglang status --short --branch
-git -C third_party/flashmla status --short --branch
-git -C third_party/sglang rev-parse HEAD
-git -C third_party/flashmla rev-parse HEAD
+git ls-tree HEAD third_party/sglang-v0.5.18 third_party/flashmla-v0.5.18 \
+  third_party/sglang-v0.5.22 third_party/flashmla-v0.5.22
+git -C third_party/sglang-v0.5.18 status --short --branch
+git -C third_party/flashmla-v0.5.18 status --short --branch
+git -C third_party/sglang-v0.5.18 rev-parse HEAD
+git -C third_party/flashmla-v0.5.18 rev-parse HEAD
 ```
 
 Ordinary builds require each fork's HEAD to equal its parent pin and both forks
@@ -39,7 +49,87 @@ content hashes and nested-source identities are retained in the build manifest.
 Ordinary serving does not accept these overrides. A source check does not prove
 that an existing container's loaded binaries match; source changes need a rebuild.
 
-## Integration map
+## Parallel v0.5.22 integration
+
+Parent branch `codex/sglang-v0.5.22` starts from local `main` `6fa18c7` in
+`data/source-snapshots/sglang-v0.5.22/`. It semantically ports only the integration
+delta `88e3b1a..62cb99a`; it does not merge the archived experiment history.
+The original `codex/sglang-v0522-port` worktree remains archived unchanged.
+The branch subsequently integrates GitHub main `ffb11cb`, preserving its newer
+v0.5.18 SGLang pin `6687a7c`, frontend diagnostics/preparation controls, HiCache
+launcher options and benchmark defaults. The v0.5.22 pair is unchanged. Main's
+custom asynchronous-preparation controls remain v0.5.18-specific; v0.5.22 keeps
+upstream conversion offload, and unsupported opt-ins fail the CPU preflight.
+
+Target: 0731 on H100/SM90, **V4 584-byte logical Native layout**, not V4.1.
+
+| Area | Decision | Contract / adaptation |
+|---|---|---|
+| Bitmap/reference/Triton | Port unchanged | FP32 magnitude selection, mask/RMSNorm, BF16 rounding and UE8M0/E4M3; 64..448 survivors by 64 |
+| Compressor/configuration/capture | Adapt | Grouped `srt/arg_groups/fields/model.py` options, scoped context publication and opt-in observers; Native producer preserved |
+| Pools and allocator | Adapt | Upstream V4 layout selection, local-stage ownership, reserved pages and physical-byte accounting |
+| Prefill/decode and graphs | Adapt | New layout/metadata APIs, head padding and FlashMLA arguments; unchanged SWA/indexer algorithms and raw positions |
+| CUDA store/Adapter | Port unchanged | 256-only ABI, independent store/decode selection and explicit dispatch |
+| FlashMLA Direct | Adapt | `csrc/kernels/sm90/decode/sparse/`, V4 instantiations and `csrc/api/sparse_decode.cpp`; preserve parameter prefix and upstream APIs |
+| HiCache | Adapt | New host-budget interfaces; coordinated value/bitmap/scale transfers, 256-only/backend rejection checks |
+| Frontend conversion | Already upstream | Retain upstream executor; no duplicate custom offload patch |
+| Profiling/calibration/benchmark | Adapt | Existing entry points and tests; experimental prefill reader stays experimental |
+| V4.1 / SM100 / tuning / full-model serving | Defer | No qualification or promotion implied |
+
+V4 synchronization corrections `31877b4..3eb8594` replace divergent aligned
+barriers and add explicit local/peer KV-ready acquires. Arithmetic and persistent
+layout are unchanged, but v0.5.22 Native is **not the untouched historical
+binary**. The [qualification record](../benchmarks/microbench/v0522-qualification-20261023/README.md)
+retains failed baselines as well as completed core numerical, allocation and
+memcheck/racecheck/synccheck gates. HiCache GPU, full-model, distributed execution
+and serving remain pending.
+
+### Reproduce the selected profile
+
+These local CPU commands do not build images or allocate GPUs:
+
+```bash
+REMNANT_INTEGRATION=v0.5.18 python3 scripts/sources.py .
+REMNANT_INTEGRATION=v0.5.22 python3 scripts/sources.py .
+REMNANT_INTEGRATION=v0.5.18 python -m unittest scripts.modal.tests
+REMNANT_INTEGRATION=v0.5.22 python -m unittest scripts.modal.tests
+```
+
+Local and Modal launchers resolve the same source pair and base image.
+v0.5.18 uses `Dockerfile.v0.5.18`, image `remnant:v0.5.18`, container `remnant`;
+v0.5.22 uses `Dockerfile.v0.5.22`, image `remnant:v0.5.22`, container
+`remnant-v0522`. Container-internal paths stay unchanged. Capture requires matching
+serving-image source/profile labels for either version. Never mix compiled pairs.
+
+The kernel launcher reuses v0.5.22 serving AOT binaries, CPU-precompiles Native
+store JIT, checks SM90 payloads and Linux CPU cases, and collects strict numerical
+and sanitizer coverage through `validate_kernels`. Profiler availability is not
+a correctness prerequisite. Its default selection includes HiCache; the archived
+core qualification explicitly deferred those four GPU cases and substituted
+H128 graph coverage in its frozen sanitizer set. Do not label that evidence as
+HiCache qualification. `REMNANT_ALLOCATION_REPORT` selects the optional allocation
+JSON; constructor-based tests reconcile planes, padding/reserves, unchanged pools
+and workspaces at matched capacity.
+
+**Initial reorganization checks:** 70 local CPU launcher/source tests passed under each
+profile, including mocked image-build arguments, source/image rejection and
+preservation of the distinct default matrices. All 20 training integration tests
+passed; both versioned calibration runners load on CPU. Reproduce with
+`OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 python -m unittest training.tests.test_integration.TrainingIntegrationTests`.
+Syntax/import and exact recursive pin checks are separate from GPU checks.
+After reconciling main `ffb11cb` and fixing container preparation, **72 launcher/
+source tests per profile and 19 replay tests pass** in the existing local Torch
+environment. The new prep regression executes the actual shell checks with
+fake Docker against both source layouts and rejects missing/stale fields.
+The separate lightweight-launcher test's accidental Torch dependency remains
+unresolved; these results do not establish a Modal-only fresh-install check.
+The curated GPU receipts belong to
+parent runtime `e68f9c4` and image `im-vOlukc1AW0gozz9mlAmg1m`, not a new parent
+build. **No image was rebuilt and no GPU run was performed after reorganization.**
+Raw artifacts remain in the archived worktree/Modal volume, with original paths
+and hashes unchanged. Historical v0.5.18 performance is not v0.5.22 performance.
+
+## Default v0.5.18 integration map
 
 Paths below are relative to the owning fork. Native is the default; Packed is
 selected by `--dsv4-c4-cache-format remnant`.
@@ -54,11 +144,11 @@ selected by `--dsv4-c4-cache-format remnant`.
 | Host cache | SGLang `srt/mem_cache/memory_pool_host.py`, `hybrid_cache/hybrid_pool_assembler.py` | Coordinated value/bitmap/scale transfers; 256 survivors only |
 | Capture and replay | SGLang `srt/remnant/capture.py`, `benchmark/remnant/calibrate.py` under `python/sglang/` | Opt-in owner-only capture, audited TP payloads, strict source hashes |
 | Profiling and request timing | SGLang `srt/utils/nvtx_utils.py`, scheduler, graph runner, request statistics | Gated built-in PyTorch NVTX; tokenizer first-output timestamp; opt-in first-output IPC boundaries |
-| Measurements | SGLang `benchmark/remnant/microbench.py` | Shared decode/store and prefill-read fixtures; [protocol and commands](sglang/benchmark/remnant/README.md) |
+| Measurements | SGLang `benchmark/remnant/microbench.py` | Shared decode/store and prefill-read fixtures; [protocol and commands](sglang-v0.5.18/benchmark/remnant/README.md) |
 
 ### SGLang file map
 
-Inventory relative to [sglang/](sglang/). Directory/glob entries cover changed
+Inventory relative to [sglang-v0.5.18/](sglang-v0.5.18/). Directory/glob entries cover changed
 files within them, not every upstream file in that directory.
 
 - **Runtime and numerics:** `python/sglang/srt/remnant/` owns configuration,
@@ -139,7 +229,7 @@ files within them, not every upstream file in that directory.
 
 ### FlashMLA file map
 
-Inventory relative to [flashmla/](flashmla/).
+Inventory relative to [flashmla-v0.5.18/](flashmla-v0.5.18/).
 
 - **API and build:** `csrc/api/api.cpp`, `csrc/api/sparse_decode.h`,
   `csrc/params.h`, `flash_mla/__init__.py`, `flash_mla/flash_mla_interface.py`
@@ -183,8 +273,8 @@ Inventory relative to [flashmla/](flashmla/).
 
 ## Validation evidence
 
-These are retained records, not tests of every later commit. Read submitted
-source hashes, binary identities and validity files in each collection before
+The following are historical v0.5.18 records, not v0.5.22 validation or tests of
+every later commit. Read submitted source hashes, binary identities and validity files in each collection before
 reusing its conclusions. Test presence and CUDA skips are not passes.
 
 | Scope | Evidence | Limits |
@@ -217,15 +307,15 @@ a follow-up documentation update. Never guess a future commit hash.
 From the parent root, regenerate the committed file map against the fixed bases:
 
 ```bash
-git -C third_party/sglang diff --name-status \
+git -C third_party/sglang-v0.5.18 diff --name-status \
   71de97b264b04dcd514cf904003028aefe9775c8 \
-  "$(git rev-parse HEAD:third_party/sglang)"
-git -C third_party/flashmla diff --name-status \
+  "$(git rev-parse HEAD:third_party/sglang-v0.5.18)"
+git -C third_party/flashmla-v0.5.18 diff --name-status \
   05e26647fe840b8baedae486c2d86d5ce4efeb7c \
-  "$(git rev-parse HEAD:third_party/flashmla)"
-git log --oneline -- third_party/sglang third_party/flashmla
+  "$(git rev-parse HEAD:third_party/flashmla-v0.5.18)"
+git log --oneline -- third_party/sglang-v0.5.18 third_party/flashmla-v0.5.18
 ```
 
-Use `git ls-tree <parent-commit> third_party/sglang third_party/flashmla` to
+Use `git ls-tree <parent-commit> third_party/sglang-v0.5.18 third_party/flashmla-v0.5.18` to
 recover an integration's exact pair. Git history remains the detailed record;
 this guide and the changelog are its curated index.

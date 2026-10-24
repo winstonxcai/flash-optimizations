@@ -9,6 +9,13 @@ Default Packed retains 256 of 512 coordinates: **584 → 328 bytes per C4 record
 token positions into one record; record compression is not total GPU-memory savings.
 Throughput benefits depend on workload, and task-quality equivalence is not established.
 
+**Parallel integration:** v0.5.18 remains the default. Set
+`REMNANT_INTEGRATION=v0.5.22` to select the independent v0.5.22 source pair,
+`Dockerfile.v0.5.22`, image `remnant:v0.5.22` and container `remnant-v0522` in
+the same local/Modal commands below. Its [core model-free qualification](benchmarks/microbench/v0522-qualification-20261023/README.md)
+passed; HiCache GPU, full-model and serving validation remain pending. Historical
+v0.5.18 performance results do not describe v0.5.22.
+
 ## Understand the modes
 
 Native is the default. The two Packed paths use the same default 328-byte format.
@@ -28,7 +35,7 @@ steps of 64, without HiCache; these profiles need separate serving validation.
 1. [Project report](docs/report.md): motivation, measured gains and limitations.
 2. [Fork guide](third_party/README.md): source ownership, integration map and validation limits; [changelog](third_party/CHANGELOG.md) for commit-based milestones.
 3. Follow your research track:
-   - **Kernel optimization:** [maintained microbenchmark protocol](third_party/sglang/benchmark/remnant/README.md) and [curated measurements](benchmarks/README.md).
+   - **Kernel optimization:** [maintained microbenchmark protocol](third_party/sglang-v0.5.18/benchmark/remnant/README.md) and [curated measurements](benchmarks/README.md).
    - **Attention-aware latent KV compression:** [method and findings](docs/attention-aware-latent-kv-compression.md) and [training/evaluation commands](training/README.md). Learned scoring is an offline research extension, not the serving default.
 
 Use the maintained runners below; historical measurements retain their own source identities and limitations.
@@ -64,6 +71,7 @@ and a local 0731 checkpoint. On shared nodes, reserve four GPUs through GPUQ fir
 select unused GPU IDs and ports. The container does not automatically start a server.
 
 ```bash
+export REMNANT_INTEGRATION=v0.5.18      # v0.5.18 | v0.5.22; selects build and runtime
 export MODEL_PATH=/absolute/path/to/DeepSeek-V4-Flash-0731
 export GPUS=0,1,2,3 PORT=30212 MASTER_PORT=29638
 export MODE=native                    # native | triton | kernel
@@ -76,6 +84,9 @@ bash scripts/local/serve.sh "$MODE" stop  # also stop after a failed benchmark
 ```
 
 The benchmark client uses the running server; it never starts or stops one.
+Build settings live in `scripts/local/env.sh`: the integration selects
+`Dockerfile.v0.5.18` or `Dockerfile.v0.5.22` and a matching image tag. Override
+`IMAGE` only to choose another local tag, not another integration's binaries.
 Random-text serving uses C warm-up requests and 3C measured requests, flushing the
 prefix cache before each phase. C limits simultaneous requests, not total work;
 3C requests are one run, not three independent runs. It may download ShareGPT
@@ -119,8 +130,11 @@ benchmark client. Defaults: 32k input, 2,048 output, C8; override with
 
 Read [AGENTS.md](AGENTS.md) before editing. Work in the owning repository:
 
-- `third_party/sglang/`: runtime, packing, allocation and dispatch.
-- `third_party/flashmla/`: Direct Packed attention kernels.
+- `third_party/sglang-v0.5.18/`: runtime, packing, allocation and dispatch.
+- `third_party/flashmla-v0.5.18/`: Direct Packed attention kernels.
+- `third_party/sglang-v0.5.22/` and `third_party/flashmla-v0.5.22/`:
+  parallel integration; the suffix identifies the SGLang integration pair,
+  not a FlashMLA release. Do not mix pairs or their compiled binaries.
 - Parent repository: scripts, experiment records and reports.
 
 After fork source or Dockerfile changes, run `bash scripts/local/container.sh rebuild`;

@@ -12,11 +12,31 @@ set -u
 # ------------------------------ MACHINE CONFIG -------------------------------
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 HOST_REPO=${HOST_REPO:-$(cd -- "$SCRIPT_DIR/../.." && pwd)}
-CONTAINER=${CONTAINER:-remnant}
 
-# The Dockerfile is the source of truth for serving. It installs the reviewed
-# production fork at this path; neither native nor packed serving imports the
-# repository's old third_party/sglang checkout anymore.
+# Build/runtime profile: select one matching source pair, recipe and base image.
+# Set here for local scripts, or export for both local and Modal commands.
+#   REMNANT_INTEGRATION=v0.5.22 bash scripts/local/container.sh rebuild
+REMNANT_INTEGRATION=${REMNANT_INTEGRATION:-v0.5.18}  # v0.5.18 | v0.5.22
+case "$REMNANT_INTEGRATION" in
+  v0.5.18)
+    SGLANG_SOURCE_RELATIVE=third_party/sglang-v0.5.18
+    FLASHMLA_SOURCE_RELATIVE=third_party/flashmla-v0.5.18
+    REMNANT_BASE_IMAGE=lmsysorg/sglang:v0.5.18-cu130
+    REMNANT_DOCKERFILE=Dockerfile.v0.5.18
+    CONTAINER=${CONTAINER:-remnant} ;;
+  v0.5.22)
+    SGLANG_SOURCE_RELATIVE=third_party/sglang-v0.5.22
+    FLASHMLA_SOURCE_RELATIVE=third_party/flashmla-v0.5.22
+    REMNANT_BASE_IMAGE=lmsysorg/sglang:v0.5.22
+    REMNANT_DOCKERFILE=Dockerfile.v0.5.22
+    CONTAINER=${CONTAINER:-remnant-v0522} ;;
+  *) echo "Unsupported REMNANT_INTEGRATION=$REMNANT_INTEGRATION" >&2; exit 2 ;;
+esac
+export REMNANT_INTEGRATION
+IMAGE=${IMAGE:-remnant:$REMNANT_INTEGRATION}  # Optional local image-tag override.
+
+# The selected Dockerfile installs the reviewed fork at a stable container path.
+# Native and Packed serving import that installation, not a host checkout.
 REPO_CT=${REPO_CT:-/mnt/host_root$HOST_REPO}
 SGLANG_ROOT_CT=${SGLANG_ROOT_CT:-/sgl-workspace/sglang-remnant}
 SGLANG_PY=${SGLANG_PY:-$SGLANG_ROOT_CT/python}
@@ -64,6 +84,19 @@ ct_script () { docker exec -i "$CONTAINER" bash -s -- "$@"; }
 
 # Host-side only. Container/direct runners use their caller's recorded preflight.
 check_sources () { python3 "$SCRIPT_DIR/../sources.py" "$HOST_REPO"; }
+
+# Reject a different profile or stale compiled fork pair before server startup.
+# Old v0.5.18 images predate labels; their existing verification stays intact.
+check_container_sources () {
+  local actual expected
+  actual=$(docker inspect --format '{{index .Config.Labels "remnant.integration"}} {{index .Config.Labels "remnant.sglang"}} {{index .Config.Labels "remnant.flashmla"}}' "$CONTAINER") || return 1
+  if [ "$REMNANT_INTEGRATION" = v0.5.18 ] && [[ "$actual" != v* ]]; then return 0; fi
+  expected="$REMNANT_INTEGRATION $(git -C "$HOST_REPO/$SGLANG_SOURCE_RELATIVE" rev-parse HEAD) $(git -C "$HOST_REPO/$FLASHMLA_SOURCE_RELATIVE" rev-parse HEAD)"
+  [ "$actual" = "$expected" ] || {
+    echo "container source/profile mismatch: expected $expected, actual $actual; rebuild the selected image" >&2
+    return 1
+  }
+}
 
 # ------------------------------ server helpers ------------------------------
 # These manage a server that serve.sh brought up inside $CONTAINER. The launch

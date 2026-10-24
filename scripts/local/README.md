@@ -6,6 +6,16 @@ Run from the repository root on the GPU node. Modes: `native` = Native;
 `triton` = Packed with Triton packing/reconstruction; `kernel` = Packed with
 optimized kernels. All three use the same Docker image.
 
+The default pair is v0.5.18. Export `REMNANT_INTEGRATION=v0.5.22` before the
+same commands to select `third_party/{sglang,flashmla}-v0.5.22/`,
+`Dockerfile.v0.5.22`, image `remnant:v0.5.22` and container `remnant-v0522`.
+Both fork HEADs and nested CUTLASS must exactly match the selected parent pins.
+Container-internal install paths stay unchanged; do not reuse binaries across
+profiles. Override GPU IDs and ports explicitly if running both integrations.
+The v0.5.22 [core model-free qualification](../../benchmarks/microbench/v0522-qualification-20261023/README.md)
+does not establish full-model boot, live HiCache or serving performance, and this
+reorganized parent image has not been built.
+
 **GPUQ is only for queueing jobs on shared GPU servers (including the VDI host).**
 It reserves exclusive GPUs; it is not required for local CPU checks, dedicated
 machines or Modal. On shared machines, run GPU commands inside your GPUQ job or
@@ -33,7 +43,8 @@ Stop expansion if L2 sees no useful reuse or transfer costs outweigh savings.
 
 Capture reuses the **same `remnant:v0.5.18` image as serving**, but starts a
 separate, short-lived container; it never runs inside or replaces the production
-`remnant` container. No capture-specific image, tag or label is required.
+`remnant` container. No capture-specific image, tag or label is required, but
+the normal serving image's integration/fork labels must match the selected pins.
 The shell entry point owns all Docker operations: local image/component checks,
 mounts, GPU selection/availability, container launch, timeouts and exact-container
 cleanup. It does not source production environment defaults. It requires Docker,
@@ -58,7 +69,7 @@ not by training/evaluation compatibility checks.
 
 ```bash
 python3 scripts/sources.py .
-CAPTURE_IMAGE=$(docker image inspect --format '{{.Id}}' "${IMAGE:-remnant:v0.5.18}")
+CAPTURE_IMAGE=$(docker image inspect --format '{{.Id}}' "${IMAGE:-remnant:${REMNANT_INTEGRATION:-v0.5.18}}")
 CAPTURE_MODEL=/data/models/DeepSeek-V4-Flash-0731
 CAPTURE_COHORT=/data/pruning/cohort
 CAPTURE_BASE=/data/capture
@@ -161,12 +172,15 @@ Update outside running GPUQ jobs. Preserve dirty fork work before synchronizing:
 ```bash
 git pull --ff-only origin remnant
 git submodule update --init --recursive --checkout
+export REMNANT_INTEGRATION=v0.5.18  # or v0.5.22
 bash scripts/local/container.sh rebuild
 ```
 
-Rebuild after Dockerfile or fork source changes. The tag stays
-`remnant:v0.5.18`; successful rebuilds replace the `remnant` container and stop
-its servers. Host script changes need only a pull. To start an existing image:
+`scripts/local/env.sh` selects `Dockerfile.v0.5.18` or `Dockerfile.v0.5.22`
+using `REMNANT_INTEGRATION` (default v0.5.18). It also defines the matching
+`IMAGE` tag, which may be overridden. Rebuild after recipe or fork source changes;
+successful rebuilds replace the selected container and stop its servers.
+Host script changes need only a pull. To start an existing image:
 
 ```bash
 bash scripts/local/container.sh up
@@ -492,7 +506,7 @@ random-text client and is not used for this experiment.
 Before reserving GPUs, exercise the actual loader in the serving image on CPU:
 
 ```bash
-export SGLANG_ROOT_CT="/mnt/host_root$PWD/third_party/sglang"
+export SGLANG_ROOT_CT="/mnt/host_root$PWD/third_party/sglang-v0.5.18"
 export SGLANG_PY="$SGLANG_ROOT_CT/python"
 . scripts/local/env.sh
 docker exec -i -e CUDA_VISIBLE_DEVICES= \
@@ -594,10 +608,10 @@ gpuq run --user winstonxcai --project flash-optimizations \
 set -euo pipefail
 export GIT_CONFIG_COUNT=4
 export GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$PWD"
-export GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1="$PWD/third_party/sglang"
-export GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2="$PWD/third_party/flashmla"
-export GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3="$PWD/third_party/flashmla/csrc/cutlass"
-export SGLANG_ROOT_CT="/mnt/host_root$PWD/third_party/sglang"
+export GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1="$PWD/third_party/sglang-v0.5.18"
+export GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2="$PWD/third_party/flashmla-v0.5.18"
+export GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3="$PWD/third_party/flashmla-v0.5.18/csrc/cutlass"
+export SGLANG_ROOT_CT="/mnt/host_root$PWD/third_party/sglang-v0.5.18"
 export SGLANG_PY="$SGLANG_ROOT_CT/python"
 export LOG_HOST="$PWD/logs/ttft-c24-$(date +%Y%m%d_%H%M%S)"
 mkdir -p "$LOG_HOST"
@@ -746,11 +760,11 @@ gpuq run --user winstonxcai --project flash-optimizations \
 set -euo pipefail
 export GIT_CONFIG_COUNT=4
 export GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$PWD"
-export GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1="$PWD/third_party/sglang"
-export GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2="$PWD/third_party/flashmla"
-export GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3="$PWD/third_party/flashmla/csrc/cutlass"
+export GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1="$PWD/third_party/sglang-v0.5.18"
+export GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2="$PWD/third_party/flashmla-v0.5.18"
+export GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3="$PWD/third_party/flashmla-v0.5.18/csrc/cutlass"
 export NSYS_GRAPH_TRACE=node
-export SGLANG_ROOT_CT="/mnt/host_root$PWD/third_party/sglang"
+export SGLANG_ROOT_CT="/mnt/host_root$PWD/third_party/sglang-v0.5.18"
 export SGLANG_PY="$SGLANG_ROOT_CT/python"
 run_id=$(date +%Y%m%d_%H%M%S)
 mode=
@@ -766,9 +780,9 @@ trap cleanup EXIT
 trap "exit 143" TERM
 trap "exit 130" INT
 sha256sum scripts/local/{serve,run-server,bench-lswb}.sh \
-  third_party/sglang/python/sglang/srt/utils/nvtx_utils.py \
-  third_party/sglang/python/sglang/srt/managers/scheduler.py \
-  third_party/sglang/python/sglang/srt/model_executor/runner/decode_cuda_graph_runner.py \
+  third_party/sglang-v0.5.18/python/sglang/srt/utils/nvtx_utils.py \
+  third_party/sglang-v0.5.18/python/sglang/srt/managers/scheduler.py \
+  third_party/sglang-v0.5.18/python/sglang/srt/model_executor/runner/decode_cuda_graph_runner.py \
   > "logs/nsys-node-c24-source-$run_id.txt"
 for mode in native triton kernel; do
   bash scripts/local/serve.sh "$mode" profile
@@ -813,9 +827,9 @@ gpuq run --user winstonxcai --project flash-optimizations \
 set -euo pipefail
 export GIT_CONFIG_COUNT=4
 export GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$PWD"
-export GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1="$PWD/third_party/sglang"
-export GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2="$PWD/third_party/flashmla"
-export GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3="$PWD/third_party/flashmla/csrc/cutlass"
+export GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1="$PWD/third_party/sglang-v0.5.18"
+export GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2="$PWD/third_party/flashmla-v0.5.18"
+export GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3="$PWD/third_party/flashmla-v0.5.18/csrc/cutlass"
 cleanup() { bash scripts/local/serve.sh "$MODE" stop; }
 trap cleanup EXIT
 bash scripts/local/serve.sh "$MODE"

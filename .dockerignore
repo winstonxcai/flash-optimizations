@@ -1,10 +1,16 @@
-# Keep the docker build context small: local.Dockerfile/modal.Dockerfile only
-# COPY remnant/, so exclude the repo's runtime artifacts and regenerable data.
-# Mirrors .gitignore (git is orthogonal to the build context).
+# Exclude runtime artifacts and regenerable data from both integration images.
+# Docker COPY selects the fork pair; .gitignore does not control build contexts.
 .git/
+data/
+raw/
+results/
+logs/
+benchmarks/
+transfer/
 **/.git/
-third_party/sglang/.git
-third_party/flashmla/.git
+**/.git
+third_party/sglang-v0.5.18/.git
+third_party/flashmla-v0.5.18/.git
 log/
 writeup/
 xkv/

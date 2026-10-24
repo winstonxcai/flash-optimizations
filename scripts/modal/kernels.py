@@ -6,8 +6,9 @@ Author: Winston Cai.
     modal run scripts/modal/kernels.py::benchmark_kernels --run-id <unique-id>
     modal run scripts/modal/kernels.py::profile_kernels --run-id <unique-id> --cases <cases>
 
-Defaults: ten validation modules (skips fail); Native/Triton/Kernel timing on eight
-decode + 25 store cases, 30 rounds; ten profile cases x three modes = 30 captures.
+Defaults follow the selected fork: v0.5.18 has eight decode cases (K512/K317),
+v0.5.22 has ten (K512); both have 25 store cases and 30 timing rounds.
+Default profile captures: 30 for v0.5.18, 36 for v0.5.22; three modes per case.
 --keep-count accepts 64..448 in steps of 64; non-256 defaults to Native/Triton.
 --modes selects supported implementations explicitly; Kernel remains 256-only.
 --cases chooses comma-separated fork cases. Profiles are not acceptance timing.
@@ -22,6 +23,7 @@ Download: modal volume get remnant-stage2a-results microbench/<run-id> <local-di
 from __future__ import annotations
 
 import hashlib
+import importlib.metadata
 import importlib.util
 import json
 import os
@@ -31,28 +33,48 @@ import subprocess
 import sys
 import sysconfig
 import time
+import urllib.request
 import xml.etree.ElementTree as ET
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 
 import modal
+from scripts.sources import check_sources, integration_profile
+
+INTEGRATION = integration_profile()
 
 REMOTE_REPO = Path("/opt/flash-optimizations")
 REPO_ROOT = Path(__file__).resolve().parents[2] if modal.is_local() else REMOTE_REPO
 SGLANG_ROOT = Path("/sgl-workspace/sglang-remnant")
 FLASHMLA_ROOT = Path("/opt/flashmla-remnant")
-SGLANG_SOURCE = Path(os.getenv("REMNANT_SGLANG_SOURCE_OVERRIDE", str(REPO_ROOT / "third_party/sglang")))
-FLASHMLA_SOURCE = Path(os.getenv("REMNANT_FLASHMLA_SOURCE_OVERRIDE", str(REPO_ROOT / "third_party/flashmla")))
+SGLANG_SOURCE = Path(
+    os.getenv("REMNANT_SGLANG_SOURCE_OVERRIDE", str(REPO_ROOT / INTEGRATION["sglang"]))
+)
+FLASHMLA_SOURCE = Path(
+    os.getenv(
+        "REMNANT_FLASHMLA_SOURCE_OVERRIDE", str(REPO_ROOT / INTEGRATION["flashmla"])
+    )
+)
 if not modal.is_local():
     SGLANG_SOURCE, FLASHMLA_SOURCE = SGLANG_ROOT, FLASHMLA_ROOT
 if modal.is_local():
     from scripts.sources import check_sources
 
+    if INTEGRATION["version"] == "v0.5.22" and any(
+        actual.resolve() != (REPO_ROOT / INTEGRATION[name]).resolve()
+        for name, actual in (("sglang", SGLANG_SOURCE), ("flashmla", FLASHMLA_SOURCE))
+    ):
+        raise RuntimeError(
+            "The v0.5.22 serving recipe requires canonical pinned sources"
+        )
     SOURCE_IDENTITIES = check_sources(
         REPO_ROOT,
-        {name: path for name, path in (("sglang", SGLANG_SOURCE), ("flashmla", FLASHMLA_SOURCE))
-         if f"REMNANT_{name.upper()}_SOURCE_OVERRIDE" in os.environ},
+        {
+            name: path
+            for name, path in (("sglang", SGLANG_SOURCE), ("flashmla", FLASHMLA_SOURCE))
+            if f"REMNANT_{name.upper()}_SOURCE_OVERRIDE" in os.environ
+        },
     )
 else:
     SOURCE_IDENTITIES = json.loads(os.environ["REMNANT_SOURCE_IDENTITIES"])
@@ -60,8 +82,21 @@ RESULTS_ROOT = Path("/results")
 NATIVE_LIBRARY = Path("/opt/remnant-native-store.so")
 MANIFEST = Path("/opt/remnant-build.json")
 BUILD_ROOT = Path("/opt/remnant-build")
+SANITIZER_ROOT = Path("/opt/remnant-sanitizer")
+SANITIZER = (
+    str(SANITIZER_ROOT / "usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer")
+    if INTEGRATION["version"] == "v0.5.22"
+    else "compute-sanitizer"
+)
 # Preserve existing work caps; reserve time inside the outer timeout for cleanup.
 CPU_BUILD_TIMEOUT_S = GPU_TIMEOUT_S = 3600
+VALIDATION_TIMEOUT_S = (
+    int(os.environ.get("REMNANT_VALIDATION_TIMEOUT_S", "2700"))
+    if INTEGRATION["version"] == "v0.5.22"
+    else GPU_TIMEOUT_S
+)
+if INTEGRATION["version"] == "v0.5.22" and not 120 <= VALIDATION_TIMEOUT_S <= 2700:
+    raise ValueError("REMNANT_VALIDATION_TIMEOUT_S must be between 120 and 2700")
 CPU_BUILD_BUDGET_S = CPU_BUILD_TIMEOUT_S - 200
 RUN_BUDGETS_S = {"timing": 850, "validation": 1100, "profile": 1800}
 PROFILE_CAPTURE_TIMEOUT_S, PROFILE_EXPORT_TIMEOUT_S = 110, 45
@@ -71,14 +106,35 @@ TEST_MODULES = {
     "cache_format": "test/registered/unit/test_dsv4_c4_cache_format.py",
     **{
         name: TEST_ROOT + f"test_remnant_{name}.py"
-        for name in ["pool", "pack", "backend", "compressor_store", "fused_store", "cuda_graph", "flashmla_direct"]
+        for name in [
+            "pool",
+            "pack",
+            "backend",
+            "compressor_store",
+            "fused_store",
+            "cuda_graph",
+            "flashmla_direct",
+        ]
     },
     "pack_kernel": "python/sglang/test/kernels/deepseek_v4/test_remnant_pack_kernel.py",
     "unpack_kernel": "python/sglang/test/kernels/deepseek_v4/test_remnant_unpack_kernel.py",
 }
 VALIDATION_TESTS = tuple(TEST_MODULES.values())
-CPU_TESTS = tuple(TEST_MODULES[name] for name in ("cache_format", "pack", "backend", "compressor_store"))
+CPU_TESTS = tuple(
+    TEST_MODULES[name]
+    for name in ("cache_format", "pack", "backend", "compressor_store")
+)
 BENCHMARK_TESTS = ("benchmark/remnant/test_microbench.py", TEST_MODULES["fused_store"])
+if INTEGRATION["version"] == "v0.5.22":
+    TEST_MODULES["hicache"] = TEST_ROOT + "test_remnant_hicache.py"
+    VALIDATION_TESTS += (TEST_MODULES["hicache"], BENCHMARK_TESTS[0])
+    CPU_TESTS += (
+        TEST_MODULES["pool"] + "::TestRemnantPool",
+        BENCHMARK_TESTS[0] + "::test_packed_hicache_routes_all_planes_without_cuda",
+        BENCHMARK_TESTS[0] + "::test_prefill_fixture_matches_combine_keyword_contract",
+        "test/registered/unit/utils/test_nvtx_utils.py",
+        "test/registered/unit/observability/test_req_time_stats.py",
+    )
 SANITIZER_TESTS = (
     TEST_MODULES["unpack_kernel"]
     + "::test_triton_native_pages_match_independent_reference",
@@ -89,6 +145,26 @@ SANITIZER_TESTS = (
     + "::TestRemnantCudaGraph::test_consecutive_mixed_layers_replay_with_stable_buffers",
     TEST_MODULES["cuda_graph"]
     + "::TestRemnantCudaGraph::test_fused_read_replays_changed_planes_indices_lengths_and_frequencies",
+)
+if INTEGRATION["version"] == "v0.5.22":
+    SANITIZER_TESTS += (
+        TEST_MODULES["flashmla_direct"]
+        + "::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+        TEST_MODULES["flashmla_direct"]
+        + "::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]",
+        TEST_MODULES["flashmla_direct"]
+        + "::TestRemnantFlashMLADirect::test_direct_decode_cuda_graph_replay[8-64]",
+        TEST_MODULES["fused_store"]
+        + "::test_graph_replay_with_changed_inputs_and_plans",
+        TEST_MODULES["hicache"]
+        + "::TestRemnantHiCache::test_backup_restore_preserves_all_planes_across_layers_and_pages",
+    )
+# Finish missing synchronization coverage before retrying the slower memcheck.
+# Tool order changes neither the selected cases nor the all-three passing gate.
+SANITIZER_ORDER = (
+    ("synccheck", "racecheck", "memcheck")
+    if INTEGRATION["version"] == "v0.5.22"
+    else ("memcheck", "racecheck", "synccheck")
 )
 NCU_SECTIONS = [
     "SpeedOfLight",
@@ -120,7 +196,69 @@ def _sglang_ignored(path: Path) -> bool:
 
 
 def _flashmla_ignored(path: Path) -> bool:
-    return not (path.parts[0] == "csrc" or path.name.startswith("LICENSE")) or _ignore(path)
+    return not (path.parts[0] == "csrc" or path.name.startswith("LICENSE")) or _ignore(
+        path
+    )
+
+
+def _source_hashes() -> dict[str, str]:
+    hashes = {}
+    for label, root in (("sglang", SGLANG_ROOT), ("flashmla", FLASHMLA_ROOT)):
+        digest = hashlib.sha256()
+        for path in sorted(root.rglob("*")):
+            relative = path.relative_to(root)
+            # Docker omits both .git directories and nested submodule pointer
+            # files. Neither is a build input or part of source content identity.
+            if (
+                path.is_file()
+                and ".git" not in relative.parts
+                and not _ignore(relative)
+            ):
+                digest.update(str(relative).encode() + b"\0")
+                digest.update(path.read_bytes())
+        hashes[label] = digest.hexdigest()
+    return hashes
+
+
+def _check_cuda_binding_requirements() -> list[dict[str, str]]:
+    """Check changed bindings and consumers' base requirements, not unrelated extras.
+
+    The vendor image already fails global pip check on vision/video/Dynamo
+    packages. Do not repair those here or ignore a conflicting CUDA consumer.
+    """
+    from packaging.requirements import Requirement
+    from packaging.utils import canonicalize_name
+
+    targets = {"cuda-python", "cuda-bindings"}
+    for name in targets:
+        if importlib.metadata.version(name) != "13.0.3":
+            raise RuntimeError(f"Serving image requires {name}==13.0.3")
+    checks = []
+    for distribution in importlib.metadata.distributions():
+        owner = canonicalize_name(distribution.metadata["Name"])
+        for specification in distribution.requires or ():
+            requirement = Requirement(specification)
+            dependency = canonicalize_name(requirement.name)
+            if owner not in targets and dependency not in targets:
+                continue
+            if requirement.marker and not requirement.marker.evaluate({"extra": ""}):
+                continue
+            try:
+                installed = importlib.metadata.version(dependency)
+            except importlib.metadata.PackageNotFoundError as error:
+                raise RuntimeError(f"{owner}: missing {requirement}") from error
+            if not requirement.specifier.contains(installed, prereleases=True):
+                raise RuntimeError(
+                    f"{owner}: requires {requirement}; installed {installed}"
+                )
+            checks.append(
+                {
+                    "consumer": owner,
+                    "requirement": str(requirement),
+                    "installed": installed,
+                }
+            )
+    return sorted(checks, key=lambda item: (item["consumer"], item["requirement"]))
 
 
 def _build_image() -> None:
@@ -131,6 +269,40 @@ def _build_image() -> None:
     deadline = time.monotonic() + CPU_BUILD_BUDGET_S
     build = BUILD_ROOT
     build.mkdir()
+    binding_requirements = (
+        _check_cuda_binding_requirements()
+        if INTEGRATION["version"] == "v0.5.22"
+        else None
+    )
+    sanitizer_identity = None
+    if INTEGRATION["version"] == "v0.5.22":
+        # 2025.3.1 predates Hopper warpgroup/indirect-cluster-barrier fixes.
+        # Extract only this standalone tool: do not replace CUDA, drivers or
+        # serving binaries. Strict unsuppressed checks still decide acceptance.
+        url = "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb"
+        expected = "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f"
+        with urllib.request.urlopen(url, timeout=30) as response:
+            payload = response.read()
+        if hashlib.sha256(payload).hexdigest() != expected:
+            raise RuntimeError("Pinned Compute Sanitizer package content changed")
+        archive = build / "sanitizer.deb"
+        archive.write_bytes(payload)
+        _run_command(
+            ["dpkg-deb", "-x", str(archive), str(SANITIZER_ROOT)],
+            build / "sanitizer-extract.log",
+            deadline,
+        )
+        sanitizer_identity = {
+            "path": SANITIZER,
+            "url": url,
+            "package_sha256": expected,
+            "binary_sha256": hashlib.sha256(Path(SANITIZER).read_bytes()).hexdigest(),
+            "version": _run_command(
+                [SANITIZER, "--version"],
+                build / "sanitizer-version.log",
+                deadline,
+            ),
+        }
     cpu_environment = _cpu_preflight_environment(build)
     # Fail on a broken base-image driver linkage before paying for compilation.
     _run_command(
@@ -145,45 +317,51 @@ def _build_image() -> None:
     )
     aot = SGLANG_ROOT / "python/sglang/kernels/aot"
     # Content identity includes dirty submitted sources, not just Git commits.
-    sources = {}
-    for label, root in (("sglang", SGLANG_ROOT), ("flashmla", FLASHMLA_ROOT)):
-        digest = hashlib.sha256()
-        for path in sorted(root.rglob("*")):
-            if path.is_file():
-                digest.update(str(path.relative_to(root)).encode() + b"\0")
-                digest.update(path.read_bytes())
-        sources[label] = digest.hexdigest()
-    # 1. Compile only the two existing SM90 extension targets.
-    options = {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CUDA_FLAGS": "-lineinfo",
-        "ENABLE_BELOW_SM90": "OFF",
-        "SGL_KERNEL_ENABLE_FA3": "OFF",
-        "SGL_KERNEL_COMPILE_THREADS": "1",
-        "SGL_KERNEL_ENABLE_FLASHMLA_SM100": "OFF",
-        "REMNANT_FLASHMLA_SOURCE_DIR": str(FLASHMLA_ROOT),
-        "CMAKE_PREFIX_PATH": torch.utils.cmake_prefix_path,
-        "CUDA_VERSION": "13.0",
-    }
-    configure = ["cmake", "-S", str(aot), "-B", str(build / "cmake")]
-    configure += [f"-D{key}={value}" for key, value in options.items()]
-    _run_command(configure, build / "configure.log", deadline)
-    _run_command(
-        ["cmake", "--build", str(build / "cmake")] + ["--target", "remnant_ops", "flashmla_ops", "--parallel", "2"],
-        build / "compile.log",
-        deadline,
-    )
-    # 2. Install matching binaries and the fork Python binding.
-    package = Path(sysconfig.get_paths()["purelib"]) / "sgl_kernel"
-    binaries = []
-    for target in ("remnant_ops", "flashmla_ops"):
-        matches = list((build / "cmake").rglob(f"{target}*.so"))
-        if len(matches) != 1:
-            raise RuntimeError(f"CPU build expected one {target}, found {matches}")
-        destination = package / matches[0].name
-        shutil.copy2(matches[0], destination)
-        binaries.append(destination)
-    shutil.copy2(aot / "python/sgl_kernel/flash_mla.py", package / "flash_mla.py")
+    sources = _source_hashes()
+    # The v0.5.22 serving Dockerfile already compiled these exact extensions.
+    if INTEGRATION["version"] == "v0.5.22":
+        package = Path(sysconfig.get_paths()["purelib"]) / "sgl_kernel"
+        binaries = []
+        for target in ("remnant_ops", "flashmla_ops"):
+            matches = list(package.glob(f"{target}*.so"))
+            if len(matches) != 1:
+                raise RuntimeError(
+                    f"Serving image expected one {target}, found {matches}"
+                )
+            binaries.append(matches[0])
+    else:
+        # 1. Compile only the two existing SM90 extension targets.
+        options = {
+            "CMAKE_BUILD_TYPE": "Release",
+            "CMAKE_CUDA_FLAGS": "-lineinfo",
+            "ENABLE_BELOW_SM90": "OFF",
+            "SGL_KERNEL_ENABLE_FA3": "OFF",
+            "SGL_KERNEL_COMPILE_THREADS": "1",
+            "SGL_KERNEL_ENABLE_FLASHMLA_SM100": "OFF",
+            "REMNANT_FLASHMLA_SOURCE_DIR": str(FLASHMLA_ROOT),
+            "CMAKE_PREFIX_PATH": torch.utils.cmake_prefix_path,
+            "CUDA_VERSION": "13.0",
+        }
+        configure = ["cmake", "-S", str(aot), "-B", str(build / "cmake")]
+        configure += [f"-D{key}={value}" for key, value in options.items()]
+        _run_command(configure, build / "configure.log", deadline)
+        _run_command(
+            ["cmake", "--build", str(build / "cmake")]
+            + ["--target", "remnant_ops", "flashmla_ops", "--parallel", "2"],
+            build / "compile.log",
+            deadline,
+        )
+        # 2. Install matching binaries and the fork Python binding.
+        package = Path(sysconfig.get_paths()["purelib"]) / "sgl_kernel"
+        binaries = []
+        for target in ("remnant_ops", "flashmla_ops"):
+            matches = list((build / "cmake").rglob(f"{target}*.so"))
+            if len(matches) != 1:
+                raise RuntimeError(f"CPU build expected one {target}, found {matches}")
+            destination = package / matches[0].name
+            shutil.copy2(matches[0], destination)
+            binaries.append(destination)
+        shutil.copy2(aot / "python/sgl_kernel/flash_mla.py", package / "flash_mla.py")
     # 3. Precompile the Native store using the fork's dependency-valid cache.
     from sglang.kernels.jit.utils.compile.cache import find_prebuilt
     from sglang.kernels.ops.attention.dsv4.compress import (
@@ -191,14 +369,52 @@ def _build_image() -> None:
     )
 
     with override_jit_cuda_arch(9, 0, "a"):
-        _jit_compress_norm_rope_module(torch.float32, 512, 64, 64, False)
+        native_options = {}
+        if INTEGRATION["version"] == "v0.5.22":
+            from sglang.kernels.ops.attention.dsv4.kv_layout import KVLayout
+
+            native_options["layout"] = KVLayout.V4
+        _jit_compress_norm_rope_module(
+            torch.float32, 512, 64, 64, False, **native_options
+        )
     cache = Path(os.environ["SGLANG_JIT_CACHE_DIR"])
     scopes = {p.parent.parent for p in cache.rglob("*.so")}
-    libraries = {p for scope in scopes if (p := find_prebuilt(scope=scope, module_name=scope.parent.name)) is not None}
+    libraries = {
+        p
+        for scope in scopes
+        if (p := find_prebuilt(scope=scope, module_name=scope.parent.name)) is not None
+    }
     if len(libraries) != 1:
-        raise RuntimeError(f"Expected one dependency-valid Native library, found {libraries}")
+        raise RuntimeError(
+            f"Expected one dependency-valid Native library, found {libraries}"
+        )
     shutil.copy2(libraries.pop(), NATIVE_LIBRARY)
     binaries.append(NATIVE_LIBRARY)
+    binary_architectures = {}
+    if INTEGRATION["version"] == "v0.5.22":
+        for binary in binaries:
+            listing = _run_command(
+                ["cuobjdump", "--list-elf", str(binary)],
+                build / f"{binary.name}.architectures.log",
+                deadline,
+            )
+            architectures = sorted(set(re.findall(r"sm_[0-9]+[a-z]?", listing)))
+            if not architectures or set(architectures) - {"sm_90", "sm_90a"}:
+                raise RuntimeError(
+                    f"Unexpected binary architectures: {binary}: {architectures}"
+                )
+            binary_architectures[str(binary)] = architectures
+    model_config = None
+    if INTEGRATION["version"] == "v0.5.22":
+        revision = "7872f01b1d1fe23eabc4c98b48bffcef5a386062"
+        url = f"https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731/resolve/{revision}/config.json"
+        with urllib.request.urlopen(url, timeout=30) as response:
+            payload = response.read()
+        digest = hashlib.sha256(payload).hexdigest()
+        if digest != "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023":
+            raise RuntimeError("Pinned 0731 configuration content changed")
+        Path("/opt/remnant-0731-config.json").write_bytes(payload)
+        model_config = {"revision": revision, "sha256": digest, "url": url}
     # 4. Preflight imports, coverage and profiler availability on CPU.
     _run_command(
         _benchmark_command("--check-imports"),
@@ -229,24 +445,40 @@ def _build_image() -> None:
         collect=True,
         environment=cpu_environment,
     )
-    sections = _run_command(["ncu", "--list-sections"], build / "sections.log", deadline)
-    if any(section not in sections for section in NCU_SECTIONS):
-        raise RuntimeError("CPU preflight: Nsight Compute lacks required sections; see sections.log")
-    metrics = _run_command(
-        ["ncu", "--query-metrics-mode", "all", "--chips", "gh100"],
-        build / "prefill-metrics.log",
-        deadline,
-    )
-    missing = [name for name in PREFILL_METRICS.split(",")[1:] if name not in metrics]
-    if missing:
-        raise RuntimeError(f"CPU preflight: missing H100 traffic metrics {missing}")
-    # 5. Save exact source/binary provenance for every GPU run.
+    if INTEGRATION["version"] == "v0.5.22":
+        _run_pytest(
+            SANITIZER_TESTS,
+            build,
+            "sanitizer-collection",
+            deadline,
+            collect=True,
+            environment=cpu_environment,
+        )
+    if INTEGRATION["version"] != "v0.5.22":
+        _check_profiler_tools(build, deadline)
+    # Profiler tools are not a correctness gate for the serving-image qualification.
     manifest = {
+        "integration": INTEGRATION["version"],
+        "base_image": INTEGRATION["base_image"],
         "sources": sources,
         "source_identities": SOURCE_IDENTITIES,
+        "model_config": model_config,
         "torch": torch.__version__,
         "cuda": torch.version.cuda,
+        "cuda_python": (
+            importlib.metadata.version("cuda-python")
+            if INTEGRATION["version"] == "v0.5.22"
+            else None
+        ),
+        "cuda_bindings": (
+            importlib.metadata.version("cuda-bindings")
+            if INTEGRATION["version"] == "v0.5.22"
+            else None
+        ),
+        "cuda_binding_requirements": binding_requirements,
+        "sanitizer": sanitizer_identity,
         "arch": "sm_90a",
+        "binary_architectures": binary_architectures,
         "native_dtype": "float32",
         "cpu_import_driver_stub_sha256": hashlib.sha256(
             (build / "cpu-driver-stubs/libcuda.so.1").read_bytes()
@@ -255,13 +487,38 @@ def _build_image() -> None:
             str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in binaries
         },
         "nvcc": _run_command(["nvcc", "--version"], build / "nvcc.log", deadline),
-        "ncu": _run_command(["ncu", "--version"], build / "ncu.log", deadline),
+        "ncu": (
+            None
+            if INTEGRATION["version"] == "v0.5.22"
+            else _run_command(["ncu", "--version"], build / "ncu.log", deadline)
+        ),
     }
     MANIFEST.write_text(json.dumps(manifest, indent=2) + "\n")
 
 
+def _check_profiler_tools(build: Path, deadline: float | None = None) -> None:
+    deadline = deadline if deadline is not None else time.monotonic() + 120
+    sections = _run_command(
+        ["ncu", "--list-sections"], build / "sections.log", deadline
+    )
+    if any(section not in sections for section in NCU_SECTIONS):
+        raise RuntimeError(
+            "CPU preflight: Nsight Compute lacks required sections; see sections.log"
+        )
+    metrics = _run_command(
+        ["ncu", "--query-metrics-mode", "all", "--chips", "gh100"],
+        build / "prefill-metrics.log",
+        deadline,
+    )
+    missing = [name for name in PREFILL_METRICS.split(",")[1:] if name not in metrics]
+    if missing:
+        raise RuntimeError(f"CPU preflight: missing H100 traffic metrics {missing}")
+
+
 app = modal.App("remnant-kernel-dev")
-results_volume = modal.Volume.from_name("remnant-stage2a-results", create_if_missing=True)
+results_volume = modal.Volume.from_name(
+    "remnant-stage2a-results", create_if_missing=True
+)
 triton_volume = modal.Volume.from_name("remnant-triton-cache", create_if_missing=True)
 _ignore = modal.FilePatternMatcher(
     "**/.git/**",
@@ -276,13 +533,44 @@ _ignore = modal.FilePatternMatcher(
 )
 
 
+if INTEGRATION["version"] == "v0.5.22":
+    kernel_base = modal.Image.from_dockerfile(
+        str(REPO_ROOT / INTEGRATION["dockerfile"]),
+        context_dir=str(REPO_ROOT),
+        build_args={
+            "REMNANT_BASE_IMAGE": INTEGRATION["base_image"],
+            "REMNANT_INTEGRATION": INTEGRATION["version"],
+            "REMNANT_SGLANG_SOURCE": INTEGRATION["sglang"],
+            "REMNANT_FLASHMLA_SOURCE": INTEGRATION["flashmla"],
+            "REMNANT_SGLANG_SHA": SOURCE_IDENTITIES["sglang"]["commit"],
+            "REMNANT_FLASHMLA_SHA": SOURCE_IDENTITIES["flashmla"]["commit"],
+        },
+        ignore=modal.FilePatternMatcher.from_file(REPO_ROOT / ".dockerignore"),
+    )
+else:
+    kernel_base = (
+        modal.Image.from_registry(INTEGRATION["base_image"])
+        .pip_install("typing_extensions==4.15.0")
+        .add_local_dir(
+            SGLANG_SOURCE, str(SGLANG_ROOT), copy=True, ignore=_sglang_ignored
+        )
+        .add_local_dir(
+            FLASHMLA_SOURCE, str(FLASHMLA_ROOT), copy=True, ignore=_flashmla_ignored
+        )
+    )
+
 kernel_image = (
-    modal.Image.from_registry("lmsysorg/sglang:v0.5.18-cu130")
-    .pip_install("typing_extensions==4.15.0")
-    .env(
+    kernel_base.env(
         {
+            "REMNANT_INTEGRATION": INTEGRATION["version"],
+            "REMNANT_BUILT_INTEGRATION": INTEGRATION["version"],
             "REMNANT_SOURCE_IDENTITIES": json.dumps(SOURCE_IDENTITIES),
-            "PYTHONPATH": f"{SGLANG_ROOT / 'python'}:{REMOTE_REPO}",
+            "PYTHONPATH": (
+                "/opt/sglang-runtime-fixes:"
+                if INTEGRATION["version"] == "v0.5.22"
+                else ""
+            )
+            + f"{SGLANG_ROOT / 'python'}:{REMOTE_REPO}",
             "PYTHONUNBUFFERED": "1",
             "PYTHONDONTWRITEBYTECODE": "1",
             "TORCH_CUDA_ARCH_LIST": "9.0",
@@ -290,13 +578,24 @@ kernel_image = (
             "REMNANT_FLASHMLA_SOURCE_DIR": str(FLASHMLA_ROOT),
             "REMNANT_NATIVE_STORE_LIBRARY": str(NATIVE_LIBRARY),
             "REMNANT_BUILD_MANIFEST_PATH": str(MANIFEST),
+            "REMNANT_MODEL_CONFIG": "/opt/remnant-0731-config.json",
+            **(
+                {"REMNANT_VALIDATION_TIMEOUT_S": str(VALIDATION_TIMEOUT_S)}
+                if INTEGRATION["version"] == "v0.5.22"
+                else {}
+            ),
             "TRITON_CACHE_DIR": "/triton-cache",
         }
     )
-    .add_local_dir(SGLANG_SOURCE, str(SGLANG_ROOT), copy=True, ignore=_sglang_ignored)
-    .add_local_dir(FLASHMLA_SOURCE, str(FLASHMLA_ROOT), copy=True, ignore=_flashmla_ignored)
     # Include launcher helpers in the image cache key, not just _build_image.
-    .add_local_file(REPO_ROOT / "scripts/modal/kernels.py", "/opt/remnant-launcher.py", copy=True)
+    .add_local_file(
+        REPO_ROOT / "scripts/modal/kernels.py", "/opt/remnant-launcher.py", copy=True
+    )
+    .add_local_file(
+        REPO_ROOT / "scripts/sources.py",
+        str(REMOTE_REPO / "scripts/sources.py"),
+        copy=True,
+    )
     .run_function(_build_image, cpu=16, memory=65536, timeout=CPU_BUILD_TIMEOUT_S)
 )
 _GPU = {
@@ -391,16 +690,167 @@ def benchmark_kernels(
     return str(root)
 
 
-@app.function(**_GPU)
-def validate_kernels(run_id: str, sanitizer: bool = False) -> str:
+@app.function(
+    **{
+        **_GPU,
+        "timeout": VALIDATION_TIMEOUT_S,
+    }
+)
+def validate_kernels(
+    run_id: str, sanitizer: bool = False, max_seconds: int = RUN_BUDGETS_S["validation"]
+) -> str:
     """Run existing GPU tests; skipped tests fail coverage. Optional three sanitizers."""
-    with _run_context(run_id, "validation", RUN_BUDGETS_S["validation"]) as (root, record, deadline):
-        _run_pytest(VALIDATION_TESTS, root, "validation", deadline)
-        if sanitizer:
-            for tool in ("memcheck", "racecheck", "synccheck"):
-                prefix = ("compute-sanitizer", "--tool", tool, "--error-exitcode", "1")
-                _run_pytest(SANITIZER_TESTS, root, tool, deadline, prefix=prefix)
+    maximum = min(2640, VALIDATION_TIMEOUT_S - 60)
+    if not 60 <= max_seconds <= maximum:
+        raise ValueError(f"max_seconds must be between 60 and {maximum}")
+    with _run_context(run_id, "validation", max_seconds) as (
+        root,
+        record,
+        deadline,
+    ):
+        environment = dict(os.environ)
         record["sanitizer"] = sanitizer
+        if sanitizer:
+            record["sanitizer_results"] = {
+                tool: {"status": "not_run"} for tool in SANITIZER_ORDER
+            }
+        if INTEGRATION["version"] == "v0.5.22":
+            import torch
+
+            if (
+                torch.cuda.get_device_capability() != (9, 0)
+                or "H100" not in torch.cuda.get_device_name()
+            ):
+                raise RuntimeError("Qualification requires one H100/SM90")
+            if "cpu-driver-stubs" in environment.get("LD_LIBRARY_PATH", ""):
+                raise RuntimeError("CPU-only driver stubs leaked into the GPU loader")
+            manifest = json.loads(MANIFEST.read_text())
+            if manifest["integration"] != "v0.5.22":
+                raise RuntimeError("Serving image integration mismatch")
+            if (
+                manifest["source_identities"] != SOURCE_IDENTITIES
+                or manifest["sources"] != _source_hashes()
+            ):
+                raise RuntimeError("Serving image source identity mismatch")
+            from sgl_kernel import flashmla_ops, remnant_ops
+
+            loaded = {
+                str(Path(module.__file__).resolve())
+                for module in (flashmla_ops, remnant_ops)
+            }
+            if not loaded <= set(manifest["binaries"]):
+                raise RuntimeError(f"Loaded unverified extensions: {loaded}")
+            for path, expected in manifest["binaries"].items():
+                if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
+                    raise RuntimeError(f"Loaded binary input changed: {path}")
+            tool = manifest["sanitizer"]
+            if (
+                tool["path"] != SANITIZER
+                or hashlib.sha256(Path(SANITIZER).read_bytes()).hexdigest()
+                != tool["binary_sha256"]
+            ):
+                raise RuntimeError("Compute Sanitizer identity mismatch")
+            record["sanitizer_tool"] = tool
+            environment["REMNANT_ALLOCATION_REPORT"] = str(root / "allocation.json")
+            shutil.copy2("/opt/remnant-0731-config.json", root / "model-config.json")
+            record["gpu"] = torch.cuda.get_device_name()
+            record["loaded_extensions"] = sorted(loaded)
+            record["platform_timeout_seconds"] = VALIDATION_TIMEOUT_S
+            cpu_reports = root / "cpu-preflight"
+            cpu_reports.mkdir()
+            for path in BUILD_ROOT.iterdir():
+                if path.is_file() and path.suffix in {".log", ".xml"}:
+                    shutil.copy2(path, cpu_reports / path.name)
+            if sanitizer:
+                # Separate dependency initialization from our kernel checks.
+                # Keep API-error reporting unchanged; a failed control is a
+                # failed qualification, not an allowlisted sanitizer report.
+                _run_command(
+                    [SANITIZER, "--version"],
+                    root / "sanitizer-version.log",
+                    deadline,
+                )
+                _run_command(
+                    ["nvidia-smi", "--query-gpu=name,driver_version", "--format=csv"],
+                    root / "driver-version.log",
+                    deadline,
+                )
+                controls = (
+                    ("empty", "print('empty Python control', flush=True)"),
+                    (
+                        "bindings-import",
+                        "print('before binding import', flush=True); "
+                        "from cuda.bindings import driver; "
+                        "print('after binding import', driver.__file__, flush=True)",
+                    ),
+                    (
+                        "bindings-query",
+                        "import importlib.metadata as m; "
+                        "print('cuda-bindings', m.version('cuda-bindings'), flush=True); "
+                        "from cuda.bindings import driver; "
+                        "result, version = driver.cuDriverGetVersion(); "
+                        "print('driver', result, version, flush=True); "
+                        "assert result == driver.CUresult.CUDA_SUCCESS",
+                    ),
+                )
+                for name, code in controls:
+                    _run_command(
+                        [
+                            SANITIZER,
+                            "--tool",
+                            "memcheck",
+                            "--error-exitcode",
+                            "1",
+                            "--require-cuda-init",
+                            "no",
+                            sys.executable,
+                            "-c",
+                            code,
+                        ],
+                        root / f"sanitizer-control-{name}.log",
+                        deadline,
+                    )
+        _run_pytest(
+            VALIDATION_TESTS, root, "validation", deadline, environment=environment
+        )
+        if INTEGRATION["version"] == "v0.5.22":
+            allocation = json.loads((root / "allocation.json").read_text())
+            if allocation["status"] != "passed" or {
+                r["mode"] for r in allocation["modes"]
+            } != {"native", "triton", "kernel"}:
+                raise RuntimeError("Incomplete real-allocation coverage")
+            record["allocation"] = allocation
+        if sanitizer:
+            for tool in SANITIZER_ORDER:
+                # Commands use whole-second timeouts. Preserve the incomplete
+                # tool matrix instead of attempting a launch with zero seconds.
+                if int(deadline - time.monotonic()) <= 0:
+                    break
+                prefix = (SANITIZER, "--tool", tool, "--error-exitcode", "1")
+                try:
+                    _run_pytest(SANITIZER_TESTS, root, tool, deadline, prefix=prefix)
+                except TimeoutError:
+                    # The boundary may expire between this loop and the command
+                    # check. No process started; keep this tool marked not_run.
+                    break
+                except RuntimeError as error:
+                    record["sanitizer_results"][tool] = {
+                        "status": "failed",
+                        "error": str(error),
+                    }
+                    # Each tool owns a fresh pytest process. Retain later tools'
+                    # evidence without converting this failure into a pass.
+                else:
+                    record["sanitizer_results"][tool] = {"status": "passed"}
+            incomplete = [
+                tool
+                for tool, result in record["sanitizer_results"].items()
+                if result["status"] != "passed"
+            ]
+            if incomplete:
+                raise RuntimeError(
+                    f"Sanitizer qualification incomplete: {incomplete}; see tool logs"
+                )
     return str(root)
 
 
@@ -443,6 +893,8 @@ def profile_kernels(
         suite=suite,
     )
     with _run_context(run_id, "profile", max_seconds) as (root, record, deadline):
+        if INTEGRATION["version"] == "v0.5.22":
+            _check_profiler_tools(root, deadline)
         record.update(
             matrix=matrix, runs=[], keep_count=keep_count, modes=selected_modes
         )
@@ -654,7 +1106,9 @@ def _run_command(
     # Modal adds its serialized /root/kernels.py to PYTHONPATH. It shadows
     # Transformers' optional Hugging Face `kernels` dependency in fresh children.
     # Keep the two declared source roots; installed site packages remain visible.
-    child_environment["PYTHONPATH"] = f"{SGLANG_ROOT / 'python'}:{REMOTE_REPO}"
+    child_environment["PYTHONPATH"] = (
+        "/opt/sglang-runtime-fixes:" if INTEGRATION["version"] == "v0.5.22" else ""
+    ) + f"{SGLANG_ROOT / 'python'}:{REMOTE_REPO}"
     try:
         with output.open("w") as log:
             subprocess.run(
@@ -668,13 +1122,21 @@ def _run_command(
             )
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as error:
         tail = output.read_text(errors="replace")[-4000:] if output.is_file() else ""
-        raise RuntimeError(f"Command failed: {list(argv)}\nLog: {output}\n{tail}") from error
+        raise RuntimeError(
+            f"Command failed: {list(argv)}\nLog: {output}\n{tail}"
+        ) from error
     return output.read_text()
 
 
 def _benchmark_command(*options: str) -> list[str]:
     script = SGLANG_ROOT / "benchmark/remnant/microbench.py"
-    return [sys.executable, str(script), "--native-library", str(NATIVE_LIBRARY), *options]
+    return [
+        sys.executable,
+        str(script),
+        "--native-library",
+        str(NATIVE_LIBRARY),
+        *options,
+    ]
 
 
 def _run_pytest(
@@ -691,18 +1153,53 @@ def _run_pytest(
     argv = [*prefix, sys.executable, *["-m", "pytest", "-q"]]
     argv += [str(SGLANG_ROOT / path) for path in tests]
     argv += ["--collect-only"] if collect else [f"--junitxml={report}"]
-    _run_command(argv, root / f"{name}.log", deadline, environment=environment)
+    output = _run_command(argv, root / f"{name}.log", deadline, environment=environment)
     if not collect:
-        counts = {
-            key: sum(int(s.get(key, 0)) for s in ET.parse(report).getroot().iter("testsuite"))
-            for key in ("tests", "errors", "failures", "skipped")
-        }
-        if not counts["tests"] or any(counts[k] for k in ("errors", "failures", "skipped")):
+        try:
+            counts = {
+                key: sum(
+                    int(s.get(key, 0))
+                    for s in ET.parse(report).getroot().iter("testsuite")
+                )
+                for key in ("tests", "errors", "failures", "skipped")
+            }
+        except (OSError, ET.ParseError, ValueError) as error:
+            raise RuntimeError(
+                f"Incomplete validation {name}: unreadable {report}"
+            ) from error
+        if not counts["tests"] or any(
+            counts[k] for k in ("errors", "failures", "skipped")
+        ):
             raise RuntimeError(f"Incomplete validation {name}: {counts}")
+        if prefix:
+            tool = prefix[prefix.index("--tool") + 1]
+            summary = (
+                "RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)"
+                if tool == "racecheck"
+                else "ERROR SUMMARY: 0 errors"
+            )
+            # Pytest progress dots can precede the sanitizer record on the same
+            # line. Require one clean final report, not an earlier zero summary.
+            records = [r.strip() for r in re.findall(r"========= ([^\r\n]*)", output)]
+            summaries = [
+                r
+                for r in records
+                if r.startswith(("ERROR SUMMARY:", "RACECHECK SUMMARY:"))
+            ]
+            if (
+                summaries != [summary]
+                or any(r.startswith(("Warning:", "Error:")) for r in records)
+                or "terminated before first instrumented API call" in output
+            ):
+                raise RuntimeError(
+                    f"Incomplete sanitizer evidence {tool}; see {root / f'{name}.log'}"
+                )
 
 
 def _benchmark_cases():
-    path = (SGLANG_SOURCE if modal.is_local() else SGLANG_ROOT) / "python/sglang/benchmark/remnant/cases.py"
+    path = (
+        SGLANG_SOURCE if modal.is_local() else SGLANG_ROOT
+    ) / "python/sglang/benchmark/remnant/cases.py"
     spec = importlib.util.spec_from_file_location("remnant_modal_cases", path)
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
@@ -711,7 +1208,9 @@ def _benchmark_cases():
 
 
 @contextmanager
-def _run_context(run_id: str, action: str, seconds: int) -> Iterator[tuple[Path, dict, float]]:
+def _run_context(
+    run_id: str, action: str, seconds: int
+) -> Iterator[tuple[Path, dict, float]]:
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", run_id):
         raise ValueError("run_id must be a unique simple identifier")
     root = RESULTS_ROOT / "microbench" / run_id / action

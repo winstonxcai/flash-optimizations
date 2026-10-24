@@ -11,6 +11,7 @@ alone do not establish a repeatable speedup.
 
 | Question | Collection | Evidence and appropriate use |
 |---|---|---|
+| v0.5.22 core correctness and matched-capacity allocation | [v0.5.22 qualification](microbench/v0522-qualification-20261023/README.md) | **Source-bound qualification, not timing.** 457 H100 numerical cases plus subtests, exact allocation reconciliation and 58 cases per sanitizer. Same qualified fork sources; reorganized parent image not rebuilt. HiCache GPU and full-model/serving remain pending. |
 | Can frontend preparation delay an already-sent output? | [CPU frontend blocking diagnostic](lswb-replay/frontend-event-loop-20261022/README.md) | Source-isolated SGLang methods and real 0731 tokenizer; 216 trials across two invocations reproduce blocking. Cached OpenHands inputs, not LongSWE; no full HTTP server or GPU, and no attribution of the Triton/Kernel TTFT gap. |
 | Same-concurrency serving overhead | [C24 Native / Packed-256, n=3](lswb-replay/c24-native-packed256-n3-20261018/README.md) | **Preferred repeated C24 reference.** Nine fresh-server, unprofiled 1,200 s replays; three per mode. Recorded settings, image, dataset and harness identities match. All nine TTFT p90 values pass 10 s. Full loaded runtime identity was not captured. |
 | Packed serving at C27 | [C27 Packed-256 Triton / Kernel, n=3](lswb-replay/c27-packed256-n3-20261020/README.md) | **Repeated SLO probe.** Six fresh-server 1,200 s replays. Triton passes the 10 s TTFT-p90 threshold in 2/3 runs; Kernel in 0/3. Neither is a consistently passing ceiling. Candidate-level harness audit; no paired overnight Native control. |
@@ -53,6 +54,7 @@ benchmarks/
 │   ├── shared-prefix-c16-n1-20261019/
 │   └── shared-prefix-g32-c16-n3-20261020/
 └── microbench/
+    ├── v0522-qualification-20261023/
     ├── decode-store-h100-three-mode-20261014/
     ├── prefill-read-20261018/
     └── prefill-read-fused-rope-20261018/

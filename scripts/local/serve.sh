@@ -74,6 +74,7 @@ case "${DSV4_PREPARATION_WORKERS:-1}" in
   1|2|4) ;;
   *) echo "DSV4_PREPARATION_WORKERS must be 1, 2 or 4" >&2; exit 2 ;;
 esac
+check_container_sources || exit 1
 if [ "${DSV4_ASYNC_PREPARATION:-0}" = 1 ]; then
   # Exercise the actual mounted coroutine on CPU before replacing a server.
   timeout 60 docker exec \
@@ -149,7 +150,7 @@ if [ -n "${HICACHE_RATIO:-}" ]; then
 from sglang.srt.server_args import ServerArgs
 for field in ("enable_hierarchical_cache", "hicache_ratio", "hicache_write_policy",
               "hicache_io_backend", "hicache_mem_layout"):
-    if field not in ServerArgs.__dataclass_fields__:
+    if not hasattr(ServerArgs, field):
         raise RuntimeError(f"Active SGLang source lacks HiCache option {field}")
 ' || exit 1
 fi
@@ -169,7 +170,7 @@ from sglang.srt.configs.model_config import is_deepseek_v4
 from sglang.srt.utils.hf_transformers_utils import get_config
 from sglang.srt.remnant import config
 for field in ("dsv4_c4_cache_keep_count", "dsv4_c4_cache_layer_keep_counts"):
-    assert field in ServerArgs.__dataclass_fields__, "mounted source lacks per-layer Packed counts"
+    assert hasattr(ServerArgs, field), "mounted source lacks per-layer Packed counts"
 model, mode, count, overrides, store = sys.argv[1:]
 # Match ModelConfig: its loader applies the registered SGLang model schema.
 # Transformers AutoConfig alone can omit the V4 compression metadata.
@@ -192,7 +193,7 @@ fi
 if [ -n "${STORE_IMPLEMENTATION:-}" ]; then
   docker exec -e "PYTHONPATH=/opt/sglang-runtime-fixes:$SGLANG_PY:$REPO_CT" "$CONTAINER" python3 -c '
 from sglang.srt.server_args import ServerArgs
-assert "dsv4_c4_cache_store_implementation" in ServerArgs.__dataclass_fields__, "active source lacks store override; select updated host Python source"
+assert hasattr(ServerArgs, "dsv4_c4_cache_store_implementation"), "active source lacks store override; select updated host Python source"
 ' || exit 1
 fi
 

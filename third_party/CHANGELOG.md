@@ -13,7 +13,49 @@ records rather than this milestone log.
 
 ## Unreleased
 
-### 2026-10-23 — Preparation concurrency and queue attribution diagnostic
+- Reconciled GitHub main `ffb11cb` in parent merge `814aaa8`, retaining its
+  v0.5.18 SGLang `6687a7c36c0c`, FlashMLA `97f3faa58450`, frontend preparation/
+  diagnostics and HiCache launcher options. The v0.5.22 pair remains SGLang
+  `7856615f3fdf` / FlashMLA `3eb85944fd7d`; the qualified FlashMLA commit is now
+  published on `remnant/flashmla-v0522`. Historical qualification receipts are
+  unchanged. Container preparation checks v0.5.22's grouped model fields rather
+  than assuming the v0.5.18 `server_args.py` layout. Validation: 72 CPU launcher/
+  source tests per profile and 19 replay tests passed, including positive and
+  missing/stale argument-layout fixtures. No image build or GPU run; the separate
+  lightweight Torch-fixture dependency issue remains unresolved.
+- Both root build recipes are version-named (`Dockerfile.v0.5.18` and
+  `Dockerfile.v0.5.22`). Local environment setup owns the integration/image-tag
+  settings; local and Modal launchers select the matching recipe through
+  `REMNANT_INTEGRATION`, retaining v0.5.18 as default. Fork pins are unchanged;
+  70 CPU launcher/source tests pass under each profile. This packaging change
+  has no image-build or GPU qualification.
+
+## 2026-10-24 — Isolated v0.5.22 integration and versioned paths
+
+Parent integration `0f0dec1`; versioned-path update `a10bc97`, based on local
+`main` `6fa18c7`. v0.5.18 pins: SGLang `921cc2e03f61`, FlashMLA
+`97f3faa58450` (unchanged). v0.5.22 pins: SGLang `7856615f3fdf`, FlashMLA
+`3eb85944fd7d`. Both CUTLASS pins remain `147f5673d0c1`.
+
+- **Integrated:** semantic port of `88e3b1a..62cb99a`, without the archived
+  branch's unrelated experiment ancestry. Four independently pinned versioned
+  checkouts; v0.5.18 remains default, v0.5.22 requires the explicit selector.
+  Existing source/image gates and launchers use the selected pair; container
+  installation paths and the v0.5.18 benchmark matrix remain unchanged.
+- **Adapted:** V4 allocator/layout, grouped configuration, prefill/decode,
+  CUDA store/Adapter/Direct, host-cache routing, capture and profiling interfaces.
+  Upstream frontend conversion offload is retained. The V4 synchronization
+  corrections include Native; do not call this an untouched Native binary.
+- **Evidence:** [core model-free qualification](../benchmarks/microbench/v0522-qualification-20261023/README.md)
+  on the unchanged v0.5.22 fork sources passed numerical tests, exact physical
+  allocation reconciliation and all three sanitizers. JSON/CSV and original
+  source identities are retained unchanged; raw artifacts remain archived.
+- **Current parent checks:** 70 CPU launcher/source tests per profile, shell and
+  Python syntax/import checks, mocked build arguments and clean recursive pins;
+  all 20 training integration tests pass after updating the capture-image fixture.
+  No parent image rebuild or GPU rerun. HiCache GPU, full-model/distributed and
+  serving validation remain pending. Historical v0.5.18 results are not relabeled.
+## 2026-10-23 — Preparation concurrency and queue attribution diagnostic
 
 Parent `34e7339`; SGLang `6687a7c36c`; FlashMLA `97f3faa58450`.
 
@@ -35,7 +77,7 @@ Parent `34e7339`; SGLang `6687a7c36c`; FlashMLA `97f3faa58450`.
 - **Rollback:** restore `DSV4_PREPARATION_WORKERS=1` or disable async preparation
   with `DSV4_ASYNC_PREPARATION=0`. Counts above one remain diagnostic candidates.
 
-### 2026-10-22 — Bounded DSV4 chat preparation candidate
+## 2026-10-22 — Bounded DSV4 chat preparation candidate
 
 Parent `a64b9c0` (preflight correction `8c6e3e1`); SGLang `63291eba61`;
 FlashMLA `97f3faa58450`.

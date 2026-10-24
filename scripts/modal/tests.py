@@ -6,6 +6,8 @@ No image builds, remote calls, weights or GPUs. Build/execution boundaries are m
 
 import ast
 import copy
+import inspect
+import io
 import json
 import os
 import subprocess
@@ -18,20 +20,34 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
 
 from scripts.modal import kernels
-from scripts.sources import check_sources
+from scripts.sources import check_sources, integration_profile
+
+
+def profiler_capabilities(argv, *args, **kwargs):
+    """Mock only the external profiler's capability queries, not its guards."""
+    if argv == ["ncu", "--list-sections"]:
+        return " ".join(kernels.NCU_SECTIONS)
+    if "--query-metrics-mode" in argv:
+        return kernels.PREFILL_METRICS
+    return ""
 
 
 class SourcePreflightTests(unittest.TestCase):
     """Real Git fixtures; no Docker, Modal API or shared fork mutations."""
 
     def setUp(self):
+        # Disposable source fixtures describe the default integration, even when
+        # the launcher's real-checkout checks run under the v0.5.22 profile.
+        profile = patch.dict(os.environ, {"REMNANT_INTEGRATION": "v0.5.18"})
+        profile.start()
+        self.addCleanup(profile.stop)
         temporary = tempfile.TemporaryDirectory(prefix="remnant-sources-")
         self.addCleanup(temporary.cleanup)
         self.repo = Path(temporary.name) / "parent with spaces"
         self.initialize(self.repo)
         self.forks = {}
         for name in ("sglang", "flashmla"):
-            root = self.repo / "third_party" / name
+            root = self.repo / integration_profile("v0.5.18")[name]
             self.initialize(root)
             self.forks[name] = root
         self.cutlass = self.forks["flashmla"] / "csrc/cutlass"
@@ -70,6 +86,77 @@ class SourcePreflightTests(unittest.TestCase):
         for name in ("sglang", "flashmla", "flashmla/csrc/cutlass"):
             self.assertEqual(records[name]["commit"], records[name]["expected_commit"])
             self.assertFalse(records[name]["dirty"])
+
+    def test_profiles_select_matching_dockerfiles(self):
+        from modal._utils.docker_utils import extract_copy_command_patterns
+
+        for version, filename in (("v0.5.18", "Dockerfile.v0.5.18"),
+                                  ("v0.5.22", "Dockerfile.v0.5.22")):
+            with self.subTest(version=version):
+                profile = integration_profile(version)
+                self.assertEqual(profile["dockerfile"], filename)
+                recipe = (kernels.REPO_ROOT / filename).read_text()
+                self.assertIn(f"ARG REMNANT_INTEGRATION={version}\n", recipe)
+                self.assertIn(f"ARG REMNANT_BASE_IMAGE={profile['base_image']}\n", recipe)
+                for name in ("sglang", "flashmla"):
+                    self.assertIn(f"ARG REMNANT_{name.upper()}_SOURCE={profile[name]}\n", recipe)
+                self.assertIn('CMD ["bash"]', recipe)
+                self.assertNotIn("COPY ${", recipe)
+                sources = extract_copy_command_patterns(recipe.splitlines())
+                for name in ("sglang", "flashmla"):
+                    self.assertIn(profile[name], sources)
+                    self.assertIn(f"COPY {profile[name]} ", recipe)
+                    self.assertIn(f'test "$REMNANT_{name.upper()}_SOURCE" = {profile[name]}', recipe)
+                if version == "v0.5.22":
+                    self.assertIn("cuda-python==13.0.3 cuda-bindings==13.0.3", recipe)
+
+    def test_version_profiles_select_only_their_own_pins(self):
+        profile = integration_profile("v0.5.22")
+        forks = {}
+        for name in ("sglang", "flashmla"):
+            root = self.repo / profile[name]
+            self.initialize(root)
+            self.pin(self.repo, root)
+            forks[name] = root
+        nested = forks["flashmla"] / "csrc/cutlass"
+        self.initialize(nested)
+        self.pin(forks["flashmla"], nested)
+        self.pin(self.repo, forks["flashmla"])
+        (self.forks["sglang"] / "source.txt").write_text("unrelated old experiment")
+        records = check_sources(self.repo, integration="v0.5.22")
+        self.assertEqual(records["sglang"]["path"], str(forks["sglang"].resolve()))
+        self.assertEqual(records["flashmla"]["integration"], "v0.5.22")
+        self.assertIn("flashmla/csrc/cutlass", records)
+        with self.assertRaisesRegex(RuntimeError, "sglang is dirty"):
+            check_sources(self.repo, integration="v0.5.18")
+        (nested / "source.txt").write_text("unapproved dependency")
+        with self.assertRaisesRegex(RuntimeError, "flashmla/csrc/cutlass is dirty"):
+            check_sources(self.repo, integration="v0.5.22")
+
+    def test_rejects_unknown_profile_and_mixed_flashmla_override(self):
+        with self.assertRaises(ValueError):
+            integration_profile("latest")
+        legacy = self.forks["flashmla"] / "csrc/sm90/decode/sparse_fp8/config.h"
+        legacy.parent.mkdir(parents=True)
+        legacy.write_text("// legacy layout\n")
+        for name in ("sglang", "flashmla"):
+            root = self.repo / integration_profile("v0.5.22")[name]
+            self.initialize(root)
+            self.pin(self.repo, root)
+        with self.assertRaisesRegex(RuntimeError, "layout does not match"):
+            check_sources(self.repo, {"flashmla": self.forks["flashmla"]}, integration="v0.5.22")
+
+    def test_rejects_mixed_sglang_override_with_dynamic_version(self):
+        for name in ("sglang", "flashmla"):
+            root = self.repo / integration_profile("v0.5.22")[name]
+            self.initialize(root)
+            self.pin(self.repo, root)
+        legacy = self.forks["sglang"]
+        version = legacy / "python/sglang/version.py"
+        version.parent.mkdir(parents=True)
+        version.write_text("try:\n    __version__ = read_version()\nexcept Exception:\n    __version__ = '0.0.0.dev0'\n")
+        with self.assertRaisesRegex(RuntimeError, "argument-group layout"):
+            check_sources(self.repo, {"sglang": legacy}, integration="v0.5.22")
 
     def test_rejects_dirty_states_without_changing_them(self):
         root = self.forks["sglang"]
@@ -183,22 +270,43 @@ with patch('scripts.sources.check_sources', side_effect=RuntimeError('source rej
 class ContractTests(unittest.TestCase):
     def test_profile_matrix_is_complete(self):
         matrix = kernels._benchmark_cases().selected_profile_matrix()
-        self.assertEqual(len(matrix), 30)
-        self.assertEqual(len(set(matrix)), 30)
-        self.assertEqual(sum(suite == "decode" for suite, _, _ in matrix), 24)
+        newer = kernels.INTEGRATION["version"] == "v0.5.22"
+        batches = (8, 16, 24, 28, 32) if newer else (8, 16)
+        lengths = (512,) if newer else (512, 317)
+        expected = {
+            (f"h{head}_b{batch}_k{length}", mode)
+            for head in (64, 128)
+            for batch in batches
+            for length in lengths
+            for mode in ("native", "triton", "kernel")
+        }
+        self.assertEqual(len(matrix), len(expected) + 6)
+        self.assertEqual(len(set(matrix)), len(matrix))
+        self.assertEqual(
+            {(name, mode) for suite, name, mode in matrix if suite == "decode"},
+            expected,
+        )
         self.assertEqual({mode for _, _, mode in matrix}, {"native", "triton", "kernel"})
 
     def test_representative_profile_matrix(self):
-        cases = "h64_b16_k512,h64_b16_k317,decode-r24-all_valid,prefill-r8192-all_valid"
+        newer = kernels.INTEGRATION["version"] == "v0.5.22"
+        cases = (
+            "h64_b24_k512,h64_b28_k512,h128_b32_k512,decode-r24-all_valid,prefill-r8192-all_valid"
+            if newer else
+            "h64_b16_k512,h64_b16_k317,decode-r24-all_valid,prefill-r8192-all_valid"
+        )
         matrix = kernels._benchmark_cases().selected_profile_matrix(cases)
-        self.assertEqual(len(matrix), 12)
+        self.assertEqual(len(matrix), 3 * len(cases.split(",")))
         self.assertEqual({name for _, name, _ in matrix}, set(cases.split(",")))
         for name in cases.split(","):
             self.assertEqual(
                 {mode for _, case, mode in matrix if case == name},
                 {"native", "triton", "kernel"},
             )
-        for invalid in ("unknown", "h64_b16_k512,h64_b16_k512"):
+        invalid_cases = ["unknown", "h64_b16_k512,h64_b16_k512"]
+        if newer:
+            invalid_cases.append("h64_b16_k317")
+        for invalid in invalid_cases:
             with self.assertRaisesRegex(ValueError, "unknown or duplicate"):
                 kernels._benchmark_cases().selected_profile_matrix(invalid)
 
@@ -341,14 +449,179 @@ class LauncherTests(unittest.TestCase):
                 )
                 self.assertNotIn("--worker", argv)
 
+    def test_validation_budget_is_bounded_before_execution(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        self.assertEqual(function.__defaults__, (False, 1100))
+        with patch.object(kernels, "_run_context") as run:
+            for seconds in (0, 59, 2641, 2700):
+                with self.assertRaisesRegex(ValueError, "max_seconds"):
+                    function("fixture", max_seconds=seconds)
+            run.assert_not_called()
+        with patch.object(kernels, "VALIDATION_TIMEOUT_S", 120):
+            with self.assertRaisesRegex(ValueError, "between 60 and 60"):
+                function("fixture", max_seconds=61)
+
+    def test_sanitizer_failures_preserve_later_results_and_fail_the_run(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        order = ("synccheck", "racecheck", "memcheck")
+        for failed in (None, *order):
+            record = {}
+
+            def run_pytest(tests, root, name, deadline, **kwargs):
+                if name == failed:
+                    raise RuntimeError(f"{name}: hazard or incomplete coverage")
+
+            with (
+                self.subTest(failed=failed),
+                patch.object(kernels, "INTEGRATION", {"version": "v0.5.18"}),
+                patch.object(kernels, "SANITIZER_ORDER", order),
+                patch.object(kernels, "_run_context", return_value=nullcontext((self.root, record, 100))),
+                patch.object(kernels.time, "monotonic", return_value=0),
+                patch.object(kernels, "_run_pytest", side_effect=run_pytest) as run,
+            ):
+                if failed is None:
+                    self.assertEqual(function("fixture", sanitizer=True), str(self.root))
+                else:
+                    with self.assertRaisesRegex(RuntimeError, "qualification incomplete"):
+                        function("fixture", sanitizer=True)
+            self.assertEqual([c.args[2] for c in run.call_args_list], ["validation", *order])
+            self.assertTrue(record["sanitizer"])
+            for tool in order:
+                self.assertEqual(record["sanitizer_results"][tool]["status"],
+                                 "failed" if tool == failed else "passed")
+            for c in run.call_args_list[1:]:
+                self.assertEqual(c.args[0], kernels.SANITIZER_TESTS)
+                self.assertEqual(c.kwargs["prefix"][-2:], ("--error-exitcode", "1"))
+
+    def test_sanitizer_deadline_keeps_unstarted_tools_explicitly_incomplete(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        for now in (99.5, 100):
+            record = {}
+            with (
+                self.subTest(now=now),
+                patch.object(kernels, "INTEGRATION", {"version": "v0.5.18"}),
+                patch.object(kernels, "SANITIZER_ORDER", ("synccheck", "racecheck", "memcheck")),
+                patch.object(kernels, "_run_context", return_value=nullcontext((self.root, record, 100))),
+                patch.object(kernels.time, "monotonic", side_effect=[0, now]),
+                patch.object(kernels, "_run_pytest") as run,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "qualification incomplete"):
+                    function("fixture", sanitizer=True)
+            self.assertEqual([c.args[2] for c in run.call_args_list], ["validation", "synccheck"])
+            self.assertEqual(record["sanitizer_results"], {
+                "synccheck": {"status": "passed"},
+                "racecheck": {"status": "not_run"},
+                "memcheck": {"status": "not_run"},
+            })
+
+    def test_sanitizer_prelaunch_timeout_keeps_tool_not_run(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        run_pytest = kernels._run_pytest
+        record = {}
+
+        def validate_or_run(tests, root, name, deadline, **kwargs):
+            if name != "validation":
+                return run_pytest(tests, root, name, deadline, **kwargs)
+
+        with (
+            patch.object(kernels, "INTEGRATION", {"version": "v0.5.18"}),
+            patch.object(kernels, "SANITIZER_ORDER", ("synccheck", "racecheck", "memcheck")),
+            patch.object(kernels, "_run_context", return_value=nullcontext((self.root, record, 100))),
+            patch.object(kernels.time, "monotonic", side_effect=[99.0, 99.01]),
+            patch.object(kernels, "_run_pytest", side_effect=validate_or_run) as run,
+            patch.object(kernels.subprocess, "run") as command,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "qualification incomplete"):
+                function("fixture", sanitizer=True)
+        command.assert_not_called()
+        self.assertEqual([c.args[2] for c in run.call_args_list], ["validation", "synccheck"])
+        self.assertEqual(record["sanitizer_results"], {
+            tool: {"status": "not_run"} for tool in ("synccheck", "racecheck", "memcheck")
+        })
+
+    def test_binding_check_validates_both_directions_without_unrelated_repairs(self):
+        versions = {"cuda-python": "13.0.3", "cuda-bindings": "13.0.3", "cuda-pathfinder": "1.8.3"}
+        distributions = [
+            SimpleNamespace(metadata={"Name": "cuda-python"}, requires=["cuda-bindings~=13.0.3", "cuda-pathfinder~=1.1"]),
+            SimpleNamespace(metadata={"Name": "torch"}, requires=["cuda-bindings>=13.0.3,<14"]),
+            SimpleNamespace(metadata={"Name": "unrelated-video"}, requires=["missing-opencv>=1"]),
+        ]
+        with (
+            patch.object(kernels.importlib.metadata, "distributions", return_value=distributions),
+            patch.object(kernels.importlib.metadata, "version", side_effect=lambda name: versions[name]),
+        ):
+            self.assertEqual(len(kernels._check_cuda_binding_requirements()), 3)
+            versions["cuda-pathfinder"] = "0.9"
+            with self.assertRaisesRegex(RuntimeError, "cuda-python: requires cuda-pathfinder"):
+                kernels._check_cuda_binding_requirements()
+            versions["cuda-pathfinder"] = "1.8.3"
+            distributions[1].requires = ["cuda-bindings>=13.4"]
+            with self.assertRaisesRegex(RuntimeError, "torch: requires cuda-bindings"):
+                kernels._check_cuda_binding_requirements()
+            versions["cuda-bindings"] = "13.4.4"
+            with self.assertRaisesRegex(RuntimeError, "requires cuda-bindings==13.0.3"):
+                kernels._check_cuda_binding_requirements()
+
+    def test_source_fingerprint_ignores_regenerable_caches(self):
+        sources = [self.root / name for name in ("sglang", "flashmla")]
+        for source in sources:
+            source.mkdir()
+            (source / "runtime.py").write_text("original")
+        with (
+            patch.object(kernels, "SGLANG_ROOT", sources[0]),
+            patch.object(kernels, "FLASHMLA_ROOT", sources[1]),
+        ):
+            before = kernels._source_hashes()
+            cache = sources[0] / ".pytest_cache"
+            cache.mkdir()
+            (cache / "nodeids").write_text("collected cases")
+            self.assertEqual(kernels._source_hashes(), before)
+            (sources[0] / "runtime.py").write_text("changed")
+            self.assertNotEqual(kernels._source_hashes(), before)
+
     def test_collection_and_sanitizer_use_existing_pytest(self):
         with patch.object(kernels, "_run_command") as command:
             kernels._run_pytest(kernels.VALIDATION_TESTS, self.root, "collect", 100, collect=True)
             self.assertIn("--collect-only", command.call_args.args[0])
             (self.root / "memcheck.xml").write_text('<testsuite tests="1"/>')
             prefix = ("compute-sanitizer", "--tool", "memcheck", "--error-exitcode", "1")
+            command.return_value = "========= ERROR SUMMARY: 0 errors\n"
             kernels._run_pytest(kernels.SANITIZER_TESTS, self.root, "memcheck", 100, prefix=prefix)
             self.assertEqual(command.call_args.args[0][:5], list(prefix))
+
+    def test_sanitizer_requires_clean_summary_and_actual_instrumentation(self):
+        for tool in ("memcheck", "synccheck", "racecheck"):
+            summary = ("========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)\n"
+                       if tool == "racecheck" else "========= ERROR SUMMARY: 0 errors\n")
+            (self.root / f"{tool}.xml").write_text('<testsuite tests="1"/>')
+            for text, accepted in ((summary, True), ("....................", False),
+                                   (summary + "========= Warning: overflow of tracked barriers\n", False),
+                                   (".========= Warning: overflow of tracked barriers\n" + summary, False),
+                                   (summary + "========= ERROR SUMMARY: 2 errors\n", False),
+                                   ("========= ERROR SUMMARY: 2 errors\n" + summary, False),
+                                   (summary + "========= Target application terminated before first instrumented API call\n", False)):
+                with (
+                    self.subTest(tool=tool, text=text),
+                    patch.object(kernels, "_run_command", return_value=text),
+                ):
+                    kwargs = {"prefix": ("compute-sanitizer", "--tool", tool, "--error-exitcode", "1")}
+                    if accepted:
+                        kernels._run_pytest(kernels.SANITIZER_TESTS, self.root, tool, 100, **kwargs)
+                    else:
+                        with self.assertRaisesRegex(RuntimeError, "Incomplete sanitizer evidence"):
+                            kernels._run_pytest(kernels.SANITIZER_TESTS, self.root, tool, 100, **kwargs)
+
+    def test_missing_or_malformed_pytest_report_is_an_explicit_failure(self):
+        for content in (None, "<testsuites>", '<testsuite tests="invalid"/>'):
+            report = self.root / "missing.xml"
+            if content is not None:
+                report.write_text(content)
+            with (
+                self.subTest(content=content),
+                patch.object(kernels, "_run_command", return_value=""),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "Incomplete validation missing"):
+                    kernels._run_pytest(kernels.VALIDATION_TESTS, self.root, "missing", 100)
 
     def test_command_failures_show_log_path_tail_and_cause(self):
         with patch.object(kernels.subprocess, "run") as process:
@@ -410,6 +683,7 @@ class LauncherTests(unittest.TestCase):
         self.assertTrue(kernels._flashmla_ignored(Path("tests/test_decode.py")))
 
     def test_image_build_compiles_on_cpu_then_preflights(self):
+        newer = kernels.INTEGRATION["version"] == "v0.5.22"
         sglang, flashmla = self.root / "sglang", self.root / "flashmla"
         aot = sglang / "python/sglang/kernels/aot"
         package = self.root / "site/sgl_kernel"
@@ -424,6 +698,11 @@ class LauncherTests(unittest.TestCase):
         stub.parent.mkdir(parents=True)
         stub.write_bytes(b"CPU-only driver stub")
         calls = []
+        sanitizer = self.root / "sanitizer/compute-sanitizer"
+        if newer:
+            (package / "flash_mla.py").write_text("# fork binding")
+            for target in ("remnant_ops", "flashmla_ops"):
+                (package / (target + ".so")).write_bytes(target.encode())
 
         def command(argv, output, deadline, *, environment=None):
             calls.append(argv)
@@ -431,6 +710,11 @@ class LauncherTests(unittest.TestCase):
                 return " ".join(kernels.NCU_SECTIONS)
             if "--query-metrics-mode" in argv:
                 return kernels.PREFILL_METRICS
+            if argv[0] == "dpkg-deb":
+                sanitizer.parent.mkdir(parents=True)
+                sanitizer.write_bytes(b"pinned tool")
+            if argv[0] == "cuobjdump":
+                return "ELF file sm_90a"
             if argv[:2] == ["cmake", "--build"]:
                 for target in ("remnant_ops", "flashmla_ops"):
                     binary = self.root / "build/cmake" / (target + ".so")
@@ -448,8 +732,9 @@ class LauncherTests(unittest.TestCase):
                 )
             return "test toolchain"
 
-        def native_factory(*args):
+        def native_factory(*args, **kwargs):
             self.assertEqual(args, ("fp32", 512, 64, 64, False))
+            self.assertEqual(kwargs, {"layout": "v4"} if newer else {})
             library.write_bytes(b"native")
 
         modules = {
@@ -468,7 +753,32 @@ class LauncherTests(unittest.TestCase):
             "sglang.kernels.ops.attention.dsv4.compress": SimpleNamespace(
                 _jit_compress_norm_rope_module=native_factory
             ),
+            "sglang.kernels.ops.attention.dsv4.kv_layout": SimpleNamespace(
+                KVLayout=SimpleNamespace(V4="v4")
+            ),
         }
+        # Synthetic downloads exercise orchestration without network access.
+        # Hash checks themselves have a separate changed-content rejection case.
+        sha256 = kernels.hashlib.sha256
+        download_hashes = {
+            b"sanitizer fixture": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+            b"config fixture": "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023",
+        }
+
+        def digest(payload=b""):
+            if payload in download_hashes:
+                return SimpleNamespace(hexdigest=lambda: download_hashes[payload])
+            return sha256(payload)
+
+        def download(url, *, timeout):
+            self.assertEqual(timeout, 30)
+            return io.BytesIO(b"config fixture" if url.endswith("config.json") else b"sanitizer fixture")
+
+        def build_path(value):
+            if str(value) == "/opt/remnant-0731-config.json":
+                return self.root / "config.json"
+            return Path(value)
+
         with (
             patch.dict(sys.modules, modules),
             patch.object(kernels, "SGLANG_ROOT", sglang),
@@ -476,6 +786,13 @@ class LauncherTests(unittest.TestCase):
             patch.object(kernels, "MANIFEST", manifest),
             patch.object(kernels, "NATIVE_LIBRARY", native),
             patch.object(kernels, "BUILD_ROOT", self.root / "build"),
+            patch.object(kernels, "SANITIZER_ROOT", sanitizer.parent),
+            patch.object(kernels, "SANITIZER", str(sanitizer)),
+            patch.object(kernels, "Path", side_effect=build_path),
+            patch.object(kernels.urllib.request, "urlopen", side_effect=download),
+            patch.object(kernels.hashlib, "sha256", side_effect=digest),
+            patch.object(kernels.importlib.metadata, "version", return_value="13.0.3"),
+            patch.object(kernels.importlib.metadata, "distributions", return_value=[]),
             patch.object(
                 kernels.sysconfig,
                 "get_paths",
@@ -489,11 +806,16 @@ class LauncherTests(unittest.TestCase):
             patch.object(kernels, "_run_pytest") as tests,
         ):
             kernels._build_image()
-        configure = next(c for c in calls if c[:2] == ["cmake", "-S"])
-        self.assertIn("-DSGL_KERNEL_ENABLE_FLASHMLA_SM100=OFF", configure)
-        self.assertIn("-DENABLE_BELOW_SM90=OFF", configure)
-        self.assertEqual(calls[0][:2], [sys.executable, "-c"])
-        self.assertEqual(tests.call_count, 3)
+        if newer:
+            self.assertFalse(any(c[0] == "cmake" for c in calls))
+            self.assertFalse(any(c[0] == "ncu" for c in calls))
+            self.assertEqual(sum(c[0] == "cuobjdump" for c in calls), 3)
+        else:
+            configure = next(c for c in calls if c[:2] == ["cmake", "-S"])
+            self.assertIn("-DSGL_KERNEL_ENABLE_FLASHMLA_SM100=OFF", configure)
+            self.assertIn("-DENABLE_BELOW_SM90=OFF", configure)
+            self.assertEqual(calls[0][:2], [sys.executable, "-c"])
+        self.assertEqual(tests.call_count, 4 if newer else 3)
         self.assertTrue(
             all(
                 "cpu-driver-stubs" in c.kwargs["environment"]["LD_LIBRARY_PATH"]
@@ -503,14 +825,24 @@ class LauncherTests(unittest.TestCase):
         receipt = json.loads(manifest.read_text())
         self.assertEqual(receipt["arch"], "sm_90a")
         self.assertEqual(len(receipt["binaries"]), 3)
+        self.assertEqual(receipt["integration"], kernels.INTEGRATION["version"])
 
     def test_cpu_and_sanitizer_selection_use_names_not_list_positions(self):
+        extra_cpu = ()
+        if kernels.INTEGRATION["version"] == "v0.5.22":
+            extra_cpu = (
+                kernels.TEST_MODULES["pool"] + "::TestRemnantPool",
+                "benchmark/remnant/test_microbench.py::test_packed_hicache_routes_all_planes_without_cuda",
+                "benchmark/remnant/test_microbench.py::test_prefill_fixture_matches_combine_keyword_contract",
+                "test/registered/unit/utils/test_nvtx_utils.py",
+                "test/registered/unit/observability/test_req_time_stats.py",
+            )
         self.assertEqual(
             kernels.CPU_TESTS,
             tuple(
                 kernels.TEST_MODULES[n]
                 for n in ("cache_format", "pack", "backend", "compressor_store")
-            ),
+            ) + extra_cpu,
         )
         expected = {
             kernels.TEST_MODULES["unpack_kernel"]
@@ -524,6 +856,20 @@ class LauncherTests(unittest.TestCase):
             kernels.TEST_MODULES["cuda_graph"]
             + "::TestRemnantCudaGraph::test_fused_read_replays_changed_planes_indices_lengths_and_frequencies",
         }
+        if kernels.INTEGRATION["version"] == "v0.5.22":
+            extra_sanitizer = {
+                "flashmla_direct": (
+                    "TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+                    "TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]",
+                    "TestRemnantFlashMLADirect::test_direct_decode_cuda_graph_replay[8-64]",
+                ),
+                "fused_store": ("test_graph_replay_with_changed_inputs_and_plans",),
+                "hicache": ("TestRemnantHiCache::test_backup_restore_preserves_all_planes_across_layers_and_pages",),
+            }
+            expected.update(
+                kernels.TEST_MODULES[module] + "::" + node
+                for module, nodes in extra_sanitizer.items() for node in nodes
+            )
         self.assertEqual(set(kernels.SANITIZER_TESTS), expected)
         self.assertEqual(len(kernels.SANITIZER_TESTS), len(expected))
         # Check actual node identities without importing CUDA-dependent modules.
@@ -531,19 +877,71 @@ class LauncherTests(unittest.TestCase):
             path, *names = selector.split("::")
             node = ast.parse((kernels.SGLANG_SOURCE / path).read_text())
             for name in names:
+                name = name.split("[", 1)[0]
                 matches = [
                     child for child in node.body if getattr(child, "name", None) == name
                 ]
                 self.assertEqual(len(matches), 1, selector)
                 node = matches[0]
 
+    def test_cuda_binding_constraints_reject_missing_or_conflicting_consumers(self):
+        distribution = SimpleNamespace(
+            metadata={"Name": "torch"}, requires=["cuda-bindings>=13.0.3"]
+        )
+        with (
+            patch.object(kernels.importlib.metadata, "distributions", return_value=[distribution]),
+            patch.object(kernels.importlib.metadata, "version", return_value="13.0.3"),
+        ):
+            self.assertEqual(kernels._check_cuda_binding_requirements()[0]["consumer"], "torch")
+            distribution.requires = ["cuda-bindings>=13.4"]
+            with self.assertRaisesRegex(RuntimeError, "requires cuda-bindings"):
+                kernels._check_cuda_binding_requirements()
+            distribution.metadata["Name"] = "cuda-python"
+            distribution.requires = ["cuda-missing>=1"]
+            def version(name):
+                if name == "cuda-missing":
+                    raise kernels.importlib.metadata.PackageNotFoundError(name)
+                return "13.0.3"
+            with patch.object(kernels.importlib.metadata, "version", side_effect=version):
+                with self.assertRaisesRegex(RuntimeError, "missing cuda-missing"):
+                    kernels._check_cuda_binding_requirements()
+        with patch.object(kernels.importlib.metadata, "version", return_value="13.4"):
+            with self.assertRaisesRegex(RuntimeError, "Serving image requires"):
+                kernels._check_cuda_binding_requirements()
+
+    def test_build_rejects_changed_sanitizer_download_before_compilation(self):
+        with (
+            patch.object(kernels, "INTEGRATION", integration_profile("v0.5.22")),
+            patch.object(kernels, "BUILD_ROOT", self.root / "bad-download"),
+            patch.object(kernels, "_check_cuda_binding_requirements", return_value=[]),
+            patch.dict(sys.modules, {"sglang.kernels.jit.utils": SimpleNamespace(override_jit_cuda_arch=None)}),
+            patch.object(kernels.urllib.request, "urlopen", return_value=io.BytesIO(b"changed package")),
+            patch.object(kernels, "_run_command") as command,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "Sanitizer package content changed"):
+                kernels._build_image()
+            command.assert_not_called()
+
+    def test_profiler_capability_guards_are_not_bypassed(self):
+        for response, message in (("", "required sections"), (" ".join(kernels.NCU_SECTIONS), "traffic metrics")):
+            with self.subTest(response=response), patch.object(kernels, "_run_command", return_value=response):
+                with self.assertRaisesRegex(RuntimeError, message):
+                    kernels._check_profiler_tools(self.root)
+
     def test_cached_serving_image_rejects_mismatched_sources(self):
         from scripts.modal import serve
 
-        with patch.object(serve, "_compiled_source_digest", return_value="matching"):
+        with (
+            patch.object(serve, "_compiled_source_digest", return_value="matching"),
+            patch.dict(os.environ, {"REMNANT_BUILT_INTEGRATION": serve.INTEGRATION["version"]}),
+        ):
             serve._verify_compiled_sources("matching")
             with self.assertRaisesRegex(RuntimeError, "Compiled source changed"):
                 serve._verify_compiled_sources("different")
+            wrong = "v0.5.18" if serve.INTEGRATION["version"] == "v0.5.22" else "v0.5.22"
+            with patch.dict(os.environ, {"REMNANT_BUILT_INTEGRATION": wrong}):
+                with self.assertRaisesRegex(RuntimeError, "different REMNANT_INTEGRATION"):
+                    serve._verify_compiled_sources("matching")
         source = self.root / "source"
         source.mkdir()
         kernel = source / "kernel.cu"
@@ -551,6 +949,23 @@ class LauncherTests(unittest.TestCase):
         before = serve._compiled_source_digest([source])
         kernel.write_text("changed")
         self.assertNotEqual(before, serve._compiled_source_digest([source]))
+
+    def test_image_source_hash_ignores_git_pointers_but_not_code(self):
+        roots = [self.root / name for name in ("sglang", "flashmla")]
+        for root in roots:
+            (root / "nested").mkdir(parents=True)
+            (root / "kernel.cu").write_text("compiled source\n")
+            (root / "nested/.git").write_text("gitdir: first-local-checkout\n")
+        with (
+            patch.object(kernels, "SGLANG_ROOT", roots[0]),
+            patch.object(kernels, "FLASHMLA_ROOT", roots[1]),
+        ):
+            before = kernels._source_hashes()
+            for root in roots:
+                (root / "nested/.git").write_text("gitdir: another-local-checkout\n")
+            self.assertEqual(kernels._source_hashes(), before)
+            (roots[1] / "kernel.cu").write_text("changed compiled source\n")
+            self.assertNotEqual(kernels._source_hashes()["flashmla"], before["flashmla"])
 
     def test_serving_missing_extensions_never_compiles_on_gpu(self):
         from scripts.modal import serve
@@ -677,21 +1092,29 @@ class LauncherTests(unittest.TestCase):
     def test_public_commands_import_without_launching_jobs(self):
         code = """
 from unittest.mock import patch
+from pathlib import Path
 import modal
 with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')), \\
-     patch.object(modal.Function, 'spawn', side_effect=AssertionError('launch')):
+     patch.object(modal.Function, 'spawn', side_effect=AssertionError('launch')), \\
+     patch.object(modal.Image, 'from_dockerfile', wraps=modal.Image.from_dockerfile) as recipe:
     from scripts.modal import serve, kernels
+    expected = 'Dockerfile.' + serve.INTEGRATION['version']
+    assert Path(recipe.call_args.args[0]).name == expected
+    assert recipe.call_args.kwargs['build_args']['REMNANT_INTEGRATION'] == serve.INTEGRATION['version']
     assert 'benchmark_serving' in serve.app.registered_functions
     assert {'benchmark_kernels', 'profile_kernels', 'validate_kernels'} <= set(kernels.app.registered_functions)
+    expected_order = ('synccheck', 'racecheck', 'memcheck') if serve.INTEGRATION['version'] == 'v0.5.22' else ('memcheck', 'racecheck', 'synccheck')
+    assert kernels.SANITIZER_ORDER == expected_order
 """
-        subprocess.run(
-            [sys.executable, "-c", code],
-            cwd=kernels.REPO_ROOT,
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
+        for version in ("v0.5.18", "v0.5.22"):
+            environment = dict(os.environ, REMNANT_INTEGRATION=version)
+            environment.pop("REMNANT_COMPILED_IMAGE", None)
+            with self.subTest(version=version):
+                subprocess.run(
+                    [sys.executable, "-c", code],
+                    cwd=kernels.REPO_ROOT, env=environment, check=True,
+                    capture_output=True, text=True, timeout=30,
+                )
 
     def test_launchers_import_independently(self):
         for module, other in (("serve", "kernels"), ("kernels", "serve")):
@@ -707,6 +1130,116 @@ with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')
 
 
 class LocalScriptTests(unittest.TestCase):
+    def test_container_preflight_uses_selected_argument_layout(self):
+        """Run the real prep action and shell checks; fake Docker only."""
+        with tempfile.TemporaryDirectory(prefix="remnant-container-prep-") as temporary:
+            root = Path(temporary)
+            tools = root / "bin"
+            tools.mkdir()
+            docker = tools / "docker"
+            docker.write_text(
+                f"#!{sys.executable}\n"
+                "import os, subprocess, sys\n"
+                "args = sys.argv[1:]\n"
+                "if args[:2] == ['container', 'inspect']:\n"
+                "    raise SystemExit(0)\n"
+                "if args[0] == 'inspect':\n"
+                "    print(os.environ['IMAGE_SOURCE_LABELS'])\n"
+                "    raise SystemExit(0)\n"
+                "assert args[:2] == ['exec', '-i'], args\n"
+                "assert args[3:6] == ['bash', '-s', '--'], args\n"
+                "raise SystemExit(subprocess.call(args[3:]))\n"
+            )
+            docker.chmod(0o755)
+            for version in ("v0.5.18", "v0.5.22"):
+                profile = integration_profile(version)
+                source = kernels.REPO_ROOT / profile["sglang"] / "python/sglang/srt"
+                installation = root / version
+                srt = installation / "python/sglang/srt"
+                srt.mkdir(parents=True)
+                (srt / "server_args.py").write_bytes((source / "server_args.py").read_bytes())
+                fields = srt / "server_args.py"
+                if version == "v0.5.22":
+                    fields = srt / "arg_groups/fields/model.py"
+                    fields.parent.mkdir(parents=True)
+                    fields.write_bytes((source / "arg_groups/fields/model.py").read_bytes())
+                pins = [subprocess.check_output(
+                    ["git", "-C", str(kernels.REPO_ROOT / profile[name]), "rev-parse", "HEAD"],
+                    text=True, timeout=10,
+                ).strip() for name in ("sglang", "flashmla")]
+                environment = dict(
+                    os.environ, REMNANT_INTEGRATION=version,
+                    HOST_REPO=str(kernels.REPO_ROOT), CONTAINER="fixture",
+                    SGLANG_ROOT_CT=str(installation),
+                    IMAGE_SOURCE_LABELS=" ".join([version, *pins]),
+                    PATH=f"{tools}:{Path(sys.executable).parent}:{os.environ['PATH']}",
+                )
+                def prep():
+                    return subprocess.run(
+                        ["bash", str(kernels.REPO_ROOT / "scripts/local/container.sh"), "prep"],
+                        env=environment, text=True, capture_output=True, timeout=30,
+                    )
+                with self.subTest(version=version):
+                    result = prep()
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertIn("production image ready", result.stdout)
+                    fields.write_text(fields.read_text().replace(
+                        "dsv4_c4_cache_implementation", "missing_implementation_flag"
+                    ))
+                    self.assertNotEqual(prep().returncode, 0)
+                    if version == "v0.5.22":
+                        # A stale legacy declaration cannot replace grouped fields.
+                        fields.unlink()
+                        with (srt / "server_args.py").open("a") as stream:
+                            stream.write("\ndsv4_c4_cache_implementation = 'kernel'\n")
+                        self.assertNotEqual(prep().returncode, 0)
+
+    def test_capture_rejects_wrong_image_profile_before_gpu_checks(self):
+        with tempfile.TemporaryDirectory(prefix="remnant-capture-image-") as temporary:
+            root = Path(temporary)
+            for name in ("bin", "model", "scratch", "published"):
+                (root / name).mkdir()
+            for name in ("capture-config.json", "replay.jsonl"):
+                (root / "scratch" / name).write_text("{}\n")
+            commands = {
+                "docker": '#!/bin/bash\nif [[ "$*" == *"{{.Id}}"* ]]; then printf "sha256:%064d\\n" 0; else echo "$FAKE_IMAGE_PROFILE wrong-sglang wrong-flashmla"; fi\n',
+                "timeout": '#!/bin/bash\nwhile [[ "$1" == --* ]]; do shift; done\nshift\nexec "$@"\n',
+                "nvidia-smi": '#!/bin/bash\necho unexpected-GPU-inspection >&2\nexit 1\n',
+            }
+            for name, script in commands.items():
+                tool = root / "bin" / name
+                tool.write_text(script)
+                tool.chmod(0o755)
+            for version in ("v0.5.18", "v0.5.22"):
+                environment = dict(os.environ, REMNANT_INTEGRATION=version,
+                                   FAKE_IMAGE_PROFILE="v0.5.22" if version == "v0.5.18" else "v0.5.18",
+                                   PATH=f"{root / 'bin'}:{Path(sys.executable).parent}:{os.environ['PATH']}")
+                with self.subTest(version=version):
+                    result = subprocess.run(
+                        ["bash", str(kernels.REPO_ROOT / "scripts/local/capture-latent.sh"), "run", "fake-image",
+                         str(root / "model"), str(root / "scratch"), str(root / "published"), "120"],
+                        env=environment, text=True, capture_output=True, timeout=30,
+                    )
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("Capture image source/profile mismatch", result.stderr)
+                    self.assertNotIn("unexpected-GPU-inspection", result.stderr)
+
+    def test_local_profiles_match_source_and_dockerfile_selection(self):
+        for version in ("v0.5.18", "v0.5.22"):
+            profile = integration_profile(version)
+            environment = dict(os.environ, REMNANT_INTEGRATION=version)
+            environment.pop("CONTAINER", None)
+            environment.pop("IMAGE", None)
+            with self.subTest(version=version):
+                result = subprocess.run(
+                    ["bash", "-c",
+                     '. "$1"; printf "%s\\n" "$REMNANT_DOCKERFILE" "$REMNANT_BASE_IMAGE" "$CONTAINER" "$IMAGE"',
+                     "profile-check", str(kernels.REPO_ROOT / "scripts/local/env.sh")],
+                    env=environment, capture_output=True, text=True, check=True, timeout=10,
+                )
+                self.assertEqual(result.stdout.splitlines(),
+                                 [profile["dockerfile"], profile["base_image"], profile["container"], f"remnant:{version}"])
+
     def test_async_preparation_knob_validates_before_server_replacement(self):
         """Author: Winston Cai. Exercise the real shell boundary without Docker."""
         with tempfile.TemporaryDirectory(prefix="remnant-input-preparation-") as temporary:
@@ -718,6 +1251,9 @@ class LocalScriptTests(unittest.TestCase):
             docker.write_text(
                 f"#!{sys.executable}\n"
                 "import json, os, sys\n"
+                "if sys.argv[1] == 'inspect':\n"
+                "    print(os.environ['REMNANT_INTEGRATION'] + ' ' + ' '.join(['1'*40]*2))\n"
+                "    raise SystemExit(0)\n"
                 "with open(os.environ['DOCKER_CALLS'], 'a') as handle:\n"
                 "    handle.write(json.dumps(sys.argv[1:]) + '\\n')\n"
                 "raise SystemExit(77)\n"
@@ -727,6 +1263,7 @@ class LocalScriptTests(unittest.TestCase):
                 ("python3", "exit 0"),
                 ("sleep", "exit 0"),
                 ("timeout", 'shift; exec "$@"'),
+                ("git", "printf '%s\\n' 1111111111111111111111111111111111111111"),
             ):
                 tool = tools / name
                 tool.write_text("#!/bin/sh\n" + body + "\n")
@@ -739,6 +1276,7 @@ class LocalScriptTests(unittest.TestCase):
                 "PATH": str(tools) + os.pathsep + os.environ["PATH"],
                 "HOST_REPO": str(root), "LOG_HOST": str(root / "logs"),
                 "DOCKER_CALLS": str(calls), "FRONTEND_DIAGNOSTICS": "0",
+                "DSV4_PREPARATION_WORKERS": "1",
                 "SGLANG_PY": "/fixture/selected-source/python",
             }
             script = kernels.REPO_ROOT / "scripts/local/serve.sh"
@@ -761,8 +1299,9 @@ class LocalScriptTests(unittest.TestCase):
             invocation = json.loads(calls.read_text())
             self.assertIn("SGLANG_DSV4_ASYNC_PREPARATION=1", invocation)
             self.assertNotIn("-i", invocation)
-            self.assertIn("async def preflight", invocation[-2])
-            self.assertEqual(invocation[-1], environment["SGLANG_PY"])
+            self.assertIn("async def preflight", invocation[-3])
+            self.assertEqual(invocation[-2], environment["SGLANG_PY"])
+            self.assertEqual(invocation[-1], "1")
             calls.unlink()
             # Default-off does not import or activate the candidate preflight.
             result = subprocess.run(
@@ -978,7 +1517,9 @@ if kind == 'duplicate' and measured:
             # Exercise the real host gate as well as the mocked Docker client.
             SourcePreflightTests.initialize(self.root)
             for name in ("sglang", "flashmla"):
-                fork = self.root / "third_party" / name
+                fork = self.root / integration_profile(
+                    self.env.get("REMNANT_INTEGRATION", "v0.5.18")
+                )[name]
                 SourcePreflightTests.initialize(fork)
                 SourcePreflightTests.pin(self.root, fork)
         self.info_path.write_text(json.dumps(self.info))
@@ -1156,6 +1697,8 @@ class SurvivorBudgetLauncherTests(unittest.TestCase):
 
         def profile_command(argv, output, deadline):
             calls.append(argv)
+            if capabilities := profiler_capabilities(argv):
+                return capabilities
             if "--export" in argv:
                 base = Path(argv[argv.index("--export") + 1])
                 base.with_suffix(".ncu-rep").write_bytes(b"nonempty profile")
@@ -1215,7 +1758,7 @@ class SurvivorBudgetLauncherTests(unittest.TestCase):
                 self.subTest(count=count, mode=mode),
                 patch.object(kernels, "_benchmark_cases", return_value=contract),
                 patch.object(kernels, "_run_context", return_value=nullcontext((self.root, {}, float("inf")))),
-                patch.object(kernels, "_run_command"),
+                patch.object(kernels, "_run_command", side_effect=profiler_capabilities),
             ):
                 with self.assertRaisesRegex(RuntimeError, "Invalid capture"):
                     kernels.profile_kernels.local("count192", cases="h64_b8_k512", keep_count=192)
@@ -1377,7 +1920,7 @@ class PrefillReadLauncherTests(unittest.TestCase):
                 "_run_context",
                 return_value=nullcontext((self.root, {}, float("inf"))),
             ),
-            patch.object(kernels, "_run_command") as command,
+            patch.object(kernels, "_run_command", side_effect=profiler_capabilities) as command,
         ):
             with self.assertRaisesRegex(RuntimeError, "Prefill capture"):
                 kernels.profile_kernels.local(
@@ -1405,6 +1948,8 @@ class PrefillReadLauncherTests(unittest.TestCase):
         exports = []
 
         def run(argv, output, deadline):
+            if capabilities := profiler_capabilities(argv):
+                return capabilities
             if "--export" in argv:
                 captures.append(argv)
                 base = Path(argv[argv.index("--export") + 1])

@@ -2,8 +2,8 @@
 
 # Offline serving-image dependency
 
-The root `Dockerfile` installs `typing_extensions` from this directory because
-VDI build workers cannot reliably access PyPI or its mirrors. This 45,571-byte
+Both root versioned Dockerfiles install `typing_extensions` from this directory
+because VDI build workers cannot reliably access PyPI or its mirrors. This 45,571-byte
 universal Python wheel is a deliberate Git-tracked build input, not a generated
 benchmark artifact. It does not use Git LFS, so a normal pull includes its bytes.
 Keep the dependency copy/install steps after the CUDA build to preserve caching.

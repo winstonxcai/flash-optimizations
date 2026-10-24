@@ -1,8 +1,16 @@
 [submodule "third_party/sglang"]
-	path = third_party/sglang
+	path = third_party/sglang-v0.5.18
 	url = https://github.com/winstonxcai/sglang.git
 	branch = remnant/v0.5.18
 [submodule "third_party/flashmla"]
-	path = third_party/flashmla
+	path = third_party/flashmla-v0.5.18
 	url = https://github.com/winstonxcai/FlashMLA.git
 	branch = remnant/flashmla-v0518
+[submodule "third_party/flashmla-v0.5.22"]
+	path = third_party/flashmla-v0.5.22
+	url = https://github.com/winstonxcai/FlashMLA.git
+	branch = remnant/flashmla-v0522
+[submodule "third_party/sglang-v0.5.22"]
+	path = third_party/sglang-v0.5.22
+	url = https://github.com/winstonxcai/sglang.git
+	branch = remnant/v0.5.22
