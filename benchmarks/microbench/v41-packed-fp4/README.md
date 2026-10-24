@@ -40,5 +40,18 @@ artifacts in the runner's existing results volume; this README indexes outcomes.
 
 ## Status
 
-Implementation in progress. No Modal jobs launched; task spend $0.
+Implementation in progress; not qualified. Attempt001: profile
+poohthewinniechurchill rejected the launch at its workspace limit, before build
+or GPU allocation. Attempt002: profile wpooh1579, app
+ap-HbGInp86LfsFYh4OlB3qy9, stopped during base-image initialization following a
+source audit finding (empty C4/C128 placeholders). No GPU allocation or tests.
+Baseline on wpooh1579: compute $18.51013772; metered total $31.50823044,
+including historical storage. Track incremental task charges, not credits.
+CPU rate $0.0473/core-hour, memory $0.008/GiB-hour, H100 $3.95/hour.
+The default GPU worker (8 cores, 64 GiB) costs up to $4.8404/hour.
+
+Runtime accounting now deducts the physical reserved SWA/main/indexer pages for
+both explicit FP4 modes. The allocation fixture checks actual pool storage plus
+a fixed BF16 prefill workspace against a 1-GiB budget; this is not serving/SLO
+capacity. Its metadata is synthetic and weights are never downloaded.
 Rollback: select auto or restore baseline fork pins. The new modes remain opt-in.
