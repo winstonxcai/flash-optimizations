@@ -9,7 +9,8 @@ Commands (each remote run requires budget authorization):
 
 Default benchmark: TP4/4xH100, Native, 32k input, 2048 output, concurrency 8;
 60-minute work limit (not an ETA). Uses the same Bash launcher as local H100s.
-The default image builds from Dockerfile. REMNANT_COMPILED_IMAGE reuses a known
+Images use Dockerfile (v0.5.18) or Dockerfile.v0.5.22, selected by
+REMNANT_INTEGRATION. REMNANT_COMPILED_IMAGE reuses a known
 image only after CPU source verification, before overlaying Python updates.
 Model-free work: kernels.py. Capture: scripts/local/capture-latent.sh.
 """
@@ -34,6 +35,9 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import modal
+from scripts.sources import check_sources, integration_profile
+
+INTEGRATION = integration_profile()
 
 MODEL_REPO = "deepseek-ai/DeepSeek-V4-Flash-0731"
 MODEL_REVISION = "7872f01b1d1fe23eabc4c98b48bffcef5a386062"
@@ -87,20 +91,33 @@ def _compiled_source_digest(roots: list[Path]) -> str:
 
 def _verify_compiled_sources(expected: str) -> None:
     """CPU-only gate: never overlay Python onto mismatched compiled kernel sources."""
-    actual = _compiled_source_digest([SGLANG_ROOT / "python/sglang/kernels", Path("/opt/flashmla-remnant/csrc")])
+    if os.environ.get("REMNANT_BUILT_INTEGRATION", "v0.5.18") != INTEGRATION["version"]:
+        raise RuntimeError("Compiled image belongs to a different REMNANT_INTEGRATION")
+    actual = _compiled_source_digest(
+        [SGLANG_ROOT / "python/sglang/kernels", Path("/opt/flashmla-remnant/csrc")]
+    )
     if actual != expected:
-        raise RuntimeError("Compiled source changed; rebuild Dockerfile instead of reusing this image")
+        raise RuntimeError(
+            "Compiled source changed; rebuild Dockerfile instead of reusing this image"
+        )
 
 
 SOURCE_REVISIONS = {
-    identity: _source_revision(identity) for identity in ("parent", "sglang", "flashmla")
+    identity: _source_revision(identity)
+    for identity in ("parent", "sglang", "flashmla")
 }
-SOURCE_ENV = {f"REMNANT_{name.upper()}_SHA": revision for name, revision in SOURCE_REVISIONS.items()}
+SOURCE_ENV = {
+    f"REMNANT_{name.upper()}_SHA": revision
+    for name, revision in SOURCE_REVISIONS.items()
+}
 SOURCE_ENV["REMNANT_SOURCE_IDENTITIES"] = json.dumps(SOURCE_IDENTITIES)
+SOURCE_ENV["REMNANT_INTEGRATION"] = INTEGRATION["version"]
 app = modal.App("remnant")
 model_volume = modal.Volume.from_name("deepseek-v4-flash-0731", create_if_missing=True)
 # Keep the existing volume name: renaming the public modes must not orphan results.
-results_volume = modal.Volume.from_name("remnant-stage2a-results", create_if_missing=True)
+results_volume = modal.Volume.from_name(
+    "remnant-stage2a-results", create_if_missing=True
+)
 download_image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install(
@@ -116,8 +133,8 @@ if compiled_image_id:
     # source over old binaries: reject mismatches before mounting Python files.
     expected = _compiled_source_digest(
         [
-            REPO_ROOT / "third_party/sglang/python/sglang/kernels",
-            REPO_ROOT / "third_party/flashmla/csrc",
+            REPO_ROOT / INTEGRATION["sglang"] / "python/sglang/kernels",
+            REPO_ROOT / INTEGRATION["flashmla"] / "csrc",
         ]
     )
     fork_image = (
@@ -125,10 +142,19 @@ if compiled_image_id:
         .pip_install(f"modal=={modal.__version__}")
         .env(SOURCE_ENV)
         # Bake the verifier's helpers into the cache key; execute ordinary Python.
-        .add_local_file(REPO_ROOT / "scripts/modal/serve.py", "/opt/remnant-serve.py", copy=True)
-        .run_function(_verify_compiled_sources, kwargs={"expected": expected}, timeout=180)
+        .add_local_file(
+            REPO_ROOT / "scripts/modal/serve.py", "/opt/remnant-serve.py", copy=True
+        )
+        .add_local_file(
+            REPO_ROOT / "scripts/sources.py",
+            str(REMOTE_REPO / "scripts/sources.py"),
+            copy=True,
+        )
+        .run_function(
+            _verify_compiled_sources, kwargs={"expected": expected}, timeout=180
+        )
         .add_local_dir(
-            REPO_ROOT / "third_party/sglang",
+            REPO_ROOT / INTEGRATION["sglang"],
             str(SGLANG_ROOT),
             copy=True,
             ignore=(
@@ -141,17 +167,25 @@ if compiled_image_id:
     )
 else:
     fork_image = modal.Image.from_dockerfile(
-        str(REPO_ROOT / "Dockerfile"),
+        str(REPO_ROOT / INTEGRATION["dockerfile"]),
         context_dir=str(REPO_ROOT),
-        ignore=(
-            "scripts/**",
-            "**/.git/**",
-            "third_party/sglang/.git",
-            "third_party/flashmla/.git",
-        ),
+        build_args={
+            "REMNANT_BASE_IMAGE": INTEGRATION["base_image"],
+            "REMNANT_INTEGRATION": INTEGRATION["version"],
+            "REMNANT_SGLANG_SOURCE": INTEGRATION["sglang"],
+            "REMNANT_FLASHMLA_SOURCE": INTEGRATION["flashmla"],
+            "REMNANT_SGLANG_SHA": SOURCE_REVISIONS["sglang"],
+            "REMNANT_FLASHMLA_SHA": SOURCE_REVISIONS["flashmla"],
+        },
+        ignore=modal.FilePatternMatcher.from_file(REPO_ROOT / ".dockerignore"),
     )
 server_image = (
     fork_image.env(SOURCE_ENV)
+    .add_local_file(
+        REPO_ROOT / "scripts/sources.py",
+        str(REMOTE_REPO / "scripts/sources.py"),
+        copy=True,
+    )
     .apt_install("curl", "jq", "util-linux", "coreutils")
     .add_local_dir(
         REPO_ROOT / "scripts/local",
@@ -229,7 +263,9 @@ def _stop_serving_server(process: subprocess.Popen) -> None:
         deadline = time.monotonic() + grace
         while time.monotonic() < deadline:
             rows = subprocess.check_output(
-                ["ps", "-eo", "pgid=,stat="], text=True, timeout=3,
+                ["ps", "-eo", "pgid=,stat="],
+                text=True,
+                timeout=3,
             )
             # Container PID 1 may leave zombies; they cannot retain GPUs.
             live = any(
@@ -244,7 +280,9 @@ def _stop_serving_server(process: subprocess.Popen) -> None:
 
 
 @contextmanager
-def _running_serving_server(env: dict[str, str], log: Path, deadline: float) -> Iterator[None]:
+def _running_serving_server(
+    env: dict[str, str], log: Path, deadline: float
+) -> Iterator[None]:
     """The Modal caller owns server lifetime; the benchmark is only a client."""
     # Refuse an existing listener rather than accepting its health response.
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
@@ -255,21 +293,35 @@ def _running_serving_server(env: dict[str, str], log: Path, deadline: float) -> 
             raise RuntimeError(f"serving port {env['PORT']} is already in use") from exc
     with log.open("w") as stream:
         process = subprocess.Popen(
-            ["bash", str(REMOTE_REPO / "scripts/local/run-server.sh"),
-             env["SERVING_MODE"], str(MODEL_DIR), "127.0.0.1", env["PORT"]],
-            env=env, cwd=REMOTE_REPO, stdout=stream, stderr=subprocess.STDOUT,
+            [
+                "bash",
+                str(REMOTE_REPO / "scripts/local/run-server.sh"),
+                env["SERVING_MODE"],
+                str(MODEL_DIR),
+                "127.0.0.1",
+                env["PORT"],
+            ],
+            env=env,
+            cwd=REMOTE_REPO,
+            stdout=stream,
+            stderr=subprocess.STDOUT,
             start_new_session=True,
         )
         try:
             while True:
                 if process.poll() is not None:
-                    raise RuntimeError(f"serving process exited during startup; see {log}")
+                    raise RuntimeError(
+                        f"serving process exited during startup; see {log}"
+                    )
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
-                    raise TimeoutError(f"server startup exhausted job budget; see {log}")
+                    raise TimeoutError(
+                        f"server startup exhausted job budget; see {log}"
+                    )
                 try:
                     with urllib.request.urlopen(
-                        f"http://127.0.0.1:{env['PORT']}/health", timeout=min(3, remaining),
+                        f"http://127.0.0.1:{env['PORT']}/health",
+                        timeout=min(3, remaining),
                     ) as response:
                         if response.status == 200:
                             break
@@ -299,7 +351,9 @@ def benchmark_serving(
 ) -> str:
     """Own one server boot and call the shared client against it."""
     if mode not in {"native", "triton", "kernel", "packed"}:
-        raise ValueError("mode must be native, triton, or kernel (packed aliases kernel)")
+        raise ValueError(
+            "mode must be native, triton, or kernel (packed aliases kernel)"
+        )
     if mode == "packed":
         mode = "kernel"
     if not 1 <= timeout_minutes <= 240:
@@ -323,13 +377,18 @@ def benchmark_serving(
         "BENCH_EXECUTION": "direct",
         "SERVING_MODE": mode,
         "PORT": os.environ.get("PORT", "30211"),
-        "DECODE_CFG": os.environ.get("DECODE_CFG") or (
+        "DECODE_CFG": os.environ.get("DECODE_CFG")
+        or (
             REMOTE_REPO / "scripts/local/config/decode-graphs-extended.json"
         ).read_text(),
         **SOURCE_ENV,
     }
-    (run / "source-revisions.json").write_text(json.dumps(SOURCE_REVISIONS, indent=2) + "\n")
-    (run / "source-identities.json").write_text(json.dumps(SOURCE_IDENTITIES, indent=2) + "\n")
+    (run / "source-revisions.json").write_text(
+        json.dumps(SOURCE_REVISIONS, indent=2) + "\n"
+    )
+    (run / "source-identities.json").write_text(
+        json.dumps(SOURCE_IDENTITIES, indent=2) + "\n"
+    )
     try:
         with _running_serving_server(env, run / "server.log", deadline):
             remaining = int(deadline - time.monotonic())
@@ -337,9 +396,19 @@ def benchmark_serving(
                 raise TimeoutError("server startup exhausted the benchmark budget")
             env["BENCH_TIMEOUT_S"] = str(remaining)
             subprocess.run(
-                ["bash", str(REMOTE_REPO / "scripts/local/bench-serving.sh"),
-                 mode, env["PORT"], str(input_tokens), str(output_tokens), str(concurrency)],
-                env=env, cwd=REMOTE_REPO, check=True, timeout=remaining,
+                [
+                    "bash",
+                    str(REMOTE_REPO / "scripts/local/bench-serving.sh"),
+                    mode,
+                    env["PORT"],
+                    str(input_tokens),
+                    str(output_tokens),
+                    str(concurrency),
+                ],
+                env=env,
+                cwd=REMOTE_REPO,
+                check=True,
+                timeout=remaining,
             )
     finally:
         results_volume.commit()
@@ -352,7 +421,9 @@ def benchmark_serving(
 def _kernel_package_dir() -> Path:
     spec = importlib.util.find_spec("sgl_kernel")
     if spec is None or not spec.submodule_search_locations:
-        raise FileNotFoundError("CPU-built sgl_kernel package is missing from the image")
+        raise FileNotFoundError(
+            "CPU-built sgl_kernel package is missing from the image"
+        )
     return Path(next(iter(spec.submodule_search_locations)))
 
 

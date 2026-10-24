@@ -7,10 +7,24 @@
 # This is the single server image for local and Modal runs. The model weights
 # remain mounted at runtime; the checked-out fork sources are copied from the
 # third_party submodules in this repository.
-FROM lmsysorg/sglang:v0.5.18-cu130
+ARG REMNANT_BASE_IMAGE=lmsysorg/sglang:v0.5.18-cu130
+FROM ${REMNANT_BASE_IMAGE}
+ARG REMNANT_INTEGRATION=v0.5.18
+ARG REMNANT_SGLANG_SOURCE=third_party/sglang
+ARG REMNANT_FLASHMLA_SOURCE=third_party/flashmla
+ARG REMNANT_SGLANG_SHA
+ARG REMNANT_FLASHMLA_SHA
+ENV REMNANT_BUILT_INTEGRATION=${REMNANT_INTEGRATION}
+LABEL remnant.integration=${REMNANT_INTEGRATION} \
+      remnant.sglang=${REMNANT_SGLANG_SHA} \
+      remnant.flashmla=${REMNANT_FLASHMLA_SHA}
 
-COPY third_party/sglang/python/sglang/kernels /sgl-workspace/sglang-remnant/python/sglang/kernels
-COPY third_party/flashmla /opt/flashmla-remnant
+COPY ${REMNANT_SGLANG_SOURCE}/python/sglang/kernels /sgl-workspace/sglang-remnant/python/sglang/kernels
+COPY ${REMNANT_FLASHMLA_SOURCE} /opt/flashmla-remnant
+RUN python3 -c 'import importlib.metadata, os; expected=os.environ["REMNANT_BUILT_INTEGRATION"].lstrip("v"); actual=importlib.metadata.version("sglang"); assert actual == expected or actual.startswith(expected+"."), (expected, actual)' \
+    && if [ "$REMNANT_INTEGRATION" = v0.5.22 ]; then \
+      test -f /opt/flashmla-remnant/csrc/kernels/sm90/decode/sparse/instantiations/v4_remnant_h64.cu; \
+    else test -f /opt/flashmla-remnant/csrc/sm90/decode/sparse_fp8/instantiations/model1_remnant_h64.cu; fi
 
 # Compile the local SM90 extensions while building the image. These layers are
 # invalidated by kernel source changes, not Python capture/client changes.
@@ -41,7 +55,7 @@ RUN set -eux; \
     grep -q remnant_sparse_decode_fwd "$package_dir"/flash_mla.py; \
     rm -rf "$build_root"
 
-COPY third_party/sglang /sgl-workspace/sglang-remnant
+COPY ${REMNANT_SGLANG_SOURCE} /sgl-workspace/sglang-remnant
 
 ENV SG_LOWRANK_SRC=/sgl-workspace/sglang-remnant/python
 ENV REMNANT_FLASHMLA_SOURCE_DIR=/opt/flashmla-remnant

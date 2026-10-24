@@ -6,6 +6,7 @@ No image builds, remote calls, weights or GPUs. Build/execution boundaries are m
 
 import ast
 import copy
+import inspect
 import json
 import os
 import subprocess
@@ -18,13 +19,18 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
 
 from scripts.modal import kernels
-from scripts.sources import check_sources
+from scripts.sources import check_sources, integration_profile
 
 
 class SourcePreflightTests(unittest.TestCase):
     """Real Git fixtures; no Docker, Modal API or shared fork mutations."""
 
     def setUp(self):
+        # Disposable source fixtures describe the default integration, even when
+        # the launcher's real-checkout checks run under the v0.5.22 profile.
+        profile = patch.dict(os.environ, {"REMNANT_INTEGRATION": "v0.5.18"})
+        profile.start()
+        self.addCleanup(profile.stop)
         temporary = tempfile.TemporaryDirectory(prefix="remnant-sources-")
         self.addCleanup(temporary.cleanup)
         self.repo = Path(temporary.name) / "parent with spaces"
@@ -70,6 +76,72 @@ class SourcePreflightTests(unittest.TestCase):
         for name in ("sglang", "flashmla", "flashmla/csrc/cutlass"):
             self.assertEqual(records[name]["commit"], records[name]["expected_commit"])
             self.assertFalse(records[name]["dirty"])
+
+    def test_profiles_select_matching_dockerfiles(self):
+        for version, filename in (("v0.5.18", "Dockerfile"),
+                                  ("v0.5.22", "Dockerfile.v0.5.22")):
+            with self.subTest(version=version):
+                profile = integration_profile(version)
+                self.assertEqual(profile["dockerfile"], filename)
+                recipe = (kernels.REPO_ROOT / filename).read_text()
+                self.assertIn(f"ARG REMNANT_INTEGRATION={version}\n", recipe)
+                self.assertIn(f"ARG REMNANT_BASE_IMAGE={profile['base_image']}\n", recipe)
+                for name in ("sglang", "flashmla"):
+                    self.assertIn(f"ARG REMNANT_{name.upper()}_SOURCE={profile[name]}\n", recipe)
+                self.assertIn('CMD ["bash"]', recipe)
+                if version == "v0.5.22":
+                    self.assertNotIn("COPY ${", recipe)
+                    self.assertIn("COPY third_party/sglang-v0.5.22 ", recipe)
+                    self.assertIn("COPY third_party/flashmla-v0.5.22 ", recipe)
+                    self.assertIn("cuda-python==13.0.3 cuda-bindings==13.0.3", recipe)
+
+    def test_version_profiles_select_only_their_own_pins(self):
+        profile = integration_profile("v0.5.22")
+        forks = {}
+        for name in ("sglang", "flashmla"):
+            root = self.repo / profile[name]
+            self.initialize(root)
+            self.pin(self.repo, root)
+            forks[name] = root
+        nested = forks["flashmla"] / "csrc/cutlass"
+        self.initialize(nested)
+        self.pin(forks["flashmla"], nested)
+        self.pin(self.repo, forks["flashmla"])
+        (self.forks["sglang"] / "source.txt").write_text("unrelated old experiment")
+        records = check_sources(self.repo, integration="v0.5.22")
+        self.assertEqual(records["sglang"]["path"], str(forks["sglang"].resolve()))
+        self.assertEqual(records["flashmla"]["integration"], "v0.5.22")
+        self.assertIn("flashmla/csrc/cutlass", records)
+        with self.assertRaisesRegex(RuntimeError, "sglang is dirty"):
+            check_sources(self.repo, integration="v0.5.18")
+        (nested / "source.txt").write_text("unapproved dependency")
+        with self.assertRaisesRegex(RuntimeError, "flashmla/csrc/cutlass is dirty"):
+            check_sources(self.repo, integration="v0.5.22")
+
+    def test_rejects_unknown_profile_and_mixed_flashmla_override(self):
+        with self.assertRaises(ValueError):
+            integration_profile("latest")
+        legacy = self.forks["flashmla"] / "csrc/sm90/decode/sparse_fp8/config.h"
+        legacy.parent.mkdir(parents=True)
+        legacy.write_text("// legacy layout\n")
+        for name in ("sglang", "flashmla"):
+            root = self.repo / integration_profile("v0.5.22")[name]
+            self.initialize(root)
+            self.pin(self.repo, root)
+        with self.assertRaisesRegex(RuntimeError, "layout does not match"):
+            check_sources(self.repo, {"flashmla": self.forks["flashmla"]}, integration="v0.5.22")
+
+    def test_rejects_mixed_sglang_override_with_dynamic_version(self):
+        for name in ("sglang", "flashmla"):
+            root = self.repo / integration_profile("v0.5.22")[name]
+            self.initialize(root)
+            self.pin(self.repo, root)
+        legacy = self.forks["sglang"]
+        version = legacy / "python/sglang/version.py"
+        version.parent.mkdir(parents=True)
+        version.write_text("try:\n    __version__ = read_version()\nexcept Exception:\n    __version__ = '0.0.0.dev0'\n")
+        with self.assertRaisesRegex(RuntimeError, "argument-group layout"):
+            check_sources(self.repo, {"sglang": legacy}, integration="v0.5.22")
 
     def test_rejects_dirty_states_without_changing_them(self):
         root = self.forks["sglang"]
@@ -183,22 +255,43 @@ with patch('scripts.sources.check_sources', side_effect=RuntimeError('source rej
 class ContractTests(unittest.TestCase):
     def test_profile_matrix_is_complete(self):
         matrix = kernels._benchmark_cases().selected_profile_matrix()
-        self.assertEqual(len(matrix), 30)
-        self.assertEqual(len(set(matrix)), 30)
-        self.assertEqual(sum(suite == "decode" for suite, _, _ in matrix), 24)
+        newer = kernels.INTEGRATION["version"] == "v0.5.22"
+        batches = (8, 16, 24, 28, 32) if newer else (8, 16)
+        lengths = (512,) if newer else (512, 317)
+        expected = {
+            (f"h{head}_b{batch}_k{length}", mode)
+            for head in (64, 128)
+            for batch in batches
+            for length in lengths
+            for mode in ("native", "triton", "kernel")
+        }
+        self.assertEqual(len(matrix), len(expected) + 6)
+        self.assertEqual(len(set(matrix)), len(matrix))
+        self.assertEqual(
+            {(name, mode) for suite, name, mode in matrix if suite == "decode"},
+            expected,
+        )
         self.assertEqual({mode for _, _, mode in matrix}, {"native", "triton", "kernel"})
 
     def test_representative_profile_matrix(self):
-        cases = "h64_b16_k512,h64_b16_k317,decode-r24-all_valid,prefill-r8192-all_valid"
+        newer = kernels.INTEGRATION["version"] == "v0.5.22"
+        cases = (
+            "h64_b24_k512,h64_b28_k512,h128_b32_k512,decode-r24-all_valid,prefill-r8192-all_valid"
+            if newer else
+            "h64_b16_k512,h64_b16_k317,decode-r24-all_valid,prefill-r8192-all_valid"
+        )
         matrix = kernels._benchmark_cases().selected_profile_matrix(cases)
-        self.assertEqual(len(matrix), 12)
+        self.assertEqual(len(matrix), 3 * len(cases.split(",")))
         self.assertEqual({name for _, name, _ in matrix}, set(cases.split(",")))
         for name in cases.split(","):
             self.assertEqual(
                 {mode for _, case, mode in matrix if case == name},
                 {"native", "triton", "kernel"},
             )
-        for invalid in ("unknown", "h64_b16_k512,h64_b16_k512"):
+        invalid_cases = ["unknown", "h64_b16_k512,h64_b16_k512"]
+        if newer:
+            invalid_cases.append("h64_b16_k317")
+        for invalid in invalid_cases:
             with self.assertRaisesRegex(ValueError, "unknown or duplicate"):
                 kernels._benchmark_cases().selected_profile_matrix(invalid)
 
@@ -341,14 +434,179 @@ class LauncherTests(unittest.TestCase):
                 )
                 self.assertNotIn("--worker", argv)
 
+    def test_validation_budget_is_bounded_before_execution(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        self.assertEqual(function.__defaults__, (False, 1100))
+        with patch.object(kernels, "_run_context") as run:
+            for seconds in (0, 59, 2641, 2700):
+                with self.assertRaisesRegex(ValueError, "max_seconds"):
+                    function("fixture", max_seconds=seconds)
+            run.assert_not_called()
+        with patch.object(kernels, "VALIDATION_TIMEOUT_S", 120):
+            with self.assertRaisesRegex(ValueError, "between 60 and 60"):
+                function("fixture", max_seconds=61)
+
+    def test_sanitizer_failures_preserve_later_results_and_fail_the_run(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        order = ("synccheck", "racecheck", "memcheck")
+        for failed in (None, *order):
+            record = {}
+
+            def run_pytest(tests, root, name, deadline, **kwargs):
+                if name == failed:
+                    raise RuntimeError(f"{name}: hazard or incomplete coverage")
+
+            with (
+                self.subTest(failed=failed),
+                patch.object(kernels, "INTEGRATION", {"version": "v0.5.18"}),
+                patch.object(kernels, "SANITIZER_ORDER", order),
+                patch.object(kernels, "_run_context", return_value=nullcontext((self.root, record, 100))),
+                patch.object(kernels.time, "monotonic", return_value=0),
+                patch.object(kernels, "_run_pytest", side_effect=run_pytest) as run,
+            ):
+                if failed is None:
+                    self.assertEqual(function("fixture", sanitizer=True), str(self.root))
+                else:
+                    with self.assertRaisesRegex(RuntimeError, "qualification incomplete"):
+                        function("fixture", sanitizer=True)
+            self.assertEqual([c.args[2] for c in run.call_args_list], ["validation", *order])
+            self.assertTrue(record["sanitizer"])
+            for tool in order:
+                self.assertEqual(record["sanitizer_results"][tool]["status"],
+                                 "failed" if tool == failed else "passed")
+            for c in run.call_args_list[1:]:
+                self.assertEqual(c.args[0], kernels.SANITIZER_TESTS)
+                self.assertEqual(c.kwargs["prefix"][-2:], ("--error-exitcode", "1"))
+
+    def test_sanitizer_deadline_keeps_unstarted_tools_explicitly_incomplete(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        for now in (99.5, 100):
+            record = {}
+            with (
+                self.subTest(now=now),
+                patch.object(kernels, "INTEGRATION", {"version": "v0.5.18"}),
+                patch.object(kernels, "SANITIZER_ORDER", ("synccheck", "racecheck", "memcheck")),
+                patch.object(kernels, "_run_context", return_value=nullcontext((self.root, record, 100))),
+                patch.object(kernels.time, "monotonic", side_effect=[0, now]),
+                patch.object(kernels, "_run_pytest") as run,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "qualification incomplete"):
+                    function("fixture", sanitizer=True)
+            self.assertEqual([c.args[2] for c in run.call_args_list], ["validation", "synccheck"])
+            self.assertEqual(record["sanitizer_results"], {
+                "synccheck": {"status": "passed"},
+                "racecheck": {"status": "not_run"},
+                "memcheck": {"status": "not_run"},
+            })
+
+    def test_sanitizer_prelaunch_timeout_keeps_tool_not_run(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        run_pytest = kernels._run_pytest
+        record = {}
+
+        def validate_or_run(tests, root, name, deadline, **kwargs):
+            if name != "validation":
+                return run_pytest(tests, root, name, deadline, **kwargs)
+
+        with (
+            patch.object(kernels, "INTEGRATION", {"version": "v0.5.18"}),
+            patch.object(kernels, "SANITIZER_ORDER", ("synccheck", "racecheck", "memcheck")),
+            patch.object(kernels, "_run_context", return_value=nullcontext((self.root, record, 100))),
+            patch.object(kernels.time, "monotonic", side_effect=[99.0, 99.01]),
+            patch.object(kernels, "_run_pytest", side_effect=validate_or_run) as run,
+            patch.object(kernels.subprocess, "run") as command,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "qualification incomplete"):
+                function("fixture", sanitizer=True)
+        command.assert_not_called()
+        self.assertEqual([c.args[2] for c in run.call_args_list], ["validation", "synccheck"])
+        self.assertEqual(record["sanitizer_results"], {
+            tool: {"status": "not_run"} for tool in ("synccheck", "racecheck", "memcheck")
+        })
+
+    def test_binding_check_validates_both_directions_without_unrelated_repairs(self):
+        versions = {"cuda-python": "13.0.3", "cuda-bindings": "13.0.3", "cuda-pathfinder": "1.8.3"}
+        distributions = [
+            SimpleNamespace(metadata={"Name": "cuda-python"}, requires=["cuda-bindings~=13.0.3", "cuda-pathfinder~=1.1"]),
+            SimpleNamespace(metadata={"Name": "torch"}, requires=["cuda-bindings>=13.0.3,<14"]),
+            SimpleNamespace(metadata={"Name": "unrelated-video"}, requires=["missing-opencv>=1"]),
+        ]
+        with (
+            patch.object(kernels.importlib.metadata, "distributions", return_value=distributions),
+            patch.object(kernels.importlib.metadata, "version", side_effect=lambda name: versions[name]),
+        ):
+            self.assertEqual(len(kernels._check_cuda_binding_requirements()), 3)
+            versions["cuda-pathfinder"] = "0.9"
+            with self.assertRaisesRegex(RuntimeError, "cuda-python: requires cuda-pathfinder"):
+                kernels._check_cuda_binding_requirements()
+            versions["cuda-pathfinder"] = "1.8.3"
+            distributions[1].requires = ["cuda-bindings>=13.4"]
+            with self.assertRaisesRegex(RuntimeError, "torch: requires cuda-bindings"):
+                kernels._check_cuda_binding_requirements()
+            versions["cuda-bindings"] = "13.4.4"
+            with self.assertRaisesRegex(RuntimeError, "requires cuda-bindings==13.0.3"):
+                kernels._check_cuda_binding_requirements()
+
+    def test_source_fingerprint_ignores_regenerable_caches(self):
+        sources = [self.root / name for name in ("sglang", "flashmla")]
+        for source in sources:
+            source.mkdir()
+            (source / "runtime.py").write_text("original")
+        with (
+            patch.object(kernels, "SGLANG_ROOT", sources[0]),
+            patch.object(kernels, "FLASHMLA_ROOT", sources[1]),
+        ):
+            before = kernels._source_hashes()
+            cache = sources[0] / ".pytest_cache"
+            cache.mkdir()
+            (cache / "nodeids").write_text("collected cases")
+            self.assertEqual(kernels._source_hashes(), before)
+            (sources[0] / "runtime.py").write_text("changed")
+            self.assertNotEqual(kernels._source_hashes(), before)
+
     def test_collection_and_sanitizer_use_existing_pytest(self):
         with patch.object(kernels, "_run_command") as command:
             kernels._run_pytest(kernels.VALIDATION_TESTS, self.root, "collect", 100, collect=True)
             self.assertIn("--collect-only", command.call_args.args[0])
             (self.root / "memcheck.xml").write_text('<testsuite tests="1"/>')
             prefix = ("compute-sanitizer", "--tool", "memcheck", "--error-exitcode", "1")
+            command.return_value = "========= ERROR SUMMARY: 0 errors\n"
             kernels._run_pytest(kernels.SANITIZER_TESTS, self.root, "memcheck", 100, prefix=prefix)
             self.assertEqual(command.call_args.args[0][:5], list(prefix))
+
+    def test_sanitizer_requires_clean_summary_and_actual_instrumentation(self):
+        for tool in ("memcheck", "synccheck", "racecheck"):
+            summary = ("========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)\n"
+                       if tool == "racecheck" else "========= ERROR SUMMARY: 0 errors\n")
+            (self.root / f"{tool}.xml").write_text('<testsuite tests="1"/>')
+            for text, accepted in ((summary, True), ("....................", False),
+                                   (summary + "========= Warning: overflow of tracked barriers\n", False),
+                                   (".========= Warning: overflow of tracked barriers\n" + summary, False),
+                                   (summary + "========= ERROR SUMMARY: 2 errors\n", False),
+                                   ("========= ERROR SUMMARY: 2 errors\n" + summary, False),
+                                   (summary + "========= Target application terminated before first instrumented API call\n", False)):
+                with (
+                    self.subTest(tool=tool, text=text),
+                    patch.object(kernels, "_run_command", return_value=text),
+                ):
+                    kwargs = {"prefix": ("compute-sanitizer", "--tool", tool, "--error-exitcode", "1")}
+                    if accepted:
+                        kernels._run_pytest(kernels.SANITIZER_TESTS, self.root, tool, 100, **kwargs)
+                    else:
+                        with self.assertRaisesRegex(RuntimeError, "Incomplete sanitizer evidence"):
+                            kernels._run_pytest(kernels.SANITIZER_TESTS, self.root, tool, 100, **kwargs)
+
+    def test_missing_or_malformed_pytest_report_is_an_explicit_failure(self):
+        for content in (None, "<testsuites>", '<testsuite tests="invalid"/>'):
+            report = self.root / "missing.xml"
+            if content is not None:
+                report.write_text(content)
+            with (
+                self.subTest(content=content),
+                patch.object(kernels, "_run_command", return_value=""),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "Incomplete validation missing"):
+                    kernels._run_pytest(kernels.VALIDATION_TESTS, self.root, "missing", 100)
 
     def test_command_failures_show_log_path_tail_and_cause(self):
         with patch.object(kernels.subprocess, "run") as process:
@@ -552,6 +810,23 @@ class LauncherTests(unittest.TestCase):
         kernel.write_text("changed")
         self.assertNotEqual(before, serve._compiled_source_digest([source]))
 
+    def test_image_source_hash_ignores_git_pointers_but_not_code(self):
+        roots = [self.root / name for name in ("sglang", "flashmla")]
+        for root in roots:
+            (root / "nested").mkdir(parents=True)
+            (root / "kernel.cu").write_text("compiled source\n")
+            (root / "nested/.git").write_text("gitdir: first-local-checkout\n")
+        with (
+            patch.object(kernels, "SGLANG_ROOT", roots[0]),
+            patch.object(kernels, "FLASHMLA_ROOT", roots[1]),
+        ):
+            before = kernels._source_hashes()
+            for root in roots:
+                (root / "nested/.git").write_text("gitdir: another-local-checkout\n")
+            self.assertEqual(kernels._source_hashes(), before)
+            (roots[1] / "kernel.cu").write_text("changed compiled source\n")
+            self.assertNotEqual(kernels._source_hashes()["flashmla"], before["flashmla"])
+
     def test_serving_missing_extensions_never_compiles_on_gpu(self):
         from scripts.modal import serve
 
@@ -677,21 +952,29 @@ class LauncherTests(unittest.TestCase):
     def test_public_commands_import_without_launching_jobs(self):
         code = """
 from unittest.mock import patch
+from pathlib import Path
 import modal
 with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')), \\
-     patch.object(modal.Function, 'spawn', side_effect=AssertionError('launch')):
+     patch.object(modal.Function, 'spawn', side_effect=AssertionError('launch')), \\
+     patch.object(modal.Image, 'from_dockerfile', wraps=modal.Image.from_dockerfile) as recipe:
     from scripts.modal import serve, kernels
+    expected = 'Dockerfile.v0.5.22' if serve.INTEGRATION['version'] == 'v0.5.22' else 'Dockerfile'
+    assert Path(recipe.call_args.args[0]).name == expected
+    assert recipe.call_args.kwargs['build_args']['REMNANT_INTEGRATION'] == serve.INTEGRATION['version']
     assert 'benchmark_serving' in serve.app.registered_functions
     assert {'benchmark_kernels', 'profile_kernels', 'validate_kernels'} <= set(kernels.app.registered_functions)
+    expected_order = ('synccheck', 'racecheck', 'memcheck') if serve.INTEGRATION['version'] == 'v0.5.22' else ('memcheck', 'racecheck', 'synccheck')
+    assert kernels.SANITIZER_ORDER == expected_order
 """
-        subprocess.run(
-            [sys.executable, "-c", code],
-            cwd=kernels.REPO_ROOT,
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
+        for version in ("v0.5.18", "v0.5.22"):
+            environment = dict(os.environ, REMNANT_INTEGRATION=version)
+            environment.pop("REMNANT_COMPILED_IMAGE", None)
+            with self.subTest(version=version):
+                subprocess.run(
+                    [sys.executable, "-c", code],
+                    cwd=kernels.REPO_ROOT, env=environment, check=True,
+                    capture_output=True, text=True, timeout=30,
+                )
 
     def test_launchers_import_independently(self):
         for module, other in (("serve", "kernels"), ("kernels", "serve")):
@@ -707,6 +990,21 @@ with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')
 
 
 class LocalScriptTests(unittest.TestCase):
+    def test_local_profiles_match_source_and_dockerfile_selection(self):
+        for version in ("v0.5.18", "v0.5.22"):
+            profile = integration_profile(version)
+            environment = dict(os.environ, REMNANT_INTEGRATION=version)
+            environment.pop("CONTAINER", None)
+            with self.subTest(version=version):
+                result = subprocess.run(
+                    ["bash", "-c",
+                     '. "$1"; printf "%s\\n" "$REMNANT_DOCKERFILE" "$REMNANT_BASE_IMAGE" "$CONTAINER"',
+                     "profile-check", str(kernels.REPO_ROOT / "scripts/local/env.sh")],
+                    env=environment, capture_output=True, text=True, check=True, timeout=10,
+                )
+                self.assertEqual(result.stdout.splitlines(),
+                                 [profile["dockerfile"], profile["base_image"], profile["container"]])
+
     def test_raw_jsonl_prepares_for_existing_session_replay(self):
         from scripts.local.business_replay import runner
 

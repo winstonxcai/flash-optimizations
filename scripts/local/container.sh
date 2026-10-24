@@ -17,13 +17,12 @@
 # server is already running on the node.
 # =====================================================================
 set -u
-export CONTAINER=${CONTAINER:-remnant}
 DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 . "$DIR/env.sh"
 
 ACTION=${1:-up}
-IMAGE=${IMAGE:-remnant:v0.5.18}
-DOCKERFILE="$HOST_REPO/Dockerfile"
+IMAGE=${IMAGE:-remnant:$REMNANT_INTEGRATION}
+DOCKERFILE="$HOST_REPO/$REMNANT_DOCKERFILE"
 
 die () { echo "FATAL: $*" >&2; exit 1; }
 
@@ -44,7 +43,14 @@ build_image () {
   echo "== build $IMAGE from $DOCKERFILE"
   # GPU nodes may have no docker0 bridge; build workers use the same host
   # network as the serving container rather than Docker's default bridge.
-  docker build --network host -t "$IMAGE" -f "$DOCKERFILE" "$HOST_REPO" || die "docker build failed"
+  docker build --network host -t "$IMAGE" -f "$DOCKERFILE" \
+    --build-arg "REMNANT_INTEGRATION=$REMNANT_INTEGRATION" \
+    --build-arg "REMNANT_BASE_IMAGE=$REMNANT_BASE_IMAGE" \
+    --build-arg "REMNANT_SGLANG_SOURCE=$SGLANG_SOURCE_RELATIVE" \
+    --build-arg "REMNANT_FLASHMLA_SOURCE=$FLASHMLA_SOURCE_RELATIVE" \
+    --build-arg "REMNANT_SGLANG_SHA=$(git -C "$HOST_REPO/$SGLANG_SOURCE_RELATIVE" rev-parse HEAD)" \
+    --build-arg "REMNANT_FLASHMLA_SHA=$(git -C "$HOST_REPO/$FLASHMLA_SOURCE_RELATIVE" rev-parse HEAD)" \
+    "$HOST_REPO" || die "docker build failed"
 }
 
 create_container () {
@@ -57,13 +63,14 @@ create_container () {
 
 prep () {
   has_container || die "container $CONTAINER does not exist; run: $0 (no args)"
+  check_container_sources || die "container does not match the selected source pair"
   echo "== verify production SGLang fork at $SGLANG_ROOT_CT"
   ct_script "$SGLANG_ROOT_CT/python/sglang/srt/server_args.py" <<'BASH' \
     || die "production SGLang fork is not present or missing C4 cache selection flags"
 set -e
 server_args=$1
 test -f "$server_args"
-grep -q dsv4-c4-cache-format "$server_args"
+grep -q _configure_dsv4_c4_cache_format "$server_args"
 grep -q dsv4_c4_cache_implementation "$server_args"
 BASH
 }
