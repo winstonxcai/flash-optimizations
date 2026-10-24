@@ -78,7 +78,7 @@ Run the frozen snapshot from this worktree:
 MODAL_PROFILE=wpooh1579 REMNANT_INTEGRATION=v0.5.22 \
 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_VALIDATION_TIMEOUT_S=1800 \
 modal run scripts/modal/kernels.py::validate_kernels \
-  --run-id v41-fp4-20261024-attempt005 --sanitizer --max-seconds 1600
+  --run-id v41-fp4-20261025-attempt006 --sanitizer --max-seconds 1600
 ```
 
 All executable validation is on Modal. Local work is source preparation and
@@ -95,3 +95,12 @@ zero-global and zero-global-tail negative controls to fail the original toleranc
 Reported cumulative compute is $0.23699321 before billing lag. Attempt005 has the
 same bounded resource projection (CPU preflight <=$1.2688, H100 worker <=$2.4202,
 plus image builds), comfortably below the $13 projected-work ceiling.
+
+Attempt005: app `ap-i9KtfByyB4cKGE78RhDJcK`, parent `6e02fae`. CPU build,
+SM90 precompilation and legacy startup regressions passed; FP4 startup failed
+because the upstream layout variable defaults to `v4` even when unset. Corrected
+in SGLang `d3e86c63`: reject explicitly set conflicting layouts, accept the
+implicit default and explicit `auto`, with focused regression assertions.
+22 CPU tests and 15 subtests passed; one failed. No H100 allocation.
+Reported cumulative compute $0.46312721 before billing lag. Attempt006 retains
+the same bounded projection and $2 reserve; no automatic retries.

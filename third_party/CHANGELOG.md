@@ -14,7 +14,7 @@ records rather than this milestone log.
 ## Unreleased
 
 - Experimental V4.1 FP4 integration on parent `f4f21a8` (implementation snapshot
-  `97573d2`), based on `9419d0e`. v0.5.22 pins: SGLang `fe7dd846afa6` /
+  `97573d2`), based on `9419d0e`. v0.5.22 pins: SGLang `d3e86c63afa6` /
   FlashMLA `0e34a09a4f5d`; v0.5.18 and CUTLASS pins unchanged. Adds opt-in
   Native 288-byte/Packed 224-byte storage, deterministic post-quantization
   256-coordinate selection, SM90 mixed-SWA Direct dispatch, reconstruction,

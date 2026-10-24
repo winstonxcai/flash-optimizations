@@ -9,8 +9,8 @@
     "max_projected_work_usd": 13,
     "account": "wpooh1579",
     "baseline_compute_usd": 18.51013772,
-    "latest_compute_usd": 18.74713093,
-    "incremental_compute_usd": 0.23699321,
+    "latest_compute_usd": 18.97326493,
+    "incremental_compute_usd": 0.46312721,
     "billing_lag": true,
     "cpu_core_hour_usd": 0.0473,
     "memory_gib_hour_usd": 0.008,
@@ -66,6 +66,24 @@
       },
       "gpu_allocated": false,
       "reason": "startup tests failed; source audit fixes auto attention default and missing legacy flag fallback; next run verifies diagnosis"
+    },
+    {
+      "id": "attempt005",
+      "account": "wpooh1579",
+      "app_id": "ap-i9KtfByyB4cKGE78RhDJcK",
+      "status": "cpu_preflight_failed",
+      "source_parent": "6e02faeb7b632ec4762ce17c647d22dab7949ce0",
+      "sglang": "fe7dd84620f135f50f1dc50ea0939a21ac12e8dd",
+      "flashmla": "0e34a09a4f5d5d3879a94c483a4feef8eba8dc03",
+      "cpu_native_compilation": "passed",
+      "cpu_fp4_precompilation": "passed",
+      "cpu_tests": {
+        "passed": 22,
+        "failed": 1,
+        "subtests_passed": 15
+      },
+      "gpu_allocated": false,
+      "reason": "unset upstream KV layout defaults to v4; conflict validation must check explicit environment presence"
     }
   ],
   "review": {
