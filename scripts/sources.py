@@ -16,6 +16,36 @@ import sys
 from pathlib import Path
 
 
+def compiled_source_digest(roots: list[Path]) -> str:
+    digest = hashlib.sha256()
+    for root in map(Path, roots):
+        if not root.is_dir():
+            raise RuntimeError(f"compiled source directory absent: {root}")
+        for path in sorted(root.rglob("*")):
+            if path.is_file() and path.suffix in {
+                ".cu",
+                ".cuh",
+                ".cc",
+                ".cpp",
+                ".h",
+                ".hpp",
+                ".cmake",
+                ".txt",
+                ".py",
+            }:
+                digest.update(str(path.relative_to(root)).encode() + b"\0")
+                digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+
+def verify_compiled_image_sources(expected: str, roots: list[str], integration: str) -> None:
+    """CPU-only reuse gate; never overlay runtime code on mismatched kernels."""
+    if os.environ.get("REMNANT_BUILT_INTEGRATION", "v0.5.18") != integration:
+        raise RuntimeError("Compiled image belongs to a different integration")
+    if compiled_source_digest([Path(root) for root in roots]) != expected:
+        raise RuntimeError("Compiled source changed; rebuild the selected Dockerfile")
+
 def integration_profile(value: str | None = None) -> dict[str, str]:
     """One explicit source/image pair; Native defaults remain v0.5.18."""
     version = (

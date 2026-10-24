@@ -70,26 +70,7 @@ def _source_revision(identity: str) -> str:
     return SOURCE_IDENTITIES[identity]["commit"]
 
 
-def _compiled_source_digest(roots: list[Path]) -> str:
-    digest = hashlib.sha256()
-    for root in map(Path, roots):
-        if not root.is_dir():
-            raise RuntimeError(f"compiled source directory absent: {root}")
-        for path in sorted(root.rglob("*")):
-            if path.is_file() and path.suffix in {
-                ".cu",
-                ".cuh",
-                ".cc",
-                ".cpp",
-                ".h",
-                ".hpp",
-                ".cmake",
-                ".txt",
-                ".py",
-            }:
-                digest.update(str(path.relative_to(root)).encode() + b"\0")
-                digest.update(path.read_bytes())
-    return digest.hexdigest()
+from scripts.sources import compiled_source_digest as _compiled_source_digest
 
 
 def _verify_compiled_sources(expected: str) -> None:

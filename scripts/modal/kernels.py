@@ -33,6 +33,7 @@ import json
 import os
 import re
 import shutil
+import shlex
 import subprocess
 import sys
 import sysconfig
@@ -498,6 +499,8 @@ def _build_image() -> None:
         "glm_compile": (json.loads(Path("/opt/remnant-glm-compile.json").read_text()) if MODEL_FAMILY == "glm53" else None),
         "integration": INTEGRATION["version"],
         "base_image": INTEGRATION["base_image"],
+        "compiled_base_image": os.environ.get("REMNANT_COMPILED_IMAGE"),
+        "launcher_sha256": hashlib.sha256(Path("/opt/remnant-launcher.py").read_bytes()).hexdigest(),
         "sources": sources,
         "source_identities": SOURCE_IDENTITIES,
         "model_config": model_config,
@@ -571,7 +574,22 @@ _ignore = modal.FilePatternMatcher(
 )
 
 
-if INTEGRATION["version"] == "v0.5.22":
+compiled_image_id = os.environ.get("REMNANT_COMPILED_IMAGE") if MODEL_FAMILY == "glm53" else None
+if compiled_image_id:
+    from scripts.sources import compiled_source_digest
+
+    expected = compiled_source_digest([SGLANG_SOURCE / "python/sglang/kernels", FLASHMLA_SOURCE / "csrc"])
+    code = ("from scripts.sources import verify_compiled_image_sources; "
+            f"verify_compiled_image_sources({expected!r}, {[str(SGLANG_ROOT / 'python/sglang/kernels'), str(FLASHMLA_ROOT / 'csrc')]!r}, {INTEGRATION['version']!r})")
+    kernel_base = (
+        modal.Image.from_id(compiled_image_id)
+        .env({"PYTHONPATH": f"{REMOTE_REPO}:{SGLANG_ROOT / 'python'}"})
+        .add_local_file(REPO_ROOT / "scripts/sources.py", str(REMOTE_REPO / "scripts/sources.py"), copy=True)
+        .run_commands("python3 -c " + shlex.quote(code))
+        .add_local_dir(SGLANG_SOURCE, str(SGLANG_ROOT), copy=True, ignore=_ignore)
+        .dockerfile_commands(f"LABEL remnant.integration={INTEGRATION['version']} remnant.sglang={SOURCE_IDENTITIES['sglang']['commit']} remnant.flashmla={SOURCE_IDENTITIES['flashmla']['commit']}")
+    )
+elif INTEGRATION["version"] == "v0.5.22":
     kernel_base = modal.Image.from_dockerfile(
         str(REPO_ROOT / INTEGRATION["dockerfile"]),
         context_dir=str(REPO_ROOT),
@@ -624,6 +642,7 @@ kernel_image = (
             ),
             "TRITON_CACHE_DIR": "/opt/remnant-triton-glm" if MODEL_FAMILY == "glm53" else "/triton-cache",
             "REMNANT_MODEL_FAMILY": MODEL_FAMILY,
+            **({"REMNANT_COMPILED_IMAGE": compiled_image_id} if compiled_image_id else {}),
             "REMNANT_GLM_MODEL_CONFIG": "/opt/remnant-glm-config.json",
             "REMNANT_GLM_COMPILE_MANIFEST": "/opt/remnant-glm-compile.json",
             **({"TILELANG_DEFAULT_TARGET": "cuda -arch=sm_90a"} if MODEL_FAMILY == "glm53" else {}),

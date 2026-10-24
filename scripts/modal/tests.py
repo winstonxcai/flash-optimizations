@@ -775,6 +775,8 @@ class LauncherTests(unittest.TestCase):
             return io.BytesIO(b"config fixture" if url.endswith("config.json") else b"sanitizer fixture")
 
         def build_path(value):
+            if str(value) == "/opt/remnant-launcher.py":
+                return kernels.REPO_ROOT / "scripts/modal/kernels.py"
             if str(value) == "/opt/remnant-0731-config.json":
                 return self.root / "config.json"
             return Path(value)

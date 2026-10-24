@@ -9,7 +9,7 @@
   "budget": {
     "authorized_usd": 15,
     "routine_cutoff_usd": 12,
-    "conservative_accrued_usd": 0,
+    "conservative_accrued_usd": 0.27175045425413663,
     "h100_seconds": 0,
     "accounts": {
       "caiw": {
@@ -66,21 +66,51 @@
           }
         ]
       }
-    }
+    },
+    "actual_compute_observed_usd": 0.02536121,
+    "actual_compute_excludes_credits": true
   },
   "commands": [],
   "coverage": {
     "local": {
-      "startup_contract_tests": 18,
+      "startup_contract_tests": 19,
       "status": "passed",
       "syntax": "passed",
       "shell_syntax": "passed",
-      "fresh_context_review": "pending_authorization"
-    }
+      "fresh_context_review": "pending_authorization",
+      "maintained_launcher_tests": 74,
+      "launcher_status": "passed"
+    },
+    "cpu_preparation_attempts": [
+      {
+        "status": "failed",
+        "started_at": "2026-10-24T15:03:11.203201+00:00",
+        "compute_before": {
+          "metered_cost": "26.54329934",
+          "billed_cost": "0E-8",
+          "adjustments": {
+            "free_storage": "-26.54329934",
+            "network_egress_allowance": "0E-8",
+            "plan_cost": "0E-8",
+            "reservation_adjustment": "-0E-8",
+            "credits": "-0E-8"
+          },
+          "metered_cost_breakdown": {
+            "volumes": "26.54329934",
+            "llm_tokens": "0E-8",
+            "network_egress": "0E-8"
+          }
+        },
+        "cpu_hour_upper_rate_usd": 1.2688,
+        "error": "ExecutionError('/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/scripts/modal/kernels.py was modified during build process.')",
+        "wall_seconds": 771.0447945420019,
+        "saved_native_image": "im-BSsxuyx2ZEi72yTMnj8o7K"
+      }
+    ]
   },
   "sources": {
     "starting_parent": "9419d0e18e1e7677c0e48b8e40ad54bbc30010ca",
-    "sglang": "1d06ae4b5e5c4441bc83835a6e79ba1127dfbe82",
+    "sglang": "97278442389ad090aaa633082e1bd0f132ef90d8",
     "flashmla": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8"
   }
 }
