@@ -15,6 +15,7 @@ Default profile captures: 30 for v0.5.18, 36 for v0.5.22; three modes per case.
 --suite prefill-read compares Native/Packed192/Packed256 on identical fixtures,
 with separate reconstruction/attention/complete stages and warm/rotating caches.
 --prefill-reader fused selects the opt-in unpack/RoPE candidate for that suite.
+Set REMNANT_VALIDATION_SUITE=v41-fp4 for scoped model-free SM90 FP4 validation.
 CPU build/preflight precedes H100; Modal caches source/binaries. Authorization required.
 Limits are caps, not ETAs; no weights/retries. Results: remnant-stage2a-results/microbench/<run-id>/<action>.
 Download: modal volume get remnant-stage2a-results microbench/<run-id> <local-dir>
@@ -43,6 +44,9 @@ import modal
 from scripts.sources import check_sources, integration_profile
 
 INTEGRATION = integration_profile()
+VALIDATION_SUITE = os.environ.get("REMNANT_VALIDATION_SUITE", "v4")
+if VALIDATION_SUITE not in ("v4", "v41-fp4") or (VALIDATION_SUITE == "v41-fp4" and INTEGRATION["version"] != "v0.5.22"):
+    raise ValueError("REMNANT_VALIDATION_SUITE must be v4, or v41-fp4 with v0.5.22")
 
 REMOTE_REPO = Path("/opt/flash-optimizations")
 REPO_ROOT = Path(__file__).resolve().parents[2] if modal.is_local() else REMOTE_REPO
@@ -166,6 +170,19 @@ SANITIZER_ORDER = (
     if INTEGRATION["version"] == "v0.5.22"
     else ("memcheck", "racecheck", "synccheck")
 )
+# Scoped FP4 qualification keeps the legacy suite intact. Collection and XML
+# gates reject skips; these explicit lists are copied into each result manifest.
+if VALIDATION_SUITE == "v41-fp4":
+    fp4_tests = TEST_ROOT + "test_remnant_fp4.py"
+    VALIDATION_TESTS = (
+        fp4_tests,
+        TEST_MODULES["flashmla_direct"] + "::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+        TEST_MODULES["flashmla_direct"] + "::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]",
+    )
+    CPU_TESTS = (fp4_tests + "::test_fp4_startup_contract", TEST_MODULES["cache_format"])
+    SANITIZER_TESTS = tuple(fp4_tests + "::" + name for name in (
+        "test_fp4_store_and_reader", "test_fp4_direct", "test_fp4_graph_and_stream", "test_fp4_compressor_boundary"))
+
 NCU_SECTIONS = [
     "SpeedOfLight",
     "MemoryWorkloadAnalysis",
@@ -415,6 +432,27 @@ def _build_image() -> None:
             raise RuntimeError("Pinned 0731 configuration content changed")
         Path("/opt/remnant-0731-config.json").write_bytes(payload)
         model_config = {"revision": revision, "sha256": digest, "url": url}
+    if VALIDATION_SUITE == "v41-fp4":
+        # Compile every new core format/geometry on CPU before an H100 exists.
+        code = """
+import triton
+from triton.compiler import ASTSource
+from triton.backends.compiler import GPUTarget
+from sglang.kernels.ops.attention.dsv4.fp4_cache import _store, _read
+from sgl_kernel import flashmla_ops
+import torch
+assert hasattr(torch.ops.sgl_kernel, 'fp4_sparse_decode_fwd')
+for p in (128,256):
+    for packed in (False,True):
+        stride=p*(224 if packed else 288)
+        for rotate in (False,True):
+            src=ASTSource(_store, signature={'X':'*bf16','F':'*fp32' if rotate else '*bf16','LOC':'*i64','C':'*u8'}, constexprs={'XS':512,'FS':64 if rotate else 512,'P':p,'STRIDE':stride,'N':2,'PACKED':packed,'ROTATE':rotate})
+            triton.compile(src,target=GPUTarget('cuda',90,32),options={'num_warps':4,'enable_fp_fusion':False})
+        src=ASTSource(_read,signature={'C':'*u8','IDS':'*i32','OUT':'*bf16'},constexprs={'OS':512,'P':p,'STRIDE':stride,'N':2,'PACKED':packed})
+        triton.compile(src,target=GPUTarget('cuda',90,32),options={'num_warps':4})
+print('FP4 CPU SM90 precompilation passed')
+"""
+        _run_command([sys.executable,"-c",code],build/"fp4-precompile.log",deadline,environment=cpu_environment)
     # 4. Preflight imports, coverage and profiler availability on CPU.
     _run_command(
         _benchmark_command("--check-imports"),
@@ -458,6 +496,8 @@ def _build_image() -> None:
         _check_profiler_tools(build, deadline)
     # Profiler tools are not a correctness gate for the serving-image qualification.
     manifest = {
+        "validation_suite": VALIDATION_SUITE,
+        "coverage": {"validation": VALIDATION_TESTS, "cpu": CPU_TESTS, "sanitizer": SANITIZER_TESTS},
         "integration": INTEGRATION["version"],
         "base_image": INTEGRATION["base_image"],
         "sources": sources,
@@ -562,6 +602,7 @@ else:
 kernel_image = (
     kernel_base.env(
         {
+            "REMNANT_VALIDATION_SUITE": VALIDATION_SUITE,
             "REMNANT_INTEGRATION": INTEGRATION["version"],
             "REMNANT_BUILT_INTEGRATION": INTEGRATION["version"],
             "REMNANT_SOURCE_IDENTITIES": json.dumps(SOURCE_IDENTITIES),
@@ -709,6 +750,8 @@ def validate_kernels(
         deadline,
     ):
         environment = dict(os.environ)
+        record["validation_suite"] = VALIDATION_SUITE
+        record["coverage"] = {"validation": VALIDATION_TESTS, "sanitizer": SANITIZER_TESTS}
         record["sanitizer"] = sanitizer
         if sanitizer:
             record["sanitizer_results"] = {
@@ -725,6 +768,8 @@ def validate_kernels(
             if "cpu-driver-stubs" in environment.get("LD_LIBRARY_PATH", ""):
                 raise RuntimeError("CPU-only driver stubs leaked into the GPU loader")
             manifest = json.loads(MANIFEST.read_text())
+            if manifest.get("validation_suite", "v4") != VALIDATION_SUITE:
+                raise RuntimeError("Validation suite mismatch")
             if manifest["integration"] != "v0.5.22":
                 raise RuntimeError("Serving image integration mismatch")
             if (
@@ -817,7 +862,7 @@ def validate_kernels(
             allocation = json.loads((root / "allocation.json").read_text())
             if allocation["status"] != "passed" or {
                 r["mode"] for r in allocation["modes"]
-            } != {"native", "triton", "kernel"}:
+            } != ({"Native", "Packed"} if VALIDATION_SUITE == "v41-fp4" else {"native", "triton", "kernel"}):
                 raise RuntimeError("Incomplete real-allocation coverage")
             record["allocation"] = allocation
         if sanitizer:
