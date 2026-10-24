@@ -78,7 +78,7 @@ Run the frozen snapshot from this worktree:
 MODAL_PROFILE=wpooh1579 REMNANT_INTEGRATION=v0.5.22 \
 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_VALIDATION_TIMEOUT_S=1800 \
 modal run scripts/modal/kernels.py::validate_kernels \
-  --run-id v41-fp4-20261025-attempt008 --sanitizer --max-seconds 1600
+  --run-id v41-fp4-20261025-attempt009 --sanitizer --max-seconds 1600
 ```
 
 All executable validation is on Modal. Local work is source preparation and
@@ -130,3 +130,19 @@ imports at module scope, so CPU collection now checks them. Sanitizers not run.
 Raw evidence: `remnant-stage2a-results/microbench/v41-fp4-20261025-attempt007/validation/`.
 Reported compute $0.84529972 before billing lag. Attempt008 uses the same bounded
 projection and reserve, with no automatic retries.
+
+Attempt008: app `ap-kjGoAsXjXCwc16fn7ZnBzX`, parent `1f0630c`. CPU passed.
+H100: 29 passed, eight Adapter-fixture alignment failures in 49.81 seconds.
+All Direct/reference and negative-control assertions passed before the Adapter
+call; all graph/stream and allocator cases passed. Stock prefill requires two
+64-entry tiles per iteration (`phase1.cuh`, `2*B_TOPK`); SGLang `0872a474`
+pads the 576-entry test selection to 640 with invalid -1 entries. Kernel and
+reference tolerances are unchanged. Sanitizers did not run after the failed test.
+Measured allocator: Native 656384 tokens, Packed 800512, +21.9578783%, within
+1 GiB including identical 467251200-byte SWA reservations, 270336-byte compressor
+state, 1048576-byte BF16 workspace and 20492288-byte Direct workspace peak.
+Indexer storage scales with token capacity; page reserves/padding are included.
+This is not serving/SLO capacity. Canonical summary is in qualification.json;
+raw allocation.json and XML remain in the existing results volume.
+Reported compute $1.13832086 before billing lag. Attempt009 retains the same
+bounded projection and $2 reserve, no automatic retries.

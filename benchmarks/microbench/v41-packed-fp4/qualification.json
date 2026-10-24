@@ -9,8 +9,8 @@
     "max_projected_work_usd": 13,
     "account": "wpooh1579",
     "baseline_compute_usd": 18.51013772,
-    "latest_compute_usd": 19.35543744,
-    "incremental_compute_usd": 0.84529972,
+    "latest_compute_usd": 19.64845858,
+    "incremental_compute_usd": 1.13832086,
     "billing_lag": true,
     "cpu_core_hour_usd": 0.0473,
     "memory_gib_hour_usd": 0.008,
@@ -134,6 +134,30 @@
       "sanitizers": "not_run",
       "reason": "sibling fixture imports require pytest package-relative paths; moved to collection time",
       "evidence": "remnant-stage2a-results/microbench/v41-fp4-20261025-attempt007/validation/"
+    },
+    {
+      "id": "attempt008",
+      "account": "wpooh1579",
+      "app_id": "ap-kjGoAsXjXCwc16fn7ZnBzX",
+      "status": "adapter_fixture_alignment_failed",
+      "source_parent": "1f0630c65e59be39065cbd44cdb2a7fc9ea4b6b3",
+      "sglang": "0e1a6b0801d68f36c55aa3e9f21c203d7910697d",
+      "flashmla": "0e34a09a4f5d5d3879a94c483a4feef8eba8dc03",
+      "cpu_preflight": "passed",
+      "tests": {
+        "passed": 29,
+        "failed": 8,
+        "seconds": 49.81
+      },
+      "passed_components": [
+        "all exact packing/producer/V4 regressions",
+        "Native/Packed Direct vs independent references and negative controls",
+        "graph/stream",
+        "allocator boundaries and actual storage"
+      ],
+      "reason": "Adapter selections576 require stock SM90 prefill alignment128; pad64 invalid entries to640",
+      "sanitizers": "not_run",
+      "evidence": "remnant-stage2a-results/microbench/v41-fp4-20261025-attempt008/validation/"
     }
   ],
   "review": {
@@ -153,5 +177,46 @@
     "no serving or full-model execution",
     "no performance measurement",
     "GPU numerical, graph, stream, allocation and sanitizer gates remain pending"
-  ]
+  ],
+  "allocation": {
+    "direct_workspace_peak_bytes": 20492288,
+    "direct_workspace_case": "B8/S1/H128/K512 plus K64 SWA, page128",
+    "status": "passed",
+    "modes": [
+      {
+        "mode": "Native",
+        "groups": {
+          "swa": 467251200,
+          "global_kv": 472891392,
+          "indexer": 111646208,
+          "compressor_state": 270336
+        },
+        "prefill_workspace_bytes": 1048576,
+        "direct_workspace_bytes": 20492288,
+        "total_bytes": 1073600000,
+        "byte_budget": 1073741824,
+        "full_tokens": 656384,
+        "swa_tokens": 19712,
+        "reserved_page_bytes": 6346240
+      },
+      {
+        "mode": "Packed",
+        "groups": {
+          "swa": 467251200,
+          "global_kv": 448516096,
+          "indexer": 136147968,
+          "compressor_state": 270336
+        },
+        "prefill_workspace_bytes": 1048576,
+        "direct_workspace_bytes": 20492288,
+        "total_bytes": 1073726464,
+        "byte_budget": 1073741824,
+        "full_tokens": 800512,
+        "swa_tokens": 19712,
+        "reserved_page_bytes": 6280704
+      }
+    ],
+    "scope": "model-free actual pool storage; no serving capacity claim",
+    "capacity_gain_percent": 21.957878315132607
+  }
 }
