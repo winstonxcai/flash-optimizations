@@ -9,8 +9,8 @@
     "max_projected_work_usd": 13,
     "account": "wpooh1579",
     "baseline_compute_usd": 18.51013772,
-    "latest_compute_usd": 25.691942,
-    "incremental_compute_usd": 7.18180428,
+    "latest_compute_usd": 30.42292268,
+    "incremental_compute_usd": 11.91278496,
     "billing_lag": true,
     "cpu_core_hour_usd": 0.0473,
     "memory_gib_hour_usd": 0.008,
@@ -20,7 +20,16 @@
     "next_gpu_cpu_cores": 2,
     "next_gpu_memory_gib": 16,
     "next_gpu_hour_usd": 4.1726,
-    "next_projected_max_usd": 5.63295
+    "next_projected_max_usd": 5.63295,
+    "remaining_projected_work_usd": 1.08721504,
+    "all_task_allocations_stopped": true,
+    "workspace_status": "disabled during memcheck; no account/billing setting changed",
+    "account_billed_cost_usd": 0.42,
+    "baseline_metered_total_usd": 31.50823044,
+    "latest_metered_total_usd": 43.41836328,
+    "latest_network_egress_usd": 0.00189581,
+    "storage_cost_unchanged": true,
+    "projection_note": "next_* fields record the final attempt012 pre-launch projection, not authorization for another launch; work stopped after interruption"
   },
   "attempts": [
     {
@@ -258,6 +267,82 @@
       "gpu_function_seconds": 2195.382827917,
       "stopped_at": "2026-10-24T19:55:20Z",
       "evidence": "remnant-stage2a-results/microbench/v41-fp4-20261025-attempt011/validation/"
+    },
+    {
+      "id": "attempt012",
+      "account": "wpooh1579",
+      "app_id": "ap-dk5bM8Ddk2LX1VNvMDU1ix",
+      "source_parent": "9ec5971da3e117691311e43680d2ff3e6b8d6885",
+      "sglang": "0a36a662562ff3aa98ebc5abca12dcc7cff83168",
+      "flashmla": "91463e004ec99762f39a173cd687f9ab98d3628d",
+      "status": "workspace_disabled_during_memcheck",
+      "cpu_preflight": "passed",
+      "cpu_tests": {
+        "passed": 23,
+        "subtests_passed": 15,
+        "seconds": 132.35
+      },
+      "gpu_tests": {
+        "passed": 37,
+        "failed": 0,
+        "seconds": 51.58
+      },
+      "gpu_resources": {
+        "h100": 1,
+        "cpu": 2,
+        "memory_gib": 16,
+        "timeout_seconds": 4500,
+        "inner_budget_seconds": 4440,
+        "retries": 0
+      },
+      "sanitizer_order": [
+        "racecheck",
+        "memcheck",
+        "synccheck"
+      ],
+      "sanitizers": {
+        "racecheck": {
+          "status": "passed",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0,
+          "errors": 0,
+          "warnings": 0,
+          "seconds": 1298.37,
+          "process_exit": "successful; checkpoint status passed",
+          "xml_sha256": "85a170e93d7b18a113ce275c57fe280478479631e197c75e6b0f6adb8900fc00",
+          "log_sha256": "87f1b336392836a6fefffaa815d5c5e090e7db8adfd0b3f7ee2729e5a5d2d48c"
+        },
+        "memcheck": {
+          "status": "interrupted_unqualified",
+          "required_cases": 32,
+          "completed_named_cases": 27,
+          "seconds": 2506.21,
+          "xml_sha256": "cf76b7ea8ec3244c4f3f4646526a4063a8934ee81a48d43bb65bbb4a2b351957",
+          "log_sha256": "1a41b2ab81fa26fc131da9741e1611570f1b2d1d07ecf762003cece14eba3bee",
+          "clean_sanitizer_summary": false,
+          "successful_process_exit": false,
+          "missing_case_ids": [
+            "test_fp4_compressor_boundary[False-1]",
+            "test_fp4_compressor_boundary[False-2]",
+            "test_fp4_compressor_boundary[True-1]",
+            "test_fp4_compressor_boundary[True-2]",
+            "test_fp4_graph_and_stream[128-True]"
+          ],
+          "full_matrix_rerun_required": true,
+          "raw_checkpoint_state": "not_run because interruption preceded tool return"
+        },
+        "synccheck": {
+          "status": "not_run",
+          "note": "complete matching-identity receipt retained from attempt011"
+        }
+      },
+      "gpu_function_seconds": 3885.865746193,
+      "stopped_at": "2026-10-24T21:15:55Z",
+      "termination": "ConflictError: workspace is disabled; all containers confirmed stopped",
+      "transport_warnings": "CLI heartbeat timeout recovered before CPU allocation; later CLI log gaps; no replacement/retry was launched",
+      "evidence": "remnant-stage2a-results/microbench/v41-fp4-20261025-attempt012/validation/",
+      "manifest_sha256": "d7e2b5fc0b10252f9d6967316b903b9a19ed74d327125f93cd67e169416b7cc0"
     }
   ],
   "review": {
@@ -273,10 +358,11 @@
     "executable_validation": false
   },
   "limitations": [
-    "no quality evaluation",
-    "no serving or full-model execution",
-    "no performance measurement",
-    "GPU numerical, graph, stream, allocation and sanitizer gates remain pending"
+    "Full strict32-case memcheck gate remains unqualified after workspace interruption.",
+    "No full-model loads, weights, serving, task-quality evaluation, performance profiling/benchmark or production promotion.",
+    "Supported Direct/prefill query-head fixtures are64/128 on SM90; other local head counts and distributed/runtime configurations are unqualified or rejected.",
+    "HiCache, distributed cache transfer, CP, speculative/DSpark and incompatible legacy overrides are deferred/rejected.",
+    "Added mocked Modal launcher unit tests were not run as a standalone local suite; CPU boundary guards and the live reordered workflow executed on Modal."
   ],
   "allocation": {
     "direct_workspace_peak_bytes": 20492288,
@@ -314,6 +400,200 @@
         "full_tokens": 800512,
         "swa_tokens": 19712,
         "reserved_page_bytes": 6280704
+      }
+    ],
+    "edges": [
+      {
+        "layout": "v41_fp4",
+        "page": 128,
+        "rows": 0,
+        "storage_bytes": 73728
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 128,
+        "rows": 1,
+        "storage_bytes": 110592
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 128,
+        "rows": 127,
+        "storage_bytes": 110592
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 128,
+        "rows": 128,
+        "storage_bytes": 110592
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 128,
+        "rows": 129,
+        "storage_bytes": 147456
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 128,
+        "rows": 255,
+        "storage_bytes": 147456
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 128,
+        "rows": 256,
+        "storage_bytes": 147456
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 128,
+        "rows": 257,
+        "storage_bytes": 184320
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 256,
+        "rows": 0,
+        "storage_bytes": 73728
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 256,
+        "rows": 1,
+        "storage_bytes": 147456
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 256,
+        "rows": 127,
+        "storage_bytes": 147456
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 256,
+        "rows": 128,
+        "storage_bytes": 147456
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 256,
+        "rows": 129,
+        "storage_bytes": 147456
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 256,
+        "rows": 255,
+        "storage_bytes": 147456
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 256,
+        "rows": 256,
+        "storage_bytes": 147456
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 256,
+        "rows": 257,
+        "storage_bytes": 221184
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 128,
+        "rows": 0,
+        "storage_bytes": 57344
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 128,
+        "rows": 1,
+        "storage_bytes": 86016
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 128,
+        "rows": 127,
+        "storage_bytes": 86016
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 128,
+        "rows": 128,
+        "storage_bytes": 86016
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 128,
+        "rows": 129,
+        "storage_bytes": 114688
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 128,
+        "rows": 255,
+        "storage_bytes": 114688
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 128,
+        "rows": 256,
+        "storage_bytes": 114688
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 128,
+        "rows": 257,
+        "storage_bytes": 143360
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 256,
+        "rows": 0,
+        "storage_bytes": 57344
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 256,
+        "rows": 1,
+        "storage_bytes": 114688
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 256,
+        "rows": 127,
+        "storage_bytes": 114688
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 256,
+        "rows": 128,
+        "storage_bytes": 114688
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 256,
+        "rows": 129,
+        "storage_bytes": 114688
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 256,
+        "rows": 255,
+        "storage_bytes": 114688
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 256,
+        "rows": 256,
+        "storage_bytes": 114688
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 256,
+        "rows": 257,
+        "storage_bytes": 172032
       }
     ],
     "scope": "model-free actual pool storage; no serving capacity claim",
@@ -367,6 +647,150 @@
   "orchestration_review": {
     "status": "no_blocking_findings",
     "scope": "Permutation-only tool order, unchanged all-three gate, per-tool durable receipt, scoped FP4 resource/time bounds",
-    "executable_validation": "CPU boundary preflight pending; no local tests"
+    "executable_validation": "CPU boundary guards passed; actual reordered workflow/checkpoint confirmed on Modal; no local tests"
+  },
+  "decision": "keep experimental opt-in candidate; no production promotion",
+  "qualification_scope": "Synthetic H100/SM90 FP4 storage, attention, allocation and runtime engineering only",
+  "sources": {
+    "baseline_parent": "9419d0e18e1e7677c0e48b8e40ad54bbc30010ca",
+    "baseline_sglang": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "baseline_flashmla": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "validated_parent_attempt011": "8d4015af1d41ab6917258fde9df8bb5aa7c285f8",
+    "validated_parent_attempt012": "9ec5971da3e117691311e43680d2ff3e6b8d6885",
+    "sglang": "0a36a662562ff3aa98ebc5abca12dcc7cff83168",
+    "flashmla": "91463e004ec99762f39a173cd687f9ab98d3628d",
+    "cutlass": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "content_sha256": {
+      "sglang": "adb48a480f629df3829052687ff97041c065553724c4d813915806e97310028e",
+      "flashmla": "b4ee3971c86dc31a6b9c5427732684cd3b0d2dc4b8cbc286a4d4ea7a1ad794a7"
+    },
+    "binaries_sha256": {
+      "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so": "d400f3d40e3d51cae5f07310749306b874072b480f54e401db0212241f203cfe",
+      "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so": "8e7d6df0c41554882840948177b6a0802a6c635b5de0c81206da145be132355b",
+      "/opt/remnant-native-store.so": "509edf30ceba9039b384e936758f4dd5b23ba4339fddb570320151400a868f3c"
+    },
+    "binary_architectures": {
+      "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so": [
+        "sm_90"
+      ],
+      "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so": [
+        "sm_90a"
+      ],
+      "/opt/remnant-native-store.so": [
+        "sm_90a"
+      ]
+    },
+    "tool": {
+      "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+      "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+      "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+      "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+      "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+    },
+    "toolchain": {
+      "torch": "2.14.1+cu130",
+      "cuda": "13.0",
+      "nvcc": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:58:59_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0\n",
+      "driver": "610.57.04"
+    },
+    "attempt011_012_identical": {
+      "sources": true,
+      "binaries": true,
+      "sanitizer": true,
+      "coverage": true,
+      "fp4_precompile_artifacts": true
+    },
+    "completed_tool_case_ids_identical": true
+  },
+  "gates": {
+    "cpu_native_build_and_fp4_core_precompile": "passed on Modal CPU workers",
+    "cpu_startup": "23 tests + 15 subtests passed; order boundary guards passed",
+    "ordinary_correctness": "37 cases passed, including 4 graph/stream cases, allocation and 2 V4 regressions",
+    "synccheck": "passed 32/32, zero errors, attempt011",
+    "racecheck": "passed 32/32, zero errors/warnings, attempt012",
+    "memcheck": "incomplete 27/32; no clean summary/process exit; full rerun required",
+    "fresh_context_review": "no blocking findings; source-only review",
+    "overall": "unqualified"
+  },
+  "allocation_source_run_id": "v41-fp4-20261025-attempt012",
+  "allocation_fixture": {
+    "byte_budget": 1073741824,
+    "layers": 40,
+    "compress_ratios": [
+      0,
+      0,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "global_source_layers": [
+      2,
+      8,
+      14,
+      20
+    ],
+    "context_len": 131072,
+    "window_size": 128,
+    "global_page_size": 256,
+    "max_running_requests": 8,
+    "chunked_prefill_size": 512,
+    "scope": "actual physical tensor storage + specified workspaces under a synthetic budget, not serving/SLO capacity"
+  },
+  "allocation_gain_percent": 21.957878315132607,
+  "theoretical_main_record_savings_percent": 22.22222222222222,
+  "cleanup": {
+    "allocations": "all stopped; no new account launch after interruption",
+    "retained": "canonical implementation/tests, one experiment README, JSON receipt and flat allocation CSV; hashed raw artifacts in existing Modal volume/cache",
+    "consolidated": "README chronology consolidated; full attempt history retained in JSON/Git",
+    "local_downloads": "owned temporary receipt downloads removed after summary commit; raw sources remain in the canonical volume",
+    "source_probes": "no temporary source runner/harness retained",
+    "unrelated_work": "original dirty checkout, other worktrees and v0.5.18 pins preserved",
+    "pushes": false
+  },
+  "next_step": {
+    "entrypoint": "scripts/modal/kernels.py::validate_kernels",
+    "requirement": "new approved budget and enabled account before a full32-case memcheck rerun",
+    "order": "memcheck,synccheck,racecheck",
+    "reuse_policy": "only complete successful receipts with identical source/fixture/binary/tool identities and case IDs; otherwise requalify all gates",
+    "reason_stopped": "remaining work allowance is insufficient even for the observed interrupted41m46s memcheck plus required remaining cases and CPU preflight"
+  },
+  "commands": {
+    "attempt011": "MODAL_PROFILE=wpooh1579 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_VALIDATION_TIMEOUT_S=2700 /Users/poohthewinnie/.local/bin/modal run scripts/modal/kernels.py::validate_kernels --run-id v41-fp4-20261025-attempt011 --sanitizer --max-seconds 2640",
+    "attempt012": "MODAL_PROFILE=wpooh1579 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_VALIDATION_TIMEOUT_S=4500 /Users/poohthewinnie/.local/bin/modal run scripts/modal/kernels.py::validate_kernels --run-id v41-fp4-20261025-attempt012 --sanitizer --sanitizer-order racecheck,memcheck,synccheck --max-seconds 4440"
   }
 }

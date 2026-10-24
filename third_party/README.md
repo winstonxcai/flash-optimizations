@@ -84,9 +84,13 @@ transfer, speculation/DSpark, replay and legacy layout overrides are rejected.
   and Modal kernel runner. Set `REMNANT_INTEGRATION=v0.5.22` and
   `REMNANT_VALIDATION_SUITE=v41-fp4`. CPU builds/preflight precede one H100;
   no weights, model volumes, serving, GPUQ or SM100 work. Independent source
-  review is complete; executable qualification is in progress, not passed.
+  review is complete. The candidate is **unqualified**: 37 ordinary cases,
+  complete 32-case synccheck/racecheck and allocation passed; memcheck was
+  interrupted after 27/32 when Modal disabled the workspace. No clean memory
+  sanitizer gate is inferred. Reported task compute is $11.91; all allocations
+  are stopped and the remaining work allowance cannot fund a full rerun.
   Completed sanitizer tools may be combined only with identical runtime,
-  fixture, binary and sanitizer hashes and the full32-case matrix per tool.
+  fixture, binary and sanitizer hashes and the full 32-case matrix per tool.
   The runner supports tool permutations and checkpoints; no missing tool can
   pass its per-run gate.
   See the [single experiment record](../benchmarks/microbench/v41-packed-fp4/README.md)

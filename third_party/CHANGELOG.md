@@ -13,18 +13,21 @@ records rather than this milestone log.
 
 ## Unreleased
 
-- Experimental V4.1 FP4 integration on parent `f4f21a8` (implementation snapshot
-  `97573d2`), based on `9419d0e`. v0.5.22 pins: SGLang `0a36a662562f` /
-  FlashMLA `91463e004ec9`; v0.5.18 and CUTLASS pins unchanged. Adds opt-in
-  Native 288-byte/Packed 224-byte storage, deterministic post-quantization
-  256-coordinate selection, SM90 mixed-SWA Direct dispatch, reconstruction,
-  reserved-page accounting and scoped model-free Modal fixtures. Fresh-context
-  source review found no runtime defect; fixture gaps were addressed separately.
-  Parent `8d332cc` passed all37 ordinary GPU tests, then strict synccheck
-  exposed an inherited stock BF16 prefill barrier defect. The current pins add
-  a reviewed FP4-only prefill policy/API, retaining stock auto behavior; full
-  CPU/GPU/sanitizer requalification is pending. No model-quality,
-  performance or serving claim. Outcome/budget/source receipts live in the
+- Experimental V4.1 FP4 integration validated from parent `9ec5971`, based on
+  `9419d0e`. v0.5.22 pins: SGLang `0a36a662562f` / FlashMLA `91463e004ec9`;
+  v0.5.18 and CUTLASS pins unchanged. Adds opt-in Native 288-byte/Packed
+  224-byte storage, deterministic post-quantization 256-coordinate selection,
+  SM90 mixed-SWA Direct, BF16 reconstruction/prefill, reserved-page accounting
+  and model-free Modal fixtures. Separate FP4 prefill synchronization retains
+  stock auto behavior. Native CPU builds/preflight, 37 ordinary cases, full
+  32-case synccheck/racecheck and fresh-context review passed. **Unqualified:**
+  workspace disablement interrupted memcheck after 27/32; no clean memory
+  sanitizer summary/exit. Reported task compute $11.91, all allocations stopped;
+  a full rerun exceeds the remaining work allowance while preserving the $2
+  reserve. Physical 1-GiB allocation fixture: 656384 Native / 800512 Packed
+  tokens (+21.96%); record-byte savings 22.22% are separate. No model quality,
+  serving, performance or production claim. Source hashes, exact commands,
+  failed attempts, costs and the missing gate are indexed by the
   [experiment record](../benchmarks/microbench/v41-packed-fp4/README.md).
 
 - Reconciled GitHub main `ffb11cb` in parent merge `814aaa8`, retaining its
