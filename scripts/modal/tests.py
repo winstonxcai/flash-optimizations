@@ -451,7 +451,7 @@ class LauncherTests(unittest.TestCase):
 
     def test_validation_budget_is_bounded_before_execution(self):
         function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
-        self.assertEqual(function.__defaults__, (False, 1100))
+        self.assertEqual(function.__defaults__, (False, 1100, "dsv4", "numerical"))
         with patch.object(kernels, "_run_context") as run:
             for seconds in (0, 59, 2641, 2700):
                 with self.assertRaisesRegex(ValueError, "max_seconds"):
@@ -2033,6 +2033,40 @@ class PrefillReadLauncherTests(unittest.TestCase):
             {(r["case"], r["mode"]) for r in record["runs"]},
             {(name, mode) for name in names for mode in contract.PREFILL_VARIANTS},
         )
+
+
+
+
+class GlmLauncherTests(unittest.TestCase):
+    """GLM selection must stay explicit and fail before remote execution."""
+
+    def test_family_mismatch_never_opens_run_context(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        with patch.object(kernels, "_run_context") as run:
+            with self.assertRaisesRegex(ValueError, "model-family"):
+                function("fixture", model_family="glm53")
+            run.assert_not_called()
+
+    def test_glm_local_launcher_uses_raw_fp8_tilelang_and_tp8(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary)
+            command = path / "sglang"
+            command.write_text("#!/usr/bin/env python3\nimport json,sys\nprint(json.dumps(sys.argv[1:]))\n")
+            command.chmod(0o755)
+            for mode, implementation in (("native", "direct"), ("triton", "adapter"), ("kernel", "direct")):
+                env = {**os.environ, "PATH": str(path) + os.pathsep + os.environ["PATH"],
+                       "MODEL_FAMILY": "glm53", "DECODE_CFG": "{}"}
+                for name in ("TP", "EP", "MODEL_NAME", "SERVER_PID_FILE", "STORE_IMPLEMENTATION", "C4_KEEP_COUNT", "C4_LAYER_KEEP_COUNTS", "HICACHE_RATIO"):
+                    env.pop(name, None)
+                result = subprocess.run(["bash", str(kernels.REPO_ROOT / "scripts/local/run-server.sh"), mode,
+                                         "/config-only", "127.0.0.1", "30212"], env=env, capture_output=True,
+                                        text=True, check=True, timeout=10)
+                args = json.loads(result.stdout)
+                for flag, expected in (("--tp", "8"), ("--ep", "8"), ("--kv-cache-dtype", "fp8_e4m3"),
+                    ("--dsa-prefill-backend", "tilelang"), ("--dsa-decode-backend", "tilelang"),
+                    ("--glm5-mla-cache-implementation", implementation), ("--moe-runner-backend", "deep_gemm")):
+                    self.assertEqual(args[args.index(flag) + 1], expected)
+                self.assertNotIn("--dsv4-c4-cache-format", args)
 
 
 if __name__ == "__main__":

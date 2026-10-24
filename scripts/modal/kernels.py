@@ -54,7 +54,7 @@ GLM_TEST = "test/registered/attention/unittests/test_glm5_remnant.py"
 GLM_CPU_TEST = "test/registered/unit/test_glm5_mla_cache_format.py"
 GLM_SMOKE = (GLM_TEST + "::test_producer_reconstruction", GLM_TEST + "::test_invalid_attention",
              GLM_TEST + "::test_attention[3-8-8]",
-             GLM_TEST + "::test_changing_input_graph")
+             GLM_TEST + "::test_changing_input_graph", GLM_TEST + "::test_production_backend_constructor")
 GLM_SANITIZER = (*GLM_SMOKE, GLM_TEST + "::test_attention[0-1-64]", GLM_TEST + "::test_pool_lifecycle")
 
 REMOTE_REPO = Path("/opt/flash-optimizations")
@@ -905,8 +905,9 @@ def validate_kernels(
                     # evidence without converting this failure into a pass.
                 else:
                     record["sanitizer_results"][tool] = {"status": "passed"}
-                (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
-                results_volume.commit()
+                if MODEL_FAMILY == "glm53":
+                    (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
+                    results_volume.commit()
             incomplete = [
                 tool
                 for tool, result in record["sanitizer_results"].items()

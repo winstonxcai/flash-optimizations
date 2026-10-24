@@ -54,6 +54,11 @@ if [ -n "${SERVER_PID_FILE:-}" ]; then
   mv -f -- "$pid_file_tmp" "$SERVER_PID_FILE"
 fi
 
+if [ "${MODEL_FAMILY:-dsv4}" = glm53 ]; then
+  TP=${TP:-8}
+  MODEL_NAME=${MODEL_NAME:-glm53-flash}
+fi
+
 args=(
   serve
   --model-path "$MODEL"
@@ -90,7 +95,7 @@ case "${MODEL_FAMILY:-dsv4}" in
     args+=(--glm5-mla-cache-format "$CACHE_FORMAT"
       --glm5-mla-cache-implementation "$GLM_IMPLEMENTATION"
       --dsa-prefill-backend tilelang --dsa-decode-backend tilelang
-      --moe-runner-backend deep_gemm)
+      --moe-runner-backend deep_gemm --ep "${EP:-8}")
     ;;
   *) echo "MODEL_FAMILY must be dsv4 or glm53" >&2; exit 2 ;;
 esac

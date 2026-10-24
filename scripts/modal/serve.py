@@ -250,8 +250,8 @@ def inspect_model_cache() -> dict:
         "revision": MODEL_REVISION,
         "shards": len(names),
         "bytes": sum((MODEL_DIR / n).stat().st_size for n in names),
-        "heads": config["num_attention_heads"],
-        "layers": len(config["compress_ratios"]),
+        "heads": config.get("text_config", config)["num_attention_heads"],
+        "layers": config["text_config"]["num_hidden_layers"] if MODEL_FAMILY == "glm53" else len(config["compress_ratios"]),
     }
     print(json.dumps(result), flush=True)
     return result
