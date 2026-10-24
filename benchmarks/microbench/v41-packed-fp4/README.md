@@ -78,7 +78,7 @@ Run the frozen snapshot from this worktree:
 MODAL_PROFILE=wpooh1579 REMNANT_INTEGRATION=v0.5.22 \
 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_VALIDATION_TIMEOUT_S=1800 \
 modal run scripts/modal/kernels.py::validate_kernels \
-  --run-id v41-fp4-20261025-attempt006 --sanitizer --max-seconds 1600
+  --run-id v41-fp4-20261025-attempt007 --sanitizer --max-seconds 1600
 ```
 
 All executable validation is on Modal. Local work is source preparation and
@@ -104,3 +104,13 @@ implicit default and explicit `auto`, with focused regression assertions.
 22 CPU tests and 15 subtests passed; one failed. No H100 allocation.
 Reported cumulative compute $0.46312721 before billing lag. Attempt006 retains
 the same bounded projection and $2 reserve; no automatic retries.
+
+Attempt006: app `ap-misaGh3NhWdoxQaOeiFIhD`, parent `c468f81`. Complete CPU
+preflight passed (23 tests, 15 subtests), including SM90 native binaries and FP4
+precompilation, image `im-7H2YIAf2ocroGo0CEJN7A8`. GPU container startup failed
+before tests: Modal cannot mount the persistent Triton volume over the CPU-built
+nonempty cache directory. Scoped FP4 qualification now retains that embedded
+cache and verifies every precompiled file against CPU-recorded SHA256; legacy V4
+keeps its persistent volume. No numerical or sanitizer GPU result was produced.
+Reported compute $0.62971763 before billing lag; the same bounded projection and
+$2 reserve apply to attempt007. Native sources are unchanged and reusable.

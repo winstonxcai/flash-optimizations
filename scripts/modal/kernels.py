@@ -543,6 +543,15 @@ print('FP4 CPU SM90 precompilation passed')
         "sanitizer": sanitizer_identity,
         "arch": "sm_90a",
         "binary_architectures": binary_architectures,
+        "fp4_precompile_artifacts": (
+            {
+                str(p): hashlib.sha256(p.read_bytes()).hexdigest()
+                for p in Path(os.environ["TRITON_CACHE_DIR"]).rglob("*")
+                if p.is_file()
+            }
+            if VALIDATION_SUITE == "v41-fp4"
+            else {}
+        ),
         "native_dtype": "float32",
         "cpu_import_driver_stub_sha256": hashlib.sha256(
             (build / "cpu-driver-stubs/libcuda.so.1").read_bytes()
@@ -672,7 +681,12 @@ _GPU = {
     "retries": 0,
     "max_containers": 1,
     "scaledown_window": 2,
-    "volumes": {str(RESULTS_ROOT): results_volume, "/triton-cache": triton_volume},
+    # FP4 precompilation populates this image path on CPU. Mounting a volume
+    # over a nonempty path fails Modal startup; retain its verified image cache.
+    "volumes": {
+        str(RESULTS_ROOT): results_volume,
+        **({"/triton-cache": triton_volume} if VALIDATION_SUITE != "v41-fp4" else {}),
+    },
 }
 
 
@@ -815,6 +829,13 @@ def validate_kernels(
             for path, expected in manifest["binaries"].items():
                 if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
                     raise RuntimeError(f"Loaded binary input changed: {path}")
+            if VALIDATION_SUITE == "v41-fp4":
+                artifacts = manifest.get("fp4_precompile_artifacts", {})
+                if not artifacts:
+                    raise RuntimeError("Missing CPU-precompiled FP4 artifacts")
+                for path, expected in artifacts.items():
+                    if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
+                        raise RuntimeError(f"FP4 precompiled artifact changed: {path}")
             tool = manifest["sanitizer"]
             if (
                 tool["path"] != SANITIZER

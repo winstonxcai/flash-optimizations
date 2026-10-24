@@ -9,8 +9,8 @@
     "max_projected_work_usd": 13,
     "account": "wpooh1579",
     "baseline_compute_usd": 18.51013772,
-    "latest_compute_usd": 18.97326493,
-    "incremental_compute_usd": 0.46312721,
+    "latest_compute_usd": 19.13985535,
+    "incremental_compute_usd": 0.62971763,
     "billing_lag": true,
     "cpu_core_hour_usd": 0.0473,
     "memory_gib_hour_usd": 0.008,
@@ -84,6 +84,25 @@
       },
       "gpu_allocated": false,
       "reason": "unset upstream KV layout defaults to v4; conflict validation must check explicit environment presence"
+    },
+    {
+      "id": "attempt006",
+      "account": "wpooh1579",
+      "app_id": "ap-misaGh3NhWdoxQaOeiFIhD",
+      "status": "gpu_container_startup_failed",
+      "source_parent": "c468f814b8e9c970f85a657e9960f4be7c13b32b",
+      "sglang": "d3e86c632616e0414583f0ee025f4eefd07916f5",
+      "flashmla": "0e34a09a4f5d5d3879a94c483a4feef8eba8dc03",
+      "cpu_preflight": "passed",
+      "cpu_tests": {
+        "passed": 23,
+        "failed": 0,
+        "subtests_passed": 15
+      },
+      "cpu_image": "im-7H2YIAf2ocroGo0CEJN7A8",
+      "gpu_allocation_attempted": true,
+      "gpu_tests": "not_run",
+      "reason": "persistent Triton volume cannot mount over CPU-prepopulated /triton-cache; use hash-verified embedded cache for scoped FP4 suite"
     }
   ],
   "review": {
@@ -102,6 +121,6 @@
     "no quality evaluation",
     "no serving or full-model execution",
     "no performance measurement",
-    "all executable gates remain pending"
+    "GPU numerical, graph, stream, allocation and sanitizer gates remain pending"
   ]
 }
