@@ -9,7 +9,7 @@
   "budget": {
     "authorized_usd": 15,
     "routine_cutoff_usd": 12,
-    "conservative_accrued_usd": 0.27175045425413663,
+    "conservative_accrued_usd": 0.3754366213451362,
     "h100_seconds": 0,
     "accounts": {
       "caiw": {
@@ -105,6 +105,59 @@
         "error": "ExecutionError('/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/scripts/modal/kernels.py was modified during build process.')",
         "wall_seconds": 771.0447945420019,
         "saved_native_image": "im-BSsxuyx2ZEi72yTMnj8o7K"
+      },
+      {
+        "status": "failed",
+        "started_at": "2026-10-24T15:22:43.486242+00:00",
+        "compute_before": {
+          "metered_cost": "26.57331807",
+          "billed_cost": "0E-8",
+          "adjustments": {
+            "network_egress_allowance": "-0.00001873",
+            "credits": "-0.03000000",
+            "reservation_adjustment": "-0E-8",
+            "plan_cost": "0E-8",
+            "free_storage": "-26.54329934"
+          },
+          "metered_cost_breakdown": {
+            "network_egress": "0.00001873",
+            "deployed_apps": "0.02539577",
+            "llm_tokens": "0E-8",
+            "volumes": "26.54329934"
+          }
+        },
+        "source_identities": {
+          "parent": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations",
+            "commit": "5e537cca52bb67b1726196d7672436dd6514498a"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+            "expected_commit": "97278442389ad090aaa633082e1bd0f132ef90d8",
+            "commit": "97278442389ad090aaa633082e1bd0f132ef90d8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22",
+            "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "compiled_base_image": "im-BSsxuyx2ZEi72yTMnj8o7K",
+        "error": "ImageBuildError('Image build for im-60iWFQxTfdJvzt5AXcwjl3 failed with the exception:\\nInput failed with an exception that was too large: RuntimeError(\\'Command failed: [\\\\\\'/opt/sglang/bin/python\\\\\\', \\\\\\'/sgl-workspace/sglang-remnant/test/registered/attention/unittests/test_glm5_remnant.py\\\\\\', \\\\\\'--compile-only\\\\\\']\\\\nLog: /opt/remnant-build/glm-sm90-compile.log\\\\n/opt/sglang/lib/python3.12/site-packages/torch/cuda/__init__.py:228: UserWarning: CUDA initialization: Unexpected error from cudaGetDeviceCount(). Did you run some cuda functions before calling NumCudaDevices() that might have already set an error? Error 34: CUDA driver is a stub library (Triggered internally at /__w/pytorch/pytorch/c10/cuda/CUDAFunctions.cpp:119.)\\\\n  return torch._C._cuda_getDeviceCount() > 0\\\\nTraceback (most recent call last):\\\\n  File \"/opt/sglang/lib/python3.12/site-packages/tilelang/backend/target.py\", line 103, in _validate_manual_target\\\\n    Target(normalized_target)\\\\n  File \"/opt/sglang/lib/python3.12/site-packages/tilelang/3rdparty/tvm/python/tvm/target/target.py\", line 145, in __init__\\\\n    self.__init_handle_by_constructor__(_ffi_api.Target, target)\\\\n  File \"python/tvm_ffi/cython/object.pxi\", line 355, in tvm_ffi.core.Object.__init_handle_by_constructor__\\\\n  File \"python/tvm_ffi/cython/object.pxi\", line 183, in tvm_ffi.core.CObject.__init_handle_by_constructor__\\\\n  File \"python/tvm_ffi/cython/function.pxi\", line 126, in tvm_ffi.core.ConstructorCall\\\\n  File \"python/tvm_ffi/cython/error.pxi\", line 176, in tvm_ffi.core.CHECK_CALL\\\\n  File \"<unknown>\", line 0, in tvm::TargetInternal::ConstructorDispatcher(tvm::ffi::PackedArgs, tvm::ffi::Any*)\\\\n  File \"<unknown>\", line 0, in tvm::Target::Target(tvm::ffi::String const&)\\\\n  File \"/project/3rdparty/tvm/src/target/target.cc\", line 266, in static tvm::ffi::ObjectPtr<tvm::TargetNode> tvm::TargetInternal::FromString(const tvm::ffi::String&)\\\\nValueError: Cannot parse target string \"cuda -arch=sm_90a\". CLI target string form (e.g. \"llvm -mcpu=xxx\") is no longer supported. Please use JSON dict form (e.g. {\"kind\": \"llvm\", \"mcpu\": \"xxx\"}) instead.. Target creation from string failed: cuda -arch=sm_90a\\\\n\\\\nThe above exception was the direct cause of the following exception:\\\\n\\\\nTraceback (most recent call last):\\\\n  File \"/sgl-workspace/sglang-remnant/test/registered/attention/unittests/test_glm5_remnant.py\", line 513, in <module>\\\\n    precompile_sm90()\\\\n  File \"/sgl-workspace/sglang-remnant/test/registered/attention/unittests/test_glm5_remnant.py\", line 474, in precompile_sm90\\\\n    kernel = sparse_mla_fwd_decode_partial_fp8(\\\\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\\\n  File \"/opt/sglang/lib/python3.12/site-packages/tilelang/jit/__init__.py\", line 529, in __call__\\\\n    kernel = self.compile(*args, **kwargs)\\\\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\\\n  File \"/opt/sglang/lib/python3.12/site-packages/tilelang/jit/__init__.py\", line 444, in compile\\\\n    kernel_result = compile(\\\\n                    ^^^^^^^^\\\\n  File \"/opt/sglang/lib/python3.12/site-packages/tilelang/jit/__init__.py\", line 161, in compile\\\\n    return cached(\\\\n           ^^^^^^^\\\\n  File \"/opt/sglang/lib/python3.12/site-packages/tilelang/cache/__init__.py\", line 81, in cached\\\\n    cache, norm_target, execution_backend, verbose = _resolve_cache_dispatch(target, execution_backend, verbose)\\\\n                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\\\n  File \"/opt/sglang/lib/python3.12/site-packages/tilelang/cache/__init__.py\", line 47, in _resolve_cache_dispatch\\\\n    norm_target = _determine_target(target, return_object=True)\\\\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\\\n  File \"/opt/sglang/lib/python3.12/site-packages/tilelang/backend/target.py\", line 132, in determine_target\\\\n    return_var = _validate_manual_target(target)\\\\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\\\n  File \"/opt/sglang/lib/python3.12/site-packages/tilelang/backend/target.py\", line 105, in _validate_manual_target\\\\n    raise AssertionError(\\\\nAssertionError: Target cuda -arch=sm_90a is not supported. Pass target options as a dict when the target needs attributes.\\\\n\\')...')",
+        "wall_seconds": 294.19152074999874
       }
     ]
   },

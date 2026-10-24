@@ -53,7 +53,7 @@ if MODEL_FAMILY not in ("dsv4", "glm53") or (MODEL_FAMILY == "glm53" and INTEGRA
     raise ValueError("GLM validation requires REMNANT_INTEGRATION=v0.5.22")
 GLM_TEST = "test/registered/attention/unittests/test_glm5_remnant.py"
 GLM_CPU_TEST = "test/registered/unit/test_glm5_mla_cache_format.py"
-GLM_SMOKE = (GLM_TEST + "::test_producer_reconstruction", GLM_TEST + "::test_invalid_attention",
+GLM_SMOKE = (GLM_TEST + "::test_producer_reconstruction", GLM_TEST + "::test_invalid_attention", GLM_TEST + "::test_partial_outputs",
              GLM_TEST + "::test_attention[3-8-8]",
              GLM_TEST + "::test_changing_input_graph", GLM_TEST + "::test_production_backend_constructor")
 GLM_SANITIZER = (*GLM_SMOKE, GLM_TEST + "::test_attention[0-1-64]", GLM_TEST + "::test_pool_lifecycle")
@@ -645,7 +645,7 @@ kernel_image = (
             **({"REMNANT_COMPILED_IMAGE": compiled_image_id} if compiled_image_id else {}),
             "REMNANT_GLM_MODEL_CONFIG": "/opt/remnant-glm-config.json",
             "REMNANT_GLM_COMPILE_MANIFEST": "/opt/remnant-glm-compile.json",
-            **({"TILELANG_DEFAULT_TARGET": "cuda -arch=sm_90a"} if MODEL_FAMILY == "glm53" else {}),
+            **({"TILELANG_DEFAULT_TARGET": json.dumps({"kind": "cuda", "arch": "sm_90a"})} if MODEL_FAMILY == "glm53" else {}),
         }
     )
     # Include launcher helpers in the image cache key, not just _build_image.
