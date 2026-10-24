@@ -9,7 +9,7 @@
   "budget": {
     "authorized_usd": 15,
     "routine_cutoff_usd": 12,
-    "conservative_accrued_usd": 0.3754366213451362,
+    "conservative_accrued_usd": 0.6824427474110267,
     "h100_seconds": 0,
     "accounts": {
       "caiw": {
@@ -158,6 +158,36 @@
         "compiled_base_image": "im-BSsxuyx2ZEi72yTMnj8o7K",
         "error": "ImageBuildError('Image build for im-60iWFQxTfdJvzt5AXcwjl3 failed with the exception:\\nInput failed with an exception that was too large: RuntimeError(\\'Command failed: [\\\\\\'/opt/sglang/bin/python\\\\\\', \\\\\\'/sgl-workspace/sglang-remnant/test/registered/attention/unittests/test_glm5_remnant.py\\\\\\', \\\\\\'--compile-only\\\\\\']\\\\nLog: /opt/remnant-build/glm-sm90-compile.log\\\\n/opt/sglang/lib/python3.12/site-packages/torch/cuda/__init__.py:228: UserWarning: CUDA initialization: Unexpected error from cudaGetDeviceCount(). Did you run some cuda functions before calling NumCudaDevices() that might have already set an error? Error 34: CUDA driver is a stub library (Triggered internally at /__w/pytorch/pytorch/c10/cuda/CUDAFunctions.cpp:119.)\\\\n  return torch._C._cuda_getDeviceCount() > 0\\\\nTraceback (most recent call last):\\\\n  File \"/opt/sglang/lib/python3.12/site-packages/tilelang/backend/target.py\", line 103, in _validate_manual_target\\\\n    Target(normalized_target)\\\\n  File \"/opt/sglang/lib/python3.12/site-packages/tilelang/3rdparty/tvm/python/tvm/target/target.py\", line 145, in __init__\\\\n    self.__init_handle_by_constructor__(_ffi_api.Target, target)\\\\n  File \"python/tvm_ffi/cython/object.pxi\", line 355, in tvm_ffi.core.Object.__init_handle_by_constructor__\\\\n  File \"python/tvm_ffi/cython/object.pxi\", line 183, in tvm_ffi.core.CObject.__init_handle_by_constructor__\\\\n  File \"python/tvm_ffi/cython/function.pxi\", line 126, in tvm_ffi.core.ConstructorCall\\\\n  File \"python/tvm_ffi/cython/error.pxi\", line 176, in tvm_ffi.core.CHECK_CALL\\\\n  File \"<unknown>\", line 0, in tvm::TargetInternal::ConstructorDispatcher(tvm::ffi::PackedArgs, tvm::ffi::Any*)\\\\n  File \"<unknown>\", line 0, in tvm::Target::Target(tvm::ffi::String const&)\\\\n  File \"/project/3rdparty/tvm/src/target/target.cc\", line 266, in static tvm::ffi::ObjectPtr<tvm::TargetNode> tvm::TargetInternal::FromString(const tvm::ffi::String&)\\\\nValueError: Cannot parse target string \"cuda -arch=sm_90a\". CLI target string form (e.g. \"llvm -mcpu=xxx\") is no longer supported. Please use JSON dict form (e.g. {\"kind\": \"llvm\", \"mcpu\": \"xxx\"}) instead.. Target creation from string failed: cuda -arch=sm_90a\\\\n\\\\nThe above exception was the direct cause of the following exception:\\\\n\\\\nTraceback (most recent call last):\\\\n  File \"/sgl-workspace/sglang-remnant/test/registered/attention/unittests/test_glm5_remnant.py\", line 513, in <module>\\\\n    precompile_sm90()\\\\n  File \"/sgl-workspace/sglang-remnant/test/registered/attention/unittests/test_glm5_remnant.py\", line 474, in precompile_sm90\\\\n    kernel = sparse_mla_fwd_decode_partial_fp8(\\\\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\\\n  File \"/opt/sglang/lib/python3.12/site-packages/tilelang/jit/__init__.py\", line 529, in __call__\\\\n    kernel = self.compile(*args, **kwargs)\\\\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\\\n  File \"/opt/sglang/lib/python3.12/site-packages/tilelang/jit/__init__.py\", line 444, in compile\\\\n    kernel_result = compile(\\\\n                    ^^^^^^^^\\\\n  File \"/opt/sglang/lib/python3.12/site-packages/tilelang/jit/__init__.py\", line 161, in compile\\\\n    return cached(\\\\n           ^^^^^^^\\\\n  File \"/opt/sglang/lib/python3.12/site-packages/tilelang/cache/__init__.py\", line 81, in cached\\\\n    cache, norm_target, execution_backend, verbose = _resolve_cache_dispatch(target, execution_backend, verbose)\\\\n                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\\\n  File \"/opt/sglang/lib/python3.12/site-packages/tilelang/cache/__init__.py\", line 47, in _resolve_cache_dispatch\\\\n    norm_target = _determine_target(target, return_object=True)\\\\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\\\n  File \"/opt/sglang/lib/python3.12/site-packages/tilelang/backend/target.py\", line 132, in determine_target\\\\n    return_var = _validate_manual_target(target)\\\\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\\\n  File \"/opt/sglang/lib/python3.12/site-packages/tilelang/backend/target.py\", line 105, in _validate_manual_target\\\\n    raise AssertionError(\\\\nAssertionError: Target cuda -arch=sm_90a is not supported. Pass target options as a dict when the target needs attributes.\\\\n\\')...')",
         "wall_seconds": 294.19152074999874
+      },
+      {
+        "status": "passed",
+        "started_at": "2026-10-24T15:35:24.273016+00:00",
+        "compute_before": {
+          "metered_cost": "26.59331941",
+          "billed_cost": "0E-8",
+          "adjustments": {
+            "reservation_adjustment": "-0E-8",
+            "network_egress_allowance": "-0.00002007",
+            "plan_cost": "0E-8",
+            "free_storage": "-26.54329934",
+            "credits": "-0.05000000"
+          },
+          "metered_cost_breakdown": {
+            "volumes": "26.54329934",
+            "deployed_apps": "0.04856797",
+            "network_egress": "0.00002007",
+            "llm_tokens": "0E-8"
+          }
+        },
+        "argv": [
+          "/Users/poohthewinnie/.local/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::prepare_kernels",
+          "--model-family",
+          "glm53"
+        ],
+        "compiled_base_image": "im-BSsxuyx2ZEi72yTMnj8o7K",
+        "wall_seconds": 871.0766502500046
       }
     ]
   },

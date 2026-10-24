@@ -289,6 +289,10 @@ def _build_image() -> None:
 
     deadline = time.monotonic() + CPU_BUILD_BUDGET_S
     build = BUILD_ROOT
+    # This directory belongs solely to CPU preparation. A verified reused image
+    # may contain prior reports; compiler caches live outside it and are retained.
+    if build.exists() and MODEL_FAMILY == "glm53" and os.environ.get("REMNANT_COMPILED_IMAGE"):
+        shutil.rmtree(build)
     build.mkdir()
     binding_requirements = (
         _check_cuda_binding_requirements()
@@ -842,7 +846,7 @@ def validate_kernels(
             if MODEL_FAMILY == "glm53":
                 compiled = manifest.get("glm_compile")
                 expected_variants = {(h, i, p) for h in (8, 16, 32, 64) for i in (1, 2, 33, 66) for p in (False, True)}
-                if not compiled or {(v["heads"], v["inner"], v["packed"]) for v in compiled["tilelang"]} != expected_variants:
+                if not compiled or compiled.get("attention_scale") != 0.0625 or {(v["heads"], v["inner"], v["packed"]) for v in compiled["tilelang"]} != expected_variants:
                     raise RuntimeError("Incomplete CPU-compiled GLM TileLang variants")
                 for path, expected in compiled["cache_files"].items():
                     if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
