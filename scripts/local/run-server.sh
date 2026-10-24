@@ -95,7 +95,7 @@ case "${MODEL_FAMILY:-dsv4}" in
     args+=(--glm5-mla-cache-format "$CACHE_FORMAT"
       --glm5-mla-cache-implementation "$GLM_IMPLEMENTATION"
       --dsa-prefill-backend tilelang --dsa-decode-backend tilelang
-      --moe-runner-backend deep_gemm --ep "${EP:-8}")
+      --moe-runner-backend deep_gemm --ep "${EP:-8}" --language-model-only)
     ;;
   *) echo "MODEL_FAMILY must be dsv4 or glm53" >&2; exit 2 ;;
 esac

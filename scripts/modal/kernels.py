@@ -696,7 +696,7 @@ def benchmark_kernels(
         if prefill_reader == "fused":
             for tool in ("memcheck", "racecheck", "synccheck"):
                 prefix = ("compute-sanitizer", "--tool", tool, "--error-exitcode", "1")
-                _run_pytest(SANITIZER_TESTS, root, tool, deadline, prefix=prefix)
+                _run_pytest(selected_tests if stage == "corrective" else SANITIZER_TESTS, root, tool, deadline, prefix=prefix)
             record["sanitizers"] = ["memcheck", "racecheck", "synccheck"]
         options = (
             []
@@ -740,13 +740,21 @@ def benchmark_kernels(
 )
 def validate_kernels(
     run_id: str, sanitizer: bool = False, max_seconds: int = RUN_BUDGETS_S["validation"],
-    model_family: str = "dsv4", stage: str = "numerical"
+    model_family: str = "dsv4", stage: str = "numerical", cases: str = ""
 ) -> str:
     """Run existing GPU tests; skipped tests fail coverage. Optional three sanitizers."""
     if model_family != MODEL_FAMILY:
         raise ValueError("--model-family must match REMNANT_MODEL_FAMILY used to prepare the image")
     if stage not in ("numerical", "sanitizer", "corrective"):
         raise ValueError("stage must be numerical, sanitizer or corrective")
+    if stage == "corrective":
+        selected_tests = tuple(cases.split(","))
+        if MODEL_FAMILY != "glm53" or not cases or any(not case.startswith(GLM_TEST + "::test_") for case in selected_tests):
+            raise ValueError("GLM corrective stage requires explicit --cases pytest node IDs")
+    else:
+        if cases:
+            raise ValueError("--cases is only supported for the GLM corrective stage")
+        selected_tests = VALIDATION_TESTS
     sanitizer = sanitizer or stage == "sanitizer"
     maximum = min(2640, VALIDATION_TIMEOUT_S - 60)
     if not 60 <= max_seconds <= maximum:
@@ -871,12 +879,17 @@ def validate_kernels(
         record["stage"] = stage
         if MODEL_FAMILY == "glm53":
             # First-ten-minute smoke gate before scheduling the broader matrix.
-            if stage != "sanitizer":
+            if stage == "numerical":
                 _run_pytest(GLM_SMOKE, root, "smoke", min(deadline, time.monotonic() + 600), environment=environment)
                 _run_pytest(VALIDATION_TESTS, root, "validation", deadline, environment=environment)
+            elif stage == "corrective":
+                record["corrective_tests"] = selected_tests
+                _run_pytest(selected_tests, root, "corrective", deadline, environment=environment)
+            else:
+                _run_pytest((GLM_CPU_TEST,), root, "startup-regressions", deadline, environment=environment)
         else:
             _run_pytest(VALIDATION_TESTS, root, "validation", deadline, environment=environment)
-        if INTEGRATION["version"] == "v0.5.22" and stage != "sanitizer":
+        if INTEGRATION["version"] == "v0.5.22" and (stage == "numerical" or (stage == "corrective" and GLM_TEST + "::test_real_gpu_allocations" in selected_tests)):
             allocation = json.loads((root / "allocation.json").read_text())
             if allocation["status"] != "passed" or {
                 r["mode"] for r in allocation["modes"]
@@ -891,7 +904,7 @@ def validate_kernels(
                     break
                 prefix = (SANITIZER, "--tool", tool, "--error-exitcode", "1")
                 try:
-                    _run_pytest(SANITIZER_TESTS, root, tool, deadline, prefix=prefix)
+                    _run_pytest(selected_tests if stage == "corrective" else SANITIZER_TESTS, root, tool, deadline, prefix=prefix)
                 except TimeoutError:
                     # The boundary may expire between this loop and the command
                     # check. No process started; keep this tool marked not_run.

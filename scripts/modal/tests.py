@@ -451,7 +451,7 @@ class LauncherTests(unittest.TestCase):
 
     def test_validation_budget_is_bounded_before_execution(self):
         function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
-        self.assertEqual(function.__defaults__, (False, 1100, "dsv4", "numerical"))
+        self.assertEqual(function.__defaults__, (False, 1100, "dsv4", "numerical", ""))
         with patch.object(kernels, "_run_context") as run:
             for seconds in (0, 59, 2641, 2700):
                 with self.assertRaisesRegex(ValueError, "max_seconds"):
@@ -2067,6 +2067,7 @@ class GlmLauncherTests(unittest.TestCase):
                     ("--glm5-mla-cache-implementation", implementation), ("--moe-runner-backend", "deep_gemm")):
                     self.assertEqual(args[args.index(flag) + 1], expected)
                 self.assertNotIn("--dsv4-c4-cache-format", args)
+                self.assertIn("--language-model-only", args)
 
 
 if __name__ == "__main__":
