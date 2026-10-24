@@ -441,6 +441,8 @@ def _build_image() -> None:
             raise RuntimeError("Pinned GLM configuration content changed")
         Path("/opt/remnant-glm-config.json").write_bytes(payload)
         model_config = {"revision": revision, "sha256": digest, "url": url}
+        _run_command([sys.executable, "-c", f"import runpy; runpy.run_path({str(SGLANG_ROOT / GLM_TEST)!r})['test_allocator_accounting']()"],
+                     build / "glm-allocator-cpu.log", deadline, environment=cpu_environment)
         _run_command([sys.executable, str(SGLANG_ROOT / GLM_TEST), "--compile-only"],
                      build / "glm-sm90-compile.log", deadline, environment=cpu_environment)
     else:
