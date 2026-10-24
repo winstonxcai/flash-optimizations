@@ -415,6 +415,9 @@ class LauncherTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
+        volume = patch.object(kernels, "results_volume")
+        self.results_volume = volume.start()
+        self.addCleanup(volume.stop)
 
     def test_only_three_remote_functions_and_no_model_volumes(self):
         self.assertEqual(
@@ -451,8 +454,12 @@ class LauncherTests(unittest.TestCase):
 
     def test_validation_budget_is_bounded_before_execution(self):
         function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
-        self.assertEqual(function.__defaults__, (False, 1100))
-        with patch.object(kernels, "_run_context") as run:
+        self.assertEqual(function.__defaults__, (False, 1100, ""))
+        with (
+            patch.object(kernels, "_run_context") as run,
+            patch.object(kernels, "VALIDATION_TIMEOUT_CAP_S", 2700),
+            patch.object(kernels, "VALIDATION_TIMEOUT_S", 2700),
+        ):
             for seconds in (0, 59, 2641, 2700):
                 with self.assertRaisesRegex(ValueError, "max_seconds"):
                     function("fixture", max_seconds=seconds)
@@ -460,6 +467,54 @@ class LauncherTests(unittest.TestCase):
         with patch.object(kernels, "VALIDATION_TIMEOUT_S", 120):
             with self.assertRaisesRegex(ValueError, "between 60 and 60"):
                 function("fixture", max_seconds=61)
+
+    def test_sanitizer_order_rejects_missing_duplicate_unknown_and_disabled(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        with patch.object(kernels, "_run_context") as run:
+            for order in (
+                "memcheck",
+                "racecheck,memcheck",
+                "memcheck,memcheck,synccheck",
+                "racecheck,memcheck,unknown",
+            ):
+                with (
+                    self.subTest(order=order),
+                    self.assertRaisesRegex(ValueError, "exactly once"),
+                ):
+                    function("fixture", sanitizer=True, sanitizer_order=order)
+            with self.assertRaisesRegex(ValueError, "requires --sanitizer"):
+                function("fixture", sanitizer_order="racecheck,memcheck,synccheck")
+            run.assert_not_called()
+
+    def test_sanitizer_reordering_preserves_all_tools_and_checkpoints_receipts(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        order = ("racecheck", "memcheck", "synccheck")
+        record = {}
+        with (
+            patch.object(kernels, "INTEGRATION", {"version": "v0.5.18"}),
+            patch.object(
+                kernels,
+                "_run_context",
+                return_value=nullcontext((self.root, record, 100)),
+            ),
+            patch.object(kernels.time, "monotonic", return_value=0),
+            patch.object(kernels, "_run_pytest") as run,
+        ):
+            function("fixture", sanitizer=True, sanitizer_order=",".join(order))
+        self.assertEqual(
+            [c.args[2] for c in run.call_args_list], ["validation", *order]
+        )
+        self.assertEqual(
+            set(record["sanitizer_results"]), {"racecheck", "memcheck", "synccheck"}
+        )
+        self.assertTrue(
+            all(r["status"] == "passed" for r in record["sanitizer_results"].values())
+        )
+        self.assertEqual(
+            json.loads((self.root / "result.json").read_text())["sanitizer_results"],
+            record["sanitizer_results"],
+        )
+        self.assertEqual(self.results_volume.commit.call_count, 3)
 
     def test_sanitizer_failures_preserve_later_results_and_fail_the_run(self):
         function = inspect.unwrap(kernels.validate_kernels.get_raw_f())

@@ -213,3 +213,51 @@ Attempt011 uses the same canonical command with run ID
 At reported cumulative compute $4.04479708 before lag, CPU preflight <=$1.2688,
 one45-minute H100 worker <=$3.6303 and CPU image build allowance <$0.10 project
 under$9.05 cumulative work. This preserves the$13 work cap and$2 reserve.
+
+
+## Bounded completion of sanitizer coverage
+
+Attempt011 passed all37 ordinary cases (47.72s) and strict synccheck:
+32 cases, zero failures/skips/errors,2063.42s, `ERROR SUMMARY: 0 errors`.
+Full log/XML/manifest were retrieved before app stop and retained in the
+canonical results volume. The allocation was stopped at2026-10-24T19:55:20Z
+before spending the remaining cap on an incomplete second tool. Racecheck and
+memcheck remain required; partial progress is not a qualification.
+
+Question: can the two remaining tools complete within the cumulative budget
+without repeating completed synchronization coverage? Extend only the existing
+runner with a sanitizer order accepting permutations of exactly all three tools.
+Default order and the per-run all-three pass gate remain unchanged. Checkpoint
+completed tool receipts immediately. A remaining-tools-first run uses
+`racecheck,memcheck,synccheck`; aggregate acceptance requires identical fork,
+fixture, binary and sanitizer hashes, the same32 test-case IDs, zero skips/
+failures/errors, successful tool process exit, and clean strict summaries for
+all three tools. Existing source review accepts this aggregation policy.
+
+Use2CPU/16GiB for scoped FP4 validation only (observed target+parent RSS~10GiB,
+one CPU busy); retain strict OOM/timeout failure. Keep default V4 resources and
+limits intact. Bound unchanged-artifact CPU preflight to900s (observed~8min),
+and permit a75-minute FP4 GPU cap derived from current resources/rates. CPU
+extension compilation remains on CPU workers; no native rebuild on GPU.
+
+Reported task compute at stop: $7.18180428 before lag. A75-minute worker at
+$4.1726/hour costs <=$5.21575;900s CPU preflight <=$0.3172, plus <=$0.10 image
+allowance, projects <=$12.82 work. Keep the$2 reserve and$13 work cap. Stop on
+preflight failure, allocation failure, sanitizer error or budget exhaustion.
+
+
+Remaining-tool command (same frozen runtime/fixtures, reviewed runner changes):
+
+```bash
+MODAL_PROFILE=wpooh1579 REMNANT_INTEGRATION=v0.5.22 \
+REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_VALIDATION_TIMEOUT_S=4500 \
+modal run scripts/modal/kernels.py::validate_kernels \
+  --run-id v41-fp4-20261025-attempt012 --sanitizer \
+  --sanitizer-order racecheck,memcheck,synccheck --max-seconds 4440
+```
+
+Fresh-context review found no blockers in the permutation guard, durable tool
+checkpoints or scoped resource/time bounds. CPU permutation boundary checks run
+before GPU allocation. Existing mocked LauncherTests were extended for future
+CPU regression use; no local executable validation was run. Qualification still
+requires complete, identical-identity receipts for all three tools.

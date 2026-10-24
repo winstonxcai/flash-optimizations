@@ -95,14 +95,21 @@ SANITIZER = (
     else "compute-sanitizer"
 )
 # Preserve existing work caps; reserve time inside the outer timeout for cleanup.
-CPU_BUILD_TIMEOUT_S = GPU_TIMEOUT_S = 3600
+GPU_TIMEOUT_S = 3600
+CPU_BUILD_TIMEOUT_S = 900 if VALIDATION_SUITE == "v41-fp4" else 3600
 VALIDATION_TIMEOUT_S = (
     int(os.environ.get("REMNANT_VALIDATION_TIMEOUT_S", "2700"))
     if INTEGRATION["version"] == "v0.5.22"
     else GPU_TIMEOUT_S
 )
-if INTEGRATION["version"] == "v0.5.22" and not 120 <= VALIDATION_TIMEOUT_S <= 2700:
-    raise ValueError("REMNANT_VALIDATION_TIMEOUT_S must be between 120 and 2700")
+VALIDATION_TIMEOUT_CAP_S = 5400 if VALIDATION_SUITE == "v41-fp4" else 2700
+if (
+    INTEGRATION["version"] == "v0.5.22"
+    and not 120 <= VALIDATION_TIMEOUT_S <= VALIDATION_TIMEOUT_CAP_S
+):
+    raise ValueError(
+        f"REMNANT_VALIDATION_TIMEOUT_S must be between 120 and {VALIDATION_TIMEOUT_CAP_S}"
+    )
 CPU_BUILD_BUDGET_S = CPU_BUILD_TIMEOUT_S - 200
 RUN_BUDGETS_S = {"timing": 850, "validation": 1100, "profile": 1800}
 PROFILE_CAPTURE_TIMEOUT_S, PROFILE_EXPORT_TIMEOUT_S = 110, 45
@@ -293,11 +300,40 @@ def _check_cuda_binding_requirements() -> list[dict[str, str]]:
     return sorted(checks, key=lambda item: (item["consumer"], item["requirement"]))
 
 
+def _validation_sanitizer_order(value: str) -> tuple[str, ...]:
+    """Prioritize pending tools without permitting missing/duplicate tools."""
+    if not value:
+        return SANITIZER_ORDER
+    tools = tuple(value.split(","))
+    if len(tools) != 3 or set(tools) != set(SANITIZER_ORDER):
+        raise ValueError(
+            "sanitizer_order must list memcheck,racecheck,synccheck exactly once"
+        )
+    return tools
+
+
 def _build_image() -> None:
     """CPU image layer: compile existing SM90 targets, install, then preflight."""
     import torch
     from sglang.kernels.jit.utils import override_jit_cuda_arch
 
+    # CPU-only orchestration boundary checks before any GPU allocation.
+    expected_order = ("racecheck", "memcheck", "synccheck")
+    if _validation_sanitizer_order(",".join(expected_order)) != expected_order:
+        raise RuntimeError("Sanitizer order preflight changed the requested order")
+    for invalid in (
+        "memcheck",
+        "racecheck,memcheck",
+        "memcheck,memcheck,synccheck",
+        "racecheck,memcheck,unknown",
+    ):
+        try:
+            _validation_sanitizer_order(invalid)
+        except ValueError:
+            continue
+        raise RuntimeError(
+            f"Sanitizer order preflight accepted invalid input: {invalid}"
+        )
     deadline = time.monotonic() + CPU_BUILD_BUDGET_S
     build = BUILD_ROOT
     build.mkdir()
@@ -774,13 +810,20 @@ def benchmark_kernels(
     **{
         **_GPU,
         "timeout": VALIDATION_TIMEOUT_S,
+        **({"cpu": 2, "memory": 16384} if VALIDATION_SUITE == "v41-fp4" else {}),
     }
 )
 def validate_kernels(
-    run_id: str, sanitizer: bool = False, max_seconds: int = RUN_BUDGETS_S["validation"]
+    run_id: str,
+    sanitizer: bool = False,
+    max_seconds: int = RUN_BUDGETS_S["validation"],
+    sanitizer_order: str = "",
 ) -> str:
     """Run existing GPU tests; skipped tests fail coverage. Optional three sanitizers."""
-    maximum = min(2640, VALIDATION_TIMEOUT_S - 60)
+    tool_order = _validation_sanitizer_order(sanitizer_order)
+    if sanitizer_order and not sanitizer:
+        raise ValueError("sanitizer_order requires --sanitizer")
+    maximum = min(VALIDATION_TIMEOUT_CAP_S - 60, VALIDATION_TIMEOUT_S - 60)
     if not 60 <= max_seconds <= maximum:
         raise ValueError(f"max_seconds must be between 60 and {maximum}")
     with _run_context(run_id, "validation", max_seconds) as (
@@ -795,6 +838,7 @@ def validate_kernels(
             "sanitizer": SANITIZER_TESTS,
         }
         record["sanitizer"] = sanitizer
+        record["sanitizer_order"] = tool_order
         if sanitizer:
             record["sanitizer_results"] = {
                 tool: {"status": "not_run"} for tool in SANITIZER_ORDER
@@ -919,7 +963,7 @@ def validate_kernels(
                 raise RuntimeError("Incomplete real-allocation coverage")
             record["allocation"] = allocation
         if sanitizer:
-            for tool in SANITIZER_ORDER:
+            for tool in tool_order:
                 # Commands use whole-second timeouts. Preserve the incomplete
                 # tool matrix instead of attempting a launch with zero seconds.
                 if int(deadline - time.monotonic()) <= 0:
@@ -940,6 +984,9 @@ def validate_kernels(
                     # evidence without converting this failure into a pass.
                 else:
                     record["sanitizer_results"][tool] = {"status": "passed"}
+                # Preserve completed evidence even if a later tool is cancelled.
+                (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
+                results_volume.commit()
             incomplete = [
                 tool
                 for tool, result in record["sanitizer_results"].items()

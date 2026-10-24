@@ -85,6 +85,10 @@ transfer, speculation/DSpark, replay and legacy layout overrides are rejected.
   `REMNANT_VALIDATION_SUITE=v41-fp4`. CPU builds/preflight precede one H100;
   no weights, model volumes, serving, GPUQ or SM100 work. Independent source
   review is complete; executable qualification is in progress, not passed.
+  Completed sanitizer tools may be combined only with identical runtime,
+  fixture, binary and sanitizer hashes and the full32-case matrix per tool.
+  The runner supports tool permutations and checkpoints; no missing tool can
+  pass its per-run gate.
   See the [single experiment record](../benchmarks/microbench/v41-packed-fp4/README.md)
   for source identities, commands, gates, budget and actual outcomes.
 

@@ -9,12 +9,18 @@
     "max_projected_work_usd": 13,
     "account": "wpooh1579",
     "baseline_compute_usd": 18.51013772,
-    "latest_compute_usd": 22.5549348,
-    "incremental_compute_usd": 4.04479708,
+    "latest_compute_usd": 25.691942,
+    "incremental_compute_usd": 7.18180428,
     "billing_lag": true,
     "cpu_core_hour_usd": 0.0473,
     "memory_gib_hour_usd": 0.008,
-    "h100_hour_usd": 3.95
+    "h100_hour_usd": 3.95,
+    "next_cpu_preflight_cap_seconds": 900,
+    "next_gpu_cap_seconds": 4500,
+    "next_gpu_cpu_cores": 2,
+    "next_gpu_memory_gib": 16,
+    "next_gpu_hour_usd": 4.1726,
+    "next_projected_max_usd": 5.63295
   },
   "attempts": [
     {
@@ -218,6 +224,40 @@
       },
       "reason": "CPU-heavy sanitizer instrumentation also covered repeated independent GPU torch/cuBLAS oracle operations. Stopped existing allocation; reviewed CPU-only oracle correction preserves all32 cases and tolerances.",
       "stopped_at": "2026-10-24T18:54:27Z"
+    },
+    {
+      "id": "attempt011",
+      "account": "wpooh1579",
+      "app_id": "ap-mgS2O0dT6duPCuHvhEA7jN",
+      "source_parent": "8d4015af1d41ab6917258fde9df8bb5aa7c285f8",
+      "sglang": "0a36a662562ff3aa98ebc5abca12dcc7cff83168",
+      "flashmla": "91463e004ec99762f39a173cd687f9ab98d3628d",
+      "cpu_native_image": "im-cfGoyqhse4dRqKBTSlMtIL",
+      "cpu_preflight": "passed",
+      "gpu_tests": {
+        "passed": 37,
+        "failed": 0,
+        "seconds": 47.72
+      },
+      "status": "stopped_after_complete_synccheck",
+      "sanitizers": {
+        "synccheck": {
+          "status": "passed",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0,
+          "errors": 0,
+          "seconds": 2063.42,
+          "process_exit": "successful; verified result.json sanitizer status passed",
+          "log_sha256": "96029439df7b550b3abdfa9d55053e82531436eb7f7796d8b9a85413d5b77b6f",
+          "xml_sha256": "7bad4213b326b790eb3d9a101c593a5456e5944f91dbf264c40d891bd10fcd64"
+        },
+        "racecheck": "not_run",
+        "memcheck": "not_run"
+      },
+      "gpu_function_seconds": 2195.382827917,
+      "stopped_at": "2026-10-24T19:55:20Z",
+      "evidence": "remnant-stage2a-results/microbench/v41-fp4-20261025-attempt011/validation/"
     }
   ],
   "review": {
@@ -303,5 +343,30 @@
   "oracle_review": {
     "status": "no_blocking_findings",
     "scope": "Independent FP32/BF16 CPU attention oracle, unchanged tolerances/negative controls/full32 sanitizer matrix, GPU production graph ordering"
+  },
+  "aggregation_policy": {
+    "required_tools": [
+      "synccheck",
+      "racecheck",
+      "memcheck"
+    ],
+    "required_cases_per_tool": 32,
+    "requirements": [
+      "successful tool process exit",
+      "zero failures/errors/skips and zero sanitizer errors/hazards",
+      "identical fixture test-case IDs and source hashes",
+      "identical runtime commits/source content and binary hashes",
+      "identical sanitizer binary/package hashes"
+    ],
+    "parent_runner_changes_only": [
+      "tool order",
+      "checkpoint receipts",
+      "resource/time bounds"
+    ]
+  },
+  "orchestration_review": {
+    "status": "no_blocking_findings",
+    "scope": "Permutation-only tool order, unchanged all-three gate, per-tool durable receipt, scoped FP4 resource/time bounds",
+    "executable_validation": "CPU boundary preflight pending; no local tests"
   }
 }
