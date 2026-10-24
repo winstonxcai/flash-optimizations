@@ -78,7 +78,7 @@ Run the frozen snapshot from this worktree:
 MODAL_PROFILE=wpooh1579 REMNANT_INTEGRATION=v0.5.22 \
 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_VALIDATION_TIMEOUT_S=1800 \
 modal run scripts/modal/kernels.py::validate_kernels \
-  --run-id v41-fp4-20261025-attempt007 --sanitizer --max-seconds 1600
+  --run-id v41-fp4-20261025-attempt008 --sanitizer --max-seconds 1600
 ```
 
 All executable validation is on Modal. Local work is source preparation and
@@ -118,3 +118,15 @@ $2 reserve apply to attempt007. Native sources are unchanged and reusable.
 Prelaunch review also caught the matching finalization dependency: FP4 must skip
 committing the unmounted persistent Triton volume. Its result volume still commits
 normally, preserving success and failure evidence.
+
+Attempt007: app `ap-QlS7WmsuD00uhZRYW63mex`, parent `f39b25f`. CPU preflight
+and H100 startup passed, including embedded-cache SHA256 checks and sanitizer
+controls. GPU validation: 24 passed, 13 fixture-import failures in 34.98 seconds;
+whole GPU function 56.693831632 seconds. Exact Native/Packed packing/reconstruction
+(16 cases), C1/C2 producer boundary (4), startup/dispatch (2) and V4 regressions
+(2) passed. Attention, graphs/streams and allocation did not execute because
+sibling fixtures used bare imports. SGLang `0e1a6b08` makes these package-relative
+imports at module scope, so CPU collection now checks them. Sanitizers not run.
+Raw evidence: `remnant-stage2a-results/microbench/v41-fp4-20261025-attempt007/validation/`.
+Reported compute $0.84529972 before billing lag. Attempt008 uses the same bounded
+projection and reserve, with no automatic retries.

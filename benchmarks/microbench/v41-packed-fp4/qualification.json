@@ -9,8 +9,8 @@
     "max_projected_work_usd": 13,
     "account": "wpooh1579",
     "baseline_compute_usd": 18.51013772,
-    "latest_compute_usd": 19.13985535,
-    "incremental_compute_usd": 0.62971763,
+    "latest_compute_usd": 19.35543744,
+    "incremental_compute_usd": 0.84529972,
     "billing_lag": true,
     "cpu_core_hour_usd": 0.0473,
     "memory_gib_hour_usd": 0.008,
@@ -103,6 +103,37 @@
       "gpu_allocation_attempted": true,
       "gpu_tests": "not_run",
       "reason": "persistent Triton volume cannot mount over CPU-prepopulated /triton-cache; use hash-verified embedded cache for scoped FP4 suite"
+    },
+    {
+      "id": "attempt007",
+      "account": "wpooh1579",
+      "app_id": "ap-QlS7WmsuD00uhZRYW63mex",
+      "status": "gpu_fixture_import_failed",
+      "source_parent": "f39b25f6c79411991056be2f2d523c07338f0f1f",
+      "sglang": "d3e86c632616e0414583f0ee025f4eefd07916f5",
+      "flashmla": "0e34a09a4f5d5d3879a94c483a4feef8eba8dc03",
+      "cpu_preflight": "passed",
+      "gpu": "NVIDIA H100 80GB HBM3",
+      "gpu_function_seconds": 56.693831632,
+      "tests": {
+        "passed": 24,
+        "failed": 13,
+        "seconds": 34.98
+      },
+      "passed_components": [
+        "exact FP4 store/read 16 cases",
+        "C1/C2 producer boundary 4 cases",
+        "startup/dispatch 2 cases",
+        "V4 Direct regressions 2 cases"
+      ],
+      "blocked_components": [
+        "FP4 attention",
+        "graph/stream",
+        "allocation"
+      ],
+      "sanitizers": "not_run",
+      "reason": "sibling fixture imports require pytest package-relative paths; moved to collection time",
+      "evidence": "remnant-stage2a-results/microbench/v41-fp4-20261025-attempt007/validation/"
     }
   ],
   "review": {
