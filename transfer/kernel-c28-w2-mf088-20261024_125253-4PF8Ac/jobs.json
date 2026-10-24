@@ -1,0 +1,43 @@
+{
+  "jobs": [
+    {
+      "allocated_gpu_ids": [
+        0,
+        2,
+        4,
+        5
+      ],
+      "argv": [
+        "bash",
+        "/home/jovyan/winstonxcai/flash-optimizations/logs/kernel-c28-w2-mf088-20261024_125253-4PF8Ac/run.sh",
+        "/home/jovyan/winstonxcai/flash-optimizations",
+        "/home/jovyan/winstonxcai/flash-optimizations/logs/kernel-c28-w2-mf088-20261024_125253-4PF8Ac"
+      ],
+      "created_at": "2026-10-24T04:52:55.729371+00:00",
+      "cwd": "/home/jovyan/winstonxcai/flash-optimizations",
+      "duration_seconds": 1516,
+      "error": "command exited with status 1",
+      "estimated_duration_seconds": 2100,
+      "estimated_duration_source": "explicit",
+      "exit_code": 1,
+      "expected_duration_seconds": 2100,
+      "finished_at": "2026-10-24T05:18:14.838339+00:00",
+      "gpu_count": 4,
+      "id": "job-20261024-045255-8a528832",
+      "lease_id": null,
+      "log_dir": "/var/lib/gpuq/jobs/job-20261024-045255-8a528832",
+      "output_dir": "/home/jovyan/winstonxcai/flash-optimizations/logs/kernel-c28-w2-mf088-20261024_125253-4PF8Ac/gpuq",
+      "pgid": 479903,
+      "pid": 479903,
+      "priority": 50,
+      "project": "flash-optimizations",
+      "release_lease_on_exit": false,
+      "requested_gpu_ids": null,
+      "started_at": "2026-10-24T04:52:58.646408+00:00",
+      "status": "failed",
+      "timeout_seconds": 3600,
+      "user_name": "winstonxcai",
+      "workload_key": "kernel-c28-w2-mf088-20261024_125253-4PF8Ac"
+    }
+  ]
+}
