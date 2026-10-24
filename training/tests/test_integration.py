@@ -72,7 +72,7 @@ class TrainingIntegrationTests(unittest.TestCase):
         self.generator = torch.Generator().manual_seed(42)
         self.runner = (
             Path(__file__).resolve().parents[2]
-            / "third_party/sglang/python/sglang/benchmark/remnant/calibrate.py"
+            / "third_party/sglang-v0.5.18/python/sglang/benchmark/remnant/calibrate.py"
         )
         self.math = load_runner(self.runner)
 
@@ -1136,10 +1136,15 @@ if name == "nvidia-smi":
     if scenario == "occupied":
         print("999")
 elif args[:2] == ["image", "inspect"]:
-    assert args[args.index("--format")+1] == "{{.Id}}", "shared image needs no capture-only label"
+    template = args[args.index("--format")+1]
+    assert "capture-only" not in template, "shared image needs no capture-only label"
     if scenario == "missing":
         sys.exit(1)
-    print("invalid-image-id" if scenario == "malformed-image" else "sha256:" + "1"*64)
+    if template == "{{.Id}}":
+        print("invalid-image-id" if scenario == "malformed-image" else "sha256:" + "1"*64)
+    else:
+        assert "remnant.integration" in template and "remnant.flashmla" in template
+        print(os.environ["IMAGE_SOURCE_LABELS"])
 elif args[0] == "run":
     gpu = "--gpus" in args
     cid = ("a" if gpu else "c") * 64
@@ -1177,6 +1182,14 @@ else:
         ]
         environment = {
             **os.environ,
+            "REMNANT_INTEGRATION": "v0.5.18",
+            "IMAGE_SOURCE_LABELS": "v0.5.18 " + " ".join(
+                subprocess.check_output(
+                    ["git", "-C", str(launcher.parents[2] / f"third_party/{name}-v0.5.18"), "rev-parse", "HEAD"],
+                    text=True, timeout=10,
+                ).strip()
+                for name in ("sglang", "flashmla")
+            ),
             "PATH": str(tools) + os.pathsep + os.defpath,
             "COMMAND_LOG": str(log),
             "TMPDIR": str(temporary),

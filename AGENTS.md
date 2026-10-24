@@ -12,8 +12,8 @@ kernel code live in two independent Git submodules.
 
 | Area | Location |
 |---|---|
-| SGLang runtime, packing, allocator, and dispatch | `third_party/sglang/` |
-| FlashMLA direct decode kernel | `third_party/flashmla/` |
+| SGLang runtime, packing, allocator, and dispatch | `third_party/sglang-v0.5.18/` |
+| FlashMLA direct decode kernel | `third_party/flashmla-v0.5.18/` |
 | Fork integration and file map | `third_party/README.md` |
 | Fork integration history | `third_party/CHANGELOG.md` |
 | Local serving and evaluation | `scripts/local/` |
@@ -232,11 +232,11 @@ change; preserve independent references and established tolerances.
 
 | Purpose | Existing entry point |
 |---|---|
-| FlashMLA Direct output/LSE, edge cases, and graph replay | `third_party/flashmla/tests/test_flash_mla_remnant_decoding.py`; shared `tests/lib.py` and `tests/ref.py` |
-| SGLang integration | `third_party/sglang/test/registered/attention/unittests/dsv4/test_remnant_*.py` |
-| Low-level pack/unpack | `third_party/sglang/python/sglang/test/kernels/deepseek_v4/test_remnant_*_kernel.py` |
-| Startup cache-format validation | `third_party/sglang/test/registered/unit/test_dsv4_c4_cache_format.py` |
-| Native/Adapter/Direct decode timing | `third_party/sglang/benchmark/remnant/microbench.py` and its README |
+| FlashMLA Direct output/LSE, edge cases, and graph replay | `third_party/flashmla-v0.5.18/tests/test_flash_mla_remnant_decoding.py`; shared `tests/lib.py` and `tests/ref.py` |
+| SGLang integration | `third_party/sglang-v0.5.18/test/registered/attention/unittests/dsv4/test_remnant_*.py` |
+| Low-level pack/unpack | `third_party/sglang-v0.5.18/python/sglang/test/kernels/deepseek_v4/test_remnant_*_kernel.py` |
+| Startup cache-format validation | `third_party/sglang-v0.5.18/test/registered/unit/test_dsv4_c4_cache_format.py` |
+| Native/Adapter/Direct decode timing | `third_party/sglang-v0.5.18/benchmark/remnant/microbench.py` and its README |
 | Cached builds, validation, timing and kernel profiles | `scripts/modal/kernels.py` |
 
 - Direct reads Packed records inside FlashMLA. Adapter reconstructs Native

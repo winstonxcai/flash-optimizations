@@ -15,8 +15,8 @@ HOST_REPO=${HOST_REPO:-$(cd -- "$SCRIPT_DIR/../.." && pwd)}
 REMNANT_INTEGRATION=${REMNANT_INTEGRATION:-v0.5.18}
 case "$REMNANT_INTEGRATION" in
   v0.5.18)
-    SGLANG_SOURCE_RELATIVE=third_party/sglang
-    FLASHMLA_SOURCE_RELATIVE=third_party/flashmla
+    SGLANG_SOURCE_RELATIVE=third_party/sglang-v0.5.18
+    FLASHMLA_SOURCE_RELATIVE=third_party/flashmla-v0.5.18
     REMNANT_BASE_IMAGE=lmsysorg/sglang:v0.5.18-cu130
     REMNANT_DOCKERFILE=Dockerfile
     CONTAINER=${CONTAINER:-remnant} ;;
@@ -30,9 +30,8 @@ case "$REMNANT_INTEGRATION" in
 esac
 export REMNANT_INTEGRATION
 
-# The selected Dockerfile is the source of truth for serving. It installs the reviewed
-# production fork at this path; neither native nor packed serving imports the
-# repository's old third_party/sglang checkout anymore.
+# The selected Dockerfile installs the reviewed fork at a stable container path.
+# Native and Packed serving import that installation, not a host checkout.
 REPO_CT=${REPO_CT:-/mnt/host_root$HOST_REPO}
 SGLANG_ROOT_CT=${SGLANG_ROOT_CT:-/sgl-workspace/sglang-remnant}
 SGLANG_PY=${SGLANG_PY:-$SGLANG_ROOT_CT/python}

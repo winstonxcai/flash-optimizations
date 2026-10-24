@@ -28,7 +28,7 @@ steps of 64, without HiCache; these profiles need separate serving validation.
 1. [Project report](docs/report.md): motivation, measured gains and limitations.
 2. [Fork guide](third_party/README.md): source ownership, integration map and validation limits; [changelog](third_party/CHANGELOG.md) for commit-based milestones.
 3. Follow your research track:
-   - **Kernel optimization:** [maintained microbenchmark protocol](third_party/sglang/benchmark/remnant/README.md) and [curated measurements](benchmarks/README.md).
+   - **Kernel optimization:** [maintained microbenchmark protocol](third_party/sglang-v0.5.18/benchmark/remnant/README.md) and [curated measurements](benchmarks/README.md).
    - **Attention-aware latent KV compression:** [method and findings](docs/attention-aware-latent-kv-compression.md) and [training/evaluation commands](training/README.md). Learned scoring is an offline research extension, not the serving default.
 
 Use the maintained runners below; historical measurements retain their own source identities and limitations.
@@ -119,8 +119,8 @@ benchmark client. Defaults: 32k input, 2,048 output, C8; override with
 
 Read [AGENTS.md](AGENTS.md) before editing. Work in the owning repository:
 
-- `third_party/sglang/`: runtime, packing, allocation and dispatch.
-- `third_party/flashmla/`: Direct Packed attention kernels.
+- `third_party/sglang-v0.5.18/`: runtime, packing, allocation and dispatch.
+- `third_party/flashmla-v0.5.18/`: Direct Packed attention kernels.
 - Parent repository: scripts, experiment records and reports.
 
 After fork source or Dockerfile changes, run `bash scripts/local/container.sh rebuild`;

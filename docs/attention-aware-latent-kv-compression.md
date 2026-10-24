@@ -695,6 +695,6 @@ Reproduce from the repository root, choosing a fresh output directory:
 python experiments/attention-pruning/diagnose_pruning.py \
   --cache data/training-cache-001 \
   --policy experiments/attention-pruning/anchored-best-policy.json \
-  --runner third_party/sglang/python/sglang/benchmark/remnant/calibrate.py \
+  --runner third_party/sglang-v0.5.18/python/sglang/benchmark/remnant/calibrate.py \
   --output data/coordinate-interactions-<new-run> --threads 4
 ```

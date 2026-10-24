@@ -155,11 +155,10 @@ image_id=$(docker_timeout 30s image inspect --format '{{.Id}}' "$image") || {
 [[ "$image_id" =~ ^sha256:[0-9a-f]{64}$ ]] || {
   echo "Cannot resolve a valid local image ID for '$image'" >&2; exit 1;
 }
-if [[ "${REMNANT_INTEGRATION:-v0.5.18}" == v0.5.22 ]]; then
-  expected="v0.5.22 $(git -C "$repo/third_party/sglang-v0.5.22" rev-parse HEAD) $(git -C "$repo/third_party/flashmla-v0.5.22" rev-parse HEAD)"
-  actual=$(docker_timeout 30s image inspect --format '{{index .Config.Labels "remnant.integration"}} {{index .Config.Labels "remnant.sglang"}} {{index .Config.Labels "remnant.flashmla"}}' "$image_id")
-  [[ "$actual" == "$expected" ]] || { echo "Capture image source/profile mismatch: $actual; expected $expected" >&2; exit 1; }
-fi
+integration=${REMNANT_INTEGRATION:-v0.5.18}
+expected="$integration $(git -C "$repo/third_party/sglang-$integration" rev-parse HEAD) $(git -C "$repo/third_party/flashmla-$integration" rev-parse HEAD)"
+actual=$(docker_timeout 30s image inspect --format '{{index .Config.Labels "remnant.integration"}} {{index .Config.Labels "remnant.sglang"}} {{index .Config.Labels "remnant.flashmla"}}' "$image_id")
+[[ "$actual" == "$expected" ]] || { echo "Capture image source/profile mismatch: $actual; expected $expected" >&2; exit 1; }
 gpus=${CAPTURE_GPUS:-0,1,2,3}
 IFS=, read -r -a gpu_ids <<< "$gpus"
 [[ ${#gpu_ids[@]} = 4 && "$gpus" != *, ]] || { echo 'CAPTURE_GPUS must identify four distinct GPUs' >&2; exit 2; }

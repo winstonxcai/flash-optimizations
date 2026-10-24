@@ -7,6 +7,7 @@ No image builds, remote calls, weights or GPUs. Build/execution boundaries are m
 import ast
 import copy
 import inspect
+import io
 import json
 import os
 import subprocess
@@ -20,6 +21,15 @@ from unittest.mock import MagicMock, call, patch
 
 from scripts.modal import kernels
 from scripts.sources import check_sources, integration_profile
+
+
+def profiler_capabilities(argv, *args, **kwargs):
+    """Mock only the external profiler's capability queries, not its guards."""
+    if argv == ["ncu", "--list-sections"]:
+        return " ".join(kernels.NCU_SECTIONS)
+    if "--query-metrics-mode" in argv:
+        return kernels.PREFILL_METRICS
+    return ""
 
 
 class SourcePreflightTests(unittest.TestCase):
@@ -37,7 +47,7 @@ class SourcePreflightTests(unittest.TestCase):
         self.initialize(self.repo)
         self.forks = {}
         for name in ("sglang", "flashmla"):
-            root = self.repo / "third_party" / name
+            root = self.repo / integration_profile("v0.5.18")[name]
             self.initialize(root)
             self.forks[name] = root
         self.cutlass = self.forks["flashmla"] / "csrc/cutlass"
@@ -78,6 +88,8 @@ class SourcePreflightTests(unittest.TestCase):
             self.assertFalse(records[name]["dirty"])
 
     def test_profiles_select_matching_dockerfiles(self):
+        from modal._utils.docker_utils import extract_copy_command_patterns
+
         for version, filename in (("v0.5.18", "Dockerfile"),
                                   ("v0.5.22", "Dockerfile.v0.5.22")):
             with self.subTest(version=version):
@@ -89,10 +101,13 @@ class SourcePreflightTests(unittest.TestCase):
                 for name in ("sglang", "flashmla"):
                     self.assertIn(f"ARG REMNANT_{name.upper()}_SOURCE={profile[name]}\n", recipe)
                 self.assertIn('CMD ["bash"]', recipe)
+                self.assertNotIn("COPY ${", recipe)
+                sources = extract_copy_command_patterns(recipe.splitlines())
+                for name in ("sglang", "flashmla"):
+                    self.assertIn(profile[name], sources)
+                    self.assertIn(f"COPY {profile[name]} ", recipe)
+                    self.assertIn(f'test "$REMNANT_{name.upper()}_SOURCE" = {profile[name]}', recipe)
                 if version == "v0.5.22":
-                    self.assertNotIn("COPY ${", recipe)
-                    self.assertIn("COPY third_party/sglang-v0.5.22 ", recipe)
-                    self.assertIn("COPY third_party/flashmla-v0.5.22 ", recipe)
                     self.assertIn("cuda-python==13.0.3 cuda-bindings==13.0.3", recipe)
 
     def test_version_profiles_select_only_their_own_pins(self):
@@ -668,6 +683,7 @@ class LauncherTests(unittest.TestCase):
         self.assertTrue(kernels._flashmla_ignored(Path("tests/test_decode.py")))
 
     def test_image_build_compiles_on_cpu_then_preflights(self):
+        newer = kernels.INTEGRATION["version"] == "v0.5.22"
         sglang, flashmla = self.root / "sglang", self.root / "flashmla"
         aot = sglang / "python/sglang/kernels/aot"
         package = self.root / "site/sgl_kernel"
@@ -682,6 +698,11 @@ class LauncherTests(unittest.TestCase):
         stub.parent.mkdir(parents=True)
         stub.write_bytes(b"CPU-only driver stub")
         calls = []
+        sanitizer = self.root / "sanitizer/compute-sanitizer"
+        if newer:
+            (package / "flash_mla.py").write_text("# fork binding")
+            for target in ("remnant_ops", "flashmla_ops"):
+                (package / (target + ".so")).write_bytes(target.encode())
 
         def command(argv, output, deadline, *, environment=None):
             calls.append(argv)
@@ -689,6 +710,11 @@ class LauncherTests(unittest.TestCase):
                 return " ".join(kernels.NCU_SECTIONS)
             if "--query-metrics-mode" in argv:
                 return kernels.PREFILL_METRICS
+            if argv[0] == "dpkg-deb":
+                sanitizer.parent.mkdir(parents=True)
+                sanitizer.write_bytes(b"pinned tool")
+            if argv[0] == "cuobjdump":
+                return "ELF file sm_90a"
             if argv[:2] == ["cmake", "--build"]:
                 for target in ("remnant_ops", "flashmla_ops"):
                     binary = self.root / "build/cmake" / (target + ".so")
@@ -706,8 +732,9 @@ class LauncherTests(unittest.TestCase):
                 )
             return "test toolchain"
 
-        def native_factory(*args):
+        def native_factory(*args, **kwargs):
             self.assertEqual(args, ("fp32", 512, 64, 64, False))
+            self.assertEqual(kwargs, {"layout": "v4"} if newer else {})
             library.write_bytes(b"native")
 
         modules = {
@@ -726,7 +753,32 @@ class LauncherTests(unittest.TestCase):
             "sglang.kernels.ops.attention.dsv4.compress": SimpleNamespace(
                 _jit_compress_norm_rope_module=native_factory
             ),
+            "sglang.kernels.ops.attention.dsv4.kv_layout": SimpleNamespace(
+                KVLayout=SimpleNamespace(V4="v4")
+            ),
         }
+        # Synthetic downloads exercise orchestration without network access.
+        # Hash checks themselves have a separate changed-content rejection case.
+        sha256 = kernels.hashlib.sha256
+        download_hashes = {
+            b"sanitizer fixture": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+            b"config fixture": "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023",
+        }
+
+        def digest(payload=b""):
+            if payload in download_hashes:
+                return SimpleNamespace(hexdigest=lambda: download_hashes[payload])
+            return sha256(payload)
+
+        def download(url, *, timeout):
+            self.assertEqual(timeout, 30)
+            return io.BytesIO(b"config fixture" if url.endswith("config.json") else b"sanitizer fixture")
+
+        def build_path(value):
+            if str(value) == "/opt/remnant-0731-config.json":
+                return self.root / "config.json"
+            return Path(value)
+
         with (
             patch.dict(sys.modules, modules),
             patch.object(kernels, "SGLANG_ROOT", sglang),
@@ -734,6 +786,13 @@ class LauncherTests(unittest.TestCase):
             patch.object(kernels, "MANIFEST", manifest),
             patch.object(kernels, "NATIVE_LIBRARY", native),
             patch.object(kernels, "BUILD_ROOT", self.root / "build"),
+            patch.object(kernels, "SANITIZER_ROOT", sanitizer.parent),
+            patch.object(kernels, "SANITIZER", str(sanitizer)),
+            patch.object(kernels, "Path", side_effect=build_path),
+            patch.object(kernels.urllib.request, "urlopen", side_effect=download),
+            patch.object(kernels.hashlib, "sha256", side_effect=digest),
+            patch.object(kernels.importlib.metadata, "version", return_value="13.0.3"),
+            patch.object(kernels.importlib.metadata, "distributions", return_value=[]),
             patch.object(
                 kernels.sysconfig,
                 "get_paths",
@@ -747,11 +806,16 @@ class LauncherTests(unittest.TestCase):
             patch.object(kernels, "_run_pytest") as tests,
         ):
             kernels._build_image()
-        configure = next(c for c in calls if c[:2] == ["cmake", "-S"])
-        self.assertIn("-DSGL_KERNEL_ENABLE_FLASHMLA_SM100=OFF", configure)
-        self.assertIn("-DENABLE_BELOW_SM90=OFF", configure)
-        self.assertEqual(calls[0][:2], [sys.executable, "-c"])
-        self.assertEqual(tests.call_count, 3)
+        if newer:
+            self.assertFalse(any(c[0] == "cmake" for c in calls))
+            self.assertFalse(any(c[0] == "ncu" for c in calls))
+            self.assertEqual(sum(c[0] == "cuobjdump" for c in calls), 3)
+        else:
+            configure = next(c for c in calls if c[:2] == ["cmake", "-S"])
+            self.assertIn("-DSGL_KERNEL_ENABLE_FLASHMLA_SM100=OFF", configure)
+            self.assertIn("-DENABLE_BELOW_SM90=OFF", configure)
+            self.assertEqual(calls[0][:2], [sys.executable, "-c"])
+        self.assertEqual(tests.call_count, 4 if newer else 3)
         self.assertTrue(
             all(
                 "cpu-driver-stubs" in c.kwargs["environment"]["LD_LIBRARY_PATH"]
@@ -761,14 +825,24 @@ class LauncherTests(unittest.TestCase):
         receipt = json.loads(manifest.read_text())
         self.assertEqual(receipt["arch"], "sm_90a")
         self.assertEqual(len(receipt["binaries"]), 3)
+        self.assertEqual(receipt["integration"], kernels.INTEGRATION["version"])
 
     def test_cpu_and_sanitizer_selection_use_names_not_list_positions(self):
+        extra_cpu = ()
+        if kernels.INTEGRATION["version"] == "v0.5.22":
+            extra_cpu = (
+                kernels.TEST_MODULES["pool"] + "::TestRemnantPool",
+                "benchmark/remnant/test_microbench.py::test_packed_hicache_routes_all_planes_without_cuda",
+                "benchmark/remnant/test_microbench.py::test_prefill_fixture_matches_combine_keyword_contract",
+                "test/registered/unit/utils/test_nvtx_utils.py",
+                "test/registered/unit/observability/test_req_time_stats.py",
+            )
         self.assertEqual(
             kernels.CPU_TESTS,
             tuple(
                 kernels.TEST_MODULES[n]
                 for n in ("cache_format", "pack", "backend", "compressor_store")
-            ),
+            ) + extra_cpu,
         )
         expected = {
             kernels.TEST_MODULES["unpack_kernel"]
@@ -782,6 +856,20 @@ class LauncherTests(unittest.TestCase):
             kernels.TEST_MODULES["cuda_graph"]
             + "::TestRemnantCudaGraph::test_fused_read_replays_changed_planes_indices_lengths_and_frequencies",
         }
+        if kernels.INTEGRATION["version"] == "v0.5.22":
+            extra_sanitizer = {
+                "flashmla_direct": (
+                    "TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+                    "TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]",
+                    "TestRemnantFlashMLADirect::test_direct_decode_cuda_graph_replay[8-64]",
+                ),
+                "fused_store": ("test_graph_replay_with_changed_inputs_and_plans",),
+                "hicache": ("TestRemnantHiCache::test_backup_restore_preserves_all_planes_across_layers_and_pages",),
+            }
+            expected.update(
+                kernels.TEST_MODULES[module] + "::" + node
+                for module, nodes in extra_sanitizer.items() for node in nodes
+            )
         self.assertEqual(set(kernels.SANITIZER_TESTS), expected)
         self.assertEqual(len(kernels.SANITIZER_TESTS), len(expected))
         # Check actual node identities without importing CUDA-dependent modules.
@@ -789,19 +877,71 @@ class LauncherTests(unittest.TestCase):
             path, *names = selector.split("::")
             node = ast.parse((kernels.SGLANG_SOURCE / path).read_text())
             for name in names:
+                name = name.split("[", 1)[0]
                 matches = [
                     child for child in node.body if getattr(child, "name", None) == name
                 ]
                 self.assertEqual(len(matches), 1, selector)
                 node = matches[0]
 
+    def test_cuda_binding_constraints_reject_missing_or_conflicting_consumers(self):
+        distribution = SimpleNamespace(
+            metadata={"Name": "torch"}, requires=["cuda-bindings>=13.0.3"]
+        )
+        with (
+            patch.object(kernels.importlib.metadata, "distributions", return_value=[distribution]),
+            patch.object(kernels.importlib.metadata, "version", return_value="13.0.3"),
+        ):
+            self.assertEqual(kernels._check_cuda_binding_requirements()[0]["consumer"], "torch")
+            distribution.requires = ["cuda-bindings>=13.4"]
+            with self.assertRaisesRegex(RuntimeError, "requires cuda-bindings"):
+                kernels._check_cuda_binding_requirements()
+            distribution.metadata["Name"] = "cuda-python"
+            distribution.requires = ["cuda-missing>=1"]
+            def version(name):
+                if name == "cuda-missing":
+                    raise kernels.importlib.metadata.PackageNotFoundError(name)
+                return "13.0.3"
+            with patch.object(kernels.importlib.metadata, "version", side_effect=version):
+                with self.assertRaisesRegex(RuntimeError, "missing cuda-missing"):
+                    kernels._check_cuda_binding_requirements()
+        with patch.object(kernels.importlib.metadata, "version", return_value="13.4"):
+            with self.assertRaisesRegex(RuntimeError, "Serving image requires"):
+                kernels._check_cuda_binding_requirements()
+
+    def test_build_rejects_changed_sanitizer_download_before_compilation(self):
+        with (
+            patch.object(kernels, "INTEGRATION", integration_profile("v0.5.22")),
+            patch.object(kernels, "BUILD_ROOT", self.root / "bad-download"),
+            patch.object(kernels, "_check_cuda_binding_requirements", return_value=[]),
+            patch.dict(sys.modules, {"sglang.kernels.jit.utils": SimpleNamespace(override_jit_cuda_arch=None)}),
+            patch.object(kernels.urllib.request, "urlopen", return_value=io.BytesIO(b"changed package")),
+            patch.object(kernels, "_run_command") as command,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "Sanitizer package content changed"):
+                kernels._build_image()
+            command.assert_not_called()
+
+    def test_profiler_capability_guards_are_not_bypassed(self):
+        for response, message in (("", "required sections"), (" ".join(kernels.NCU_SECTIONS), "traffic metrics")):
+            with self.subTest(response=response), patch.object(kernels, "_run_command", return_value=response):
+                with self.assertRaisesRegex(RuntimeError, message):
+                    kernels._check_profiler_tools(self.root)
+
     def test_cached_serving_image_rejects_mismatched_sources(self):
         from scripts.modal import serve
 
-        with patch.object(serve, "_compiled_source_digest", return_value="matching"):
+        with (
+            patch.object(serve, "_compiled_source_digest", return_value="matching"),
+            patch.dict(os.environ, {"REMNANT_BUILT_INTEGRATION": serve.INTEGRATION["version"]}),
+        ):
             serve._verify_compiled_sources("matching")
             with self.assertRaisesRegex(RuntimeError, "Compiled source changed"):
                 serve._verify_compiled_sources("different")
+            wrong = "v0.5.18" if serve.INTEGRATION["version"] == "v0.5.22" else "v0.5.22"
+            with patch.dict(os.environ, {"REMNANT_BUILT_INTEGRATION": wrong}):
+                with self.assertRaisesRegex(RuntimeError, "different REMNANT_INTEGRATION"):
+                    serve._verify_compiled_sources("matching")
         source = self.root / "source"
         source.mkdir()
         kernel = source / "kernel.cu"
@@ -990,6 +1130,36 @@ with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')
 
 
 class LocalScriptTests(unittest.TestCase):
+    def test_capture_rejects_wrong_image_profile_before_gpu_checks(self):
+        with tempfile.TemporaryDirectory(prefix="remnant-capture-image-") as temporary:
+            root = Path(temporary)
+            for name in ("bin", "model", "scratch", "published"):
+                (root / name).mkdir()
+            for name in ("capture-config.json", "replay.jsonl"):
+                (root / "scratch" / name).write_text("{}\n")
+            commands = {
+                "docker": '#!/bin/bash\nif [[ "$*" == *"{{.Id}}"* ]]; then printf "sha256:%064d\\n" 0; else echo "$FAKE_IMAGE_PROFILE wrong-sglang wrong-flashmla"; fi\n',
+                "timeout": '#!/bin/bash\nwhile [[ "$1" == --* ]]; do shift; done\nshift\nexec "$@"\n',
+                "nvidia-smi": '#!/bin/bash\necho unexpected-GPU-inspection >&2\nexit 1\n',
+            }
+            for name, script in commands.items():
+                tool = root / "bin" / name
+                tool.write_text(script)
+                tool.chmod(0o755)
+            for version in ("v0.5.18", "v0.5.22"):
+                environment = dict(os.environ, REMNANT_INTEGRATION=version,
+                                   FAKE_IMAGE_PROFILE="v0.5.22" if version == "v0.5.18" else "v0.5.18",
+                                   PATH=f"{root / 'bin'}:{Path(sys.executable).parent}:{os.environ['PATH']}")
+                with self.subTest(version=version):
+                    result = subprocess.run(
+                        ["bash", str(kernels.REPO_ROOT / "scripts/local/capture-latent.sh"), "run", "fake-image",
+                         str(root / "model"), str(root / "scratch"), str(root / "published"), "120"],
+                        env=environment, text=True, capture_output=True, timeout=30,
+                    )
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("Capture image source/profile mismatch", result.stderr)
+                    self.assertNotIn("unexpected-GPU-inspection", result.stderr)
+
     def test_local_profiles_match_source_and_dockerfile_selection(self):
         for version in ("v0.5.18", "v0.5.22"):
             profile = integration_profile(version)
@@ -1209,7 +1379,9 @@ if kind == 'duplicate' and measured:
             # Exercise the real host gate as well as the mocked Docker client.
             SourcePreflightTests.initialize(self.root)
             for name in ("sglang", "flashmla"):
-                fork = self.root / "third_party" / name
+                fork = self.root / integration_profile(
+                    self.env.get("REMNANT_INTEGRATION", "v0.5.18")
+                )[name]
                 SourcePreflightTests.initialize(fork)
                 SourcePreflightTests.pin(self.root, fork)
         self.info_path.write_text(json.dumps(self.info))
@@ -1387,6 +1559,8 @@ class SurvivorBudgetLauncherTests(unittest.TestCase):
 
         def profile_command(argv, output, deadline):
             calls.append(argv)
+            if capabilities := profiler_capabilities(argv):
+                return capabilities
             if "--export" in argv:
                 base = Path(argv[argv.index("--export") + 1])
                 base.with_suffix(".ncu-rep").write_bytes(b"nonempty profile")
@@ -1446,7 +1620,7 @@ class SurvivorBudgetLauncherTests(unittest.TestCase):
                 self.subTest(count=count, mode=mode),
                 patch.object(kernels, "_benchmark_cases", return_value=contract),
                 patch.object(kernels, "_run_context", return_value=nullcontext((self.root, {}, float("inf")))),
-                patch.object(kernels, "_run_command"),
+                patch.object(kernels, "_run_command", side_effect=profiler_capabilities),
             ):
                 with self.assertRaisesRegex(RuntimeError, "Invalid capture"):
                     kernels.profile_kernels.local("count192", cases="h64_b8_k512", keep_count=192)
@@ -1608,7 +1782,7 @@ class PrefillReadLauncherTests(unittest.TestCase):
                 "_run_context",
                 return_value=nullcontext((self.root, {}, float("inf"))),
             ),
-            patch.object(kernels, "_run_command") as command,
+            patch.object(kernels, "_run_command", side_effect=profiler_capabilities) as command,
         ):
             with self.assertRaisesRegex(RuntimeError, "Prefill capture"):
                 kernels.profile_kernels.local(
@@ -1636,6 +1810,8 @@ class PrefillReadLauncherTests(unittest.TestCase):
         exports = []
 
         def run(argv, output, deadline):
+            if capabilities := profiler_capabilities(argv):
+                return capabilities
             if "--export" in argv:
                 captures.append(argv)
                 base = Path(argv[argv.index("--export") + 1])

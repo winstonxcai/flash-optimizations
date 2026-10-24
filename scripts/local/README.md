@@ -475,7 +475,7 @@ random-text client and is not used for this experiment.
 Before reserving GPUs, exercise the actual loader in the serving image on CPU:
 
 ```bash
-export SGLANG_ROOT_CT="/mnt/host_root$PWD/third_party/sglang"
+export SGLANG_ROOT_CT="/mnt/host_root$PWD/third_party/sglang-v0.5.18"
 export SGLANG_PY="$SGLANG_ROOT_CT/python"
 . scripts/local/env.sh
 docker exec -i -e CUDA_VISIBLE_DEVICES= \
@@ -577,10 +577,10 @@ gpuq run --user winstonxcai --project flash-optimizations \
 set -euo pipefail
 export GIT_CONFIG_COUNT=4
 export GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$PWD"
-export GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1="$PWD/third_party/sglang"
-export GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2="$PWD/third_party/flashmla"
-export GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3="$PWD/third_party/flashmla/csrc/cutlass"
-export SGLANG_ROOT_CT="/mnt/host_root$PWD/third_party/sglang"
+export GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1="$PWD/third_party/sglang-v0.5.18"
+export GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2="$PWD/third_party/flashmla-v0.5.18"
+export GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3="$PWD/third_party/flashmla-v0.5.18/csrc/cutlass"
+export SGLANG_ROOT_CT="/mnt/host_root$PWD/third_party/sglang-v0.5.18"
 export SGLANG_PY="$SGLANG_ROOT_CT/python"
 export LOG_HOST="$PWD/logs/ttft-c24-$(date +%Y%m%d_%H%M%S)"
 mkdir -p "$LOG_HOST"
@@ -697,11 +697,11 @@ gpuq run --user winstonxcai --project flash-optimizations \
 set -euo pipefail
 export GIT_CONFIG_COUNT=4
 export GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$PWD"
-export GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1="$PWD/third_party/sglang"
-export GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2="$PWD/third_party/flashmla"
-export GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3="$PWD/third_party/flashmla/csrc/cutlass"
+export GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1="$PWD/third_party/sglang-v0.5.18"
+export GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2="$PWD/third_party/flashmla-v0.5.18"
+export GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3="$PWD/third_party/flashmla-v0.5.18/csrc/cutlass"
 export NSYS_GRAPH_TRACE=node
-export SGLANG_ROOT_CT="/mnt/host_root$PWD/third_party/sglang"
+export SGLANG_ROOT_CT="/mnt/host_root$PWD/third_party/sglang-v0.5.18"
 export SGLANG_PY="$SGLANG_ROOT_CT/python"
 run_id=$(date +%Y%m%d_%H%M%S)
 mode=
@@ -717,9 +717,9 @@ trap cleanup EXIT
 trap "exit 143" TERM
 trap "exit 130" INT
 sha256sum scripts/local/{serve,run-server,bench-lswb}.sh \
-  third_party/sglang/python/sglang/srt/utils/nvtx_utils.py \
-  third_party/sglang/python/sglang/srt/managers/scheduler.py \
-  third_party/sglang/python/sglang/srt/model_executor/runner/decode_cuda_graph_runner.py \
+  third_party/sglang-v0.5.18/python/sglang/srt/utils/nvtx_utils.py \
+  third_party/sglang-v0.5.18/python/sglang/srt/managers/scheduler.py \
+  third_party/sglang-v0.5.18/python/sglang/srt/model_executor/runner/decode_cuda_graph_runner.py \
   > "logs/nsys-node-c24-source-$run_id.txt"
 for mode in native triton kernel; do
   bash scripts/local/serve.sh "$mode" profile
@@ -764,9 +764,9 @@ gpuq run --user winstonxcai --project flash-optimizations \
 set -euo pipefail
 export GIT_CONFIG_COUNT=4
 export GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$PWD"
-export GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1="$PWD/third_party/sglang"
-export GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2="$PWD/third_party/flashmla"
-export GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3="$PWD/third_party/flashmla/csrc/cutlass"
+export GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1="$PWD/third_party/sglang-v0.5.18"
+export GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2="$PWD/third_party/flashmla-v0.5.18"
+export GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3="$PWD/third_party/flashmla-v0.5.18/csrc/cutlass"
 cleanup() { bash scripts/local/serve.sh "$MODE" stop; }
 trap cleanup EXIT
 bash scripts/local/serve.sh "$MODE"

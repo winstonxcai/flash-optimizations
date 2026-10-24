@@ -18,11 +18,11 @@ The parent Git links are authoritative for **current pins**. Read them rather
 than copying a branch head from documentation:
 
 ```bash
-git ls-tree HEAD third_party/sglang third_party/flashmla
-git -C third_party/sglang status --short --branch
-git -C third_party/flashmla status --short --branch
-git -C third_party/sglang rev-parse HEAD
-git -C third_party/flashmla rev-parse HEAD
+git ls-tree HEAD third_party/sglang-v0.5.18 third_party/flashmla-v0.5.18
+git -C third_party/sglang-v0.5.18 status --short --branch
+git -C third_party/flashmla-v0.5.18 status --short --branch
+git -C third_party/sglang-v0.5.18 rev-parse HEAD
+git -C third_party/flashmla-v0.5.18 rev-parse HEAD
 ```
 
 Ordinary builds require each fork's HEAD to equal its parent pin and both forks
@@ -54,11 +54,11 @@ selected by `--dsv4-c4-cache-format remnant`.
 | Host cache | SGLang `srt/mem_cache/memory_pool_host.py`, `hybrid_cache/hybrid_pool_assembler.py` | Coordinated value/bitmap/scale transfers; 256 survivors only |
 | Capture and replay | SGLang `srt/remnant/capture.py`, `benchmark/remnant/calibrate.py` under `python/sglang/` | Opt-in owner-only capture, audited TP payloads, strict source hashes |
 | Profiling and request timing | SGLang `srt/utils/nvtx_utils.py`, scheduler, graph runner, request statistics | Gated built-in PyTorch NVTX; tokenizer first-output timestamp |
-| Measurements | SGLang `benchmark/remnant/microbench.py` | Shared decode/store and prefill-read fixtures; [protocol and commands](sglang/benchmark/remnant/README.md) |
+| Measurements | SGLang `benchmark/remnant/microbench.py` | Shared decode/store and prefill-read fixtures; [protocol and commands](sglang-v0.5.18/benchmark/remnant/README.md) |
 
 ### SGLang file map
 
-Inventory relative to [sglang/](sglang/). Directory/glob entries cover changed
+Inventory relative to [sglang/](sglang-v0.5.18/). Directory/glob entries cover changed
 files within them, not every upstream file in that directory.
 
 - **Runtime and numerics:** `python/sglang/srt/remnant/` owns configuration,
@@ -114,7 +114,7 @@ files within them, not every upstream file in that directory.
 
 ### FlashMLA file map
 
-Inventory relative to [flashmla/](flashmla/).
+Inventory relative to [flashmla/](flashmla-v0.5.18/).
 
 - **API and build:** `csrc/api/api.cpp`, `csrc/api/sparse_decode.h`,
   `csrc/params.h`, `flash_mla/__init__.py`, `flash_mla/flash_mla_interface.py`
@@ -192,15 +192,15 @@ a follow-up documentation update. Never guess a future commit hash.
 From the parent root, regenerate the committed file map against the fixed bases:
 
 ```bash
-git -C third_party/sglang diff --name-status \
+git -C third_party/sglang-v0.5.18 diff --name-status \
   71de97b264b04dcd514cf904003028aefe9775c8 \
   "$(git rev-parse HEAD:third_party/sglang)"
-git -C third_party/flashmla diff --name-status \
+git -C third_party/flashmla-v0.5.18 diff --name-status \
   05e26647fe840b8baedae486c2d86d5ce4efeb7c \
   "$(git rev-parse HEAD:third_party/flashmla)"
-git log --oneline -- third_party/sglang third_party/flashmla
+git log --oneline -- third_party/sglang-v0.5.18 third_party/flashmla-v0.5.18
 ```
 
-Use `git ls-tree <parent-commit> third_party/sglang third_party/flashmla` to
+Use `git ls-tree <parent-commit> third_party/sglang-v0.5.18 third_party/flashmla-v0.5.18` to
 recover an integration's exact pair. Git history remains the detailed record;
 this guide and the changelog are its curated index.

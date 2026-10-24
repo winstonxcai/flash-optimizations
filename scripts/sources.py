@@ -28,8 +28,8 @@ def integration_profile(value: str | None = None) -> dict[str, str]:
     newer = version == "v0.5.22"
     return {
         "version": version,
-        "sglang": "third_party/sglang-v0.5.22" if newer else "third_party/sglang",
-        "flashmla": "third_party/flashmla-v0.5.22" if newer else "third_party/flashmla",
+        "sglang": "third_party/sglang-v0.5.22" if newer else "third_party/sglang-v0.5.18",
+        "flashmla": "third_party/flashmla-v0.5.22" if newer else "third_party/flashmla-v0.5.18",
         "base_image": (
             "lmsysorg/sglang:v0.5.22" if newer else "lmsysorg/sglang:v0.5.18-cu130"
         ),
