@@ -1226,7 +1226,15 @@ def _run_pytest(
     environment: dict[str, str] | None = None,
 ) -> None:
     report = root / f"{name}.xml"
-    argv = [*prefix, sys.executable, *["-m", "pytest", "-q"]]
+    argv = [
+        *prefix,
+        sys.executable,
+        "-m",
+        "pytest",
+        "-q",
+        "--disable-warnings",
+        "--tb=short",
+    ]
     argv += [str(SGLANG_ROOT / path) for path in tests]
     argv += ["--collect-only"] if collect else [f"--junitxml={report}"]
     output = _run_command(argv, root / f"{name}.log", deadline, environment=environment)

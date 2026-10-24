@@ -9,8 +9,8 @@
     "max_projected_work_usd": 13,
     "account": "wpooh1579",
     "baseline_compute_usd": 18.51013772,
-    "latest_compute_usd": 18.54455302,
-    "incremental_compute_usd": 0.0344153,
+    "latest_compute_usd": 18.74713093,
+    "incremental_compute_usd": 0.23699321,
     "billing_lag": true,
     "cpu_core_hour_usd": 0.0473,
     "memory_gib_hour_usd": 0.008,
@@ -48,6 +48,24 @@
       "cpu_preflight": "not_run",
       "gpu_tests": "not_run",
       "sanitizers": "not_run"
+    },
+    {
+      "id": "attempt004",
+      "account": "wpooh1579",
+      "app_id": "ap-tfsbiBLd5DCI5aLYMnkbwy",
+      "status": "cpu_preflight_failed",
+      "source_parent": "880bf65acf095c9800763d7d340931103257d5c6",
+      "sglang": "6ad4413fafa6aec51eef82113b85010dea491fe3",
+      "flashmla": "0e34a09a4f5d5d3879a94c483a4feef8eba8dc03",
+      "cpu_native_compilation": "passed",
+      "cpu_fp4_precompilation": "passed",
+      "cpu_tests": {
+        "passed": 22,
+        "failed": 3,
+        "subtests_passed": 13
+      },
+      "gpu_allocated": false,
+      "reason": "startup tests failed; source audit fixes auto attention default and missing legacy flag fallback; next run verifies diagnosis"
     }
   ],
   "review": {
@@ -56,7 +74,8 @@
     "fixture_findings": [
       "add whole-pool/disjoint ownership checks",
       "cover real C2 pending state and consumer dispatch",
-      "empty C2 scores use negative infinity"
+      "empty C2 scores use negative infinity",
+      "balance SWA/global values and require zero-global/zero-tail negative-control sensitivity"
     ],
     "fixture_findings_addressed": true,
     "executable_validation": false

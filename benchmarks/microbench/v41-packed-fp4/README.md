@@ -78,8 +78,20 @@ Run the frozen snapshot from this worktree:
 MODAL_PROFILE=wpooh1579 REMNANT_INTEGRATION=v0.5.22 \
 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_VALIDATION_TIMEOUT_S=1800 \
 modal run scripts/modal/kernels.py::validate_kernels \
-  --run-id v41-fp4-20261024-attempt004 --sanitizer --max-seconds 1600
+  --run-id v41-fp4-20261024-attempt005 --sanitizer --max-seconds 1600
 ```
 
 All executable validation is on Modal. Local work is source preparation and
 formatting only. No changes to submitted files while a build/run depends on them.
+
+Attempt004: parent `880bf65`, app `ap-tfsbiBLd5DCI5aLYMnkbwy`. Native extensions,
+SM90 binary checks and all FP4 CPU precompilation passed. CPU startup checks
+stopped qualification before GPU allocation: 22 passed, 3 failed, 13 passing
+subtests. Source audit fixes the default `auto` attention backend and the new
+flag fallback for legacy startup fixtures; the next attempt verifies these.
+Failure logs now suppress warning summaries and retain short tracebacks.
+The strengthened attention fixture balances SWA/global magnitudes and requires
+zero-global and zero-global-tail negative controls to fail the original tolerance.
+Reported cumulative compute is $0.23699321 before billing lag. Attempt005 has the
+same bounded resource projection (CPU preflight <=$1.2688, H100 worker <=$2.4202,
+plus image builds), comfortably below the $13 projected-work ceiling.
