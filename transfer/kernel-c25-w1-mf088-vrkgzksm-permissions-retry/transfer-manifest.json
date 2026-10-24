@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "description": "Packed Kernel256 C25 W1 TP4 MF0.88 HiCache-off original replay1200s n1",
+  "original_run": "results/lswb-replay/kernel-c25-w1-mf088-vrkgzksm/20261024_140441",
+  "missing_artifacts": [],
+  "classification": "Screening evidence; response and timing qualification pending",
+  "baseline": "frontend-preparation-workers-20261023_213929-RtkRUV/native-c24-w1"
+}
