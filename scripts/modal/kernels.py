@@ -520,7 +520,9 @@ def _build_image() -> None:
         "sanitizer": sanitizer_identity,
         "arch": "sm_90a",
         "binary_architectures": binary_architectures,
-        "native_dtype": "float32",
+        "native_dtype": "bfloat16" if MODEL_FAMILY == "glm53" else "float32",
+        "triton": importlib.metadata.version("triton") if MODEL_FAMILY == "glm53" else None,
+        "tilelang": importlib.metadata.version("tilelang") if MODEL_FAMILY == "glm53" else None,
         "cpu_import_driver_stub_sha256": hashlib.sha256(
             (build / "cpu-driver-stubs/libcuda.so.1").read_bytes()
         ).hexdigest(),
@@ -645,7 +647,7 @@ kernel_image = (
             **({"REMNANT_COMPILED_IMAGE": compiled_image_id} if compiled_image_id else {}),
             "REMNANT_GLM_MODEL_CONFIG": "/opt/remnant-glm-config.json",
             "REMNANT_GLM_COMPILE_MANIFEST": "/opt/remnant-glm-compile.json",
-            **({"TILELANG_DEFAULT_TARGET": json.dumps({"kind": "cuda", "arch": "sm_90a"})} if MODEL_FAMILY == "glm53" else {}),
+            **({"TILELANG_DEFAULT_TARGET": json.dumps({"kind": "cuda", "arch": "sm_90a"}), "TILELANG_CACHE_DIR": "/opt/remnant-tilelang-glm"} if MODEL_FAMILY == "glm53" else {}),
         }
     )
     # Include launcher helpers in the image cache key, not just _build_image.
@@ -828,9 +830,12 @@ def validate_kernels(
             record["sanitizer_tool"] = tool
             if MODEL_FAMILY == "glm53":
                 compiled = manifest.get("glm_compile")
-                expected_variants = {(h, i, p) for h in (8, 16, 32, 64) for i in (1, 2, 33) for p in (False, True)}
+                expected_variants = {(h, i, p) for h in (8, 16, 32, 64) for i in (1, 2, 33, 66) for p in (False, True)}
                 if not compiled or {(v["heads"], v["inner"], v["packed"]) for v in compiled["tilelang"]} != expected_variants:
                     raise RuntimeError("Incomplete CPU-compiled GLM TileLang variants")
+                for path, expected in compiled["cache_files"].items():
+                    if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
+                        raise RuntimeError(f"GLM compiled cache artifact changed: {path}")
                 from sglang.srt.remnant.glm import compile_kernels
                 if [k.hash for k in compile_kernels()] != compiled["triton"]:
                     raise RuntimeError("GLM Triton artifact identity mismatch")
