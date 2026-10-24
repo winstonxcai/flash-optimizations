@@ -15,6 +15,10 @@ Default profile captures: 30 for v0.5.18, 36 for v0.5.22; three modes per case.
 --suite prefill-read compares Native/Packed192/Packed256 on identical fixtures,
 with separate reconstruction/attention/complete stages and warm/rotating caches.
 --prefill-reader fused selects the opt-in unpack/RoPE candidate for that suite.
+GLM: REMNANT_INTEGRATION=v0.5.22 REMNANT_MODEL_FAMILY=glm53 selects the
+320-byte codec, config-only preparation and CPU SM90 compilation. validate_kernels
+requires --model-family glm53 and --stage numerical|sanitizer|corrective. Stages
+share the caller's aggregate $15 ledger; a stage does not grant another budget.
 CPU build/preflight precedes H100; Modal caches source/binaries. Authorization required.
 Limits are caps, not ETAs; no weights/retries. Results: remnant-stage2a-results/microbench/<run-id>/<action>.
 Download: modal volume get remnant-stage2a-results microbench/<run-id> <local-dir>
@@ -43,6 +47,15 @@ import modal
 from scripts.sources import check_sources, integration_profile
 
 INTEGRATION = integration_profile()
+MODEL_FAMILY = os.environ.get("REMNANT_MODEL_FAMILY", "dsv4")
+if MODEL_FAMILY not in ("dsv4", "glm53") or (MODEL_FAMILY == "glm53" and INTEGRATION["version"] != "v0.5.22"):
+    raise ValueError("GLM validation requires REMNANT_INTEGRATION=v0.5.22")
+GLM_TEST = "test/registered/attention/unittests/test_glm5_remnant.py"
+GLM_CPU_TEST = "test/registered/unit/test_glm5_mla_cache_format.py"
+GLM_SMOKE = (GLM_TEST + "::test_producer_reconstruction", GLM_TEST + "::test_invalid_attention",
+             GLM_TEST + "::test_attention[3-8-8]",
+             GLM_TEST + "::test_changing_input_graph")
+GLM_SANITIZER = (*GLM_SMOKE, GLM_TEST + "::test_attention[0-1-64]", GLM_TEST + "::test_pool_lifecycle")
 
 REMOTE_REPO = Path("/opt/flash-optimizations")
 REPO_ROOT = Path(__file__).resolve().parents[2] if modal.is_local() else REMOTE_REPO
@@ -159,6 +172,12 @@ if INTEGRATION["version"] == "v0.5.22":
         TEST_MODULES["hicache"]
         + "::TestRemnantHiCache::test_backup_restore_preserves_all_planes_across_layers_and_pages",
     )
+if MODEL_FAMILY == "glm53":
+    VALIDATION_TESTS = (GLM_CPU_TEST, GLM_TEST)
+    CPU_TESTS = (GLM_CPU_TEST,)
+    SANITIZER_TESTS = GLM_SANITIZER
+    BENCHMARK_TESTS = ()
+
 # Finish missing synchronization coverage before retrying the slower memcheck.
 # Tool order changes neither the selected cases nor the all-three passing gate.
 SANITIZER_ORDER = (
@@ -362,34 +381,35 @@ def _build_image() -> None:
             shutil.copy2(matches[0], destination)
             binaries.append(destination)
         shutil.copy2(aot / "python/sgl_kernel/flash_mla.py", package / "flash_mla.py")
-    # 3. Precompile the Native store using the fork's dependency-valid cache.
-    from sglang.kernels.jit.utils.compile.cache import find_prebuilt
-    from sglang.kernels.ops.attention.dsv4.compress import (
-        _jit_compress_norm_rope_module,
-    )
-
-    with override_jit_cuda_arch(9, 0, "a"):
-        native_options = {}
-        if INTEGRATION["version"] == "v0.5.22":
-            from sglang.kernels.ops.attention.dsv4.kv_layout import KVLayout
-
-            native_options["layout"] = KVLayout.V4
-        _jit_compress_norm_rope_module(
-            torch.float32, 512, 64, 64, False, **native_options
+    if MODEL_FAMILY == "dsv4":
+        # 3. Precompile the Native store using the fork's dependency-valid cache.
+        from sglang.kernels.jit.utils.compile.cache import find_prebuilt
+        from sglang.kernels.ops.attention.dsv4.compress import (
+            _jit_compress_norm_rope_module,
         )
-    cache = Path(os.environ["SGLANG_JIT_CACHE_DIR"])
-    scopes = {p.parent.parent for p in cache.rglob("*.so")}
-    libraries = {
-        p
-        for scope in scopes
-        if (p := find_prebuilt(scope=scope, module_name=scope.parent.name)) is not None
-    }
-    if len(libraries) != 1:
-        raise RuntimeError(
-            f"Expected one dependency-valid Native library, found {libraries}"
-        )
-    shutil.copy2(libraries.pop(), NATIVE_LIBRARY)
-    binaries.append(NATIVE_LIBRARY)
+
+        with override_jit_cuda_arch(9, 0, "a"):
+            native_options = {}
+            if INTEGRATION["version"] == "v0.5.22":
+                from sglang.kernels.ops.attention.dsv4.kv_layout import KVLayout
+
+                native_options["layout"] = KVLayout.V4
+            _jit_compress_norm_rope_module(
+                torch.float32, 512, 64, 64, False, **native_options
+            )
+        cache = Path(os.environ["SGLANG_JIT_CACHE_DIR"])
+        scopes = {p.parent.parent for p in cache.rglob("*.so")}
+        libraries = {
+            p
+            for scope in scopes
+            if (p := find_prebuilt(scope=scope, module_name=scope.parent.name)) is not None
+        }
+        if len(libraries) != 1:
+            raise RuntimeError(
+                f"Expected one dependency-valid Native library, found {libraries}"
+            )
+        shutil.copy2(libraries.pop(), NATIVE_LIBRARY)
+        binaries.append(NATIVE_LIBRARY)
     binary_architectures = {}
     if INTEGRATION["version"] == "v0.5.22":
         for binary in binaries:
@@ -405,29 +425,44 @@ def _build_image() -> None:
                 )
             binary_architectures[str(binary)] = architectures
     model_config = None
-    if INTEGRATION["version"] == "v0.5.22":
-        revision = "7872f01b1d1fe23eabc4c98b48bffcef5a386062"
-        url = f"https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731/resolve/{revision}/config.json"
+    if MODEL_FAMILY == "glm53":
+        revision = "46a050bec13002ad29ee795c16e61cf4fa3c4a9c"
+        url = f"https://huggingface.co/zai-org/GLM-5.3-Flash/resolve/{revision}/config.json"
         with urllib.request.urlopen(url, timeout=30) as response:
             payload = response.read()
         digest = hashlib.sha256(payload).hexdigest()
-        if digest != "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023":
-            raise RuntimeError("Pinned 0731 configuration content changed")
-        Path("/opt/remnant-0731-config.json").write_bytes(payload)
+        if digest != "bb8f01c42cb92a52ca72e65afb4d5bd8d11aef083cd210e8de25dfb904f23e9f":
+            raise RuntimeError("Pinned GLM configuration content changed")
+        Path("/opt/remnant-glm-config.json").write_bytes(payload)
         model_config = {"revision": revision, "sha256": digest, "url": url}
+        _run_command([sys.executable, str(SGLANG_ROOT / GLM_TEST), "--compile-only"],
+                     build / "glm-sm90-compile.log", deadline, environment=cpu_environment)
+    else:
+        model_config = None
+        if INTEGRATION["version"] == "v0.5.22":
+            revision = "7872f01b1d1fe23eabc4c98b48bffcef5a386062"
+            url = f"https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731/resolve/{revision}/config.json"
+            with urllib.request.urlopen(url, timeout=30) as response:
+                payload = response.read()
+            digest = hashlib.sha256(payload).hexdigest()
+            if digest != "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023":
+                raise RuntimeError("Pinned 0731 configuration content changed")
+            Path("/opt/remnant-0731-config.json").write_bytes(payload)
+            model_config = {"revision": revision, "sha256": digest, "url": url}
     # 4. Preflight imports, coverage and profiler availability on CPU.
-    _run_command(
-        _benchmark_command("--check-imports"),
-        build / "imports.log",
-        deadline,
-        environment=cpu_environment,
-    )
-    _run_command(
-        _benchmark_command("--suite", "prefill-read", "--check-imports"),
-        build / "prefill-imports.log",
-        deadline,
-        environment=cpu_environment,
-    )
+    if MODEL_FAMILY == "dsv4":
+        _run_command(
+            _benchmark_command("--check-imports"),
+            build / "imports.log",
+            deadline,
+            environment=cpu_environment,
+        )
+        _run_command(
+            _benchmark_command("--suite", "prefill-read", "--check-imports"),
+            build / "prefill-imports.log",
+            deadline,
+            environment=cpu_environment,
+        )
     _run_pytest(
         VALIDATION_TESTS,
         build,
@@ -437,14 +472,15 @@ def _build_image() -> None:
         environment=cpu_environment,
     )
     _run_pytest(CPU_TESTS, build, "cpu-tests", deadline, environment=cpu_environment)
-    _run_pytest(
-        BENCHMARK_TESTS,
-        build,
-        "benchmark-collection",
-        deadline,
-        collect=True,
-        environment=cpu_environment,
-    )
+    if BENCHMARK_TESTS:
+        _run_pytest(
+            BENCHMARK_TESTS,
+            build,
+            "benchmark-collection",
+            deadline,
+            collect=True,
+            environment=cpu_environment,
+        )
     if INTEGRATION["version"] == "v0.5.22":
         _run_pytest(
             SANITIZER_TESTS,
@@ -458,6 +494,8 @@ def _build_image() -> None:
         _check_profiler_tools(build, deadline)
     # Profiler tools are not a correctness gate for the serving-image qualification.
     manifest = {
+        "model_family": MODEL_FAMILY,
+        "glm_compile": (json.loads(Path("/opt/remnant-glm-compile.json").read_text()) if MODEL_FAMILY == "glm53" else None),
         "integration": INTEGRATION["version"],
         "base_image": INTEGRATION["base_image"],
         "sources": sources,
@@ -584,7 +622,11 @@ kernel_image = (
                 if INTEGRATION["version"] == "v0.5.22"
                 else {}
             ),
-            "TRITON_CACHE_DIR": "/triton-cache",
+            "TRITON_CACHE_DIR": "/opt/remnant-triton-glm" if MODEL_FAMILY == "glm53" else "/triton-cache",
+            "REMNANT_MODEL_FAMILY": MODEL_FAMILY,
+            "REMNANT_GLM_MODEL_CONFIG": "/opt/remnant-glm-config.json",
+            "REMNANT_GLM_COMPILE_MANIFEST": "/opt/remnant-glm-compile.json",
+            **({"TILELANG_DEFAULT_TARGET": "cuda -arch=sm_90a"} if MODEL_FAMILY == "glm53" else {}),
         }
     )
     # Include launcher helpers in the image cache key, not just _build_image.
@@ -601,8 +643,8 @@ kernel_image = (
 _GPU = {
     "image": kernel_image,
     "gpu": "H100!",
-    "cpu": 8,
-    "memory": 65536,
+    "cpu": 4 if MODEL_FAMILY == "glm53" else 8,
+    "memory": 32768 if MODEL_FAMILY == "glm53" else 65536,
     "timeout": GPU_TIMEOUT_S,
     "retries": 0,
     "max_containers": 1,
@@ -697,9 +739,15 @@ def benchmark_kernels(
     }
 )
 def validate_kernels(
-    run_id: str, sanitizer: bool = False, max_seconds: int = RUN_BUDGETS_S["validation"]
+    run_id: str, sanitizer: bool = False, max_seconds: int = RUN_BUDGETS_S["validation"],
+    model_family: str = "dsv4", stage: str = "numerical"
 ) -> str:
     """Run existing GPU tests; skipped tests fail coverage. Optional three sanitizers."""
+    if model_family != MODEL_FAMILY:
+        raise ValueError("--model-family must match REMNANT_MODEL_FAMILY used to prepare the image")
+    if stage not in ("numerical", "sanitizer", "corrective"):
+        raise ValueError("stage must be numerical, sanitizer or corrective")
+    sanitizer = sanitizer or stage == "sanitizer"
     maximum = min(2640, VALIDATION_TIMEOUT_S - 60)
     if not 60 <= max_seconds <= maximum:
         raise ValueError(f"max_seconds must be between 60 and {maximum}")
@@ -751,8 +799,17 @@ def validate_kernels(
             ):
                 raise RuntimeError("Compute Sanitizer identity mismatch")
             record["sanitizer_tool"] = tool
+            if MODEL_FAMILY == "glm53":
+                compiled = manifest.get("glm_compile")
+                expected_variants = {(h, i, p) for h in (8, 16, 32, 64) for i in (1, 2, 33) for p in (False, True)}
+                if not compiled or {(v["heads"], v["inner"], v["packed"]) for v in compiled["tilelang"]} != expected_variants:
+                    raise RuntimeError("Incomplete CPU-compiled GLM TileLang variants")
+                from sglang.srt.remnant.glm import compile_kernels
+                if [k.hash for k in compile_kernels()] != compiled["triton"]:
+                    raise RuntimeError("GLM Triton artifact identity mismatch")
+                record["glm_compile"] = compiled
             environment["REMNANT_ALLOCATION_REPORT"] = str(root / "allocation.json")
-            shutil.copy2("/opt/remnant-0731-config.json", root / "model-config.json")
+            shutil.copy2("/opt/remnant-glm-config.json" if MODEL_FAMILY == "glm53" else "/opt/remnant-0731-config.json", root / "model-config.json")
             record["gpu"] = torch.cuda.get_device_name()
             record["loaded_extensions"] = sorted(loaded)
             record["platform_timeout_seconds"] = VALIDATION_TIMEOUT_S
@@ -810,14 +867,20 @@ def validate_kernels(
                         root / f"sanitizer-control-{name}.log",
                         deadline,
                     )
-        _run_pytest(
-            VALIDATION_TESTS, root, "validation", deadline, environment=environment
-        )
-        if INTEGRATION["version"] == "v0.5.22":
+        record["model_family"] = MODEL_FAMILY
+        record["stage"] = stage
+        if MODEL_FAMILY == "glm53":
+            # First-ten-minute smoke gate before scheduling the broader matrix.
+            if stage != "sanitizer":
+                _run_pytest(GLM_SMOKE, root, "smoke", min(deadline, time.monotonic() + 600), environment=environment)
+                _run_pytest(VALIDATION_TESTS, root, "validation", deadline, environment=environment)
+        else:
+            _run_pytest(VALIDATION_TESTS, root, "validation", deadline, environment=environment)
+        if INTEGRATION["version"] == "v0.5.22" and stage != "sanitizer":
             allocation = json.loads((root / "allocation.json").read_text())
             if allocation["status"] != "passed" or {
                 r["mode"] for r in allocation["modes"]
-            } != {"native", "triton", "kernel"}:
+            } != ({"native", "adapter", "direct"} if MODEL_FAMILY == "glm53" else {"native", "triton", "kernel"}):
                 raise RuntimeError("Incomplete real-allocation coverage")
             record["allocation"] = allocation
         if sanitizer:
@@ -842,6 +905,8 @@ def validate_kernels(
                     # evidence without converting this failure into a pass.
                 else:
                     record["sanitizer_results"][tool] = {"status": "passed"}
+                (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
+                results_volume.commit()
             incomplete = [
                 tool
                 for tool, result in record["sanitizer_results"].items()

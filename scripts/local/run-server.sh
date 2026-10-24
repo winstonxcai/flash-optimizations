@@ -64,18 +64,36 @@ args=(
   --context-length "${CTX_LEN:-1048576}"
   --max-running-requests "${MAX_RUN:-256}"
   --chunked-prefill-size "${CHUNK:-8192}"
-  --dsv4-c4-cache-format "$CACHE_FORMAT"
-  --dsv4-c4-cache-implementation "$CACHE_IMPLEMENTATION"
   --kv-cache-dtype fp8_e4m3
-  --moe-runner-backend flashinfer_mxfp4
-  --reasoning-parser deepseek-v4
-  --tool-call-parser deepseekv4
   --host "$HOST"
   --port "$PORT_VALUE"
   --cuda-graph-config "${DECODE_CFG:?DECODE_CFG is required}"
   --skip-server-warmup
   --watchdog-timeout 1800
 )
+
+case "${MODEL_FAMILY:-dsv4}" in
+  dsv4)
+    args+=(--dsv4-c4-cache-format "$CACHE_FORMAT"
+      --dsv4-c4-cache-implementation "$CACHE_IMPLEMENTATION"
+      --moe-runner-backend flashinfer_mxfp4
+      --reasoning-parser deepseek-v4 --tool-call-parser deepseekv4)
+    ;;
+  glm53)
+    [ -z "${HICACHE_RATIO:-}${C4_KEEP_COUNT:-}${C4_LAYER_KEEP_COUNTS:-}${STORE_IMPLEMENTATION:-}" ] || {
+      echo "GLM Packed does not support HiCache or DeepSeek codec overrides" >&2; exit 2;
+    }
+    case "$MODE" in
+      triton) GLM_IMPLEMENTATION=adapter ;;
+      *) GLM_IMPLEMENTATION=direct ;;
+    esac
+    args+=(--glm5-mla-cache-format "$CACHE_FORMAT"
+      --glm5-mla-cache-implementation "$GLM_IMPLEMENTATION"
+      --dsa-prefill-backend tilelang --dsa-decode-backend tilelang
+      --moe-runner-backend deep_gemm)
+    ;;
+  *) echo "MODEL_FAMILY must be dsv4 or glm53" >&2; exit 2 ;;
+esac
 
 if [ -n "${STORE_IMPLEMENTATION:-}" ]; then
   args+=(--dsv4-c4-cache-store-implementation "$STORE_IMPLEMENTATION")

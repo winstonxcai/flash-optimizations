@@ -54,8 +54,14 @@ GPUS=${GPUS:-0,1,2,3}
 PORT=${PORT:-30212}
 MASTER_PORT=${MASTER_PORT:-29638}
 SERVER_PID_FILE_CT=${SERVER_PID_FILE_CT:-/tmp/remnant-sglang-${PORT}.pid}
-TP=${TP:-4}
-MODEL_NAME=${MODEL_NAME:-deepseek-v4-flash}
+MODEL_FAMILY=${MODEL_FAMILY:-dsv4}
+if [ "$MODEL_FAMILY" = glm53 ]; then
+  TP=${TP:-8}
+  MODEL_NAME=${MODEL_NAME:-glm53-flash}
+else
+  TP=${TP:-4}
+  MODEL_NAME=${MODEL_NAME:-deepseek-v4-flash}
+fi
 MEM_FRAC=${MEM_FRAC:-0.88}
 CTX_LEN=${CTX_LEN:-1048576}
 MAX_RUN=${MAX_RUN:-256}

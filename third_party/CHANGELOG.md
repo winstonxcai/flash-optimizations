@@ -235,3 +235,16 @@ Parent `48bcce5`; SGLang `e21dfe4bf417`; FlashMLA `40a1c73eabc9`.
   and startup integration on SGLang v0.5.18 (SGLang `aac50712c6`).
 - **Added:** SM90 Packed decode/API in FlashMLA (`40a1c73eabc9`) and SGLang
   Direct dispatch (`e21dfe4bf417`). Native remains the default.
+
+## GLM Packed candidate
+
+Author: Winston Cai.
+
+Starting parent: 9419d0e18e1e7677c0e48b8e40ad54bbc30010ca. Starting v0.5.22
+SGLang: 7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7; FlashMLA remains
+3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8. Current candidate fork pin is recorded
+in the parent tree and canonical GLM qualification JSON. Adds the separate raw
+320-byte codec, producer/pool lifecycle integration, bounded Adapter and TileLang
+Direct, startup guards and model-free GLM fixtures. Local startup contracts pass;
+CPU SM90 compilation and real H100 qualification are pending. This is an opt-in
+candidate, not a measured serving-capacity or quality result.

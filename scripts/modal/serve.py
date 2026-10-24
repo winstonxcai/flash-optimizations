@@ -39,10 +39,13 @@ from scripts.sources import check_sources, integration_profile
 
 INTEGRATION = integration_profile()
 
-MODEL_REPO = "deepseek-ai/DeepSeek-V4-Flash-0731"
-MODEL_REVISION = "7872f01b1d1fe23eabc4c98b48bffcef5a386062"
+MODEL_FAMILY = os.environ.get("REMNANT_MODEL_FAMILY", "dsv4")
+if MODEL_FAMILY not in ("dsv4", "glm53") or (MODEL_FAMILY == "glm53" and INTEGRATION["version"] != "v0.5.22"):
+    raise ValueError("GLM launchers require REMNANT_INTEGRATION=v0.5.22")
+MODEL_REPO = "zai-org/GLM-5.3-Flash" if MODEL_FAMILY == "glm53" else "deepseek-ai/DeepSeek-V4-Flash-0731"
+MODEL_REVISION = "46a050bec13002ad29ee795c16e61cf4fa3c4a9c" if MODEL_FAMILY == "glm53" else "7872f01b1d1fe23eabc4c98b48bffcef5a386062"
 MODEL_ROOT = Path("/models")
-MODEL_DIR = MODEL_ROOT / "DeepSeek-V4-Flash-0731"
+MODEL_DIR = MODEL_ROOT / ("GLM-5.3-Flash" if MODEL_FAMILY == "glm53" else "DeepSeek-V4-Flash-0731")
 RESULTS_ROOT = Path("/results")
 SGLANG_ROOT = Path("/sgl-workspace/sglang-remnant")
 REMOTE_REPO = Path("/opt/flash-optimizations")
@@ -113,8 +116,9 @@ SOURCE_ENV = {
 }
 SOURCE_ENV["REMNANT_SOURCE_IDENTITIES"] = json.dumps(SOURCE_IDENTITIES)
 SOURCE_ENV["REMNANT_INTEGRATION"] = INTEGRATION["version"]
+SOURCE_ENV["REMNANT_MODEL_FAMILY"] = MODEL_FAMILY
 app = modal.App("remnant")
-model_volume = modal.Volume.from_name("deepseek-v4-flash-0731", create_if_missing=True)
+model_volume = modal.Volume.from_name("glm53-flash" if MODEL_FAMILY == "glm53" else "deepseek-v4-flash-0731", create_if_missing=True)
 # Keep the existing volume name: renaming the public modes must not orphan results.
 results_volume = modal.Volume.from_name(
     "remnant-stage2a-results", create_if_missing=True
@@ -230,7 +234,7 @@ def inspect_model_cache() -> dict:
     config = json.loads((MODEL_DIR / "config.json").read_text())
     index = json.loads((MODEL_DIR / "model.safetensors.index.json").read_text())
     names = sorted(set(index["weight_map"].values()))
-    if len(names) != 48:
+    if not names or (MODEL_FAMILY == "dsv4" and len(names) != 48):
         raise RuntimeError("expected 48 pinned checkpoint shards")
     for name in names + ["config.json", "model.safetensors.index.json"]:
         path = MODEL_DIR / name
@@ -336,7 +340,7 @@ def _running_serving_server(
 
 @app.function(
     image=server_image,
-    gpu="H100!:4",
+    gpu="H100!:8" if MODEL_FAMILY == "glm53" else "H100!:4",
     cpu=32,
     memory=262144,
     timeout=4 * 3600 + 60,
@@ -373,6 +377,8 @@ def benchmark_serving(
         **os.environ,
         "PYTHON": sys.executable,
         "MODEL_PATH": str(MODEL_DIR),
+        "MODEL_FAMILY": MODEL_FAMILY,
+        **({"TP": "8", "MODEL_NAME": "glm53-flash"} if MODEL_FAMILY == "glm53" else {}),
         "SGLANG_ROOT": str(SGLANG_ROOT),
         "RESULTS_HOST": str(run),
         "BENCH_EXECUTION": "direct",

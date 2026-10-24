@@ -17,7 +17,7 @@ Folder suffixes identify the SGLang integration pair, not a FlashMLA release.
 |---|---|---|---|
 | `sglang-v0.5.18/` | `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` | `6687a7c` |
 | `flashmla-v0.5.18/` | `05e26647fe840b8baedae486c2d86d5ce4efeb7c` | `remnant/flashmla-v0518` | `97f3faa` |
-| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `remnant/v0.5.22` | `7856615` |
+| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `codex/glm53-packed` | `1d06ae4` |
 | `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `remnant/flashmla-v0522` | `3eb8594` |
 
 Both FlashMLA checkouts pin CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`.
@@ -319,3 +319,25 @@ git log --oneline -- third_party/sglang-v0.5.18 third_party/flashmla-v0.5.18
 Use `git ls-tree <parent-commit> third_party/sglang-v0.5.18 third_party/flashmla-v0.5.18` to
 recover an integration's exact pair. Git history remains the detailed record;
 this guide and the changelog are its curated index.
+
+## GLM-5.3-Flash candidate (v0.5.22 only)
+
+Author: Winston Cai.
+
+GLM Packed is opt-in with `--glm5-mla-cache-format remnant` and
+`--glm5-mla-cache-implementation adapter|direct` (Direct by default). Native
+remains unchanged. The fork owns `srt/remnant/glm_config.py`, `glm.py`, and
+`glm_pool.py`: two planes of 256 raw E4M3 bytes and eight uint64 bitmap words,
+with no DeepSeek scale plane. Raw latent selection precedes the existing GLM
+RMSNorm; the producer stores once and the DSA backend skips the ordinary write.
+Only hybrid full-attention storage changes; KDA, indexer and tail ownership stays
+with the existing pools. Full-page relocation and retraction carry both planes.
+The Adapter shares one 128-query workspace; Direct specializes only TileLang's
+KV tile loads. All Native FP8 attention and combine arithmetic is retained.
+
+Shared launchers select `MODEL_FAMILY=glm53`; Modal image selection additionally
+uses `REMNANT_MODEL_FAMILY=glm53 REMNANT_INTEGRATION=v0.5.22`. Maintained
+`kernels.py::validate_kernels --model-family glm53` owns model-free qualification.
+Full weights/serving are outside the current $15 authorization. See
+`benchmarks/microbench/glm53-packed/README.md` and its canonical JSON for exact
+coverage and promotion status. FlashMLA and both v0.5.18 pins are unchanged.
