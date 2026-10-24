@@ -457,6 +457,7 @@ from sglang.kernels.ops.attention.dsv4.fp4_cache import _store, _read
 from sgl_kernel import flashmla_ops
 import torch
 assert hasattr(torch.ops.sgl_kernel, 'fp4_sparse_decode_fwd')
+assert hasattr(torch.ops.sgl_kernel, 'fp4_sparse_prefill_fwd')
 for p in (128,256):
     for packed in (False,True):
         stride=p*(224 if packed else 288)

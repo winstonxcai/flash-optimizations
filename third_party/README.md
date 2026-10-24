@@ -17,8 +17,8 @@ Folder suffixes identify the SGLang integration pair, not a FlashMLA release.
 |---|---|---|---|
 | `sglang-v0.5.18/` | `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` | `6687a7c` |
 | `flashmla-v0.5.18/` | `05e26647fe840b8baedae486c2d86d5ce4efeb7c` | `remnant/flashmla-v0518` | `97f3faa` |
-| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `codex/v41-packed-fp4` | `0872a474afa6` |
-| `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `codex/v41-packed-fp4` | `0e34a09a4f5d` |
+| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `codex/v41-packed-fp4` | `55660d7f6d36` |
+| `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `codex/v41-packed-fp4` | `91463e004ec9` |
 
 Both FlashMLA checkouts pin CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`.
 The default remains v0.5.18; `REMNANT_INTEGRATION=v0.5.22` selects the other pair.
@@ -68,6 +68,11 @@ transfer, speculation/DSpark, replay and legacy layout overrides are rejected.
   boundary, `deepseek_v4_memory_pool.py`, `pool_configurator.py`, and
   `deepseek_v4_backend.py` select layouts, budget physical reserved rows and
   dispatch. Existing SWA storage and FP8 Remnant interfaces are retained.
+- **FP4 prefill ownership:** FlashMLA `sm90/prefill/sparse/phase1.cuh` has an
+  opt-in named-barrier policy and two FP4-only D512 instantiations. Separate
+  `fp4_sparse_prefill_fwd`/`flash_mla_fp4_sparse_fwd` entries serve reconstructed
+  BF16 caches and SWA-only layers in explicit FP4 modes. Stock/auto retain the
+  existing policy. SGLang owns AOT registration and explicit-mode dispatch.
 - **Direct ownership:** FlashMLA's separate `flash_mla_with_fp4_kvcache` entry
   point and SM90 template specializations read global FP4 beside V4 SWA. Packed
   data rows hold ascending survivors and eight MSB-first uint64 bitmap words;

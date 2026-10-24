@@ -9,8 +9,8 @@
     "max_projected_work_usd": 13,
     "account": "wpooh1579",
     "baseline_compute_usd": 18.51013772,
-    "latest_compute_usd": 19.64845858,
-    "incremental_compute_usd": 1.13832086,
+    "latest_compute_usd": 20.51379938,
+    "incremental_compute_usd": 2.00366166,
     "billing_lag": true,
     "cpu_core_hour_usd": 0.0473,
     "memory_gib_hour_usd": 0.008,
@@ -158,6 +158,38 @@
       "reason": "Adapter selections576 require stock SM90 prefill alignment128; pad64 invalid entries to640",
       "sanitizers": "not_run",
       "evidence": "remnant-stage2a-results/microbench/v41-fp4-20261025-attempt008/validation/"
+    },
+    {
+      "id": "attempt009",
+      "account": "wpooh1579",
+      "app_id": "ap-zYhVLbCTc5uLmFPPVuUAz8",
+      "source_parent": "8d332cccd699a71d51da72c47df08b13d56e8884",
+      "sglang": "0872a474afa6",
+      "flashmla": "0e34a09a4f5d",
+      "cpu_image": "im-Ez2oqXxEwesDBevoGbOA3x",
+      "cpu_preflight": "passed",
+      "cpu_tests": {
+        "passed": 23,
+        "subtests_passed": 15
+      },
+      "gpu_tests": {
+        "passed": 37,
+        "failed": 0,
+        "seconds": 46.9
+      },
+      "sanitizers": {
+        "synccheck": {
+          "passed": 16,
+          "failed": 16,
+          "errors": 12800,
+          "seconds": 175.89
+        },
+        "racecheck": "not_qualified_after_cuda_fault",
+        "memcheck": "not_run"
+      },
+      "status": "unqualified",
+      "reason": "Inherited stock BF16 sparse prefill divergent aligned named barriers; CUDA719/Xid43. Separate opt-in FP4 prefill specialization required.",
+      "stopped_at": "2026-10-24T17:51:23Z"
     }
   ],
   "review": {
@@ -218,5 +250,26 @@
     ],
     "scope": "model-free actual pool storage; no serving capacity claim",
     "capacity_gain_percent": 21.957878315132607
+  },
+  "diagnostics": [
+    {
+      "app_id": "ap-sElVVs92ttleWoKaZcllsN",
+      "resource": "CPU only; no GPU or native rebuild",
+      "purpose": "cuobjdump artifact inspection of exact attempt009 binary",
+      "binary_sha256": "06c8dffa8155b3a7e1d2cc5085dd9fd38471838e887c84ea4c9e7a7c5192d606",
+      "finding": "BAR.SYNC.DEFER_BLOCKING 0xc,0x100 at PCs0x5b90/0xd020 in separate consumer branches"
+    },
+    {
+      "app_id": "ap-K6z2M5uoTJNFlIfb2pDupI",
+      "resource": "CPU only; no GPU or native rebuild",
+      "purpose": "cuobjdump artifact inspection of exact attempt009 binary",
+      "binary_sha256": "06c8dffa8155b3a7e1d2cc5085dd9fd38471838e887c84ea4c9e7a7c5192d606",
+      "finding": "BAR.SYNC.DEFER_BLOCKING 0xc,0x100 at PCs0x5b90/0xd020 in separate consumer branches"
+    }
+  ],
+  "prefill_review": {
+    "status": "no_blocking_findings",
+    "scope": "FP4-only unaligned CUTLASS named barrier policy, raw/AOT entry points, C0/C1/C2 production dispatch, length/no-length Adapter and graph fixtures",
+    "validation": "source review only; compilation/sanitizers remain required"
   }
 }

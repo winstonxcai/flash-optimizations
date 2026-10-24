@@ -146,3 +146,44 @@ This is not serving/SLO capacity. Canonical summary is in qualification.json;
 raw allocation.json and XML remain in the existing results volume.
 Reported compute $1.13832086 before billing lag. Attempt009 retains the same
 bounded projection and $2 reserve, no automatic retries.
+
+## FP4-only prefill synchronization refinement
+
+Question: can the FP4 prefill/Adapter path satisfy strict sanitizer checks without
+changing default stock prefill behavior? Attempt009 parent `8d332cc` passed all
+37 ordinary tests, but synccheck found 12800 divergent-barrier errors in stock
+BF16 prefill. Exact binary SHA256 `06c8dffa8155b3a7e1d2cc5085dd9fd38471838e887c84ea4c9e7a7c5192d606`
+has two `BAR.SYNC.DEFER_BLOCKING 0xc,0x100` PCs, `0x5b90` and `0xd020`,
+from separate warpgroup calls to reduce_L. CUDA719/Xid43 followed. The allocation
+was stopped; no suppression or sanitizer pass is inferred. CPU-only disassembly
+apps: `ap-sElVVs92ttleWoKaZcllsN`, `ap-K6z2M5uoTJNFlIfb2pDupI`.
+
+Changed mechanism: separate SM90/D512 FP4 prefill specialization/entrypoint using
+CUTLASS unaligned named-barrier APIs for role-divergent warpgroup synchronization.
+The default template policy and existing stock dispatch remain unchanged. Two
+new instantiation files own the length/no-length variants; existing CMake/setup
+build them. No copied numerical harness or replacement reference is introduced.
+Route explicit FP4 sparse prefill (including SWA-only layers) and Adapter through
+this same path. Keep all numerical tolerances and the strict three-tool matrix;
+cover both length variants and prefill graph replay. Accept only complete passes
+and fresh-context review. Stop on further preflight failure, sanitizer error or
+budget limit. Before the next launch, record pins, exact commands and projected
+cost; retain the failed attempt as evidence.
+
+
+Attempt009 completed CPU preflight (23 tests +15 subtests) and all37 ordinary
+GPU tests (46.90s). Strict synccheck then reported12800 barrier errors in the
+inherited stock BF16 prefill Adapter kernel (16 cases passed,16 failed,
+175.89s), followed by CUDA719/Xid43. App `ap-zYhVLbCTc5uLmFPPVuUAz8` was
+stopped and all allocations released; subsequent tools are not qualified.
+CPU-only disassembly apps `ap-sElVVs92ttleWoKaZcllsN` and
+`ap-K6z2M5uoTJNFlIfb2pDupI` confirmed the exact binary/PCs above.
+
+The reviewed correction adds a separate FP4 BF16 prefill entry, leaving auto
+and stock kernels on the original barrier policy. Adapter exercises both
+selection-length variants; graph/stream coverage now includes reconstruction
+and FP4 prefill. Source review found no blocking issue. Attempt010 will rerun
+CPU preflight and all numerical/sanitizer gates without skips or suppression.
+Current reported cumulative task compute is $2.00366166 before billing lag.
+With no competing allocations, the same bounded CPU build/preflight plus
+1800s H100 worker projects less than $4 additional work, below the $13 work cap.

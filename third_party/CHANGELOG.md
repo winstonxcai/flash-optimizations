@@ -14,13 +14,16 @@ records rather than this milestone log.
 ## Unreleased
 
 - Experimental V4.1 FP4 integration on parent `f4f21a8` (implementation snapshot
-  `97573d2`), based on `9419d0e`. v0.5.22 pins: SGLang `0872a474afa6` /
-  FlashMLA `0e34a09a4f5d`; v0.5.18 and CUTLASS pins unchanged. Adds opt-in
+  `97573d2`), based on `9419d0e`. v0.5.22 pins: SGLang `55660d7f6d36` /
+  FlashMLA `91463e004ec9`; v0.5.18 and CUTLASS pins unchanged. Adds opt-in
   Native 288-byte/Packed 224-byte storage, deterministic post-quantization
   256-coordinate selection, SM90 mixed-SWA Direct dispatch, reconstruction,
   reserved-page accounting and scoped model-free Modal fixtures. Fresh-context
   source review found no runtime defect; fixture gaps were addressed separately.
-  CPU build/preflight is in progress. No GPU/sanitizer pass, model-quality,
+  Parent `8d332cc` passed all37 ordinary GPU tests, then strict synccheck
+  exposed an inherited stock BF16 prefill barrier defect. The current pins add
+  a reviewed FP4-only prefill policy/API, retaining stock auto behavior; full
+  CPU/GPU/sanitizer requalification is pending. No model-quality,
   performance or serving claim. Outcome/budget/source receipts live in the
   [experiment record](../benchmarks/microbench/v41-packed-fp4/README.md).
 
