@@ -114,3 +114,7 @@ cache and verifies every precompiled file against CPU-recorded SHA256; legacy V4
 keeps its persistent volume. No numerical or sanitizer GPU result was produced.
 Reported compute $0.62971763 before billing lag; the same bounded projection and
 $2 reserve apply to attempt007. Native sources are unchanged and reusable.
+
+Prelaunch review also caught the matching finalization dependency: FP4 must skip
+committing the unmounted persistent Triton volume. Its result volume still commits
+normally, preserving success and failure evidence.
