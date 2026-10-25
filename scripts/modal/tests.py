@@ -2078,6 +2078,17 @@ class GlmLauncherTests(unittest.TestCase):
 class GLMAttentionProtocolTests(unittest.TestCase):
     """Coverage identities and model-specific dispatch must fail closed."""
 
+    def test_preparation_reports_already_built_image_without_second_build(self):
+        source = ast.parse((kernels.REPO_ROOT / "scripts/modal/kernels.py").read_text())
+        function = next(n for n in source.body if isinstance(n, ast.FunctionDef) and n.name == "prepare_kernels")
+        function.decorator_list = []
+        image = MagicMock(object_id="im-built")
+        namespace = dict(MODEL_FAMILY="glm53", kernel_image=image, SOURCE_IDENTITIES={}, json=json)
+        exec(compile(ast.Module([function], type_ignores=[]), "prepare", "exec"), namespace)
+        with patch("builtins.print"):
+            namespace["prepare_kernels"]("glm53")
+        image.build.assert_not_called()
+
     def test_explicit_sanitizer_selection_preserves_full_gate(self):
         self.assertEqual(kernels._selected_sanitizer_tools('racecheck', True, 'glm53'), ('racecheck',))
         self.assertEqual(kernels._selected_sanitizer_tools('', True, 'glm53'), kernels.SANITIZER_ORDER)

@@ -704,7 +704,9 @@ def prepare_kernels(model_family: str = "dsv4") -> None:
     """Prepare the selected image on CPU; never call a GPU Function."""
     if model_family != MODEL_FAMILY:
         raise ValueError("--model-family must match REMNANT_MODEL_FAMILY")
-    image = kernel_image.build(app)
+    # Registered Functions hydrate/build this image before the local entrypoint.
+    # Building again here needlessly resolves the entire image graph twice.
+    image = kernel_image
     print(json.dumps({"model_family": MODEL_FAMILY, "image_id": image.object_id,
                       "source_identities": SOURCE_IDENTITIES}, sort_keys=True))
 
