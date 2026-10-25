@@ -13,6 +13,14 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Parent based on `5c8b464`; v0.5.22 SGLang `889edf56b332` / FlashMLA
+  `3eb85944fd7d`: add explicit exploratory GLM timing when sanitizer coverage
+  is incomplete, following user authorization. Default qualification remains
+  mandatory; exploratory exports record exact missing cases and an unqualified
+  experiment. Production kernels and all fork pins are unchanged. Seven focused
+  launcher tests and real saved-evidence reconciliation pass (racecheck and
+  synccheck 13 cases each; memcheck unverified). No timing claim yet.
+
 - Reconciled GitHub main `ffb11cb` in parent merge `814aaa8`, retaining its
   v0.5.18 SGLang `6687a7c36c0c`, FlashMLA `97f3faa58450`, frontend preparation/
   diagnostics and HiCache launcher options. The v0.5.22 pair remains SGLang

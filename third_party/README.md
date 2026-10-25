@@ -361,3 +361,9 @@ four-bank fixture's final memory-accounting assertion before sanitizers. SGLang
 10 focused CPU contracts and targeted independent review pass, but that repair
 has no GPU validation. No timing cases were accepted. See the GLM README and
 aggregate JSON for the failed run, unchanged historical qualification and cost.
+
+GLM exploratory timing is explicitly selected with
+`benchmark_kernels --model-family glm53 --suite glm-attention --allow-incomplete-qualification`
+plus source-bound `--qualification-runs`. Missing sanitizer coverage remains
+recorded and the experiment is unqualified; this does not promote Packed or
+change the default gate. See the canonical GLM experiment README/ledger.

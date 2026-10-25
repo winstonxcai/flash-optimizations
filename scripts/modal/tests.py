@@ -2174,6 +2174,13 @@ class GLMAttentionProtocolTests(unittest.TestCase):
                 self.assertEqual(set(result['tools']['racecheck']['cases']),original|focused)
                 with self.assertRaisesRegex(RuntimeError,'missing sanitizer gates'):
                     kernels._glm_timing_qualification(ids.replace(',race-focused',''))
+                exploratory = kernels._glm_timing_qualification(
+                    ids.replace(',mem-all', ''), allow_incomplete=True
+                )
+                self.assertEqual(exploratory['status'], 'incomplete')
+                self.assertEqual(set(exploratory['missing']['memcheck']), original | focused)
+                self.assertFalse(exploratory['missing']['racecheck'])
+                self.assertFalse(exploratory['missing']['synccheck'])
                 note = interrupted / 'racecheck-coverage-checkpoint.json'
                 saved = note.read_text(); note.unlink()
                 with self.assertRaisesRegex(RuntimeError,'missing sanitizer gates'):
@@ -2182,6 +2189,8 @@ class GLMAttentionProtocolTests(unittest.TestCase):
                 (interrupted / 'racecheck.log').write_text('KeyboardInterrupt\n========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)\nchanged')
                 with self.assertRaisesRegex(RuntimeError,'report changed'):
                     kernels._glm_timing_qualification(ids)
+                with self.assertRaisesRegex(RuntimeError,'report changed'):
+                    kernels._glm_timing_qualification(ids, allow_incomplete=True)
 
     def test_glm_checkpoint_path_rejects_traversal_and_missing_records(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(kernels, 'RESULTS_ROOT', Path(directory)):

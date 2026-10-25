@@ -253,3 +253,22 @@ controller conservatively rejects projected totals above$14.75, retaining$0.25
 for shutdown/export/storage. Historical caps, attempts and costs remain recorded.
 A small CPU preparation reallocation avoids much more expensive reference-only
 GPU sanitizer work. No numerical acceptance criterion or timing count changes.
+
+### Authorized timing priority (2026-10-26)
+
+The user selected descriptive Native versus Direct timing with memcheck explicitly
+incomplete, then approved an additional $5: the aggregate task cap is now $20.
+The controller retains a $0.25 cleanup/export reserve and schedules below $19.75.
+Prior costs are preserved. Original time/category estimates do not reset the ledger.
+Both focused racecheck and synccheck probes passed, supplementing the original
+11-case reports. Memcheck was stopped for timing priority after six pass markers;
+without a final XML/summary, it remains unverified.
+
+The maintained `benchmark_kernels` accepts explicit GLM-only
+`--allow-incomplete-qualification`. It still verifies all supplied evidence,
+source/toolchain identities, fixture validity and the full measurement protocol;
+missing sanitizer coverage is returned as `qualification.status=incomplete` with
+exact missing case names and `experiment_status=unqualified`. The default still
+blocks timing on missing gates. This option enables descriptive data collection,
+not acceptance or production promotion. Finish remaining memcheck only after
+timing if the same aggregate budget permits.

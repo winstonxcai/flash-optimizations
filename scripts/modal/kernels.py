@@ -724,6 +724,7 @@ def benchmark_kernels(
     prefill_reader: str = "split",
     model_family: str = "dsv4", max_seconds: int = RUN_BUDGETS_S["timing"],
     qualification_runs: str = "", resume_run: str = "",
+    allow_incomplete_qualification: bool = False,
 ) -> str:
     """Validate and time the complete matrix for the selected survivor budget."""
     if model_family != MODEL_FAMILY:
@@ -735,7 +736,13 @@ def benchmark_kernels(
             raise ValueError("GLM timing max_seconds must be between 60 and 1140")
         with _run_context(run_id, "timing", max_seconds) as (root, record, deadline):
             _verify_glm_image()
-            record["qualification"] = _glm_timing_qualification(qualification_runs)
+            record["qualification"] = _glm_timing_qualification(
+                qualification_runs, allow_incomplete=allow_incomplete_qualification
+            )
+            record["experiment_status"] = (
+                "unqualified" if record["qualification"]["status"] != "passed"
+                else "qualified"
+            )
             _run_pytest((GLM_BENCHMARK_GRAPH,), root, "benchmark-graphs", deadline)
             argv = _benchmark_command("--model-family", "glm53", "--suite", suite,
                                       "--output", str(root / "timing"),
@@ -748,8 +755,8 @@ def benchmark_kernels(
             _run_command(argv, root / "timing.log", deadline)
             _glm_benchmark_contract().validate_timing(json.loads((root / "timing.json").read_text()))
         return str(root)
-    if qualification_runs or resume_run:
-        raise ValueError("qualification_runs/resume_run are GLM-only")
+    if qualification_runs or resume_run or allow_incomplete_qualification:
+        raise ValueError("qualification_runs/resume_run/allow_incomplete_qualification are GLM-only")
     contract = _benchmark_cases()
     is_prefill = suite == "prefill-read"
     if prefill_reader not in ("split", "fused") or (
@@ -1393,7 +1400,7 @@ def _glm_timing_checkpoint(run_id: str) -> Path:
     return checkpoint
 
 
-def _glm_timing_qualification(run_ids: str) -> dict:
+def _glm_timing_qualification(run_ids: str, *, allow_incomplete: bool = False) -> dict:
     """Accept per-tool evidence only with unchanged production code/toolchains.
 
     A prior overall failed run may supply a completed synccheck group; its
@@ -1448,9 +1455,11 @@ def _glm_timing_qualification(run_ids: str) -> dict:
                                       result_sha256=hashlib.sha256((root / 'result.json').read_bytes()).hexdigest()))
     required = _glm_required_sanitizer_cases(historical=False)
     missing = {tool: sorted(required - groups.get(tool, {}).get('cases', set())) for tool in SANITIZER_ORDER}
-    if any(missing.values()):
+    incomplete = any(missing.values())
+    if incomplete and not allow_incomplete:
         raise RuntimeError(f"GLM timing blocked by missing sanitizer gates: {missing}")
-    return dict(status="passed", tools={tool: dict(cases=sorted(group['cases']), runs=group['runs'])
+    return dict(status="incomplete" if incomplete else "passed", missing=missing,
+                tools={tool: dict(cases=sorted(group['cases']), runs=group['runs'])
                                         for tool, group in groups.items()}, runtime_hashes=current)
 
 
