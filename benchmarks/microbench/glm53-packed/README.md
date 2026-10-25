@@ -192,3 +192,21 @@ that GPU launch. Memcheck remains a separate allocation. Timing dispatch is
 `kernels.py::benchmark_kernels --model-family glm53 --suite glm-attention` with
 qualified run IDs and a remaining-budget deadline; it rejects missing gates.
 Rollback is to omit this suite; Native serving remains the default.
+
+
+### Resumed authorization (2026-10-25)
+
+The user explicitly approved reruns until the microbenchmark/comparison works,
+within the same aggregate $15. This supersedes the prior no-corrective-launch
+restriction, not the aggregate ledger or qualification requirements. Production
+kernels and timed attention paths remain unchanged. Setup now populates only the
+sorted union of valid selected physical rows in full-size zeroed backing banks;
+Native/Packed share raw latents, all selected Packed bytes are checked, and hashes
+include their physical locations. This is a distinct fixture source revision.
+
+Timing can resume a valid ordered checkpoint through maintained
+`benchmark_kernels --resume-run <prior-run-id>`. Source/artifacts, seed, rounds and
+all completed per-case checks must match exactly. Only an unfinished final case
+is discarded; interior gaps and changed fixtures are rejected. Full acceptance
+still requires all 128 cases. This avoids repeating completed work after a
+bounded deadline and does not change sample counts or combine independent ratios.

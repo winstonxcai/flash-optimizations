@@ -2129,6 +2129,18 @@ class GLMAttentionProtocolTests(unittest.TestCase):
         self.assertNotIn('--native-library', command)
         self.assertIn('glm-attention', command)
 
+    def test_glm_checkpoint_path_rejects_traversal_and_missing_records(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(kernels, 'RESULTS_ROOT', Path(directory)):
+            for name in ('../other', 'bad/path', ''):
+                with self.assertRaises(ValueError):
+                    kernels._glm_timing_checkpoint(name)
+            with self.assertRaises(FileNotFoundError):
+                kernels._glm_timing_checkpoint('prior')
+            expected = Path(directory) / 'microbench/prior/timing/timing.json'
+            expected.parent.mkdir(parents=True)
+            expected.write_text('{}')
+            self.assertEqual(kernels._glm_timing_checkpoint('prior'), expected)
+
     def test_glm_qualified_timing_rejects_missing_tools(self):
         with self.assertRaises(ValueError):
             kernels._glm_timing_qualification('')

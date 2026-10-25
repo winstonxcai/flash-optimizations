@@ -722,7 +722,7 @@ def benchmark_kernels(
     suite: str = "all",
     prefill_reader: str = "split",
     model_family: str = "dsv4", max_seconds: int = RUN_BUDGETS_S["timing"],
-    qualification_runs: str = "",
+    qualification_runs: str = "", resume_run: str = "",
 ) -> str:
     """Validate and time the complete matrix for the selected survivor budget."""
     if model_family != MODEL_FAMILY:
@@ -739,12 +739,16 @@ def benchmark_kernels(
             argv = _benchmark_command("--model-family", "glm53", "--suite", suite,
                                       "--output", str(root / "timing"),
                                       "--max-seconds", str(max(60, int(deadline-time.monotonic())-10)))
+            if resume_run:
+                checkpoint = _glm_timing_checkpoint(resume_run)
+                argv += ["--resume", str(checkpoint)]
+                record["resume_run"] = resume_run
             record.update(command=argv, modes=("native", "direct"), suite=suite)
             _run_command(argv, root / "timing.log", deadline)
             _glm_benchmark_contract().validate_timing(json.loads((root / "timing.json").read_text()))
         return str(root)
-    if qualification_runs:
-        raise ValueError("qualification_runs is GLM-only")
+    if qualification_runs or resume_run:
+        raise ValueError("qualification_runs/resume_run are GLM-only")
     contract = _benchmark_cases()
     is_prefill = suite == "prefill-read"
     if prefill_reader not in ("split", "fused") or (
@@ -1375,6 +1379,15 @@ def _verify_glm_image() -> None:
     from sglang.srt.remnant.glm import compile_kernels
     if [k.hash for k in compile_kernels()] != manifest["glm_compile"]["triton"]:
         raise RuntimeError("GLM timing Triton variant mismatch")
+
+
+def _glm_timing_checkpoint(run_id: str) -> Path:
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", run_id):
+        raise ValueError("Invalid GLM checkpoint run ID")
+    checkpoint = RESULTS_ROOT / "microbench" / run_id / "timing" / "timing.json"
+    if not checkpoint.is_file():
+        raise FileNotFoundError(f"GLM checkpoint not found: {checkpoint}")
+    return checkpoint
 
 
 def _glm_timing_qualification(run_ids: str) -> dict:
