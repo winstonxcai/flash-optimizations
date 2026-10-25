@@ -371,3 +371,11 @@ git log --oneline -- third_party/sglang-v0.5.18 third_party/flashmla-v0.5.18
 Use `git ls-tree <parent-commit> third_party/sglang-v0.5.18 third_party/flashmla-v0.5.18` to
 recover an integration's exact pair. Git history remains the detailed record;
 this guide and the changelog are its curated index.
+
+The fragment reconstruction follow-up stages Packed FP4 rows and prefix ranks
+once, reusing V4's fragment selectors with nibble adaptation. Producer geometry
+and persistent formats stay fixed. The maintained microbenchmark now includes
+`v41-fp4-decode`, all10 V4 decode shapes at both SWA64 and SWA128, with
+actual captured-output checks and fresh dense Native FP4 controls. Timing is
+blocked until identical source/binary/tool receipts pass34 cases per sanitizer.
+These new pins are source-reviewed; executable qualification is pending.

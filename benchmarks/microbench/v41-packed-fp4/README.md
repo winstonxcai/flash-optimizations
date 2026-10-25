@@ -196,3 +196,26 @@ full-model/serving, performance and production readiness remain deferred.
 
 Rollback: select `--dsv41-main-kv-cache-format auto`, or return to the recorded
 baseline pins through the repository's normal clean-worktree workflow.
+
+## Authorized fragment reconstruction and timing follow-up
+
+Question: can V4's staged bitmap/fragment reconstruction replace scalar Packed
+FP4 loading while preserving exact reconstructed values, and how does complete
+Packed Direct decode compare with fresh Native FP4? Baseline is parent cc0f82f,
+SGLang 0a36a662 and FlashMLA 91463e00. Only Packed reconstruction changes;
+producer scheduling, persistent layout, Native and SWA remain fixed.
+
+Acceptance requires independent numerical/graph/stream/allocation checks, all
+three strict sanitizer tools, fresh-context review, then paired Native/Direct
+timing for H64/H128 x batches 8/16/24/28/32 x SWA64/page64 and SWA128/page128,
+Q1/K512, global page256. Reuse the maintained benchmark and shared cases; no
+new harness. Use 10 warmups, 30 randomized paired rounds and 100 graph replays.
+Performance is descriptive; complete coverage, not a minimum speedup, is the gate.
+
+User authorized $20 additional cumulative compute across accounts, including
+reruns. Reserve $2 and cap projected work at $18. Baseline peroace360 compute
+is $13.73409128; no competing apps/containers were active, existing results
+volume is available, and no model volume will be mounted. Rates: H100 $3.95/h,
+CPU $0.0473/core-hour, RAM $0.008/GiB-hour. Bound jobs and inspect completed
+costs before reruns. Stop before exceeding the allowance, retain failures and
+mark incomplete coverage unqualified. No weights, serving, profiling or GPUQ.

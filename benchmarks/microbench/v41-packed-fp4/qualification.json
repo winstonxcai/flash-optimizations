@@ -792,5 +792,40 @@
   "commands": {
     "attempt011": "MODAL_PROFILE=wpooh1579 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_VALIDATION_TIMEOUT_S=2700 /Users/poohthewinnie/.local/bin/modal run scripts/modal/kernels.py::validate_kernels --run-id v41-fp4-20261025-attempt011 --sanitizer --max-seconds 2640",
     "attempt012": "MODAL_PROFILE=wpooh1579 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_VALIDATION_TIMEOUT_S=4500 /Users/poohthewinnie/.local/bin/modal run scripts/modal/kernels.py::validate_kernels --run-id v41-fp4-20261025-attempt012 --sanitizer --sanitizer-order racecheck,memcheck,synccheck --max-seconds 4440"
+  },
+  "fragment_followup": {
+    "status": "implementation",
+    "baseline_parent": "cc0f82fa71126f466b53b24624ab1a6937cc3165",
+    "authorized_usd": 20,
+    "reserve_usd": 2,
+    "max_projected_work_usd": 18,
+    "accounts": {
+      "peroace360": {
+        "baseline_compute_usd": 13.73409128
+      }
+    },
+    "attempts": [],
+    "source_review": {
+      "status": "no blocking findings",
+      "graph_output_check": "captured outputs checked after capture and all paired rounds",
+      "executable_checks": false
+    },
+    "sources": {
+      "sglang": "98991169803f4ec0b1b2c3f369695dc62d0bf3ec",
+      "flashmla": "e274b715f49ab6c300f62e0d42c1cd627b8d1bb5"
+    },
+    "planned_initial_run": {
+      "id": "v41-fragments-20261025-attempt001",
+      "account": "peroace360",
+      "gpu_timeout_seconds": 5400,
+      "inner_seconds": 5340,
+      "sanitizer_order": [
+        "memcheck",
+        "racecheck",
+        "synccheck"
+      ],
+      "projected_gpu_compute_usd": 6.2589,
+      "total_initial_projection_cap_usd": 8.5
+    }
   }
 }

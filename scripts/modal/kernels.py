@@ -194,6 +194,7 @@ if VALIDATION_SUITE == "v41-fp4":
         fp4_tests + "::test_fp4_startup_contract",
         fp4_tests + "::test_fp4_backend_dispatch",
         TEST_MODULES["cache_format"],
+        "benchmark/remnant/test_microbench.py::test_v41_fp4_matrix_and_timing_gate",
     )
     SANITIZER_TESTS = tuple(
         fp4_tests + "::" + name
@@ -202,6 +203,7 @@ if VALIDATION_SUITE == "v41-fp4":
             "test_fp4_direct",
             "test_fp4_graph_and_stream",
             "test_fp4_compressor_boundary",
+            "test_fp4_fragment_masks",
         )
     )
 
@@ -523,6 +525,13 @@ print('FP4 CPU SM90 precompilation passed')
         deadline,
         environment=cpu_environment,
     )
+    if VALIDATION_SUITE == "v41-fp4":
+        _run_command(
+            _benchmark_command("--suite", "v41-fp4-decode", "--check-imports"),
+            build / "fp4-benchmark-imports.log",
+            deadline,
+            environment=cpu_environment,
+        )
     _run_pytest(
         VALIDATION_TESTS,
         build,
@@ -730,17 +739,126 @@ _GPU = {
 # Public workflows.
 
 
-@app.function(**{**_GPU, "timeout": 900})
+def _fp4_timing_qualification(run_ids: str) -> dict:
+    """Author: Winston Cai. Aggregate only complete tools with identical inputs."""
+    ids = run_ids.split(",")
+    if (
+        not run_ids
+        or len(set(ids)) != len(ids)
+        or any(not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", i) for i in ids)
+    ):
+        raise ValueError("FP4 timing requires unique qualification run IDs")
+    current = json.loads(MANIFEST.read_text())
+    if (
+        current["sources"] != _source_hashes()
+        or current["source_identities"] != SOURCE_IDENTITIES
+    ):
+        raise RuntimeError("Timing source identity mismatch")
+    for path, digest in current["binaries"].items():
+        if hashlib.sha256(Path(path).read_bytes()).hexdigest() != digest:
+            raise RuntimeError(f"Timing binary changed: {path}")
+    passed, receipts = set(), {}
+    expected_ids = None
+    for run_id in ids:
+        base = RESULTS_ROOT / "microbench" / run_id / "validation"
+        manifest = json.loads((base / "build-manifest.json").read_text())
+        result = json.loads((base / "result.json").read_text())
+        for key in (
+            "sources",
+            "source_identities",
+            "binaries",
+            "sanitizer",
+            "coverage",
+            "fp4_precompile_artifacts",
+        ):
+            if manifest.get(key) != current.get(key):
+                raise RuntimeError(f"Qualification identity changed: {run_id}/{key}")
+        if result.get("allocation", {}).get("status") != "passed":
+            raise RuntimeError(f"Missing allocation qualification: {run_id}")
+        for tool, state in result.get("sanitizer_results", {}).items():
+            if state.get("status") != "passed":
+                continue
+            tests = list(ET.parse(base / f"{tool}.xml").getroot().iter("testcase"))
+            case_ids = {(t.get("classname"), t.get("name")) for t in tests}
+            if (
+                len(tests) != 34
+                or any(list(t) for t in tests)
+                or len(case_ids) != len(tests)
+            ):
+                raise RuntimeError(f"Incomplete qualification XML: {run_id}/{tool}")
+            if expected_ids is not None and case_ids != expected_ids:
+                raise RuntimeError(f"Sanitizer case identities differ: {run_id}/{tool}")
+            expected_ids = case_ids
+            passed.add(tool)
+        receipts[run_id] = hashlib.sha256(
+            (base / "result.json").read_bytes()
+        ).hexdigest()
+    if passed != {"memcheck", "racecheck", "synccheck"}:
+        raise RuntimeError(
+            f"FP4 timing blocked by incomplete sanitizer coverage: {sorted(passed)}"
+        )
+    return {
+        "receipts": receipts,
+        "tools": sorted(passed),
+        "case_count_per_tool": len(expected_ids),
+    }
+
+
+@app.function(
+    **{
+        **_GPU,
+        "timeout": 900,
+        **({"cpu": 2, "memory": 16384} if VALIDATION_SUITE == "v41-fp4" else {}),
+    }
+)
 def benchmark_kernels(
     run_id: str,
     keep_count: int = 256,
     modes: str = "",
     suite: str = "all",
     prefill_reader: str = "split",
+    qualification_runs: str = "",
 ) -> str:
     """Validate and time the complete matrix for the selected survivor budget."""
     contract = _benchmark_cases()
     is_prefill = suite == "prefill-read"
+    is_fp4 = suite == "v41-fp4-decode"
+    if is_fp4:
+        if (
+            VALIDATION_SUITE != "v41-fp4"
+            or keep_count != 256
+            or modes not in ("", "native,kernel")
+        ):
+            raise ValueError(
+                "FP4 timing requires v41-fp4 qualification and Native/Packed keep256"
+            )
+        if prefill_reader != "split":
+            raise ValueError("FP4 timing uses the Direct decode paths")
+        with _run_context(run_id, "timing", RUN_BUDGETS_S["timing"]) as (
+            root,
+            record,
+            deadline,
+        ):
+            record["qualification"] = _fp4_timing_qualification(qualification_runs)
+            _run_pytest(
+                (
+                    "benchmark/remnant/test_microbench.py::test_v41_fp4_matrix_and_timing_gate",
+                ),
+                root,
+                "contract",
+                deadline,
+            )
+            argv = _benchmark_command(
+                "--suite", suite, "--output", str(root / "timing")
+            )
+            record.update(command=argv, suite=suite)
+            _run_command(argv, root / "timing.log", deadline)
+            contract.validate_timing(
+                json.loads((root / "timing.json").read_text()), suite=suite
+            )
+        return str(root)
+    if qualification_runs:
+        raise ValueError("qualification_runs is only supported by v41-fp4-decode")
     if prefill_reader not in ("split", "fused") or (
         not is_prefill and prefill_reader != "split"
     ):
@@ -1084,7 +1202,7 @@ def profile_kernels(
             argv = ["ncu", *[arg for pair in options.items() for arg in pair]]
             if is_prefill:
                 argv += ["--nvtx"]
-            for section in ([] if is_prefill else NCU_SECTIONS):
+            for section in [] if is_prefill else NCU_SECTIONS:
                 argv += ["--section", section]
             argv += [
                 "--metrics",

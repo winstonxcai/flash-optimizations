@@ -13,6 +13,13 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Follow-up to parent `cc0f82f`: SGLang `98991169803f` / FlashMLA `e274b715f49a`.
+  Packed FP4 now stages survivors/bitmap prefixes once and reconstructs fragments
+  with V4-style selectors. Adds two exhaustive-mask Direct fixtures and paired
+  Native/Packed FP4 timing for all20 H64/H128/batch/SWA cases. Scheduling, Native,
+  persistent layouts and v0.5.18 pins remain unchanged. Fresh-context source
+  review passed; Modal build,34-case/tool sanitizers and timing are pending.
+
 - Experimental V4.1 FP4 integration validated from parent `9ec5971`, based on
   `9419d0e`. v0.5.22 pins: SGLang `0a36a662562f` / FlashMLA `91463e004ec9`;
   v0.5.18 and CUTLASS pins unchanged. Adds opt-in Native 288-byte/Packed
