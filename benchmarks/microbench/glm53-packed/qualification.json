@@ -1,5 +1,5 @@
 {
-  "status": "inconclusive",
+  "status": "incomplete",
   "model_config": {
     "model": "zai-org/GLM-5.3-Flash",
     "revision": "46a050bec13002ad29ee795c16e61cf4fa3c4a9c",
@@ -9,8 +9,8 @@
   "budget": {
     "authorized_usd": 15,
     "routine_cutoff_usd": 12,
-    "conservative_accrued_usd": 4.703309590958719,
-    "h100_seconds": 2882.8639179159945,
+    "conservative_accrued_usd": 5.257996667117971,
+    "h100_seconds": 3040.712437082999,
     "accounts": {
       "caiw": {
         "preparation_preflight": [
@@ -77,8 +77,10 @@
       "billed_after_credits": 0,
       "note": "Compute sum excludes unrelated baseline storage and credits; billing may lag. Conservative accrued includes full CLI wall time at worker resource caps; $3 reserve remains unused."
     },
-    "cpu_preparation_conservative_usd": 1.1836530653963915,
-    "h100_worker_conservative_usd": 3.5196565255623278
+    "cpu_preparation_conservative_usd": 1.5456246383770829,
+    "h100_worker_conservative_usd": 3.712372028740888,
+    "latest_compute_reading_usd": 3.80780462,
+    "latest_compute_reading_note": "Read-only final check, excludes credits/storage; lower than historical high-water, which is preserved. Conservative task ledger remains controlling."
   },
   "commands": [
     {
@@ -690,7 +692,7 @@
     "flashmla_unchanged": true,
     "v0518_pins_unchanged": true
   },
-  "decision": "keep_opt_in_candidate; not production-qualified: racecheck timeout, memcheck not_run, independent fresh-context review not performed",
+  "decision": "Retain opt-in production candidate and two-path benchmark. Original racecheck/memcheck remain unqualified; new benchmark stopped before sanitizers and timing after graph accounting smoke failure. Repaired benchmark is CPU-reviewed, GPU-unverified; no speed claim.",
   "build_artifact": {
     "model_family": "glm53",
     "glm_compile": {
@@ -1856,8 +1858,1402 @@
     "idle_preparation_app": "ap-VWjaXfxTD2hvKdyXWVvOqp stopped",
     "weights_downloaded": false,
     "pushes": false,
-    "active": "canonical SGLang candidate, maintained validator, experiment README and JSON/CSV",
-    "retired": "task-owned temporary patch scripts removed after source and evidence committed",
-    "deferred": "independent review and unfinished sanitizer gates; no extra GPU launch authorized by this record"
+    "active": "canonical SGLang candidate, maintained two-path benchmark/validator, experiment README and aggregate qualification JSON; historical allocation CSV",
+    "retired": "task-owned controller archived and hashed in ignored data/glm53-packed/attention-execution-controller.py, then removed from temporary execution location",
+    "deferred": "GPU validation of repaired accounting, completed racecheck/memcheck and all 128 timing cases; no automatic corrective allocation"
+  },
+  "timing_phase": {
+    "status": "incomplete",
+    "protocol": "remnant-glm-attention-v1",
+    "attempts": [
+      {
+        "action": "prepare",
+        "run_id": "glm53-attention-prepare-20261025T122216Z",
+        "status": "completed",
+        "started_at": "2026-10-25T12:22:16.393874+00:00",
+        "compute_before": {
+          "metered_cost": "30.14332387",
+          "billed_cost": "0E-8",
+          "adjustments": {
+            "free_storage": "-26.54329934",
+            "plan_cost": "0E-8",
+            "reservation_adjustment": "-0E-8",
+            "credits": "-3.60000000",
+            "network_egress_allowance": "-0.00002453"
+          },
+          "metered_cost_breakdown": {
+            "network_egress": "0.00002453",
+            "ephemeral_apps": "3.55639255",
+            "deployed_apps": "0.04856797",
+            "llm_tokens": "0E-8",
+            "volumes": "26.54329934"
+          }
+        },
+        "rates": {
+          "cpu_hour_cost": "0.04730",
+          "cpu_hour_cost_sandbox": "0.141900",
+          "egress_gib_cost": "0.04000",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_cached_prompt_mtok_cost": "0.005",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_completion_mtok_cost": "1.00",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_prompt_mtok_cost": "0.25",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_reasoning_mtok_cost": "1.00",
+          "endpoints_moonshotai_kimi_k3_cached_prompt_mtok_cost": "0.30",
+          "endpoints_moonshotai_kimi_k3_completion_mtok_cost": "15.00",
+          "endpoints_moonshotai_kimi_k3_prompt_mtok_cost": "3.00",
+          "endpoints_moonshotai_kimi_k3_reasoning_mtok_cost": "15.00",
+          "endpoints_nvidia_glm_5.2_nvfp4_cached_prompt_mtok_cost": "1",
+          "endpoints_nvidia_glm_5.2_nvfp4_completion_mtok_cost": "1",
+          "endpoints_nvidia_glm_5.2_nvfp4_prompt_mtok_cost": "1",
+          "endpoints_nvidia_glm_5.2_nvfp4_reasoning_mtok_cost": "1",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_cached_prompt_mtok_cost": "0.25",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_completion_mtok_cost": "6.00",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_prompt_mtok_cost": "2.00",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_reasoning_mtok_cost": "6.00",
+          "endpoints_thinkingmachines_inkling_nvfp4_cached_prompt_mtok_cost": "0.27",
+          "endpoints_thinkingmachines_inkling_nvfp4_completion_mtok_cost": "5",
+          "endpoints_thinkingmachines_inkling_nvfp4_prompt_mtok_cost": "1.20",
+          "endpoints_thinkingmachines_inkling_nvfp4_reasoning_mtok_cost": "5",
+          "endpoints_zai_org_glm_5.3_cached_prompt_mtok_cost": "0.26",
+          "endpoints_zai_org_glm_5.3_completion_mtok_cost": "4.40",
+          "endpoints_zai_org_glm_5.3_flash_cached_prompt_mtok_cost": "0.09",
+          "endpoints_zai_org_glm_5.3_flash_completion_mtok_cost": "1.50",
+          "endpoints_zai_org_glm_5.3_flash_prompt_mtok_cost": "0.45",
+          "endpoints_zai_org_glm_5.3_flash_reasoning_mtok_cost": "1.50",
+          "endpoints_zai_org_glm_5.3_prompt_mtok_cost": "1.40",
+          "endpoints_zai_org_glm_5.3_reasoning_mtok_cost": "4.40",
+          "gpu_hour_cost_a100_40gb": "2.10000",
+          "gpu_hour_cost_a100_80gb": "2.50000",
+          "gpu_hour_cost_a10g": "1.10000",
+          "gpu_hour_cost_b200": "6.25000",
+          "gpu_hour_cost_b300": "7.10000",
+          "gpu_hour_cost_h100": "3.95000",
+          "gpu_hour_cost_h200": "4.54000",
+          "gpu_hour_cost_l4": "0.80000",
+          "gpu_hour_cost_l40s": "1.95000",
+          "gpu_hour_cost_rtx6000": "3.03000",
+          "gpu_hour_cost_t4": "0.59000",
+          "mem_gib_hour_cost": "0.00800",
+          "mem_gib_hour_cost_sandbox": "0.024000",
+          "volume_storage_gib_month_cost": "0.09000"
+        },
+        "containers_before": [],
+        "apps_before": [],
+        "sources": {
+          "parent": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations",
+            "commit": "967250390030194ab82717d2c23a476ee8556d56"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+            "expected_commit": "07fc300047bd6890eee04ec74130135392cc28f6",
+            "commit": "07fc300047bd6890eee04ec74130135392cc28f6",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22",
+            "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "argv": [
+          "/Users/poohthewinnie/.local/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::prepare_kernels",
+          "--model-family",
+          "glm53"
+        ],
+        "environment": {
+          "MODAL_PROFILE": "caiw",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_COMPILED_IMAGE": "im-XTjWc2irNsaIzoyCmwuyVW",
+          "REMNANT_VALIDATION_TIMEOUT_S": "1620"
+        },
+        "controller_timeout_seconds": 2000,
+        "worker_hour_upper_rate_usd": 1.2688000000000001,
+        "conservative_wall_seconds": 617.5981017500017,
+        "log": "data/glm53-packed/glm53-attention-prepare-20261025T122216Z.log",
+        "log_sha256": "9325eef86b5db3b45ca197053a8f8621e34c0304b60ef6b4feba4b90e61d959a",
+        "containers_after": [],
+        "compute_after": {
+          "metered_cost": "30.20332488",
+          "billed_cost": "0E-8",
+          "adjustments": {
+            "free_storage": "-26.54329934",
+            "reservation_adjustment": "-0E-8",
+            "plan_cost": "0E-8",
+            "credits": "-3.66000000",
+            "network_egress_allowance": "-0.00002554"
+          },
+          "metered_cost_breakdown": {
+            "deployed_apps": "0.04856797",
+            "llm_tokens": "0E-8",
+            "volumes": "26.54329934",
+            "ephemeral_apps": "3.61628156",
+            "network_egress": "0.00002554"
+          }
+        }
+      },
+      {
+        "action": "prepare",
+        "run_id": "glm53-attention-prepare-20261025T123520Z",
+        "status": "completed",
+        "started_at": "2026-10-25T12:35:20.761724+00:00",
+        "compute_before": {
+          "metered_cost": "30.20332488",
+          "billed_cost": "0E-8",
+          "adjustments": {
+            "network_egress_allowance": "-0.00002554",
+            "credits": "-3.66000000",
+            "free_storage": "-26.54329934",
+            "plan_cost": "0E-8",
+            "reservation_adjustment": "-0E-8"
+          },
+          "metered_cost_breakdown": {
+            "deployed_apps": "0.04856797",
+            "network_egress": "0.00002554",
+            "llm_tokens": "0E-8",
+            "volumes": "26.54329934",
+            "ephemeral_apps": "3.61628156"
+          }
+        },
+        "rates": {
+          "cpu_hour_cost": "0.04730",
+          "cpu_hour_cost_sandbox": "0.141900",
+          "egress_gib_cost": "0.04000",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_cached_prompt_mtok_cost": "0.005",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_completion_mtok_cost": "1.00",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_prompt_mtok_cost": "0.25",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_reasoning_mtok_cost": "1.00",
+          "endpoints_moonshotai_kimi_k3_cached_prompt_mtok_cost": "0.30",
+          "endpoints_moonshotai_kimi_k3_completion_mtok_cost": "15.00",
+          "endpoints_moonshotai_kimi_k3_prompt_mtok_cost": "3.00",
+          "endpoints_moonshotai_kimi_k3_reasoning_mtok_cost": "15.00",
+          "endpoints_nvidia_glm_5.2_nvfp4_cached_prompt_mtok_cost": "1",
+          "endpoints_nvidia_glm_5.2_nvfp4_completion_mtok_cost": "1",
+          "endpoints_nvidia_glm_5.2_nvfp4_prompt_mtok_cost": "1",
+          "endpoints_nvidia_glm_5.2_nvfp4_reasoning_mtok_cost": "1",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_cached_prompt_mtok_cost": "0.25",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_completion_mtok_cost": "6.00",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_prompt_mtok_cost": "2.00",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_reasoning_mtok_cost": "6.00",
+          "endpoints_thinkingmachines_inkling_nvfp4_cached_prompt_mtok_cost": "0.27",
+          "endpoints_thinkingmachines_inkling_nvfp4_completion_mtok_cost": "5",
+          "endpoints_thinkingmachines_inkling_nvfp4_prompt_mtok_cost": "1.20",
+          "endpoints_thinkingmachines_inkling_nvfp4_reasoning_mtok_cost": "5",
+          "endpoints_zai_org_glm_5.3_cached_prompt_mtok_cost": "0.26",
+          "endpoints_zai_org_glm_5.3_completion_mtok_cost": "4.40",
+          "endpoints_zai_org_glm_5.3_flash_cached_prompt_mtok_cost": "0.09",
+          "endpoints_zai_org_glm_5.3_flash_completion_mtok_cost": "1.50",
+          "endpoints_zai_org_glm_5.3_flash_prompt_mtok_cost": "0.45",
+          "endpoints_zai_org_glm_5.3_flash_reasoning_mtok_cost": "1.50",
+          "endpoints_zai_org_glm_5.3_prompt_mtok_cost": "1.40",
+          "endpoints_zai_org_glm_5.3_reasoning_mtok_cost": "4.40",
+          "gpu_hour_cost_a100_40gb": "2.10000",
+          "gpu_hour_cost_a100_80gb": "2.50000",
+          "gpu_hour_cost_a10g": "1.10000",
+          "gpu_hour_cost_b200": "6.25000",
+          "gpu_hour_cost_b300": "7.10000",
+          "gpu_hour_cost_h100": "3.95000",
+          "gpu_hour_cost_h200": "4.54000",
+          "gpu_hour_cost_l4": "0.80000",
+          "gpu_hour_cost_l40s": "1.95000",
+          "gpu_hour_cost_rtx6000": "3.03000",
+          "gpu_hour_cost_t4": "0.59000",
+          "mem_gib_hour_cost": "0.00800",
+          "mem_gib_hour_cost_sandbox": "0.024000",
+          "volume_storage_gib_month_cost": "0.09000"
+        },
+        "containers_before": [],
+        "apps_before": [
+          {
+            "app_id": "ap-0qyh2KAOPbctNyqNLvO2Dx",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 20:22:19+08:00",
+            "stopped_at": "2026-10-25 20:32:33+08:00"
+          }
+        ],
+        "sources": {
+          "parent": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations",
+            "commit": "d092f8501b0c152bc8239bd95409396e981aa2b8"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+            "expected_commit": "f71841eade02afd1b601d8f1af72786b494bb6cb",
+            "commit": "f71841eade02afd1b601d8f1af72786b494bb6cb",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22",
+            "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "argv": [
+          "/Users/poohthewinnie/.local/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::prepare_kernels",
+          "--model-family",
+          "glm53"
+        ],
+        "environment": {
+          "MODAL_PROFILE": "caiw",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_COMPILED_IMAGE": "im-vwwDy7UMUgFqIHRwa0O0xK",
+          "REMNANT_VALIDATION_TIMEOUT_S": "1620"
+        },
+        "controller_timeout_seconds": 1638,
+        "worker_hour_upper_rate_usd": 1.2688000000000001,
+        "conservative_wall_seconds": 409.43347354199796,
+        "log": "data/glm53-packed/glm53-attention-prepare-20261025T123520Z.log",
+        "log_sha256": "2d185bcd52e9ab425ee8f3e4f9042ac0c15b0ca493b6b81b0bba78b149dac6f2",
+        "containers_after": [],
+        "compute_after": {
+          "metered_cost": "30.29332792",
+          "billed_cost": "0E-8",
+          "adjustments": {
+            "plan_cost": "0E-8",
+            "free_storage": "-26.54329934",
+            "credits": "-3.75000000",
+            "reservation_adjustment": "-0E-8",
+            "network_egress_allowance": "-0.00002858"
+          },
+          "metered_cost_breakdown": {
+            "volumes": "26.54329934",
+            "llm_tokens": "0E-8",
+            "deployed_apps": "0.04856797",
+            "ephemeral_apps": "3.70459543",
+            "network_egress": "0.00002858"
+          }
+        }
+      },
+      {
+        "action": "racecheck",
+        "run_id": "glm53-attention-racecheck-20261025T124407Z",
+        "status": "failed",
+        "started_at": "2026-10-25T12:44:07.912664+00:00",
+        "compute_before": {
+          "metered_cost": "30.28332792",
+          "billed_cost": "0E-8",
+          "adjustments": {
+            "free_storage": "-26.54329934",
+            "reservation_adjustment": "-0E-8",
+            "credits": "-3.74000000",
+            "plan_cost": "0E-8",
+            "network_egress_allowance": "-0.00002858"
+          },
+          "metered_cost_breakdown": {
+            "network_egress": "0.00002858",
+            "volumes": "26.54329934",
+            "ephemeral_apps": "3.69330875",
+            "deployed_apps": "0.04856797",
+            "llm_tokens": "0E-8"
+          }
+        },
+        "rates": {
+          "cpu_hour_cost": "0.04730",
+          "cpu_hour_cost_sandbox": "0.141900",
+          "egress_gib_cost": "0.04000",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_cached_prompt_mtok_cost": "0.005",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_completion_mtok_cost": "1.00",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_prompt_mtok_cost": "0.25",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_reasoning_mtok_cost": "1.00",
+          "endpoints_moonshotai_kimi_k3_cached_prompt_mtok_cost": "0.30",
+          "endpoints_moonshotai_kimi_k3_completion_mtok_cost": "15.00",
+          "endpoints_moonshotai_kimi_k3_prompt_mtok_cost": "3.00",
+          "endpoints_moonshotai_kimi_k3_reasoning_mtok_cost": "15.00",
+          "endpoints_nvidia_glm_5.2_nvfp4_cached_prompt_mtok_cost": "1",
+          "endpoints_nvidia_glm_5.2_nvfp4_completion_mtok_cost": "1",
+          "endpoints_nvidia_glm_5.2_nvfp4_prompt_mtok_cost": "1",
+          "endpoints_nvidia_glm_5.2_nvfp4_reasoning_mtok_cost": "1",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_cached_prompt_mtok_cost": "0.25",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_completion_mtok_cost": "6.00",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_prompt_mtok_cost": "2.00",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_reasoning_mtok_cost": "6.00",
+          "endpoints_thinkingmachines_inkling_nvfp4_cached_prompt_mtok_cost": "0.27",
+          "endpoints_thinkingmachines_inkling_nvfp4_completion_mtok_cost": "5",
+          "endpoints_thinkingmachines_inkling_nvfp4_prompt_mtok_cost": "1.20",
+          "endpoints_thinkingmachines_inkling_nvfp4_reasoning_mtok_cost": "5",
+          "endpoints_zai_org_glm_5.3_cached_prompt_mtok_cost": "0.26",
+          "endpoints_zai_org_glm_5.3_completion_mtok_cost": "4.40",
+          "endpoints_zai_org_glm_5.3_flash_cached_prompt_mtok_cost": "0.09",
+          "endpoints_zai_org_glm_5.3_flash_completion_mtok_cost": "1.50",
+          "endpoints_zai_org_glm_5.3_flash_prompt_mtok_cost": "0.45",
+          "endpoints_zai_org_glm_5.3_flash_reasoning_mtok_cost": "1.50",
+          "endpoints_zai_org_glm_5.3_prompt_mtok_cost": "1.40",
+          "endpoints_zai_org_glm_5.3_reasoning_mtok_cost": "4.40",
+          "gpu_hour_cost_a100_40gb": "2.10000",
+          "gpu_hour_cost_a100_80gb": "2.50000",
+          "gpu_hour_cost_a10g": "1.10000",
+          "gpu_hour_cost_b200": "6.25000",
+          "gpu_hour_cost_b300": "7.10000",
+          "gpu_hour_cost_h100": "3.95000",
+          "gpu_hour_cost_h200": "4.54000",
+          "gpu_hour_cost_l4": "0.80000",
+          "gpu_hour_cost_l40s": "1.95000",
+          "gpu_hour_cost_rtx6000": "3.03000",
+          "gpu_hour_cost_t4": "0.59000",
+          "mem_gib_hour_cost": "0.00800",
+          "mem_gib_hour_cost_sandbox": "0.024000",
+          "volume_storage_gib_month_cost": "0.09000"
+        },
+        "containers_before": [],
+        "apps_before": [
+          {
+            "app_id": "ap-RteW4CSfTBCPj4q1MlrPjY",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 20:35:24+08:00",
+            "stopped_at": "2026-10-25 20:42:09+08:00"
+          },
+          {
+            "app_id": "ap-0qyh2KAOPbctNyqNLvO2Dx",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 20:22:19+08:00",
+            "stopped_at": "2026-10-25 20:32:33+08:00"
+          }
+        ],
+        "sources": {
+          "parent": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations",
+            "commit": "d092f8501b0c152bc8239bd95409396e981aa2b8"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+            "expected_commit": "f71841eade02afd1b601d8f1af72786b494bb6cb",
+            "commit": "f71841eade02afd1b601d8f1af72786b494bb6cb",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22",
+            "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "argv": [
+          "/Users/poohthewinnie/.local/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::validate_kernels",
+          "--model-family",
+          "glm53",
+          "--stage",
+          "sanitizer",
+          "--sanitizer-tools",
+          "racecheck",
+          "--run-id",
+          "glm53-attention-racecheck-20261025T124407Z",
+          "--max-seconds",
+          "1500"
+        ],
+        "environment": {
+          "MODAL_PROFILE": "caiw",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_COMPILED_IMAGE": "im-vwwDy7UMUgFqIHRwa0O0xK",
+          "REMNANT_VALIDATION_TIMEOUT_S": "1620"
+        },
+        "controller_timeout_seconds": 1680,
+        "worker_hour_upper_rate_usd": 4.3952,
+        "error": "CalledProcessError(1, ['/Users/poohthewinnie/.local/bin/modal', 'run', 'scripts/modal/kernels.py::validate_kernels', '--model-family', 'glm53', '--stage', 'sanitizer', '--sanitizer-tools', 'racecheck', '--run-id', 'glm53-attention-racecheck-20261025T124407Z', '--max-seconds', '1500'])",
+        "conservative_wall_seconds": 157.84851916700427,
+        "log": "data/glm53-packed/glm53-attention-racecheck-20261025T124407Z.log",
+        "log_sha256": "9bf8e6bbe3eae77d9d138b4ed8856d4f98b35c47e63220a588f41d823e2a0e41",
+        "containers_after": [],
+        "compute_after": {
+          "metered_cost": "30.28332792",
+          "billed_cost": "0E-8",
+          "adjustments": {
+            "plan_cost": "0E-8",
+            "credits": "-3.74000000",
+            "free_storage": "-26.54329934",
+            "reservation_adjustment": "-0E-8",
+            "network_egress_allowance": "-0.00002858"
+          },
+          "metered_cost_breakdown": {
+            "llm_tokens": "0E-8",
+            "volumes": "26.54329934",
+            "network_egress": "0.00002858",
+            "ephemeral_apps": "3.69330875",
+            "deployed_apps": "0.04856797"
+          }
+        }
+      }
+    ],
+    "review": {
+      "status": "passed_after_fixes",
+      "reviewer": "glm_benchmark_review",
+      "findings": [
+        "Function timeout mismatch fixed",
+        "Required sanitizer testcase identities enforced"
+      ],
+      "followup": "Reserved graph memory and image identity checks reviewed; no new material finding",
+      "graph_accounting_followup": {
+        "reviewer": "glm_benchmark_review",
+        "status": "no_concrete_findings",
+        "scope": "Only new pool-filtered snapshot accounting and CPU regression; no GPU execution",
+        "api_evidence": "Local PyTorch 2.10 source and official PyTorch 2.14 memory_snapshot(mempool_id) API; production image PyTorch 2.14.1+cu130"
+      }
+    },
+    "cpu": {
+      "benchmark_non_gpu_tests": 81,
+      "focused_glm_tests": 10,
+      "startup_contracts": 24,
+      "maintained_launcher_tests": 78,
+      "status": "passed",
+      "focused_launcher_tests": 5,
+      "commands": [
+        {
+          "argv": [
+            "python3",
+            "-m",
+            "pytest",
+            "-q",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "-k",
+            "glm_"
+          ],
+          "result": "10 passed, 176 deselected"
+        },
+        {
+          "argv": [
+            "python3",
+            "-m",
+            "unittest",
+            "scripts.modal.tests.GLMAttentionProtocolTests"
+          ],
+          "environment": {
+            "PYTHONPATH": "/Users/poohthewinnie/.local/share/uv/tools/modal/lib/python3.11/site-packages"
+          },
+          "result": "5 passed"
+        },
+        {
+          "argv": [
+            "uv",
+            "run",
+            "--with",
+            "ruff==0.15.1",
+            "ruff",
+            "check",
+            "--select",
+            "F401,F821,F823,UP037",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/glm_attention.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py"
+          ],
+          "result": "All checks passed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "third_party/sglang-v0.5.22",
+            "diff",
+            "--check"
+          ],
+          "result": "passed"
+        }
+      ]
+    },
+    "original_limits": {
+      "total_usd": 15,
+      "routine_cutoff_usd": 12,
+      "cpu_usd": 2,
+      "h100_worker_usd": 10,
+      "reserve_usd": 3,
+      "h100_seconds": 7200
+    },
+    "decision": "retain benchmark implementation; zero accepted timing cases; no automatic corrective allocation",
+    "required_cases": 128,
+    "accepted_cases": 0,
+    "required_paired_rounds": 30,
+    "accepted_samples": 0,
+    "stop_reason": "New H100 smoke failed at a negative global reserved-memory delta assertion before sanitizer execution; plan prohibits automatic corrective launches.",
+    "sources": {
+      "gpu_tested_parent": "d092f8501b0c152bc8239bd95409396e981aa2b8",
+      "gpu_tested_sglang": "f71841eade02afd1b601d8f1af72786b494bb6cb",
+      "repaired_sglang": "02cbbd92b802e0437a8597b6b14ec45c994cf98b",
+      "flashmla": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+      "production_runtime_unchanged_from": "9e42a0d8886dd93944dc6b47ef3bffef4e033b5a"
+    },
+    "gates": {
+      "new_graph_smoke": {
+        "status": "failed",
+        "passed": [
+          "heads8/banks2/queries128"
+        ],
+        "failed": [
+          "heads16/banks4/queries512"
+        ],
+        "failure": "Final positive graph allocation assertion saw -48234496 bytes; numerical, finiteness and changing-input replay assertions had completed before that assertion. This is not a passed case.",
+        "repair": "Use public pool-filtered memory_snapshot(graph.pool()) and sum unique positive total_size segments, including inactive memory. Preserve constant allocation bound and 70% cap.",
+        "repair_validation": "10 focused CPU contracts passed; independent targeted review found no concrete issue; GPU rerun not performed"
+      },
+      "racecheck": "not_run in new allocation; original timed-out coverage remains incomplete",
+      "memcheck": "not_run",
+      "synccheck": "historical 11-case pass only; new fixture synccheck not_run",
+      "timing": "not_run"
+    },
+    "prepared_images": [
+      "im-vwwDy7UMUgFqIHRwa0O0xK",
+      "im-LF2iKAP2WKy42lKF67nPlt"
+    ],
+    "next_entrypoint": "scripts/modal/kernels.py::validate_kernels --model-family glm53 --stage sanitizer --sanitizer-tools racecheck (requires explicit approval for a corrective allocation and fresh budget/source/artifact preflight)",
+    "artifacts": {
+      "attention-execution-controller.py": {
+        "path": "data/glm53-packed/attention-execution-controller.py",
+        "sha256": "a742c308733a411af477568f303ecd946973d758e27ce2d0308a16df68e11c12",
+        "bytes": 5430
+      },
+      "attention-final-cleanup.json": {
+        "path": "data/glm53-packed/attention-final-cleanup.json",
+        "sha256": "3f3c36f3399b4d835eeed00bdbd6962398874cbd16a59e980192779bd4490ffb",
+        "bytes": 1962
+      },
+      "attention-race-benchmark-graph-smoke.log": {
+        "path": "data/glm53-packed/attention-race-benchmark-graph-smoke.log",
+        "sha256": "0f2a109b1fc87273bb5188524c3dcb6dac0aec5813f1aa63071c8b187f12c7c9",
+        "bytes": 10702
+      },
+      "attention-race-benchmark-graph-smoke.xml": {
+        "path": "data/glm53-packed/attention-race-benchmark-graph-smoke.xml",
+        "sha256": "c57d04ef60c73eb1ad907c186874fd1f3ec8d93e9ef28acf4cb711b5e2769c13",
+        "bytes": 2595
+      },
+      "attention-race-build-manifest.json": {
+        "path": "data/glm53-packed/attention-race-build-manifest.json",
+        "sha256": "27b25eed5d036b283b292aa51545acf0d4ad8836f93e1837a409bbd17bd3067f",
+        "bytes": 97555
+      },
+      "attention-race-result.json": {
+        "path": "data/glm53-packed/attention-race-result.json",
+        "sha256": "b35cb90857b0af7b6079e1ae143348785fd280f56c1392409a83f4e8a115d41f",
+        "bytes": 98702
+      },
+      "glm-attention-accounting-cpu.log": {
+        "path": "data/glm53-packed/glm-attention-accounting-cpu.log",
+        "sha256": "0d12cfdec0ef94a61d6916dafdf68be94db4e9bd1bb594aa1a09edd8d4b88e7e",
+        "bytes": 115
+      },
+      "glm-attention-cpu-full.log": {
+        "path": "data/glm53-packed/glm-attention-cpu-full.log",
+        "sha256": "690a7a5bda319866ab3ec90e1f3b58542c22f6a8bc939989823b9333d6b03228",
+        "bytes": 503
+      },
+      "glm-attention-cpu.log": {
+        "path": "data/glm53-packed/glm-attention-cpu.log",
+        "sha256": "d59a3e1aa5ddb3a2d417e71dd30bbc3fba59a08640dad57f904d5d0ae083eb23",
+        "bytes": 964
+      },
+      "glm-attention-gates-final.log": {
+        "path": "data/glm53-packed/glm-attention-gates-final.log",
+        "sha256": "3507612a5e67de7f909c5daf665e72ae48703638023e5a20bbbf698936a10064",
+        "bytes": 103
+      },
+      "glm-attention-gates.log": {
+        "path": "data/glm53-packed/glm-attention-gates.log",
+        "sha256": "feabb4add9e2ca3374e538560634d1ec97dc4f4ce89aab12f3d726e36ea9b2f6",
+        "bytes": 102
+      },
+      "glm-attention-launchers-full.log": {
+        "path": "data/glm53-packed/glm-attention-launchers-full.log",
+        "sha256": "c27111e5ad4d5fc7799340d1bc1cf6820a1f11988cfd36edde2a73aa9fe15340",
+        "bytes": 1730
+      },
+      "glm-attention-launchers.log": {
+        "path": "data/glm53-packed/glm-attention-launchers.log",
+        "sha256": "4acfeba58f2fef0e149f50ef341566ffba2452dcb578b7304a6344e94a0c7d90",
+        "bytes": 9370
+      },
+      "glm53-attention-prepare-20261025T122216Z.log": {
+        "path": "data/glm53-packed/glm53-attention-prepare-20261025T122216Z.log",
+        "sha256": "9325eef86b5db3b45ca197053a8f8621e34c0304b60ef6b4feba4b90e61d959a",
+        "bytes": 14001
+      },
+      "glm53-attention-prepare-20261025T123520Z.log": {
+        "path": "data/glm53-packed/glm53-attention-prepare-20261025T123520Z.log",
+        "sha256": "2d185bcd52e9ab425ee8f3e4f9042ac0c15b0ca493b6b81b0bba78b149dac6f2",
+        "bytes": 7816
+      },
+      "glm53-attention-racecheck-20261025T124407Z.log": {
+        "path": "data/glm53-packed/glm53-attention-racecheck-20261025T124407Z.log",
+        "sha256": "9bf8e6bbe3eae77d9d138b4ed8856d4f98b35c47e63220a588f41d823e2a0e41",
+        "bytes": 16902
+      }
+    },
+    "cleanup": {
+      "checked_at": "2026-10-25T12:54:52.613892+00:00",
+      "account": "caiw",
+      "commands": [
+        {
+          "argv": [
+            "/Users/poohthewinnie/.local/bin/modal",
+            "container",
+            "list",
+            "--json"
+          ],
+          "result": []
+        },
+        {
+          "argv": [
+            "/Users/poohthewinnie/.local/bin/modal",
+            "app",
+            "list",
+            "--json"
+          ],
+          "result": [
+            {
+              "app_id": "ap-WpjxRXpXECjNFQaT5SEpAD",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-25 20:44:12+08:00",
+              "stopped_at": "2026-10-25 20:46:43+08:00"
+            },
+            {
+              "app_id": "ap-RteW4CSfTBCPj4q1MlrPjY",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-25 20:35:24+08:00",
+              "stopped_at": "2026-10-25 20:42:09+08:00"
+            },
+            {
+              "app_id": "ap-0qyh2KAOPbctNyqNLvO2Dx",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-25 20:22:19+08:00",
+              "stopped_at": "2026-10-25 20:32:33+08:00"
+            }
+          ]
+        },
+        {
+          "argv": [
+            "/Users/poohthewinnie/.local/bin/modal",
+            "billing",
+            "summary",
+            "--json"
+          ],
+          "result": {
+            "metered_cost": "30.35332792",
+            "billed_cost": "0E-8",
+            "adjustments": {
+              "network_egress_allowance": "-0.00002858",
+              "credits": "-3.81000000",
+              "plan_cost": "0E-8",
+              "free_storage": "-26.54329934",
+              "reservation_adjustment": "-0E-8"
+            },
+            "metered_cost_breakdown": {
+              "network_egress": "0.00002858",
+              "llm_tokens": "0E-8",
+              "ephemeral_apps": "3.75923665",
+              "deployed_apps": "0.04856797",
+              "volumes": "26.54329934"
+            }
+          }
+        }
+      ]
+    },
+    "compiled_artifacts": {
+      "tested_image": "im-LF2iKAP2WKy42lKF67nPlt",
+      "runtime_hashes": {
+        "kernels/ops/attention/dsa/tilelang_kernel.py": "54dc7149990b1afbeebd076e9d1055f7d711e1d952a18c4fc3af7cef06fb7dcf",
+        "srt/remnant/glm.py": "c1fbaba6d417c202f2643d66f978b07d6e1a165ea288b672bec0f5463732c19e",
+        "srt/remnant/glm_pool.py": "4654b6f13b44a330e43af7bb845667f7881639bc80e472e9b3b2b59de0531612",
+        "srt/remnant/reference.py": "6231ec9622623643eba8ab50d714f9433cd13672be927030c4070ae05452021e",
+        "srt/layers/layernorm.py": "98072d836e0c77312058521ee1015c80177b2c370da7408fd066eec61015ff21"
+      },
+      "glm_compile": {
+        "attention_scale": 0.0625,
+        "precompile_workers": 4,
+        "triton": [
+          "e8ca1525e691c5633cfe3cdce24b8ee3e252e3b68ff1b6208c43e6f4898bd9f8",
+          "3e79edce407e0e3d032d412a256fdf5ea53575d1a45190fee0617578db2ff564"
+        ],
+        "tilelang": [
+          {
+            "heads": 8,
+            "inner": 1,
+            "packed": false,
+            "source_sha256": "c029325b69f77f88493885419b78b0bea6becdfa4f6311c04a96cd505341539b"
+          },
+          {
+            "heads": 8,
+            "inner": 1,
+            "packed": true,
+            "source_sha256": "286c93f3c263440be1903f053223b514202a4603126766e745a33f19b4feb407"
+          },
+          {
+            "heads": 8,
+            "inner": 2,
+            "packed": false,
+            "source_sha256": "f82b8db076ee3a4ddc36de2371781c4545c1f9827c21acee348ac771cd4a1fe9"
+          },
+          {
+            "heads": 8,
+            "inner": 2,
+            "packed": true,
+            "source_sha256": "f08cd851f95a24fbfb93891716650b45b6c443401bb803bf2ea123c5397d5c0b"
+          },
+          {
+            "heads": 8,
+            "inner": 33,
+            "packed": false,
+            "source_sha256": "68e646ad802ef9214843bf0b7a6acd967370b8bea0445855e216ae56a3150ec9"
+          },
+          {
+            "heads": 8,
+            "inner": 33,
+            "packed": true,
+            "source_sha256": "097551773ec65ae580b328121dabf273beda45401cb8eb6d72e2b48536142552"
+          },
+          {
+            "heads": 8,
+            "inner": 66,
+            "packed": false,
+            "source_sha256": "a3826f50fa9afe2f88771450983050eb14543bc4605332b3e46911747ffbf596"
+          },
+          {
+            "heads": 8,
+            "inner": 66,
+            "packed": true,
+            "source_sha256": "f83cd586554a861f122822c988ccfdf7e87fe00ffdbb62236f4f11e67ae92f0e"
+          },
+          {
+            "heads": 16,
+            "inner": 1,
+            "packed": false,
+            "source_sha256": "d3754a265f31521ea79c71a5b8081a0e61f4b83d71f7cad15d6ef568fc2e890b"
+          },
+          {
+            "heads": 16,
+            "inner": 1,
+            "packed": true,
+            "source_sha256": "cc0392c5ede5826ee2a11dcea45ae179d2ae21c3856c6e5a823de38ef6819d28"
+          },
+          {
+            "heads": 16,
+            "inner": 2,
+            "packed": false,
+            "source_sha256": "f675573f1efce81f410491594ad1be0a9aca1054b3526f22bfca590062d754f9"
+          },
+          {
+            "heads": 16,
+            "inner": 2,
+            "packed": true,
+            "source_sha256": "f3e59b79825d97a7c24385d3e1bb2ddcb02a3e110f6768dc1bfc53c039d3d4bd"
+          },
+          {
+            "heads": 16,
+            "inner": 33,
+            "packed": false,
+            "source_sha256": "dbe39cd580da951d8341cad1b4b5afabb46813ee450366801aea5cb0240366a6"
+          },
+          {
+            "heads": 16,
+            "inner": 33,
+            "packed": true,
+            "source_sha256": "caf7aaa40d5d61495e019bbaf097a23459cc431f762aeb9707a56921a2188c85"
+          },
+          {
+            "heads": 16,
+            "inner": 66,
+            "packed": false,
+            "source_sha256": "8058d6e583e115be66ee145350e62ce741bba21f8edec967bfa48c39927e0430"
+          },
+          {
+            "heads": 16,
+            "inner": 66,
+            "packed": true,
+            "source_sha256": "8cd18a765f02e0c72d0f9e0b59ce6f6a12a8e6d4e0d4a08aefc8fdfcff5e57f8"
+          },
+          {
+            "heads": 32,
+            "inner": 1,
+            "packed": false,
+            "source_sha256": "b2a7daa1f4260693ea4163808ee861fc5f12c8d66e3a9a7214d0b26a181630f1"
+          },
+          {
+            "heads": 32,
+            "inner": 1,
+            "packed": true,
+            "source_sha256": "ddcc8d365ecc64ea38ca1b2c9899a447b6c82c3dac97cc2af96c174150ffe80c"
+          },
+          {
+            "heads": 32,
+            "inner": 2,
+            "packed": false,
+            "source_sha256": "a0254c02425c8c7998c41b9e148998128c021a260be61674745e559bcc975c77"
+          },
+          {
+            "heads": 32,
+            "inner": 2,
+            "packed": true,
+            "source_sha256": "a360f69b34c62a59b177ad81e33317c72d4144ffcccad62d72adec547ca91319"
+          },
+          {
+            "heads": 32,
+            "inner": 33,
+            "packed": false,
+            "source_sha256": "789eae46992c5598d4bea1bdd3ae2a90afd0ed02db0b4c2b24d8317f6be297e8"
+          },
+          {
+            "heads": 32,
+            "inner": 33,
+            "packed": true,
+            "source_sha256": "ade910b58d850415ff0feb2ef801c0f34d04c8daceccec793f30395857225181"
+          },
+          {
+            "heads": 32,
+            "inner": 66,
+            "packed": false,
+            "source_sha256": "50ddb4eb9ae0fa1a5070db5e6b50ba6552b7f1c82a9ec25dde27cb7a5c990175"
+          },
+          {
+            "heads": 32,
+            "inner": 66,
+            "packed": true,
+            "source_sha256": "3852c7c5b8c133f4236fbd2afa6228d97329c584656c10e196f5babc6cf4f926"
+          },
+          {
+            "heads": 64,
+            "inner": 1,
+            "packed": false,
+            "source_sha256": "dafa14ba30b0a049341481265214b0ff6e07abc0353dedb5b9826402a1d7defd"
+          },
+          {
+            "heads": 64,
+            "inner": 1,
+            "packed": true,
+            "source_sha256": "7e99bb36c7f396f206f63a1af7af4a73294afced00b7b5a92b1d43694f149b20"
+          },
+          {
+            "heads": 64,
+            "inner": 2,
+            "packed": false,
+            "source_sha256": "cb86dfb001db1dc9ce2a7c5903cf24db33a7066a08c775f529c930fee0e162b5"
+          },
+          {
+            "heads": 64,
+            "inner": 2,
+            "packed": true,
+            "source_sha256": "a40891381c21c83b3e09e71dd3f6e515f2756f6b6c2e0f773e8b8d10d83cca2d"
+          },
+          {
+            "heads": 64,
+            "inner": 33,
+            "packed": false,
+            "source_sha256": "e142f63bc78b0fb065b0cfc84c6a58fa6a12492ac0d5a7df32b7b12d6e1d2e4e"
+          },
+          {
+            "heads": 64,
+            "inner": 33,
+            "packed": true,
+            "source_sha256": "4ba13f21ec9294a0caca26f90d3168a757dabe8bf0667808a4744068f2ea09b1"
+          },
+          {
+            "heads": 64,
+            "inner": 66,
+            "packed": false,
+            "source_sha256": "21351e89e8506791f512e41ee17717aa911539dbf3a77c42d1828f0b0c7c4624"
+          },
+          {
+            "heads": 64,
+            "inner": 66,
+            "packed": true,
+            "source_sha256": "9525eacb3c81c4236a90ac9ce62c63416eec927308a3739adc0ba2afb70b843e"
+          }
+        ],
+        "cache_files": {
+          "/opt/remnant-triton-glm/57G4LPGQGZBV3Y5SB3SXTIRE2S6GCSVKG6HUGZFZJF6PFESTLGSA/__grp___store.json": "7eb46d605901bf6b3b84e041cbedfa418ce87a6779f5ab749f129cd58d37e1d6",
+          "/opt/remnant-triton-glm/57G4LPGQGZBV3Y5SB3SXTIRE2S6GCSVKG6HUGZFZJF6PFESTLGSA/_store.cubin": "96cdab7fee0fb92d49585004d11fca2344ffb374389b18427ac1775c7649a786",
+          "/opt/remnant-triton-glm/57G4LPGQGZBV3Y5SB3SXTIRE2S6GCSVKG6HUGZFZJF6PFESTLGSA/_store.json": "238712f95ef03af9da506fe190e55e0e4e30ef6d71b258ddd8477ca17a003f26",
+          "/opt/remnant-triton-glm/57G4LPGQGZBV3Y5SB3SXTIRE2S6GCSVKG6HUGZFZJF6PFESTLGSA/_store.llir": "c14a78f7a0216ac5b7e028eef18ec488cfc416406b83d818e6f244cfdf80e4a7",
+          "/opt/remnant-triton-glm/57G4LPGQGZBV3Y5SB3SXTIRE2S6GCSVKG6HUGZFZJF6PFESTLGSA/_store.ptx": "27bede7bc65d712a73f4ee503ea6e009e72f28e26f6cdd073b43e1c00fa56438",
+          "/opt/remnant-triton-glm/57G4LPGQGZBV3Y5SB3SXTIRE2S6GCSVKG6HUGZFZJF6PFESTLGSA/_store.source": "c3fff55dfbfbfb3f7c8aa920992be357fce439b3cb7b09ca8e49a00002ea7c4d",
+          "/opt/remnant-triton-glm/57G4LPGQGZBV3Y5SB3SXTIRE2S6GCSVKG6HUGZFZJF6PFESTLGSA/_store.ttgir": "b6a3d44f98f2ecb8b65d651c41cb27f626ee25293fa5a59397d584b1c6fc8cea",
+          "/opt/remnant-triton-glm/57G4LPGQGZBV3Y5SB3SXTIRE2S6GCSVKG6HUGZFZJF6PFESTLGSA/_store.ttir": "e268ae4f7422b6158cb8c60f3ec2c63c8e4e72c6f679f4c29d3256cc97b10d98",
+          "/opt/remnant-triton-glm/5DFBKJPGSHCWGPH6HTOOES4O4PRFFY5WR7Y3MIEMIPTPJCML3H4A/__grp___store.json": "d6cdba48ac61c50554edcd6eb4fefa409655c2f44a52f4e13255911a33c9dc07",
+          "/opt/remnant-triton-glm/5DFBKJPGSHCWGPH6HTOOES4O4PRFFY5WR7Y3MIEMIPTPJCML3H4A/_store.cubin": "4dfa0da9f717589ea5e8535f019a1e56bf74c2ea700b347820ecfe3a558fcf98",
+          "/opt/remnant-triton-glm/5DFBKJPGSHCWGPH6HTOOES4O4PRFFY5WR7Y3MIEMIPTPJCML3H4A/_store.json": "6c14a7e7934f8e76d66bb153526af9942206077a3e1b9df90dd59c92e49d5357",
+          "/opt/remnant-triton-glm/5DFBKJPGSHCWGPH6HTOOES4O4PRFFY5WR7Y3MIEMIPTPJCML3H4A/_store.llir": "27ccfb49c3a27eaa4679f93ed40f27702fbad1b2dc57fbb89c8544c616312ae6",
+          "/opt/remnant-triton-glm/5DFBKJPGSHCWGPH6HTOOES4O4PRFFY5WR7Y3MIEMIPTPJCML3H4A/_store.ptx": "42e8e26950782850ddeacae6ab132e218933e8f14e79fa40763ab8b1aba74507",
+          "/opt/remnant-triton-glm/5DFBKJPGSHCWGPH6HTOOES4O4PRFFY5WR7Y3MIEMIPTPJCML3H4A/_store.source": "1ca72ed2885b9308b1b6a53665e437b288c58eda4b3b723e5538b02c89a9b1d9",
+          "/opt/remnant-triton-glm/5DFBKJPGSHCWGPH6HTOOES4O4PRFFY5WR7Y3MIEMIPTPJCML3H4A/_store.ttgir": "d0fc951d945e45c87c72f7f45030f2d84f7e08ae81df2825c90b07184f1a9bbe",
+          "/opt/remnant-triton-glm/5DFBKJPGSHCWGPH6HTOOES4O4PRFFY5WR7Y3MIEMIPTPJCML3H4A/_store.ttir": "2fdd652a4a823ec0dfab2094a5fe1c8e06df400292591bd57b4a4786fffc4143",
+          "/opt/remnant-triton-glm/HZ463TSAPYHD2AZNIEVCK367L2STK5ORURIZB7XAMF2XRWZP6VSA/__grp___reconstruct.json": "e90725d022c4a4849edfffda2dcce8581ffa8e219a43b3e642a2d18560e51d07",
+          "/opt/remnant-triton-glm/HZ463TSAPYHD2AZNIEVCK367L2STK5ORURIZB7XAMF2XRWZP6VSA/_reconstruct.cubin": "4de2e6a0861663d64950a26dae415c224e402390accba08c49f1d50a1953fabf",
+          "/opt/remnant-triton-glm/HZ463TSAPYHD2AZNIEVCK367L2STK5ORURIZB7XAMF2XRWZP6VSA/_reconstruct.json": "aa035fc1786dc52e73eaf1627d5ed2ed9a97d9f102815492eb30c22d2dc0f38b",
+          "/opt/remnant-triton-glm/HZ463TSAPYHD2AZNIEVCK367L2STK5ORURIZB7XAMF2XRWZP6VSA/_reconstruct.llir": "d6f16052e5c8cafff895ae18d10c96809bb188531d8a028e3c738b2887534875",
+          "/opt/remnant-triton-glm/HZ463TSAPYHD2AZNIEVCK367L2STK5ORURIZB7XAMF2XRWZP6VSA/_reconstruct.ptx": "5acde383b50f19615392d423ccf3f3311b9a54e1110e4780198f13fb9b466678",
+          "/opt/remnant-triton-glm/HZ463TSAPYHD2AZNIEVCK367L2STK5ORURIZB7XAMF2XRWZP6VSA/_reconstruct.source": "01a05a2fed6437f523b70f60cf2ed510ce967e282e2ac3d06d3ad0be8ea08401",
+          "/opt/remnant-triton-glm/HZ463TSAPYHD2AZNIEVCK367L2STK5ORURIZB7XAMF2XRWZP6VSA/_reconstruct.ttgir": "c98b10257126d22ead22a52bb4a640c8765e9ea5bb4ca393fc27819a56cb2e3e",
+          "/opt/remnant-triton-glm/HZ463TSAPYHD2AZNIEVCK367L2STK5ORURIZB7XAMF2XRWZP6VSA/_reconstruct.ttir": "7bdfc5c16ee2a14fb9d48a36c2e1f08e945806f725df71ffcab6c06b2775653a",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/03721efa48d8720dca0cc6368b320a8a3eb4f4df08e412361a78ac0ea188b851.cubin": "bfa00ab83682025d98c4af24c49c1bf6795b5230251468125dc54bba68e7b9d5",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/07f5994c4b375ad887057a1bf29695a80d93037cfda7769e19ee38b71fcc1e56.cubin": "d9f3dedf718774662f85d551067f3afe937fd038f956c6e36fb28d6e7db01cc2",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/09425995defbde7d2f6d9b7aeda88a75b2fa70bada934568f8d8eaa072f7dcfd.cubin": "d9b8771dc01dd8c99d9b22ae13d72c2d80f4ab1a74a89ae638c960e3687a1904",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/0aca2c1b7cb1395de93417c2f28d5c21c3fef5e27242725e08613fb62062b90b.cubin": "5f851947834484aeea89314696820fb8e167720717f8cc08f721e5231e46fa96",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/0defad77e4758525635236d631b22a519249dafac964747ea4958598c25adb47.cubin": "87ceb767e4bf7abafda3dd383595b1e8c223521e69ad40abc49b6094faad3737",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/0ed65716ffbfe5761f06b58631ee51d0ae7a40496b7f684f5bdf0f205741da76.cubin": "4b78e09fc63f55ed721fe413fa626706ed28407b7700f8dda9546b43cccf8768",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/114bc84dba6c3fe05a1c4be5f3ad9ac6dfd114d1280336fc909d646a74499173.cubin": "847ba16dfa78bd9cba61bb9a5ec45dbb910600484f0c390254179cc04932ee3c",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/16f67733535822439a6f5de531fec34a8663b62077aac46b3aceb4facf6962c6.cubin": "81bcc4d952cedf2e442f29762b952c90e4ec44ad9283c34fe710c01e565213e7",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/1796e195d5841f400238737fc0c1b4716fd5b39f9598b425354797d870e6fe93.cubin": "c44a69f6a469e3f4a31e3cbf62051ce489ad9e7f56c0be431d8213d73ca50a85",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/1d534519958bf6268b2776904b38cf6a7ebd8c580af0a3e782c519fc91965b7f.cubin": "138c86ce981384c8e3ce1df44729e6647bdb229c71b2cd00008739bf63445eac",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/24dd0be59ac0e872f709b988ff8f1b816cce068e864371db01cc41fb70bf051a.cubin": "547ce06e08b8e5ef72e6af5fe6129ae7052754e5eac3de79d06922c73a943ca8",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/263147664dd765f0a93abd3b8f1a73c534b38bc0709f547dc5d0addc164e651b.cubin": "98db8c09e60d43decdea0bdff6ed9c39796843d57a789730c5905d9bf1582e25",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/26a94450a5df050c4ea33749470e3959a179d0de4e70b038a05cc9491d599196.cubin": "15153446216e8e28be8e97503e09dc2ef35e34d97d7a6517ecd6b214a6f55b2c",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/26f2309f8848ad4c94ba6ef9a175ddd724974cf8cf38d4559dbcd4221f4a17df.cubin": "53849fbe6c60c480ec1dc561bdba286e859696da93c177a25041f935699ac507",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/283dea9156f3cfca202d39e0c94c2af83809cc04a89249af5a4910a1e39c0c54.cubin": "4af06db3e2818f8427e0fe8994931c28e8901ea9c35bc52e8679b6063efe9b2d",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/289d54bb6f8cfde33cdb50e140540bd09aa08c2e61a41899b0fdae6b1a56300a.cubin": "c9dca41b34ca306d6da35c2e14b9609c85608fdc907c5b29eaea4d0ab081e542",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/35e60b61a314caaa0241247505dfe4b2040a85533c39dfa8b1950f5cd8b58840.cubin": "6dd1b3c6a4712077f16016c3df8f70c0914b4f2ac981716b6eeccd55507aaf66",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/37f82b26715f8b03611c82aec37b72730fe9484771ffaf7058fb6c2db53b56a2.cubin": "56ceabdb233ffee1dd0d72f78b692c870404457fdc82e37b9dc3c06a77041fdf",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/4612b09cc0c384e357c711eef90d34802d7e06c39d3e77caf516747bddb1a127.cubin": "a6dd234a07fdac7032026f880cd4e59e5e9a2031da6cc2d7917528dcd1fff62e",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/4783062855bd3f92a088bc3eb674f7deb2045c703e8501add1006026ac1b6656.cubin": "ce0a46da9b944279a7f68400a2ea230036c24029b6f8aa31832a7315eaddb55e",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/4a5dffe0d4c98593bc80b11a0d8ad7c6d51151e12ff216d9d21b5b65294cfa8a.cubin": "491dc0e5687fe9b8ba7fc488fdd6236a2944d3a81c4198a66f564cda084da787",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/4f348266244ac5a298390e27112e1de0243ee28c96d55e55897fa329b4cc275f.cubin": "054fc75558ea175a548f461007fba05991e15661ca392c4cccecc2b1d90e0c52",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/507ea9e9daca439d1e05d8337cdf311556378d773d9cb27066fa77c1581b9976.cubin": "3471f9346cd68e5ec815542c4ca074fc0f57d394a0cdc91089f29e704c138ed6",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/50fc811d1e1a322a990e4ee9469f3cb4466743db5036309d21b4be5de300b114.cubin": "ecb90476ea090a47b0878a52ed28a63d162eb3d4e85e987d1897b69f999b12d9",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/51f4a3ba92a44080f3f5a13e948db5bd54c7f1b7a2b7af9a8fd20c24a8992d28.cubin": "31c3e2941e23ac5ee97082f63e9e4f7a85a4097c9b176e2f6f4b4137819bcb3d",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/57a4d68f1789b6dc5d90df1655ca25ce5aa6a1adbeafd270994356f3f8333d93.cubin": "9fd087b7ae12e3f8bbd8b948116cc57fe6e9100113d2dadb54f1dfcb711fbd49",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/6094361633a49137d57e04ab34f02e69f15b488a8cadf6e41cc7f6d51766fda0.cubin": "aa3c57f9180179473be7bbe9d08c98e535d5687b2d8c942f2f80335ad9b8b7b5",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/64f61e2444382f58dbe29b295e027a937118af11d385863a6c87605deceb1e8d.cubin": "3c97c067d48df8e39467881410175bc56ded35268968adc3dac035ecb67973b8",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/663c446d312465b14fef3dd689a4dd04b9d9dd3a2ee7f929ceef6f939e194a5b.cubin": "95f9e2f11ce067b433a1f8fe7e8c7978177974aee557e61a3f701991302b510d",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/664a8bd1c5e050387343974ce5c0d387470d56132678ed9d5e4e96fcc0140976.cubin": "bae85d9c6ea0f172e5c430c1e7b212ce6e1069bed150d04df719516130f10b1d",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/6a2de5dae2bfe7cdee25b59f5db08e77292d6b9c53339a0a86569ba408322963.cubin": "3ab78d2e54ca0a244a178329c01fc2e345180e99424b0d932effb17db0228f57",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/6c88ba08b6252004c37012102edb2f16ec251904823408c6bfc47023e3e5b605.cubin": "095af5491e9d51f34ebe9147425011875d72a2b40a43d0561c2987d0260b1109",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/6d503dd0d3b7fcd0897d5bc8512cedce7bcb57baa1a4d07a108662af867a2c43.cubin": "83bae66d05e12ef1600d10b2a615a9e40a9752e8ab0a8247ec86fde44a2338eb",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/71bf305ee4f64a0df310bfd6c053d83ad113fd73618720b2ba5ad9ca4562ac18.cubin": "4583e79b9ac99b61bd16b58a450f978a2bc08918fa85fe8ce84fd0f4a4b9dc5d",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/753fb007081f1120ea396be598c03cf224a36e9a03a0d90ffc8e8f1510757f17.cubin": "94b1420eba722381f1ece9c7eaa5e0f75c6cfb08e14ebf9fe878f634d5502783",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/76640b04b9000e910d92369a92a21bb3da324b4493e92ca5723cc8ab99486cf2.cubin": "4714a4dc96420e1f8ca71eca12159c9ae2c7eaa36da5a807a8d372d6d487dc52",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/7a5b60cf10943524d9a8810c7d474e69ac95612d30cb4a5bc5d0a9d278d6f31d.cubin": "8c456112c8d2cbe545aa49a3e481d1be330ed2423e32fcc12d5724fa29f60c1b",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/7dccebdacf1041e9c36b65dcf51a2e3e12c34588c2675fff00ccc063b66f2666.cubin": "ae0d088d5799f0bb24412a40a9c591f4690c5bd77ad09409aa91a89df99fb38b",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/854cd034de922782dcd7eb2a2dc74b7cc7a3f2d2a5035ffbe2c118fd4c321aae.cubin": "015bebf0d4176d68d605cd06fdcf8d836d28c90fbd2dec4c70e12be50cee9307",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/88c26e23eeb6ad82244eb1c9ee8d4be58ce97c9bfe188f0ab98cd5bfe139db5e.cubin": "6265254350f5c3d86e516265fc6f04d81462712ff81afecff81d2493e983d828",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/89479a9bf6f2acf0d19d567910426c668ee0b2c3717fe5263ad1bd17363f54c5.cubin": "6e64db86b461303e02079f6546c6b3c23bd804c8b13c15e5f345025bc5840b75",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/90bc49b45ade6471ffa696705c3dcf78be8051b1aa310554226ca45885fa7c0f.cubin": "aa96819e4afcf33e4a6dfea7d836e35ba51985bd6513c02f0e4a3d37ac9e9bd4",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/9466852c439167382126f89171584aab5759da146d81d33d9c54044f1e7fb6b5.cubin": "c995fc6326ff9f4c7a9d2050b9b53950c9898beeeb04ca3311da19d811004b4d",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/949e28e3644d456390bf510a08b0705729e0284d2bf461380681722168906161.cubin": "52344bbdd1ef416f5d32b9557dd161b45355166cb6150e6842ff8e81d68f143b",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/988972eba7a1954d57a006f87ec476e2d5a635a23b732e905e6b158125ce4fc5.cubin": "d38ca3d7b26a6eab14bb4f29c711bd220631236f9da9830741f27787256a7f97",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/a3850f6844189d961fb5416cbb5a880a98062d7b89415b97cf69926193093e30.cubin": "1d66e64b5324c15395c7db64ef83a809697f6cbdcd73415a702284780efe34d6",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/a39a86b5da48489b28f64519d3757c30f72fdddc26379481f7a55becf6a2aa65.cubin": "11b0ea21fb225be46addc855a7bfc6d3784bce522e126314419b02ae17149d9f",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/a3fa7ea0a45da01a69cd06bba93a9a48ab4a14160ce9bf8e4036e7e035f77f8d.cubin": "b4a4246d32280ebd703f52a1f8e990d72401044a7ba06bd965b4e9dcfd19cbf0",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/a565278bd3a808e748c1b4d4577579a579718c649659a231419811a1f457ce81.cubin": "e9d3af6e146ec243cd55cc908830609715392b35c8188d258ee6798170178a0f",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/a5ba5b837278735d079beaad13170a3eeddc16e1ed4e240753d78d8958386ae5.cubin": "a8cdaea454db7126d0456614ce228a71d5280c6c8a51dd20dacb132d5cb1cdce",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/a79071649984d3a9fb2dbe2db5ae18105391dd2f93dd784299a398b76219bf21.cubin": "3bc20a379b2097a1b38a3c3affe36fad5c6dd871ae35e69e52e9ade358f3654f",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/ac5a6743e5d7de548707a03d9a21653fa7710e6c7aa3799626200eb17861ba19.cubin": "3b1dca7bfedf2bf4ee4fed207e54ebf442060865e08c05bacd86e258c9565d31",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/ac6201899bfee473e27ce1116717b1d53a1739a79aadebbdc616278ebdf80bce.cubin": "789dd9afd3ef473f2c62c58e13cd39323d43c6da111806378c118e50699f12a9",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/adad18333bb21118c249f8815b07c89004107eebe647bd5771721f1df6928521.cubin": "3830bacc9bf55c68f87e4f1831f720a767bf21a73f083012fbfeb1b4f2fb096f",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/af781a46fe63a9cc6d4bf9ba300f27c8cabc4abf7675b8938d00ec36209702c3.cubin": "a2e54b7d3cc92d11cff84af148e50b0767051781bba1aa2608f6cad6e127fd61",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/b145fcf0a898eeed50ed191ffee7c3cd3eebc1e8c9d72a919e8c7509a8c6b47b.cubin": "e2da60dda0f6a4b2ca9089ca7d0c1089d18f2939154b2ebd77515db69571e241",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/b30811d79eb18ea48aa9d380155a23d4d498d69f240e76279c7ddbc29e7d8815.cubin": "9b49735a903258b58c7f789ca7679e29fb77c9f421706d554849df9ed9c2220d",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/b84e8333e1b02eafca64a7c33604ab99c754a290fcbb0913edda3262ea0aa46b.cubin": "620b7da57199c317c07fc79bc55820d210a979ee771efb005b63f7b86f15ac74",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/bb698a56b19630372de66519c7271b6562bee4e3e553711e76976e6f726dc021.cubin": "12538ff9bb126a3ed547b3b4fcd0a6408cb4eedb17a868c4e41d773a40e37499",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/bcbb0b5fbc3a4ea555e66d83ad7d9f2b0304aa1b57249bb143a131339d32542a.cubin": "5db370c0028157954d7ec160ed507755f10b5cfd52ba6c42af73aab96f35638c",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/bf3da02c251a85eb6a805ea0af3319df1a36d205f6f230f462819f7167723bbe.cubin": "1a49be60bc563b1d52f8e7506782c80251760379ab1bfa6b862fa80d3243a670",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/bf5fb407fd42ae422b06242bf798358ed8d658107074e60ecc0755139c52c7f3.cubin": "ef87d8f0a3d51abeca0b07b0a35637a14c5ccb412161ac461ff439ea90c49eef",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/c00b08aafa3a956b7a5bf2216bbc9b1fd9cc036bfcea54eadfc472f02f834872.cubin": "8c7f6b0b39e421a8d2d0117c628c4bb96485a1ab272102f3843e7697870e476a",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/c7bfa59c9e84df704fe7fd391aeed0a7d21d29e952f1b2a63247d1f0dd5e2b4f.cubin": "e95ccbf5d1cb2a92868eb7eb964c9d4eb861c22fac3140ee2860b726acec7662",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/c82bc39be950c15a8e0c887e643b855f241ee9ed0b254349b813fa27e990d8f9.cubin": "44811ad3a73603792730d98b724cd6477a98b09fbcf8ea4d4a5d1d85fb95d582",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/d0cb51109fcf2be6f3540ff33e28376a185e2fed0f06563b9f1c7ffdc5651b67.cubin": "81239d95410044d55fc07d805c1f73d99855908da6631cbb28dd705d54b7c7e1",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/d1711a19fcab07ef967ef42ec5952bc2ca434abb8c9c1938551ba81529722f6b.cubin": "825480a4bdc87435178f5c3ec59342e1ceba696293e12995035ba6762c806083",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/d55eadf47b67b732281c660f6c4fc873e38740f0d3bff5395a7decffa2318727.cubin": "4f2be731529dca3ad738d835285aa7dfb2a7bb4f3dbf02c23b6bb744146a81c1",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/da84b25faea3ae845dbee3bb451b0f9012b5c73f0835d30d9bd82b0122059663.cubin": "b020985da1a639332a2f1ddc849a2580c0a863553dfee9dbcc57e4514dab2d81",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/e2e3d8615fc31d6fcb155f180dbed5b2a94e2bebfa3d63f9188ac941754a307b.cubin": "120cbe32a3c7cd273b2cae262dd2849a1205a9e0fbc0d43f795b8475a82ba7bc",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/e33c0f5caa2d27c0fb7fc81d86a10bc3916918f20e6b2faf648e27d92e3d3156.cubin": "e4087556cb97f0a40bf4c7a0dafc451e0ba0c1f4a1317e6e9de26aa4609e45e6",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/e6c0540ce5d7e0ccd5982e7804f221b939321843f369cd941c367c8a421f8581.cubin": "1ec62d0e314b7cbc0586ddc2912bc16e7229a3b7d067bb568e9329e3ffeb2770",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/e7ffe075ea0244022f3d9a5f8156e67c289bea9ac13689c36d351b05499a96d4.cubin": "a489c8108a610eb9b108f2cbfd8ee7f42bd831d1e0be6b2faa2403681cb83e41",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/e8715800212c743bf01031f1eb801f4270cd58ee859bfe34c93b98af86434ace.cubin": "6d14f5edc972ff7c4776a1a90e9e8093983dddf0aed96e67b2f50f53054d3924",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/ec3c7d1e121d8ad656eede688490e795d2eb9e034ad4ca1eedc2472340676681.cubin": "af3c0fc580be6c734a0737301df767f717c7b85354df4d97673393fc0a12f190",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/f77b1138477c5801b04b70739e56d776e5382e760ab7fafadfe5220f2c31fc74.cubin": "63da41431a78f866316f490993808336d9e6ca4d94e0970061fc43ff05ce7c79",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/f96af57bb9e42e4e13b969050797d26b9be44e477de5415ee22f4c8a61a3dfab.cubin": "2f99eedeaa01f980ff1911ba5cbca24fabae016bf1ae3a4a9f07d2a841b5d06a",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/00059c4700a4c2e068fbcc4761367eb7fcd654ef7569f5d5e756ded0b58cfbc9/device_kernel.cu": "f83cd586554a861f122822c988ccfdf7e87fe00ffdbb62236f4f11e67ae92f0e",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/00059c4700a4c2e068fbcc4761367eb7fcd654ef7569f5d5e756ded0b58cfbc9/executable.so": "9ef2ae23fe84681d91719fe9127c4fa6d9cc20c0d56dadebe0533f4010ec4339",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/00059c4700a4c2e068fbcc4761367eb7fcd654ef7569f5d5e756ded0b58cfbc9/host_kernel.cu": "006903560a5dbbef541c9bfff3bfe6236bcf6171509973878479a0f278fdf6ab",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/00059c4700a4c2e068fbcc4761367eb7fcd654ef7569f5d5e756ded0b58cfbc9/params.pkl": "a4741d642089f2e7fc942c81c2550e4348edf7a0b537483d40d0ce574eae4625",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/036218c8c2c059ff656ab27fcebf277858aa39934333341fa792abbdd6dedf4a/device_kernel.cu": "a40891381c21c83b3e09e71dd3f6e515f2756f6b6c2e0f773e8b8d10d83cca2d",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/036218c8c2c059ff656ab27fcebf277858aa39934333341fa792abbdd6dedf4a/executable.so": "38388254938297e7e7b41381825258babf6bf123c8a3a34773e3593db03267bf",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/036218c8c2c059ff656ab27fcebf277858aa39934333341fa792abbdd6dedf4a/host_kernel.cu": "117aa8ebdf9de760f7b43653d3ff42676a11c64590e39f2b43771e096d2fb0f7",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/036218c8c2c059ff656ab27fcebf277858aa39934333341fa792abbdd6dedf4a/params.pkl": "a4a3bef096f5994a5acbeab9a1c315269e9f4ff161fd92be9fd859148cdeebfc",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/07013aba8a62ae97d8e0cfc6901e14163f5009263a62176275daa5890798fa9d/device_kernel.cu": "097551773ec65ae580b328121dabf273beda45401cb8eb6d72e2b48536142552",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/07013aba8a62ae97d8e0cfc6901e14163f5009263a62176275daa5890798fa9d/executable.so": "47870a33a9a600f3c20bc790b97f32ad1cae62407b7be77bb41debf277198c76",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/07013aba8a62ae97d8e0cfc6901e14163f5009263a62176275daa5890798fa9d/host_kernel.cu": "872b8e24b573fb89213a09c94fb13c6994df4057f36c120fbc902b470af0dedd",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/07013aba8a62ae97d8e0cfc6901e14163f5009263a62176275daa5890798fa9d/params.pkl": "0c957bdd9f3580a580346407c289628fc52978b6471f10a44f58bfe3c48a5fa8",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/09def89626921870f2c6e707ba50268882b9f18aff93bf005b3112023c35ce3a/device_kernel.cu": "042129e2ffbe24ab0fcdeaf1c7cbd7dcc91b87ac9ca945683c15d9eb7bdc2b23",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/09def89626921870f2c6e707ba50268882b9f18aff93bf005b3112023c35ce3a/executable.so": "2f9e270f60b561bba7d67a044c25b58136256e6bfddab8f55612f035404f46f5",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/09def89626921870f2c6e707ba50268882b9f18aff93bf005b3112023c35ce3a/host_kernel.cu": "20ccb331a078f3a7f0d9df5b0d1a344a5d5993da92cef8f9895d24e6bdd5fd62",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/09def89626921870f2c6e707ba50268882b9f18aff93bf005b3112023c35ce3a/params.pkl": "2f93c0e41871751add4f8b674769c3496ebf80a65bbad31f350ab0ef771a7363",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/0e28da63f50ec623daaff53a96efc7d7b42d3184c80e5162586ddff95dfd3ebc/device_kernel.cu": "e142f63bc78b0fb065b0cfc84c6a58fa6a12492ac0d5a7df32b7b12d6e1d2e4e",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/0e28da63f50ec623daaff53a96efc7d7b42d3184c80e5162586ddff95dfd3ebc/executable.so": "6303d8501eb9b0a48a693f6a0107d75e9370b3a65c01f2845b5eb19934cbd6aa",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/0e28da63f50ec623daaff53a96efc7d7b42d3184c80e5162586ddff95dfd3ebc/host_kernel.cu": "bf443ff9cc470ee2b93fb5b0f385a3553d5753799cf85b52f76a0c189b53bb7f",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/0e28da63f50ec623daaff53a96efc7d7b42d3184c80e5162586ddff95dfd3ebc/params.pkl": "6856795b784da2b25a87dba8964ef1fc9796c96a682267b2dca13108077fea3b",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/0e896bb7ae41fa2c79ac25baa5707763636e8b6b0cb018c98a41f2a047e55f79/device_kernel.cu": "ade910b58d850415ff0feb2ef801c0f34d04c8daceccec793f30395857225181",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/0e896bb7ae41fa2c79ac25baa5707763636e8b6b0cb018c98a41f2a047e55f79/executable.so": "c56c2246c08ee78e8348bf219a150ab546b21a323a99a31ec903b7ab3e89c89e",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/0e896bb7ae41fa2c79ac25baa5707763636e8b6b0cb018c98a41f2a047e55f79/host_kernel.cu": "8175fa6cc4e6c6464a90f6a5f56ebd2e498e25ec8a10de28f6cfc7623c7e2cd3",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/0e896bb7ae41fa2c79ac25baa5707763636e8b6b0cb018c98a41f2a047e55f79/params.pkl": "2a0cb352b8cab6eb037ef5d297384304a76d1f7e122149e1c1bc108ce11f0dc3",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/0fd08a44dd0c965f805213961878697128ec493ff4313f1a538b288c29e28108/device_kernel.cu": "cb86dfb001db1dc9ce2a7c5903cf24db33a7066a08c775f529c930fee0e162b5",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/0fd08a44dd0c965f805213961878697128ec493ff4313f1a538b288c29e28108/executable.so": "99c0e6d34af83937eac9c66fe5f780921bbf38e8994b60133a6b59698254a53d",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/0fd08a44dd0c965f805213961878697128ec493ff4313f1a538b288c29e28108/host_kernel.cu": "62219cf8a17594c7d817e2d3ed38276cc722b8581dda8df9f263fd6ce6ee76fb",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/0fd08a44dd0c965f805213961878697128ec493ff4313f1a538b288c29e28108/params.pkl": "3e2e26410a50480f250e57d548bc553a23c2b423ca2634f67b64a16e9aad5a54",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/18ea58d276e14d1bce7c358539db82b97975bdf46a128544cbb803edf80ed7df/device_kernel.cu": "32c5080857ba46caed9ab875f77c24b9d22fa7c1793d024b39c01506efb28f2e",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/18ea58d276e14d1bce7c358539db82b97975bdf46a128544cbb803edf80ed7df/executable.so": "ce7e7710f6d80b44cc5e6955afb5cee5f94b625875dcb41805e0eeed3ff71d30",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/18ea58d276e14d1bce7c358539db82b97975bdf46a128544cbb803edf80ed7df/host_kernel.cu": "870cee3c2a614e1171f61add4d7a8164cafba23c5b66baf6641a198d4bffe0a1",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/18ea58d276e14d1bce7c358539db82b97975bdf46a128544cbb803edf80ed7df/params.pkl": "167bbb32237fe3dc628c7d99158bbda65c544d83ba1e5558344fd7c7ae81b30d",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/1ccac6adba188bb59fa316ae7df361444d2c4cf39e99b829f6d61561b4b8db14/device_kernel.cu": "ddcc8d365ecc64ea38ca1b2c9899a447b6c82c3dac97cc2af96c174150ffe80c",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/1ccac6adba188bb59fa316ae7df361444d2c4cf39e99b829f6d61561b4b8db14/executable.so": "b443306cfe38ecb9f37cf00b1aa8e6f632e641629abfa6a68257d4c3bac3bd1f",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/1ccac6adba188bb59fa316ae7df361444d2c4cf39e99b829f6d61561b4b8db14/host_kernel.cu": "870cee3c2a614e1171f61add4d7a8164cafba23c5b66baf6641a198d4bffe0a1",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/1ccac6adba188bb59fa316ae7df361444d2c4cf39e99b829f6d61561b4b8db14/params.pkl": "167bbb32237fe3dc628c7d99158bbda65c544d83ba1e5558344fd7c7ae81b30d",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/213ba4c28a549383963bada1300c3ce5dd24ae96f9875be1f778da75e7ad39f0/device_kernel.cu": "da15396b684f91dca6bbe9caf91617bb51785c443389e7e442d3cd1acb1e80d1",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/213ba4c28a549383963bada1300c3ce5dd24ae96f9875be1f778da75e7ad39f0/executable.so": "172eff068e5a4ffb9d6a9fc40214d1d8362e13c10d37ab76ef941c8a23d892e8",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/213ba4c28a549383963bada1300c3ce5dd24ae96f9875be1f778da75e7ad39f0/host_kernel.cu": "93a28beb8045a80f916406393a07dcc19f2620d01c0dc57e28efca582223ebe1",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/213ba4c28a549383963bada1300c3ce5dd24ae96f9875be1f778da75e7ad39f0/params.pkl": "e63666853a9b04a49098ca62a3009d38e050976f06fbc83d603e63425542a74a",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/24899ee3df1f037bb41cafd03818c439e47aee41ccdbdff5e011fab4e2f8045a/device_kernel.cu": "3702e3f6c81c803976093677cff8921d8931d86f5465b001a7aab687225cc38e",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/24899ee3df1f037bb41cafd03818c439e47aee41ccdbdff5e011fab4e2f8045a/executable.so": "15e3246835fd1dd2b984885f6b87c3c9a794b1dc315a8e5b9c552facc77bc1de",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/24899ee3df1f037bb41cafd03818c439e47aee41ccdbdff5e011fab4e2f8045a/host_kernel.cu": "62219cf8a17594c7d817e2d3ed38276cc722b8581dda8df9f263fd6ce6ee76fb",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/24899ee3df1f037bb41cafd03818c439e47aee41ccdbdff5e011fab4e2f8045a/params.pkl": "3e2e26410a50480f250e57d548bc553a23c2b423ca2634f67b64a16e9aad5a54",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/36d33a30e0d0a4f0384d9d578e7bff7fa1e17c6c220c81f7c1970f5b043c2841/device_kernel.cu": "c55b71db21b739f25490bae87461a16e601b1fb3fddf1c9f8aa4abefefa44962",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/36d33a30e0d0a4f0384d9d578e7bff7fa1e17c6c220c81f7c1970f5b043c2841/executable.so": "2310f2cb5fb67894f20a158787233fb396adb8a8336554d1866073e34cb125d3",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/36d33a30e0d0a4f0384d9d578e7bff7fa1e17c6c220c81f7c1970f5b043c2841/host_kernel.cu": "5a816038c5b9095371de1a1cc59d14f43a1e31b2de4dd5d698b42cf9ded08231",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/36d33a30e0d0a4f0384d9d578e7bff7fa1e17c6c220c81f7c1970f5b043c2841/params.pkl": "d8b13f0954a416f3fe34384233152817cfdfd52037cbc72b1c0445d93f8e7d70",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/3830211cd2700a84f6c853ff1944215ea73baa8f0589242599d6f28d1b2693cb/device_kernel.cu": "b0a1b1faa809571107ab180b545a38a73c2ef4d65aa627400c97e0aea2bae94a",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/3830211cd2700a84f6c853ff1944215ea73baa8f0589242599d6f28d1b2693cb/executable.so": "8a0301b0dd39c7c3dd42d71db1c238cb2d4315d52c8d57200695e2212964c465",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/3830211cd2700a84f6c853ff1944215ea73baa8f0589242599d6f28d1b2693cb/host_kernel.cu": "89d5d93229f93ad46ff70a649c079cfd28d871dab3788666e5e097201780fc04",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/3830211cd2700a84f6c853ff1944215ea73baa8f0589242599d6f28d1b2693cb/params.pkl": "52b0857ab0c7e71588ec2021df59b104e481da56eff0727d2f7065067d3ff9c1",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/38304ddb06e5e2873ca5cd74663c5b82b3802b39720a16410112634312e70c0e/device_kernel.cu": "b42fb85073cf4a6373dc70cc049cd93741a55298061a0acfa280fdecd3d4d691",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/38304ddb06e5e2873ca5cd74663c5b82b3802b39720a16410112634312e70c0e/executable.so": "94ce3442d0dc5e697fd8ce63f9e10a0a276539d7753a1c5cff401459e18ea676",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/38304ddb06e5e2873ca5cd74663c5b82b3802b39720a16410112634312e70c0e/host_kernel.cu": "b1d10b043d7a1f27226e392ea888c415306e62fba2bac780513b808be98bbb65",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/38304ddb06e5e2873ca5cd74663c5b82b3802b39720a16410112634312e70c0e/params.pkl": "d451901a40f9fc3639d25bae5bb3e3aae118bd94aaf27831cdab9ff41b0730ae",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/386bccbfaffa5c5572ecb126f1bef34534972cab8cddc683afa409b9be98ba2a/device_kernel.cu": "661d8e15a18294c2725f0afa21a7c08dad40ee4ab3e08fca134b4de05529dcbd",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/386bccbfaffa5c5572ecb126f1bef34534972cab8cddc683afa409b9be98ba2a/executable.so": "4034b59143e7852aaf5c75526a1c43f2e479484aa6b65d0a4ffa76a68e634845",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/386bccbfaffa5c5572ecb126f1bef34534972cab8cddc683afa409b9be98ba2a/host_kernel.cu": "96526b104eb4fa89945ebbf66ef6f0c0a46394b970577a93416d2681378bdd48",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/386bccbfaffa5c5572ecb126f1bef34534972cab8cddc683afa409b9be98ba2a/params.pkl": "3e85fa55488b5b79bc51b30a2a77a4ee66c79ce1cc5ce8f2aa8c79bdf09db3ef",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/3cb7c69321798310d29c78462bb80838272ec4f4d68010dea47ec5392bbb64c7/device_kernel.cu": "b453b7572e91725ab84010ad001ea6f046193e27adfdf693c9b7aaf74fabda23",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/3cb7c69321798310d29c78462bb80838272ec4f4d68010dea47ec5392bbb64c7/executable.so": "50b73fa2e8228024c00b2b0741b80b1f28e2b02866bb69e00c2b24247152d8e9",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/3cb7c69321798310d29c78462bb80838272ec4f4d68010dea47ec5392bbb64c7/host_kernel.cu": "8175fa6cc4e6c6464a90f6a5f56ebd2e498e25ec8a10de28f6cfc7623c7e2cd3",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/3cb7c69321798310d29c78462bb80838272ec4f4d68010dea47ec5392bbb64c7/params.pkl": "2a0cb352b8cab6eb037ef5d297384304a76d1f7e122149e1c1bc108ce11f0dc3",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/42109a24a57ff4d72685092753d2792381d3e2b7e98fb5f7ea535c1f9fbec87f/device_kernel.cu": "4ba13f21ec9294a0caca26f90d3168a757dabe8bf0667808a4744068f2ea09b1",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/42109a24a57ff4d72685092753d2792381d3e2b7e98fb5f7ea535c1f9fbec87f/executable.so": "62101cc6614ae1f3b16f849f56bb29ad36b66387cea11b5252aa691fe8a9d89a",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/42109a24a57ff4d72685092753d2792381d3e2b7e98fb5f7ea535c1f9fbec87f/host_kernel.cu": "b1d10b043d7a1f27226e392ea888c415306e62fba2bac780513b808be98bbb65",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/42109a24a57ff4d72685092753d2792381d3e2b7e98fb5f7ea535c1f9fbec87f/params.pkl": "d451901a40f9fc3639d25bae5bb3e3aae118bd94aaf27831cdab9ff41b0730ae",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/422b95580f4feb6807382498902a1bab8036251f6361a70559992c20b1cba6d9/device_kernel.cu": "f675573f1efce81f410491594ad1be0a9aca1054b3526f22bfca590062d754f9",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/422b95580f4feb6807382498902a1bab8036251f6361a70559992c20b1cba6d9/executable.so": "b6a196db20fa9fa7e2ec3158c6b82b2402a36a2865cf07c63e9ef78fcd2947c9",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/422b95580f4feb6807382498902a1bab8036251f6361a70559992c20b1cba6d9/host_kernel.cu": "ee7908f08f6def73c8fc75a643be7093c7a26bffec5ea9db728ded35f197e139",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/422b95580f4feb6807382498902a1bab8036251f6361a70559992c20b1cba6d9/params.pkl": "801b177e3f864da3ee1ee196a90fe350518c65cea71c7d6c76102e82714e016e",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/42af2425f7e8b2d59d79c99b6dd23753c67cda56ff43cda4758851d38e1c1679/device_kernel.cu": "b87a84210dd7bf52d63e704685332c1469182596c306b0e1068002ff9d9ed8b9",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/42af2425f7e8b2d59d79c99b6dd23753c67cda56ff43cda4758851d38e1c1679/executable.so": "c4e29539e78c6369e319bc8f2e61d02eb78731d1678cb1d06f93f1f49238847f",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/42af2425f7e8b2d59d79c99b6dd23753c67cda56ff43cda4758851d38e1c1679/host_kernel.cu": "ee7908f08f6def73c8fc75a643be7093c7a26bffec5ea9db728ded35f197e139",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/42af2425f7e8b2d59d79c99b6dd23753c67cda56ff43cda4758851d38e1c1679/params.pkl": "801b177e3f864da3ee1ee196a90fe350518c65cea71c7d6c76102e82714e016e",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/493976e43ce2f60d175a447ca4d607800bc5e07ae41965fea7a1843c7eb8e18a/device_kernel.cu": "f23987f259822b9db2163d7d104c3c44a3a077fd20451c561400567e3e77298d",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/493976e43ce2f60d175a447ca4d607800bc5e07ae41965fea7a1843c7eb8e18a/executable.so": "d3e56b57995a73e4384a62fcf6ba725b8650c759009311d95249069be542531e",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/493976e43ce2f60d175a447ca4d607800bc5e07ae41965fea7a1843c7eb8e18a/host_kernel.cu": "a689193dd9888a9e49e68569f434724c693debba1e3be7818988c9580ebb7677",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/493976e43ce2f60d175a447ca4d607800bc5e07ae41965fea7a1843c7eb8e18a/params.pkl": "b4b6a95d590100c9ecad615f96c61fab37b80e8e78c2ba0c86013cdae1305ba0",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/4c22e8fc55608bd7e15c7fe5757893af2ebba75a9b948c77a16dac29e47d3cd6/device_kernel.cu": "ba4b74f9764568cde005633802db3e86fdc9f5e496115727f80d6076dd379f42",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/4c22e8fc55608bd7e15c7fe5757893af2ebba75a9b948c77a16dac29e47d3cd6/executable.so": "826fec5538b0f5a93403c4ff6bba55226f326ff6a537e4a9af39790f2878ed30",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/4c22e8fc55608bd7e15c7fe5757893af2ebba75a9b948c77a16dac29e47d3cd6/host_kernel.cu": "fde97d49e005d0a5a14409d7783f228e94db5d1eb768e24ee35666027d47c83a",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/4c22e8fc55608bd7e15c7fe5757893af2ebba75a9b948c77a16dac29e47d3cd6/params.pkl": "be4d067dbf53003ea843ade9751f7f52558a64f6c3ed4ff65b60d0401c05536a",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/4e3eb8fb4d16e31948007ee03e95ada31b6bf29dfe6d2474cf775b805bedd1b7/device_kernel.cu": "4227d728171ef0ff10fb05104313550d0ca34a7afc6273e748d632a23d4d3548",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/4e3eb8fb4d16e31948007ee03e95ada31b6bf29dfe6d2474cf775b805bedd1b7/executable.so": "88fb495a25abc08e58210992b7f47c9b92ed62a3e35e509e4fb09404c651de65",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/4e3eb8fb4d16e31948007ee03e95ada31b6bf29dfe6d2474cf775b805bedd1b7/host_kernel.cu": "b19930d9440615bdbf9996b132867db763abaf215c1e3fd65957a8008e70dee6",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/4e3eb8fb4d16e31948007ee03e95ada31b6bf29dfe6d2474cf775b805bedd1b7/params.pkl": "6fc09034646067948da7bca9287670f7d6907e943a46c280a356b0f89e35cfd7",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/4e454de070de44cf134381b69062553cde4c15d0547783be4d2af5abe7c5bdd6/device_kernel.cu": "3852c7c5b8c133f4236fbd2afa6228d97329c584656c10e196f5babc6cf4f926",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/4e454de070de44cf134381b69062553cde4c15d0547783be4d2af5abe7c5bdd6/executable.so": "23c32657d8db94fa8a8c9148a49a33d37721b289f722dd5e1dc039fcc58923cc",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/4e454de070de44cf134381b69062553cde4c15d0547783be4d2af5abe7c5bdd6/host_kernel.cu": "b19930d9440615bdbf9996b132867db763abaf215c1e3fd65957a8008e70dee6",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/4e454de070de44cf134381b69062553cde4c15d0547783be4d2af5abe7c5bdd6/params.pkl": "6fc09034646067948da7bca9287670f7d6907e943a46c280a356b0f89e35cfd7",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5024338242af5feae6ca3d50338d48fea38a1a2e086b2688339cc847c838cd6f/device_kernel.cu": "8e35086d425820e0b63fc81183f1077c2edcf1113cfb5e4d40b3acbb023382f7",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5024338242af5feae6ca3d50338d48fea38a1a2e086b2688339cc847c838cd6f/executable.so": "022d6142ac6e1caf4255bba199d10851f540b07717ccdb6eaa3415297a38721c",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5024338242af5feae6ca3d50338d48fea38a1a2e086b2688339cc847c838cd6f/host_kernel.cu": "222ee2cabf14bcc640899285792aff8486eea5c647501d4ecafd6cd4fe2ba3a3",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5024338242af5feae6ca3d50338d48fea38a1a2e086b2688339cc847c838cd6f/params.pkl": "0473ae3bdba37bc28cce95c3c690c01ed173b2a37dcf1d988048aef0faa9a0f8",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5100f45fb3038041beae0bbbeb43a6cbaba152a4d7b18c559301a5354af491a7/device_kernel.cu": "4d4543e83c60a8690915b314ee966485a027d07dd87b29ec4514180694fba235",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5100f45fb3038041beae0bbbeb43a6cbaba152a4d7b18c559301a5354af491a7/executable.so": "af5dfce84a0fd963bc474f6e52f275e5a8afc31eb35dbbda96d05b906341318c",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5100f45fb3038041beae0bbbeb43a6cbaba152a4d7b18c559301a5354af491a7/host_kernel.cu": "b26954150d3f4a7c63c769a6c4b864f526c1cc68e779887632728d56e3a51740",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5100f45fb3038041beae0bbbeb43a6cbaba152a4d7b18c559301a5354af491a7/params.pkl": "3997fc7b0241fbdf99192dd38a05a202eb2f17248b51108ae1160d7d16228201",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/579f83b85625ae92391eb788be748675253257790172d6db6996401d348a86dc/device_kernel.cu": "0a4b55ebb9198beecdad469ab88ccae03966127a243a2a83d9cb6cb10afd6c29",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/579f83b85625ae92391eb788be748675253257790172d6db6996401d348a86dc/executable.so": "b6cc3e0013c9a536b3aee3ec500abf3abab29aec3ffd5dde2234213af3559900",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/579f83b85625ae92391eb788be748675253257790172d6db6996401d348a86dc/host_kernel.cu": "7912b2164330363997471faac7bae14ef00ae89aa4698c2314165e504f661ce1",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/579f83b85625ae92391eb788be748675253257790172d6db6996401d348a86dc/params.pkl": "d3301f4b2c70fe130b53924245ea798a9f0b32edf58fb8a7ea2504149480e1ec",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/585d1dc2c0cb22cc556e86d9e89045bb61974a18688789c13304be7b700b1cf1/device_kernel.cu": "50ddb4eb9ae0fa1a5070db5e6b50ba6552b7f1c82a9ec25dde27cb7a5c990175",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/585d1dc2c0cb22cc556e86d9e89045bb61974a18688789c13304be7b700b1cf1/executable.so": "6b961a70741d8aa5d0af37d1bdcf61160abc4785ff6ea14d4d7107b6eb5a6735",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/585d1dc2c0cb22cc556e86d9e89045bb61974a18688789c13304be7b700b1cf1/host_kernel.cu": "7a18252092e11eb4678dd0c57102bf3540b4c781565b5ea192b464d90b3a1b9b",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/585d1dc2c0cb22cc556e86d9e89045bb61974a18688789c13304be7b700b1cf1/params.pkl": "9f79c5e6da1443d5ad692e2a547d380388177caa266bef84cde4406e84e10fbb",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5cbcd622e3f706384aebae0fcf6e2dbde93518fd7374d49f42673824a8b95519/device_kernel.cu": "68e646ad802ef9214843bf0b7a6acd967370b8bea0445855e216ae56a3150ec9",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5cbcd622e3f706384aebae0fcf6e2dbde93518fd7374d49f42673824a8b95519/executable.so": "e043a17449e8905061a1f50515522b84a9b0f2cea751234fd04f240e4396f5a8",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5cbcd622e3f706384aebae0fcf6e2dbde93518fd7374d49f42673824a8b95519/host_kernel.cu": "e1a83a7c038f870d9621c83485c6fbe5fb6e7431b68a0e9a9d3737c82d7258e1",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5cbcd622e3f706384aebae0fcf6e2dbde93518fd7374d49f42673824a8b95519/params.pkl": "1c941e992ef9b413f06d5e505ffd46d38cfc1e2f7ba5cadecbf9695350c71626",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5cd4473cb21a6c2335f8bc18c12493e26d703538f1125ad89a722043e34600e9/device_kernel.cu": "f08cd851f95a24fbfb93891716650b45b6c443401bb803bf2ea123c5397d5c0b",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5cd4473cb21a6c2335f8bc18c12493e26d703538f1125ad89a722043e34600e9/executable.so": "44e8a1680c8135b15eb1b93aba57d9ffed23f3904d28c46c1ddd790c9d820e30",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5cd4473cb21a6c2335f8bc18c12493e26d703538f1125ad89a722043e34600e9/host_kernel.cu": "c0e0f5ac84d9403618adc4c53f8d0acb1f2fd050163bab4e2cfd0de82d99fd56",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5cd4473cb21a6c2335f8bc18c12493e26d703538f1125ad89a722043e34600e9/params.pkl": "fdeaac21dcf8e726e5051338dfd012975461b22d348be7393a207bfea1a2f55d",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6084d92e839d5d6c607ea7bd906eb302214b5f8bde0e566846ca2444614ddb00/device_kernel.cu": "0a077b38ffc45050d13e607b03aa6419702298c45e57cabfd0dd59182d09aa06",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6084d92e839d5d6c607ea7bd906eb302214b5f8bde0e566846ca2444614ddb00/executable.so": "06914121db58915272569a6fdc52daf72a51f2abedad41e4f9fffc08155d6b21",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6084d92e839d5d6c607ea7bd906eb302214b5f8bde0e566846ca2444614ddb00/host_kernel.cu": "1327ab6acfa27cb0aad350fd777ce008cdd77f04f734f4f9748ea9e25dcac3f0",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6084d92e839d5d6c607ea7bd906eb302214b5f8bde0e566846ca2444614ddb00/params.pkl": "2a5a1927ac37b88232bb04af43a8d95e7511889a9d1633b017d8b4618bc31358",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/62957dc9da6c6b076e70eec9cf87750d1e6fbd7f9b0bc00c4aa2b63fe3d01b21/device_kernel.cu": "d3754a265f31521ea79c71a5b8081a0e61f4b83d71f7cad15d6ef568fc2e890b",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/62957dc9da6c6b076e70eec9cf87750d1e6fbd7f9b0bc00c4aa2b63fe3d01b21/executable.so": "b39868090d227d0d13b4a5bf3db565efcc6bb3767459335ea1b902f407454093",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/62957dc9da6c6b076e70eec9cf87750d1e6fbd7f9b0bc00c4aa2b63fe3d01b21/host_kernel.cu": "5a816038c5b9095371de1a1cc59d14f43a1e31b2de4dd5d698b42cf9ded08231",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/62957dc9da6c6b076e70eec9cf87750d1e6fbd7f9b0bc00c4aa2b63fe3d01b21/params.pkl": "d8b13f0954a416f3fe34384233152817cfdfd52037cbc72b1c0445d93f8e7d70",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/65cf8c10e3263cc7fde25dbc981424fc912147607cfda0b664e9fb67ac7d7bbd/device_kernel.cu": "7e99bb36c7f396f206f63a1af7af4a73294afced00b7b5a92b1d43694f149b20",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/65cf8c10e3263cc7fde25dbc981424fc912147607cfda0b664e9fb67ac7d7bbd/executable.so": "a74a4dadef0d48fd9153e3195ba2f8c28863b91079dab1a6c12022a3245b6704",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/65cf8c10e3263cc7fde25dbc981424fc912147607cfda0b664e9fb67ac7d7bbd/host_kernel.cu": "7912b2164330363997471faac7bae14ef00ae89aa4698c2314165e504f661ce1",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/65cf8c10e3263cc7fde25dbc981424fc912147607cfda0b664e9fb67ac7d7bbd/params.pkl": "d3301f4b2c70fe130b53924245ea798a9f0b32edf58fb8a7ea2504149480e1ec",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/68dfefa5a25e14db4451822cede02f852aada5287dde91759fee87f05218b409/device_kernel.cu": "7047d112ac56f10b97580dc83e2677fad15e005efb6694f32d859d476423a093",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/68dfefa5a25e14db4451822cede02f852aada5287dde91759fee87f05218b409/executable.so": "60aa43a85342d5050d4ec7217356ac9ffd3b6c564966f703b5f036ba19734892",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/68dfefa5a25e14db4451822cede02f852aada5287dde91759fee87f05218b409/host_kernel.cu": "d5016fa7daf618d1efdee321147d500fb510f2650e17524183d53e41edf9d335",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/68dfefa5a25e14db4451822cede02f852aada5287dde91759fee87f05218b409/params.pkl": "10bbbaf06989111b084e04947ee0fa081ec237c829fe22b432768a5c5252b976",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6de9879dbc2c9fdeb4c407a4ff036f0cf7b6d98b9605f0f6dda87cae56488ebc/device_kernel.cu": "c029325b69f77f88493885419b78b0bea6becdfa4f6311c04a96cd505341539b",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6de9879dbc2c9fdeb4c407a4ff036f0cf7b6d98b9605f0f6dda87cae56488ebc/executable.so": "27ea401c02cafd168ce315f0e0daa3f7ae9d8920508d58339cf197cc29aa2ecf",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6de9879dbc2c9fdeb4c407a4ff036f0cf7b6d98b9605f0f6dda87cae56488ebc/host_kernel.cu": "b6c387c02d148d2b62a27eec6cfec9197c55151e5be5d6cee3d206616871c779",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6de9879dbc2c9fdeb4c407a4ff036f0cf7b6d98b9605f0f6dda87cae56488ebc/params.pkl": "55dafc5dfa36e423c5a7b37d4fd2487c09ad35c5ea25723e08025fce8da7ec9a",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6deefc423f4d52e396dd89a35a4c64404a2fbb89124d128a5547e2456ad3301a/device_kernel.cu": "927104ff9301d980b5cd87a61cbf019da8ea4327333c109518e5d9b99ee429b9",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6deefc423f4d52e396dd89a35a4c64404a2fbb89124d128a5547e2456ad3301a/executable.so": "626c1b1535a87e72b0fa8791c38322d8e9fadd64951713848bcb0cad9bf783c9",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6deefc423f4d52e396dd89a35a4c64404a2fbb89124d128a5547e2456ad3301a/host_kernel.cu": "c0e0f5ac84d9403618adc4c53f8d0acb1f2fd050163bab4e2cfd0de82d99fd56",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6deefc423f4d52e396dd89a35a4c64404a2fbb89124d128a5547e2456ad3301a/params.pkl": "fdeaac21dcf8e726e5051338dfd012975461b22d348be7393a207bfea1a2f55d",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/730cd4d6ea0468b94a666dcf5b00739bd7113e55ee09c15931122e140f4f7351/device_kernel.cu": "0a077b38ffc45050d13e607b03aa6419702298c45e57cabfd0dd59182d09aa06",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/730cd4d6ea0468b94a666dcf5b00739bd7113e55ee09c15931122e140f4f7351/executable.so": "2970503ee59484f416e17dd8e24aa98fce305644aba996e3501f23276f847e1e",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/730cd4d6ea0468b94a666dcf5b00739bd7113e55ee09c15931122e140f4f7351/host_kernel.cu": "86ca77a010cc42b9869d8430ad427cd8dc524d743f7c9804426bd4a4ca1545be",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/730cd4d6ea0468b94a666dcf5b00739bd7113e55ee09c15931122e140f4f7351/params.pkl": "ce2985ac541d3de67131dfce8efb66ebce136dfa5a9acb5fb80529720188cbed",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/737fee63d6f7f40929794ccb8aced58e041078b1b901aa320c5af6f3f4ffc25d/device_kernel.cu": "d9ed93f95c197f8dc5bfe684fb0d8e307bffc37e0e92d365fa25136280752c91",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/737fee63d6f7f40929794ccb8aced58e041078b1b901aa320c5af6f3f4ffc25d/executable.so": "31ef1c65aec29d1a8a801f72ffbf60ae7fbd2d03e49764518e400b1baa7e43fd",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/737fee63d6f7f40929794ccb8aced58e041078b1b901aa320c5af6f3f4ffc25d/host_kernel.cu": "b6c387c02d148d2b62a27eec6cfec9197c55151e5be5d6cee3d206616871c779",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/737fee63d6f7f40929794ccb8aced58e041078b1b901aa320c5af6f3f4ffc25d/params.pkl": "55dafc5dfa36e423c5a7b37d4fd2487c09ad35c5ea25723e08025fce8da7ec9a",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/76f264fefb128f560b219e6ad19e702e0110656ebcd56dcb5884b62a55e5afd4/device_kernel.cu": "aa7d935dc6d83518a1bba4672d64bc3389bb39d294451d47cc653a4b2502a690",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/76f264fefb128f560b219e6ad19e702e0110656ebcd56dcb5884b62a55e5afd4/executable.so": "a00e0d43775fc343d983a5a021338e49c8314d07d69adcaa061bcf61d2ec9561",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/76f264fefb128f560b219e6ad19e702e0110656ebcd56dcb5884b62a55e5afd4/host_kernel.cu": "ea4bf17ecac8462de3af3efb5ee3689dd399f138ea9af14181fb66bfa5d17a17",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/76f264fefb128f560b219e6ad19e702e0110656ebcd56dcb5884b62a55e5afd4/params.pkl": "7e6a2595b249f8a99e7c620e00c9e1af5162364874ea2c7bf4fb43cd293cb168",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/79b145763a3833326d866199b1df6710c9288e77891ff0c8ec6efe7287fd1a15/device_kernel.cu": "f82b8db076ee3a4ddc36de2371781c4545c1f9827c21acee348ac771cd4a1fe9",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/79b145763a3833326d866199b1df6710c9288e77891ff0c8ec6efe7287fd1a15/executable.so": "b576b65a17172c009f85f689903505942d62c9ad901483b58c1bf1fa575d70a7",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/79b145763a3833326d866199b1df6710c9288e77891ff0c8ec6efe7287fd1a15/host_kernel.cu": "cc652fe60b66fda4feb8d4c2b126231adfac5c3a03784b6b2cbd0f681a2f9243",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/79b145763a3833326d866199b1df6710c9288e77891ff0c8ec6efe7287fd1a15/params.pkl": "c4538c46c3c4c1a5957e9d601298e879f46a14f37175a36c051fa69f179ea2b9",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/80f5d364a79a5c6a3b5778a2baf272722e3b18ea62d568242d04135d0cb86b64/device_kernel.cu": "21351e89e8506791f512e41ee17717aa911539dbf3a77c42d1828f0b0c7c4624",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/80f5d364a79a5c6a3b5778a2baf272722e3b18ea62d568242d04135d0cb86b64/executable.so": "78b12b03f8782d031d5eba82cc88b0a6847f50c411f860673c0aa5248fb1a082",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/80f5d364a79a5c6a3b5778a2baf272722e3b18ea62d568242d04135d0cb86b64/host_kernel.cu": "a689193dd9888a9e49e68569f434724c693debba1e3be7818988c9580ebb7677",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/80f5d364a79a5c6a3b5778a2baf272722e3b18ea62d568242d04135d0cb86b64/params.pkl": "b4b6a95d590100c9ecad615f96c61fab37b80e8e78c2ba0c86013cdae1305ba0",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/849220a33db9f3ed7b239ccd3e535ed24fc9b8c6dcc1047784707fb88acc4962/device_kernel.cu": "37ca93e3607d1c75d95c4cfa95a7fa0be12b7d85ed30e040b9afd14a0fa5c724",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/849220a33db9f3ed7b239ccd3e535ed24fc9b8c6dcc1047784707fb88acc4962/executable.so": "adb7dd073655a087a9d8bf5aea2590919ba3141464a71aa3d2050b82de53a5a7",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/849220a33db9f3ed7b239ccd3e535ed24fc9b8c6dcc1047784707fb88acc4962/host_kernel.cu": "c01329621a1258e51e1cc3cea34200c7d4b9d1c21067d96dc625d2e43e2be223",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/849220a33db9f3ed7b239ccd3e535ed24fc9b8c6dcc1047784707fb88acc4962/params.pkl": "574c8609b5a25361d1660d57e83150f2bec8063644463460a839c23be2eca700",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/88466111647a32d9c37e384cbb48855aa829c2e71f70c9f70e56fdc68b2ce92b/device_kernel.cu": "fc9677a0d1b94952d0e5314f34c88ef090022ce1f2f904be05e9d1b3916545e4",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/88466111647a32d9c37e384cbb48855aa829c2e71f70c9f70e56fdc68b2ce92b/executable.so": "c3939eae7962ba5b045ed906dcbe1e568ebc6046e48322c5bfa519359d458884",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/88466111647a32d9c37e384cbb48855aa829c2e71f70c9f70e56fdc68b2ce92b/host_kernel.cu": "7a18252092e11eb4678dd0c57102bf3540b4c781565b5ea192b464d90b3a1b9b",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/88466111647a32d9c37e384cbb48855aa829c2e71f70c9f70e56fdc68b2ce92b/params.pkl": "9f79c5e6da1443d5ad692e2a547d380388177caa266bef84cde4406e84e10fbb",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/88eb8df4bb4dafcc322a47b9a12db49ca503e7e99e83b2725d1b390fd21604c7/device_kernel.cu": "92863fba0bc8bd7dc810026c7c98501667cae958be6f49980fe5eaa00b0c30a9",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/88eb8df4bb4dafcc322a47b9a12db49ca503e7e99e83b2725d1b390fd21604c7/executable.so": "e3057209f69f0a19b539e90ade87a01ea2b7d6ac4eeacab5d0156cba2a075b82",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/88eb8df4bb4dafcc322a47b9a12db49ca503e7e99e83b2725d1b390fd21604c7/host_kernel.cu": "9880aab012677a5385b92fb08c16d0eabed01dc81a24e0702aaa096ef634c168",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/88eb8df4bb4dafcc322a47b9a12db49ca503e7e99e83b2725d1b390fd21604c7/params.pkl": "90640585dcfc0694bec6b262323f1edb739a15e9535ff614efffc5eedb3709ff",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/8d6b1a19965921cd79966c3196bf6945b3d34f7cebd49b12e6f9ab4b3f6beb13/device_kernel.cu": "5cdd9005d4d0765ec009a3443ed2a7823a8dad7fd42124fdffa398eef89b7d12",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/8d6b1a19965921cd79966c3196bf6945b3d34f7cebd49b12e6f9ab4b3f6beb13/executable.so": "c9056c75b1c869aa5acf080256751d97a6c503ff673edf7abddf068f04eb053a",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/8d6b1a19965921cd79966c3196bf6945b3d34f7cebd49b12e6f9ab4b3f6beb13/host_kernel.cu": "93655614b949dc9a0e5ac9fa22653153fa2d92098555ff7625388aab573246f1",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/8d6b1a19965921cd79966c3196bf6945b3d34f7cebd49b12e6f9ab4b3f6beb13/params.pkl": "9161708584ffcc5d81aa10402c5d1450ceb4547729d4ad6ea5d0fa6034b9a85c",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/8fc58fadfdc25b3c79bf024401d3c9c35af4bc8984698dc9302f7678fb648921/device_kernel.cu": "96cbfc9024fd44d05f9ada336ab439710e7a35340acd57db1c339e9546fc97d1",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/8fc58fadfdc25b3c79bf024401d3c9c35af4bc8984698dc9302f7678fb648921/executable.so": "a873fccc8e079fba397eefb6bc3d731224adb5349b653e957b2c2e48ced58d2b",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/8fc58fadfdc25b3c79bf024401d3c9c35af4bc8984698dc9302f7678fb648921/host_kernel.cu": "5e15eada945dbaeb3f185b1f5674ea45689ffc2f4687ddc63fee27438620552c",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/8fc58fadfdc25b3c79bf024401d3c9c35af4bc8984698dc9302f7678fb648921/params.pkl": "d06bfcaaf261a711dfb9defbb249686cc43650be179286a88cd52d12fe2b8344",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/90afb500185e179d1344cec6dc4424c8479577f155a046619b63f3dcbb7bd77b/device_kernel.cu": "e41cd256ad1b47fefaf0dc577120a97f22866094bfb6bcda9f143f9bb64c0f33",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/90afb500185e179d1344cec6dc4424c8479577f155a046619b63f3dcbb7bd77b/executable.so": "916c9e156fab998fbfd76a1e6e38818bffca8ab75d802f4a9f63a89eab2cce64",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/90afb500185e179d1344cec6dc4424c8479577f155a046619b63f3dcbb7bd77b/host_kernel.cu": "16d4097378bb3bb8d16bceecac9e5a30d03e3510f0a840662815ffc5035ce27a",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/90afb500185e179d1344cec6dc4424c8479577f155a046619b63f3dcbb7bd77b/params.pkl": "45e47d736621a8bd37adc62944540c9c5349e217dd3bfb7498cb0e75e62735fa",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/9a7f25a73030171e5b495cf9499647be071a4a1954c9d3542742cbd7bb893e3b/device_kernel.cu": "9525eacb3c81c4236a90ac9ce62c63416eec927308a3739adc0ba2afb70b843e",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/9a7f25a73030171e5b495cf9499647be071a4a1954c9d3542742cbd7bb893e3b/executable.so": "fcfc0fda616bc0a3f905f092a4b7b478bd173f6068b341856160bfcf3b08bc16",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/9a7f25a73030171e5b495cf9499647be071a4a1954c9d3542742cbd7bb893e3b/host_kernel.cu": "38870e5a171bdfce8205e09574773b7075d0c23351be441e13ca749fde11b526",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/9a7f25a73030171e5b495cf9499647be071a4a1954c9d3542742cbd7bb893e3b/params.pkl": "cb37df931868638fd7dc3bbe3d517316f46cacca025b5a31a8816064bb87bb8a",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/9c8480fe1f9a64cc2e1f04c4b1cc7ba8180df671541720c30a5717f1c9e8cd45/device_kernel.cu": "08c0fb17e7d31427460a51a32a900e523ac64af0f6298323304fb25ba81fcdac",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/9c8480fe1f9a64cc2e1f04c4b1cc7ba8180df671541720c30a5717f1c9e8cd45/executable.so": "f4ce7ad960b2f29a927279f72c734ac4f1d16eef868efc56755c961fbc283bb8",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/9c8480fe1f9a64cc2e1f04c4b1cc7ba8180df671541720c30a5717f1c9e8cd45/host_kernel.cu": "30a6245c95355c3dfed4950022f628d6075023a97ef2e24136845dff4e2192c9",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/9c8480fe1f9a64cc2e1f04c4b1cc7ba8180df671541720c30a5717f1c9e8cd45/params.pkl": "cdbc68174cf44b757e618f7b9a47b689d75737fe3bda6e639b5f36e382762b07",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/9e7ee37418d96e74ce3cb4b1f0aae0cef99c02eab0ccc095b6355d4287295702/device_kernel.cu": "0a077b38ffc45050d13e607b03aa6419702298c45e57cabfd0dd59182d09aa06",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/9e7ee37418d96e74ce3cb4b1f0aae0cef99c02eab0ccc095b6355d4287295702/executable.so": "9884b4d2553f5c4fb3341133f8f4cb2a632b89c2001c355b185c5f01d264ddda",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/9e7ee37418d96e74ce3cb4b1f0aae0cef99c02eab0ccc095b6355d4287295702/host_kernel.cu": "504fdcc75731a69987db70a170882f0326bc9def076fea5b7ae7e9a7ba0f68ec",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/9e7ee37418d96e74ce3cb4b1f0aae0cef99c02eab0ccc095b6355d4287295702/params.pkl": "8535bb1e66452783fc0a60de98e936535d49fd89b26b0f76aa53789870629149",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a1337db0a3d3250ae9ff0774c1f784d470ba15cc416e85e2482381d2a12c58ec/device_kernel.cu": "38b4ef1dc331c77701691727e442dc1a17c1c3512fb1d33d955b0b5f13e4fb9e",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a1337db0a3d3250ae9ff0774c1f784d470ba15cc416e85e2482381d2a12c58ec/executable.so": "7afb5b96b728e3d7e4c3cd8960d647b006dd90c23c245deddf669d92c07d7efc",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a1337db0a3d3250ae9ff0774c1f784d470ba15cc416e85e2482381d2a12c58ec/host_kernel.cu": "872b8e24b573fb89213a09c94fb13c6994df4057f36c120fbc902b470af0dedd",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a1337db0a3d3250ae9ff0774c1f784d470ba15cc416e85e2482381d2a12c58ec/params.pkl": "0c957bdd9f3580a580346407c289628fc52978b6471f10a44f58bfe3c48a5fa8",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a6150c325107d25a1b36722df79832a9d84b90f9f3c4b11d30281554e6ba7c33/device_kernel.cu": "0dc142f9f7a2cece6ce28dbaaa84ac7989e1cebbb2157018d5d25955abb33566",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a6150c325107d25a1b36722df79832a9d84b90f9f3c4b11d30281554e6ba7c33/executable.so": "5e6a9df2b27cca892f0ba1a782a083148ea402fd2b0dd1677f46098c9b4c7a7a",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a6150c325107d25a1b36722df79832a9d84b90f9f3c4b11d30281554e6ba7c33/host_kernel.cu": "006903560a5dbbef541c9bfff3bfe6236bcf6171509973878479a0f278fdf6ab",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a6150c325107d25a1b36722df79832a9d84b90f9f3c4b11d30281554e6ba7c33/params.pkl": "a4741d642089f2e7fc942c81c2550e4348edf7a0b537483d40d0ce574eae4625",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a621f6f56c5c45096a042e70f97abeaae2487af63f0edf413887c243852bf546/device_kernel.cu": "25b5d293ef9c8dd0305fd9e63ba638665439db161e433e6b21abc46647d44d42",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a621f6f56c5c45096a042e70f97abeaae2487af63f0edf413887c243852bf546/executable.so": "c43ad8931c5d8c27d51baf7f181a3302daa7bd02b8da40f65726b01bb0143c4a",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a621f6f56c5c45096a042e70f97abeaae2487af63f0edf413887c243852bf546/host_kernel.cu": "3159fa9c93f742bf2a4bcae0372dfd06ae2014e44a00db5a7e099618bba89f1e",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a621f6f56c5c45096a042e70f97abeaae2487af63f0edf413887c243852bf546/params.pkl": "773c0528591dc3b79ea6933f0f807e9fcea0fe637572488971f3091926e6c6b2",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a9a5dd62fead959485aac12c2c9f88497fbad345d066a277369c923fcb1e8875/device_kernel.cu": "8cd18a765f02e0c72d0f9e0b59ce6f6a12a8e6d4e0d4a08aefc8fdfcff5e57f8",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a9a5dd62fead959485aac12c2c9f88497fbad345d066a277369c923fcb1e8875/executable.so": "25de28e2dc9032d2e567c264c924614d0acc921abc39f3a357454fc8ae22c128",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a9a5dd62fead959485aac12c2c9f88497fbad345d066a277369c923fcb1e8875/host_kernel.cu": "20ccb331a078f3a7f0d9df5b0d1a344a5d5993da92cef8f9895d24e6bdd5fd62",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a9a5dd62fead959485aac12c2c9f88497fbad345d066a277369c923fcb1e8875/params.pkl": "2f93c0e41871751add4f8b674769c3496ebf80a65bbad31f350ab0ef771a7363",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/aaf3c25c42eaac3ecfb1958ca954a06bb4064b754b5ad3648b0f2cc03339d6fb/device_kernel.cu": "a3826f50fa9afe2f88771450983050eb14543bc4605332b3e46911747ffbf596",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/aaf3c25c42eaac3ecfb1958ca954a06bb4064b754b5ad3648b0f2cc03339d6fb/executable.so": "233c5ee87de7434da0043707bb7324e93dcf9d3f652daf183fa196d1e5f71e06",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/aaf3c25c42eaac3ecfb1958ca954a06bb4064b754b5ad3648b0f2cc03339d6fb/host_kernel.cu": "cd5703e6c9f891b9012a77d06cc24b10cef539e1e0a537ca7e73f55f77058a41",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/aaf3c25c42eaac3ecfb1958ca954a06bb4064b754b5ad3648b0f2cc03339d6fb/params.pkl": "8c86285d522cd71b83321810b913df4e02079305f8321242b24ffd584e167b02",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ad5d8a27c3626419b57bdc103aa16467ef7930d265bda50a9e8be9f8c3046610/device_kernel.cu": "decfd537ab21059e7ff1c97c7bebca4281c83175e7728f0f1ba3a72dd7cd23cf",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ad5d8a27c3626419b57bdc103aa16467ef7930d265bda50a9e8be9f8c3046610/executable.so": "9fffe29ff9170b66180db2b931e8b0eca384de74fb2627ae3a0b0dedc958babe",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ad5d8a27c3626419b57bdc103aa16467ef7930d265bda50a9e8be9f8c3046610/host_kernel.cu": "cc652fe60b66fda4feb8d4c2b126231adfac5c3a03784b6b2cbd0f681a2f9243",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ad5d8a27c3626419b57bdc103aa16467ef7930d265bda50a9e8be9f8c3046610/params.pkl": "c4538c46c3c4c1a5957e9d601298e879f46a14f37175a36c051fa69f179ea2b9",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ae010b31b5c6d27ec0880b50ee00a3cd4410e3c91edef141a22dc227ef26a6d9/device_kernel.cu": "caf7aaa40d5d61495e019bbaf097a23459cc431f762aeb9707a56921a2188c85",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ae010b31b5c6d27ec0880b50ee00a3cd4410e3c91edef141a22dc227ef26a6d9/executable.so": "0cf4ea1fb823172873291c7f73733050449cff5600928a1f3644dac33431edd9",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ae010b31b5c6d27ec0880b50ee00a3cd4410e3c91edef141a22dc227ef26a6d9/host_kernel.cu": "05d7414e479720e5ae443071fb9d953380008f30c6308f352d0d47f1f27526ba",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ae010b31b5c6d27ec0880b50ee00a3cd4410e3c91edef141a22dc227ef26a6d9/params.pkl": "53fafbaa6d7f8968240a92364308c8b8fe30170add0c44cbfb36dc4a1fd75b65",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/b6262418ad22748a5cf1e3d504c2509c68c4cd1f1b405730c3c2bc60d32197ac/device_kernel.cu": "e36527a85640b01dccf46a7c8f2045957749066a7ae8b9865ef0af4c62a2af0c",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/b6262418ad22748a5cf1e3d504c2509c68c4cd1f1b405730c3c2bc60d32197ac/executable.so": "6ac5014b4570e7715c1a6c796b4d0084e5848a25d0a812fed3889f5a1ba072c3",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/b6262418ad22748a5cf1e3d504c2509c68c4cd1f1b405730c3c2bc60d32197ac/host_kernel.cu": "bf443ff9cc470ee2b93fb5b0f385a3553d5753799cf85b52f76a0c189b53bb7f",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/b6262418ad22748a5cf1e3d504c2509c68c4cd1f1b405730c3c2bc60d32197ac/params.pkl": "6856795b784da2b25a87dba8964ef1fc9796c96a682267b2dca13108077fea3b",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/b68b4da6a85e5949436cc82b47147fae2bd01f8f76789953e54416d5e6946d92/device_kernel.cu": "9ca14a972af14e40c80f50b97c5b55b8c975e48a7e30b597ef554170f2599b3f",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/b68b4da6a85e5949436cc82b47147fae2bd01f8f76789953e54416d5e6946d92/executable.so": "1e8f29e5510cc8a008e7b0330b7a4cde81b7b48a76278d48bf345e8b06d824cd",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/b68b4da6a85e5949436cc82b47147fae2bd01f8f76789953e54416d5e6946d92/host_kernel.cu": "3e471390809a0bdf23c5ac7405bc3937f2fef68ba412c974d6abc69a606a0f90",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/b68b4da6a85e5949436cc82b47147fae2bd01f8f76789953e54416d5e6946d92/params.pkl": "49f29e98286aa24cc7c707039bf692a7fff1e782a5f8ce872bd51d978648acf9",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/b943e5eb576e311322ddcef7e3519caa611e95801aa622bf2d530dbc3020f19d/device_kernel.cu": "d51c5de3a1f1c4de899ff274917285beb9538ef9abe0fb40a922ef69fa047490",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/b943e5eb576e311322ddcef7e3519caa611e95801aa622bf2d530dbc3020f19d/executable.so": "cd36efc9bb08771161055125d5dbf9279bee5a26f2bb218edbf1b93419d7e586",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/b943e5eb576e311322ddcef7e3519caa611e95801aa622bf2d530dbc3020f19d/host_kernel.cu": "e1a83a7c038f870d9621c83485c6fbe5fb6e7431b68a0e9a9d3737c82d7258e1",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/b943e5eb576e311322ddcef7e3519caa611e95801aa622bf2d530dbc3020f19d/params.pkl": "1c941e992ef9b413f06d5e505ffd46d38cfc1e2f7ba5cadecbf9695350c71626",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/bcfee167244f01541dbdd69ed57adc3044cf055d1f8987c346b48cbbcaeba53b/device_kernel.cu": "e7a5b07b5dc2286a67e3eba62c1272107da26f2b2a3dd524eef9d1daa6e37e08",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/bcfee167244f01541dbdd69ed57adc3044cf055d1f8987c346b48cbbcaeba53b/executable.so": "fb78ec1cef34aede15185f4686c61239df9f30a31b66b726cf82a79e2e727f92",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/bcfee167244f01541dbdd69ed57adc3044cf055d1f8987c346b48cbbcaeba53b/host_kernel.cu": "2aa4bf12c743655aacf55702deaccb99f7a79dbbf98e10bc441393b90bf26d67",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/bcfee167244f01541dbdd69ed57adc3044cf055d1f8987c346b48cbbcaeba53b/params.pkl": "1a52d5ee1de01417e7aece3a8bf4a96c0bc0e89de82a9bfaa7b9684ccbd6a329",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/bdba2027f4571f792390f9f2999c1d18ea9bc13c83c6bc8545bbd84bf053c3e0/device_kernel.cu": "a0254c02425c8c7998c41b9e148998128c021a260be61674745e559bcc975c77",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/bdba2027f4571f792390f9f2999c1d18ea9bc13c83c6bc8545bbd84bf053c3e0/executable.so": "8c8069eaf703c9f2e5a188ad1e5af909a9895a88f3f81e1eacb065a79d11898c",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/bdba2027f4571f792390f9f2999c1d18ea9bc13c83c6bc8545bbd84bf053c3e0/host_kernel.cu": "93a28beb8045a80f916406393a07dcc19f2620d01c0dc57e28efca582223ebe1",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/bdba2027f4571f792390f9f2999c1d18ea9bc13c83c6bc8545bbd84bf053c3e0/params.pkl": "e63666853a9b04a49098ca62a3009d38e050976f06fbc83d603e63425542a74a",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/bdea2b4b146902936159d944834e7e1a74bba2cbba1d03f22ae3d9a98dddd5f3/device_kernel.cu": "12a73e28e4cdd74326f857fe7a9b7d10aff8d4c26661544f4d7818e710438a55",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/bdea2b4b146902936159d944834e7e1a74bba2cbba1d03f22ae3d9a98dddd5f3/executable.so": "0174905c0a0c6156dc34ecc88220817ec84546243a5aa854f0c9e9f3fc7bcf07",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/bdea2b4b146902936159d944834e7e1a74bba2cbba1d03f22ae3d9a98dddd5f3/host_kernel.cu": "4c8ef3eb724496f8bba9937125d157a0e119bc8e18d4440420dbdcf233299efb",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/bdea2b4b146902936159d944834e7e1a74bba2cbba1d03f22ae3d9a98dddd5f3/params.pkl": "ad678f61af96a0e25cf68000d1d90bf5a004733bb03a7e9ca7d2d5655a6ed940",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/be1e9604e1b928c3e174d59ff534777babc565e5689418ed1b53a7d98436cf0c/device_kernel.cu": "7920bda2b8b61c8cb0b32ebbed9101a31ce3962e6632819a1e2bb1292dd75ef7",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/be1e9604e1b928c3e174d59ff534777babc565e5689418ed1b53a7d98436cf0c/executable.so": "e7647da5719b3c1067d4da69e743be59dd9975cff25464153d3f07ff3b26c05e",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/be1e9604e1b928c3e174d59ff534777babc565e5689418ed1b53a7d98436cf0c/host_kernel.cu": "05d7414e479720e5ae443071fb9d953380008f30c6308f352d0d47f1f27526ba",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/be1e9604e1b928c3e174d59ff534777babc565e5689418ed1b53a7d98436cf0c/params.pkl": "53fafbaa6d7f8968240a92364308c8b8fe30170add0c44cbfb36dc4a1fd75b65",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/c4d69cbdc89cde18d9a3799aaa838dc4a6b6469b206b57625d8e4e90083074fb/device_kernel.cu": "8058d6e583e115be66ee145350e62ce741bba21f8edec967bfa48c39927e0430",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/c4d69cbdc89cde18d9a3799aaa838dc4a6b6469b206b57625d8e4e90083074fb/executable.so": "70f284e5776e4bf4cf0b6b4f37cf370a4f7cb7232f460dbe243d0b0defdc5eab",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/c4d69cbdc89cde18d9a3799aaa838dc4a6b6469b206b57625d8e4e90083074fb/host_kernel.cu": "16d4097378bb3bb8d16bceecac9e5a30d03e3510f0a840662815ffc5035ce27a",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/c4d69cbdc89cde18d9a3799aaa838dc4a6b6469b206b57625d8e4e90083074fb/params.pkl": "45e47d736621a8bd37adc62944540c9c5349e217dd3bfb7498cb0e75e62735fa",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/c53d82565388c5e6edd8fe589bc3c51707aa50b8cfe0ba141c9adf0127927c76/device_kernel.cu": "5eeff19c61171ef4aab4be6d9d8d23d2cfcd5ded3f41f9cc7c3f272c52de9a32",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/c53d82565388c5e6edd8fe589bc3c51707aa50b8cfe0ba141c9adf0127927c76/executable.so": "ce88e61d16c89e803406b619119f92dd6fe878b4fc64324d537338843e5fb31e",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/c53d82565388c5e6edd8fe589bc3c51707aa50b8cfe0ba141c9adf0127927c76/host_kernel.cu": "71038588e214802f163cca1ad1baeec9557cead5a166a455fc213b1940c649b6",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/c53d82565388c5e6edd8fe589bc3c51707aa50b8cfe0ba141c9adf0127927c76/params.pkl": "b85b5a116b33215e77737780632fcd6f47cbd5736d15620ba36adae7cff86a80",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/c6a0a2f12df44f619d474cce9fd3e7b029d2c939e575adeecf6871907ef22a29/device_kernel.cu": "0a077b38ffc45050d13e607b03aa6419702298c45e57cabfd0dd59182d09aa06",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/c6a0a2f12df44f619d474cce9fd3e7b029d2c939e575adeecf6871907ef22a29/executable.so": "0c72335501fe1796d9227f8e12c9d0e948ec8dfa1b409e55a202b82cc93a9821",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/c6a0a2f12df44f619d474cce9fd3e7b029d2c939e575adeecf6871907ef22a29/host_kernel.cu": "111f41f569ce0b97d8b68d22a208ffd78265e28d7b29bad23bd25ec6302c032f",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/c6a0a2f12df44f619d474cce9fd3e7b029d2c939e575adeecf6871907ef22a29/params.pkl": "c5620ae1c6d05885ab106122150da66367c0678e891dfba25ad847084d7b5959",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/cd1b243c42fd050a5ec109093b25212a9e66df13b98d58601648e778a2ce99e6/device_kernel.cu": "9a669a023a96e621fc63d2e9b96dd5c1c3162be268e7cea67f09e3da285ab6f1",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/cd1b243c42fd050a5ec109093b25212a9e66df13b98d58601648e778a2ce99e6/executable.so": "854e41a917340779368fe5b1965a20e669c3375d539e06fb044188328e86d6a6",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/cd1b243c42fd050a5ec109093b25212a9e66df13b98d58601648e778a2ce99e6/host_kernel.cu": "117aa8ebdf9de760f7b43653d3ff42676a11c64590e39f2b43771e096d2fb0f7",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/cd1b243c42fd050a5ec109093b25212a9e66df13b98d58601648e778a2ce99e6/params.pkl": "a4a3bef096f5994a5acbeab9a1c315269e9f4ff161fd92be9fd859148cdeebfc",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/cdcbb183dfbc7a20b971f09b4c103fee51b4f6b8d79141930aa7bc12c26529cb/device_kernel.cu": "b2a7daa1f4260693ea4163808ee861fc5f12c8d66e3a9a7214d0b26a181630f1",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/cdcbb183dfbc7a20b971f09b4c103fee51b4f6b8d79141930aa7bc12c26529cb/executable.so": "bb45657f6ddd580fe4ca27bbf241b58788294b14f9182c92956962ab5ac2053c",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/cdcbb183dfbc7a20b971f09b4c103fee51b4f6b8d79141930aa7bc12c26529cb/host_kernel.cu": "483b743f02e742dc9022f63e151406898e091cbd83407cf661077032fad5310d",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/cdcbb183dfbc7a20b971f09b4c103fee51b4f6b8d79141930aa7bc12c26529cb/params.pkl": "8d1cff05b2d2f054f04fb98bdcf3be5cfc75423f36999965018633b23c4a50e4",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/d3b521023da0909b4498b523b65e62c9cc60401bf0f7cac0c02293856b02eea5/device_kernel.cu": "cc0392c5ede5826ee2a11dcea45ae179d2ae21c3856c6e5a823de38ef6819d28",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/d3b521023da0909b4498b523b65e62c9cc60401bf0f7cac0c02293856b02eea5/executable.so": "08053b475ceb630e3f9aae71f9fe84b7ae9de4791f2ada33e9838c1348e7c7c4",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/d3b521023da0909b4498b523b65e62c9cc60401bf0f7cac0c02293856b02eea5/host_kernel.cu": "d5016fa7daf618d1efdee321147d500fb510f2650e17524183d53e41edf9d335",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/d3b521023da0909b4498b523b65e62c9cc60401bf0f7cac0c02293856b02eea5/params.pkl": "10bbbaf06989111b084e04947ee0fa081ec237c829fe22b432768a5c5252b976",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/d477b4a9707108b1ab2cef54f6b8c313a4b5d246054a04b7bf4e0792a8015713/device_kernel.cu": "286c93f3c263440be1903f053223b514202a4603126766e745a33f19b4feb407",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/d477b4a9707108b1ab2cef54f6b8c313a4b5d246054a04b7bf4e0792a8015713/executable.so": "0282191c6d999d4b42896e700045dacfacfc6012cbe30f93e291cd2c1068b091",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/d477b4a9707108b1ab2cef54f6b8c313a4b5d246054a04b7bf4e0792a8015713/host_kernel.cu": "2aa4bf12c743655aacf55702deaccb99f7a79dbbf98e10bc441393b90bf26d67",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/d477b4a9707108b1ab2cef54f6b8c313a4b5d246054a04b7bf4e0792a8015713/params.pkl": "1a52d5ee1de01417e7aece3a8bf4a96c0bc0e89de82a9bfaa7b9684ccbd6a329",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/dd495b2b6ec36543eaf71b47c63aee422336bd55651df84ba1671e9f1cf1f41f/device_kernel.cu": "a360f69b34c62a59b177ad81e33317c72d4144ffcccad62d72adec547ca91319",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/dd495b2b6ec36543eaf71b47c63aee422336bd55651df84ba1671e9f1cf1f41f/executable.so": "efd70fd21a91518a927772382a18898fae4a31dda1033479d05bf707db9b40a2",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/dd495b2b6ec36543eaf71b47c63aee422336bd55651df84ba1671e9f1cf1f41f/host_kernel.cu": "9880aab012677a5385b92fb08c16d0eabed01dc81a24e0702aaa096ef634c168",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/dd495b2b6ec36543eaf71b47c63aee422336bd55651df84ba1671e9f1cf1f41f/params.pkl": "90640585dcfc0694bec6b262323f1edb739a15e9535ff614efffc5eedb3709ff",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/dfb8df159e1e0122501e94728d873914edf67a0ae065dda5b4b2ef9276038567/device_kernel.cu": "789eae46992c5598d4bea1bdd3ae2a90afd0ed02db0b4c2b24d8317f6be297e8",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/dfb8df159e1e0122501e94728d873914edf67a0ae065dda5b4b2ef9276038567/executable.so": "e0108e28693e23ec706e7f9b00364c2d536f0d06096161b3c01013307e1eda47",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/dfb8df159e1e0122501e94728d873914edf67a0ae065dda5b4b2ef9276038567/host_kernel.cu": "30a6245c95355c3dfed4950022f628d6075023a97ef2e24136845dff4e2192c9",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/dfb8df159e1e0122501e94728d873914edf67a0ae065dda5b4b2ef9276038567/params.pkl": "cdbc68174cf44b757e618f7b9a47b689d75737fe3bda6e639b5f36e382762b07",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/eaaa2db273dcdcdc157bdf005bda0bf857092a82da7390cdefe0f276eb9ad751/device_kernel.cu": "f3e59b79825d97a7c24385d3e1bb2ddcb02a3e110f6768dc1bfc53c039d3d4bd",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/eaaa2db273dcdcdc157bdf005bda0bf857092a82da7390cdefe0f276eb9ad751/executable.so": "00d7294d190641af73bac0d686dcc4b1fda49a1a26eec4aff786fb0363164bfb",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/eaaa2db273dcdcdc157bdf005bda0bf857092a82da7390cdefe0f276eb9ad751/host_kernel.cu": "3e471390809a0bdf23c5ac7405bc3937f2fef68ba412c974d6abc69a606a0f90",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/eaaa2db273dcdcdc157bdf005bda0bf857092a82da7390cdefe0f276eb9ad751/params.pkl": "49f29e98286aa24cc7c707039bf692a7fff1e782a5f8ce872bd51d978648acf9",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ed4b708ef6b03a69c073d795046e853c4eefc3344c3cf8313084efa887876ea0/device_kernel.cu": "28918d8079cd00e1541960d97cbb5af6a13fed27035d23431e74f73641fc39e6",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ed4b708ef6b03a69c073d795046e853c4eefc3344c3cf8313084efa887876ea0/executable.so": "9174f43c7e7ce277b2f123704c2c7d79b6970bea146263fd6d8ca691b13717f1",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ed4b708ef6b03a69c073d795046e853c4eefc3344c3cf8313084efa887876ea0/host_kernel.cu": "483b743f02e742dc9022f63e151406898e091cbd83407cf661077032fad5310d",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ed4b708ef6b03a69c073d795046e853c4eefc3344c3cf8313084efa887876ea0/params.pkl": "8d1cff05b2d2f054f04fb98bdcf3be5cfc75423f36999965018633b23c4a50e4",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ed660a47cabe0396de8084d71ff5510885a530a2514c3909660efa8056034dd5/device_kernel.cu": "3a57fdb2ecdb65537b53201ecd20234ee87c9b6c5390ef65c83088b665801ded",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ed660a47cabe0396de8084d71ff5510885a530a2514c3909660efa8056034dd5/executable.so": "44df392c41533b42fc1c5b49d99baa484caaec0b9b10e9067a172e3318787830",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ed660a47cabe0396de8084d71ff5510885a530a2514c3909660efa8056034dd5/host_kernel.cu": "cd5703e6c9f891b9012a77d06cc24b10cef539e1e0a537ca7e73f55f77058a41",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ed660a47cabe0396de8084d71ff5510885a530a2514c3909660efa8056034dd5/params.pkl": "8c86285d522cd71b83321810b913df4e02079305f8321242b24ffd584e167b02",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ee2360d3b922dcaeb0af360902d0ce227caaaa0192dce270ee493b8ff8e16ab8/device_kernel.cu": "1be1c20fe2644e7e4bc24b0e1b182aaf06c6740aa991276fcd90a1ef11169a94",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ee2360d3b922dcaeb0af360902d0ce227caaaa0192dce270ee493b8ff8e16ab8/executable.so": "3b218ca8c9316e37508830f6342843bcfcc920a9fad94376750159e9333397c4",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ee2360d3b922dcaeb0af360902d0ce227caaaa0192dce270ee493b8ff8e16ab8/host_kernel.cu": "0deadbc8de2740b2b498ed564dfedc8c4c1dd54a4ce5c656807c9c05895c79dc",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ee2360d3b922dcaeb0af360902d0ce227caaaa0192dce270ee493b8ff8e16ab8/params.pkl": "1a371cb903ea205c649afdda5d737aad8b3242ec1ccc919a709dc6a4560933a6",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/f228e8272caf40ddfd1ef5e621e9d64a3b96ea15e52eb77cdb6bed245d1566ee/device_kernel.cu": "dafa14ba30b0a049341481265214b0ff6e07abc0353dedb5b9826402a1d7defd",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/f228e8272caf40ddfd1ef5e621e9d64a3b96ea15e52eb77cdb6bed245d1566ee/executable.so": "1fab7d50fe1bdbe9111df6b413262045ac905d01bce9362813c0eafeedde7534",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/f228e8272caf40ddfd1ef5e621e9d64a3b96ea15e52eb77cdb6bed245d1566ee/host_kernel.cu": "96526b104eb4fa89945ebbf66ef6f0c0a46394b970577a93416d2681378bdd48",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/f228e8272caf40ddfd1ef5e621e9d64a3b96ea15e52eb77cdb6bed245d1566ee/params.pkl": "3e85fa55488b5b79bc51b30a2a77a4ee66c79ce1cc5ce8f2aa8c79bdf09db3ef",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/f439637c528fef5700c5857da68eb7e2c3e4bdc5ab38c7f00c913a4c6282502f/device_kernel.cu": "50db8b4faf87e63e389be6da7d911894881232c1fc34e15252be8f338cc7ce9c",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/f439637c528fef5700c5857da68eb7e2c3e4bdc5ab38c7f00c913a4c6282502f/executable.so": "e75b906ecae54f65a6ce372e62421c8e0f69a2b8ba3cb7b63caaf456a1501eb5",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/f439637c528fef5700c5857da68eb7e2c3e4bdc5ab38c7f00c913a4c6282502f/host_kernel.cu": "d55f3abce338efaff605710e67e44eef24b013714fe57aae47c3f8bd34d9b9f6",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/f439637c528fef5700c5857da68eb7e2c3e4bdc5ab38c7f00c913a4c6282502f/params.pkl": "b5049aad120acde5e6cbec1af4988dccb9203bbd591f8e80aa7d7b057662006a",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/f897e257bacefcdd180d9a8058f4097a328eb8705420db4feb417d94c1d05ec8/device_kernel.cu": "c140d7c0f88e5f6309a61e6785b2a1de9d2f1bcab423066f195c1f2872b79b10",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/f897e257bacefcdd180d9a8058f4097a328eb8705420db4feb417d94c1d05ec8/executable.so": "46ca740eb5792a5fa220776d79443b042794f25749718061c46891418e14aef2",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/f897e257bacefcdd180d9a8058f4097a328eb8705420db4feb417d94c1d05ec8/host_kernel.cu": "38870e5a171bdfce8205e09574773b7075d0c23351be441e13ca749fde11b526",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/f897e257bacefcdd180d9a8058f4097a328eb8705420db4feb417d94c1d05ec8/params.pkl": "cb37df931868638fd7dc3bbe3d517316f46cacca025b5a31a8816064bb87bb8a",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/fa0c046098e24ec03ea961ae16b1b98fd2848a11b17e6deb0ba26e87fd547f0a/device_kernel.cu": "dbe39cd580da951d8341cad1b4b5afabb46813ee450366801aea5cb0240366a6",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/fa0c046098e24ec03ea961ae16b1b98fd2848a11b17e6deb0ba26e87fd547f0a/executable.so": "955ce082129230afa83a23ae88431b4d1e27716099414676361640361113834d",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/fa0c046098e24ec03ea961ae16b1b98fd2848a11b17e6deb0ba26e87fd547f0a/host_kernel.cu": "4c8ef3eb724496f8bba9937125d157a0e119bc8e18d4440420dbdcf233299efb",
+          "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/fa0c046098e24ec03ea961ae16b1b98fd2848a11b17e6deb0ba26e87fd547f0a/params.pkl": "ad678f61af96a0e25cf68000d1d90bf5a004733bb03a7e9ca7d2d5655a6ed940"
+        }
+      },
+      "sanitizer_tool": {
+        "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+        "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+        "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+        "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+        "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+      },
+      "manifest": "data/glm53-packed/attention-race-build-manifest.json",
+      "status": "CPU prepared and checked before failed GPU smoke; repaired benchmark source not rebuilt"
+    },
+    "repaired_content_hashes": {
+      "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/glm_attention.py": "e9e59fbf81fd415f689f1fa6381d61cc0509d4fa4a8ad3242e2c5dccabb1bc1d",
+      "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py": "b25aa8718f8f42617912b01fdb5741472f927d3e4ec902beece85105065e1903",
+      "scripts/modal/kernels.py": "fbfdde8bf66c3b84629e8084f6d8375181ffea7b1c665cde113a6c67e3db24a6",
+      "scripts/modal/tests.py": "32b0d95a69b77afffc5e7f9edbc50fae3b8231cb622c28a7060cf0f3d1c52ae2"
+    },
+    "remaining_limits": {
+      "total_usd": 9.742003332882028,
+      "routine_usd": 6.742003332882029,
+      "cpu_usd": 0.45437536162291714,
+      "h100_worker_usd": 6.287627971259112,
+      "h100_seconds": 4159.287562917001,
+      "note": "Remaining arithmetic headroom does not authorize a corrective launch; prior ceilings and two-minute shutdown margin still apply."
+    }
   }
 }

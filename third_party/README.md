@@ -17,7 +17,7 @@ Folder suffixes identify the SGLang integration pair, not a FlashMLA release.
 |---|---|---|---|
 | `sglang-v0.5.18/` | `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` | `6687a7c` |
 | `flashmla-v0.5.18/` | `05e26647fe840b8baedae486c2d86d5ce4efeb7c` | `remnant/flashmla-v0518` | `97f3faa` |
-| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `codex/glm53-packed` | `9e42a0d` |
+| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `codex/glm53-packed` | `02cbbd9` |
 | `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `remnant/flashmla-v0522` | `3eb8594` |
 
 Both FlashMLA checkouts pin CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`.
@@ -352,3 +352,12 @@ Packed Direct in 128 paired graph cases. The fork owns the GLM fixture/reference
 module and shared timing primitives. Modal validates explicit per-tool testcase
 coverage and matching production runtime/compiled-artifact identities before
 timing. This does not change production attention kernels or serving defaults.
+
+
+The attention experiment is incomplete. At parent `d092f85` / SGLang `f71841e`,
+the H100 smoke passed the 8-head, two-bank graph fixture but failed the 16-head,
+four-bank fixture's final memory-accounting assertion before sanitizers. SGLang
+`02cbbd9` counts graph-private pool segments instead of a global allocator delta;
+10 focused CPU contracts and targeted independent review pass, but that repair
+has no GPU validation. No timing cases were accepted. See the GLM README and
+aggregate JSON for the failed run, unchanged historical qualification and cost.

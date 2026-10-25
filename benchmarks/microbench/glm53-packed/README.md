@@ -132,3 +132,63 @@ entry point owns incompatible compression and FlashMLA initialization. Shared
 measurement primitives have both benchmarks as consumers. These maintained
 modules and their contract tests remain after the experiment; transient launch
 controllers are retired after their commands/source hashes enter the ledger.
+
+
+### Execution outcome: incomplete
+
+Implementation is retained in SGLang `02cbbd92b802e0437a8597b6b14ec45c994cf98b`.
+Parent implementation commits are `9672503` and `d092f85`; FlashMLA remains
+`3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8`. Production kernel/runtime content is
+unchanged from the original GLM qualification. Local checks passed: 81 existing
+non-GPU benchmark tests, 24 startup contracts, 78 maintained launcher tests,
+and, after the final fix, 10 focused GLM contracts plus five focused launcher
+tests. A fresh-context reviewer inspected selection/causality, baseline fairness,
+timing, rotation, graph ownership and cleanup; timeout and explicit sanitizer
+coverage findings were fixed. The final accounting delta received a targeted
+independent review with no concrete finding.
+
+Two CPU preparations succeeded on `caiw`, producing images
+`im-vwwDy7UMUgFqIHRwa0O0xK` and `im-LF2iKAP2WKy42lKF67nPlt`. The first new H100
+allocation, `glm53-attention-racecheck-20261025T124407Z`, tested parent `d092f85`
+and SGLang `f71841e`. Startup contracts passed (24 tests). Its unprofiled graph
+smoke passed heads8/banks2/queries128; heads16/banks4/queries512 completed output
+and changing-input replay checks but failed its final positive graph-memory
+assertion. Global reserved memory fell by 48,234,496 bytes, so subtracting global
+allocator totals cannot measure graph ownership. This failed fixture is not a
+qualification pass. No sanitizer instrumentation or timing started.
+
+The retained repair sums unique graph-pool snapshot segment sizes, including
+inactive storage. It preserves the bank-independent allocation bound and 70%
+device-memory cap. CPU regression covers pool ownership, inactive storage and
+invalid snapshots. **The repaired accounting has not run on H100.** The plan's
+no-automatic-corrective-allocation rule stopped further GPU scheduling; racecheck,
+memcheck, new fixture sanitizer coverage and all 128 timing cases remain pending.
+No timing CSV or speedup is reported; `allocation.csv` remains historical physical
+storage evidence. Per-run logs, XML, manifests, controller snapshot and CPU test
+logs are retained and hashed by `qualification.json`; the controller has been
+retired from its temporary executable location. Historical passed/failed evidence
+is preserved separately from this phase.
+
+Final read-only checks found zero containers and all three task apps stopped.
+Aggregate conservative accrual is **$5.25799667**: $1.54562464 CPU preparation and
+$3.71237203 H100 worker allocation, including the original phase. Aggregate H100
+allocation is **3,040.71244 seconds (50.67854 minutes)**. This phase added
+$0.55468708 and 157.84852 H100 seconds. The latest lagging compute reading is
+$3.80780462 before credits; the prior $3.82152258 high-water is preserved and
+conservative accrual controls the budget. No account switch, weight download or
+push occurred. The $3 reserve remains protected.
+
+The single next entry point is the maintained validator below, after explicit
+approval of a corrective allocation and fresh source/artifact/budget preflight:
+
+```sh
+MODAL_PROFILE=caiw REMNANT_INTEGRATION=v0.5.22 REMNANT_MODEL_FAMILY=glm53 \
+  modal run scripts/modal/kernels.py::validate_kernels --model-family glm53 \
+  --stage sanitizer --sanitizer-tools racecheck --run-id <unique-id> --max-seconds 1500
+```
+
+Repaired-source CPU preparation and matching artifact verification must precede
+that GPU launch. Memcheck remains a separate allocation. Timing dispatch is
+`kernels.py::benchmark_kernels --model-family glm53 --suite glm-attention` with
+qualified run IDs and a remaining-budget deadline; it rejects missing gates.
+Rollback is to omit this suite; Native serving remains the default.

@@ -270,3 +270,15 @@ shared paired timing and explicit per-tool sanitizer evidence. CPU validation
 and independent review precede GPU execution. Exact outcomes, source/artifact
 IDs and costs belong to the existing GLM qualification ledger; missing gates
 remain incomplete. Rollback omits the GLM benchmark suite; no default changes.
+
+
+Attention implementation commits: parent `9672503` and `d092f85`; SGLang
+`f71841eade02afd1b601d8f1af72786b494bb6cb`, FlashMLA unchanged at
+`3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8`. Two CPU image preparations passed;
+new H100 smoke passed one graph fixture and failed the other at a negative
+reserved-memory delta assertion. Sanitizers and timing did not start. SGLang
+`02cbbd92b802e0437a8597b6b14ec45c994cf98b` repairs accounting using graph-pool
+segments; 10 focused CPU contracts and independent targeted review pass, GPU
+repair validation remains pending. Aggregate conservative cost is $5.25799667,
+50.67854 H100 minutes; all containers stopped. The no-corrective-launch rule
+stopped further execution. No performance result or serving-default change.
