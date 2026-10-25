@@ -256,3 +256,17 @@ matched KDA reservation. The 54.39% capacity ratio remains a projection.
 See `benchmarks/microbench/glm53-packed/qualification.json` for exact commands,
 source/artifact identities, costs and failed attempts. Retain as an opt-in
 candidate; rollback is Native or the starting SGLang pin. No serving/quality claim.
+
+## GLM two-path TileLang attention measurement
+
+Author: Winston Cai.
+
+Based on parent `4521a1abb359c6e7d2354c4bdef3abc9702368b9`, with FlashMLA
+unchanged at `3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8`. The parent gitlink
+records the benchmark SGLang commit; production runtime/kernel content remains
+identical to `9e42a0d8886dd93944dc6b47ef3bffef4e033b5a`. Adds the 128-case
+Native/Direct graph protocol, independent references, bounded bank rotation,
+shared paired timing and explicit per-tool sanitizer evidence. CPU validation
+and independent review precede GPU execution. Exact outcomes, source/artifact
+IDs and costs belong to the existing GLM qualification ledger; missing gates
+remain incomplete. Rollback omits the GLM benchmark suite; no default changes.

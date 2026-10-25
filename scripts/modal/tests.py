@@ -451,7 +451,7 @@ class LauncherTests(unittest.TestCase):
 
     def test_validation_budget_is_bounded_before_execution(self):
         function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
-        self.assertEqual(function.__defaults__, (False, 1100, "dsv4", "numerical", ""))
+        self.assertEqual(function.__defaults__, (False, 1100, "dsv4", "numerical", "", ""))
         with patch.object(kernels, "_run_context") as run:
             for seconds in (0, 59, 2641, 2700):
                 with self.assertRaisesRegex(ValueError, "max_seconds"):
@@ -2070,6 +2070,59 @@ class GlmLauncherTests(unittest.TestCase):
                     self.assertEqual(args[args.index(flag) + 1], expected)
                 self.assertNotIn("--dsv4-c4-cache-format", args)
                 self.assertIn("--language-model-only", args)
+
+
+
+
+
+class GLMAttentionProtocolTests(unittest.TestCase):
+    """Coverage identities and model-specific dispatch must fail closed."""
+
+    def test_explicit_sanitizer_selection_preserves_full_gate(self):
+        self.assertEqual(kernels._selected_sanitizer_tools('racecheck', True, 'glm53'), ('racecheck',))
+        self.assertEqual(kernels._selected_sanitizer_tools('', True, 'glm53'), kernels.SANITIZER_ORDER)
+        for value, enabled, family in [('memcheck', False, 'glm53'), ('racecheck', True, 'dsv4'), ('memcheck,memcheck', True, 'glm53'), ('unknown', True, 'glm53')]:
+            with self.assertRaises(ValueError):
+                kernels._selected_sanitizer_tools(value, enabled, family)
+
+    def test_sanitizer_count_cannot_replace_required_case_identities(self):
+        import xml.etree.ElementTree as ET
+        # Construct independent fixtures instead of relying on ignored artifacts.
+        names = ['test_producer_reconstruction', 'test_native_fp8_conversion',
+                 'test_allocator_accounting', 'test_invalid_attention', 'test_partial_outputs',
+                 'test_attention[3-8-8]', 'test_changing_input_graph[adapter]',
+                 'test_changing_input_graph[direct]', 'test_production_backend_constructor',
+                 'test_attention[0-1-64]', 'test_pool_lifecycle']
+        root = ET.Element('testsuites')
+        suite = ET.SubElement(root, 'testsuite', tests='11', errors='0', failures='0', skipped='0')
+        for name in names:
+            ET.SubElement(suite, 'testcase', name=name, classname='registered.attention.unittests.test_glm5_remnant')
+        tree = ET.ElementTree(root)
+        kernels._check_glm_sanitizer_cases(tree, 'historical', historical=True)
+        with self.assertRaisesRegex(RuntimeError, 'missing'):
+            kernels._check_glm_sanitizer_cases(tree, 'current', historical=False)
+        for name in ('test_benchmark_bank_graph_ownership[8-2]', 'test_benchmark_bank_graph_ownership[16-4]'):
+            ET.SubElement(suite, 'testcase', name=name, classname='registered.attention.unittests.test_glm5_remnant')
+        kernels._check_glm_sanitizer_cases(tree, 'current', historical=False)
+        suite[0].set('name', 'unrelated_test')
+        with self.assertRaisesRegex(RuntimeError, 'missing'):
+            kernels._check_glm_sanitizer_cases(tree, 'spoofed', historical=False)
+        suite[0].set('name', names[0])
+        ET.SubElement(suite[0], 'skipped')
+        with self.assertRaises(RuntimeError):
+            kernels._check_glm_sanitizer_cases(tree, 'skipped', historical=False)
+
+    def test_glm_command_does_not_load_deepseek_native_library(self):
+        with patch.object(kernels, 'MODEL_FAMILY', 'glm53'):
+            command = kernels._benchmark_command('--model-family', 'glm53', '--suite', 'glm-attention')
+        self.assertNotIn('--native-library', command)
+        self.assertIn('glm-attention', command)
+
+    def test_glm_qualified_timing_rejects_missing_tools(self):
+        with self.assertRaises(ValueError):
+            kernels._glm_timing_qualification('')
+        with self.assertRaises(ValueError):
+            kernels._glm_timing_qualification('../invalid')
 
 
 if __name__ == "__main__":

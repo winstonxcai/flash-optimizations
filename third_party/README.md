@@ -345,3 +345,10 @@ coverage and promotion status. FlashMLA and both v0.5.18 pins are unchanged.
 Qualification status: 90 H100 numerical tests and 11 synccheck tests passed.
 Racecheck timed out and memcheck was not run; independent review is outstanding.
 Retain this as an opt-in candidate; see the canonical experiment record.
+
+GLM attention microbenchmark: the maintained entry point now accepts
+`--model-family glm53 --suite glm-attention`, comparing unpruned Native with
+Packed Direct in 128 paired graph cases. The fork owns the GLM fixture/reference
+module and shared timing primitives. Modal validates explicit per-tool testcase
+coverage and matching production runtime/compiled-artifact identities before
+timing. This does not change production attention kernels or serving defaults.

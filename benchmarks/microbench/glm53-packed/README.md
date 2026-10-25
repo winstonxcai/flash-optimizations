@@ -108,3 +108,27 @@ retained; maintained production fixtures own reproduction. Roll back with
 `--glm5-mla-cache-format native`, or restore SGLang starting pin `7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7`.
 No full-model load, TP8 execution, latency, serving capacity, quality, multimodal,
 speculation, CP, unified memory, disaggregation, HiCache or HiSparse qualification.
+
+## Native versus Direct attention timing
+
+Question: does Packed Direct reduce complete FP8 TileLang attention latency
+against unpruned Native? Only attention is measured: query conversion, partial
+outputs and combine. Producer/store, indexer, metadata, allocator and model
+weights are excluded. Native is not replaced by a reconstructed Packed control.
+The required protocol is `remnant-glm-attention-v1`: 128 cases, TP4 then TP8,
+decode batches 1/8/16/24/32/64, prefill chunks 128/512/1536/4096/8192,
+128K prefix, initial tail phases 0/3, independent/shared prefill selections,
+warm/rotating policies, seed 20261024, and 30 balanced paired graph rounds.
+Acceptance requires exact codec validity, independent output references,
+completed outstanding sanitizer gates, and full matrix coverage. Performance is
+descriptive; missing gates or resource exhaustion mean incomplete, not a smaller
+successful experiment. Preserve the original $15 total, $12 routine cutoff,
+$3 reserve, category caps and 120 aggregate H100 minutes. Stop on failed
+preflight/validity, budget or deadline; no automatic retry or corrective launch.
+
+The existing `benchmark/remnant/microbench.py` dispatches GLM into a dedicated
+fixture/reference module under `python/sglang/benchmark/remnant/`; the DeepSeek
+entry point owns incompatible compression and FlashMLA initialization. Shared
+measurement primitives have both benchmarks as consumers. These maintained
+modules and their contract tests remain after the experiment; transient launch
+controllers are retired after their commands/source hashes enter the ledger.

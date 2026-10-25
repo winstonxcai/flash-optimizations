@@ -54,6 +54,9 @@ if MODEL_FAMILY not in ("dsv4", "glm53") or (MODEL_FAMILY == "glm53" and INTEGRA
     raise ValueError("GLM validation requires REMNANT_INTEGRATION=v0.5.22")
 GLM_TEST = "test/registered/attention/unittests/test_glm5_remnant.py"
 GLM_CPU_TEST = "test/registered/unit/test_glm5_mla_cache_format.py"
+GLM_BENCHMARK_CPU = "benchmark/remnant/test_microbench.py"
+GLM_BENCHMARK_GRAPH = GLM_TEST + "::test_benchmark_bank_graph_ownership"
+GLM_BASELINE = "9e42a0d8886dd93944dc6b47ef3bffef4e033b5a"
 GLM_SMOKE = (GLM_TEST + "::test_producer_reconstruction", GLM_TEST + "::test_native_fp8_conversion", GLM_TEST + "::test_allocator_accounting", GLM_TEST + "::test_invalid_attention", GLM_TEST + "::test_partial_outputs",
              GLM_TEST + "::test_attention[3-8-8]",
              GLM_TEST + "::test_changing_input_graph", GLM_TEST + "::test_production_backend_constructor")
@@ -93,6 +96,16 @@ if modal.is_local():
     )
 else:
     SOURCE_IDENTITIES = json.loads(os.environ["REMNANT_SOURCE_IDENTITIES"])
+if MODEL_FAMILY == "glm53" and modal.is_local():
+    GLM_BASELINE_RUNTIME_HASHES = {
+        path: hashlib.sha256(subprocess.check_output(
+            ["git", "-C", str(SGLANG_SOURCE), "show", f"{GLM_BASELINE}:python/sglang/{path}"], timeout=30
+        )).hexdigest()
+        for path in ("kernels/ops/attention/dsa/tilelang_kernel.py", "srt/remnant/glm.py",
+                     "srt/remnant/glm_pool.py", "srt/remnant/reference.py", "srt/layers/layernorm.py")
+    }
+else:
+    GLM_BASELINE_RUNTIME_HASHES = json.loads(os.environ.get("REMNANT_GLM_BASELINE_RUNTIME_HASHES", "{}"))
 RESULTS_ROOT = Path("/results")
 NATIVE_LIBRARY = Path("/opt/remnant-native-store.so")
 MANIFEST = Path("/opt/remnant-build.json")
@@ -176,8 +189,8 @@ if INTEGRATION["version"] == "v0.5.22":
     )
 if MODEL_FAMILY == "glm53":
     VALIDATION_TESTS = (GLM_CPU_TEST, GLM_TEST)
-    CPU_TESTS = (GLM_CPU_TEST,)
-    SANITIZER_TESTS = GLM_SANITIZER
+    CPU_TESTS = (GLM_CPU_TEST, GLM_BENCHMARK_CPU + "::test_glm_matrix_order_and_baseline_identity", GLM_BENCHMARK_CPU + "::test_glm_grouped_causal_prefill_and_shared_prefix", GLM_BENCHMARK_CPU + "::test_glm_separate_decode_requests_and_page_mapping", GLM_BENCHMARK_CPU + "::test_glm_rotation_and_call_normalization", GLM_BENCHMARK_CPU + "::test_glm_shared_round_schedule_and_preconditioning", GLM_BENCHMARK_CPU + "::test_glm_cli_rejects_adapter_and_deepseek_options", GLM_BENCHMARK_CPU + "::test_glm_entrypoint_dispatches_before_deepseek_imports", GLM_BENCHMARK_CPU + "::test_glm_rejects_incomplete_timing")
+    SANITIZER_TESTS = (*GLM_SANITIZER, GLM_BENCHMARK_GRAPH)
     BENCHMARK_TESTS = ()
 
 # Finish missing synchronization coverage before retrying the slower memcheck.
@@ -471,6 +484,9 @@ def _build_image() -> None:
             deadline,
             environment=cpu_environment,
         )
+    if MODEL_FAMILY == "glm53":
+        _run_command(_benchmark_command("--model-family", "glm53", "--suite", "glm-attention", "--check-imports"),
+                     build / "glm-benchmark-imports.log", deadline, environment=cpu_environment)
     _run_pytest(
         VALIDATION_TESTS,
         build,
@@ -643,6 +659,8 @@ kernel_image = (
             "REMNANT_FLASHMLA_SOURCE_DIR": str(FLASHMLA_ROOT),
             "REMNANT_NATIVE_STORE_LIBRARY": str(NATIVE_LIBRARY),
             "REMNANT_BUILD_MANIFEST_PATH": str(MANIFEST),
+            "REMNANT_GLM_BASELINE_RUNTIME_HASHES": json.dumps(GLM_BASELINE_RUNTIME_HASHES),
+            "REMNANT_VALIDATION_TIMEOUT_S": str(VALIDATION_TIMEOUT_S),
             "REMNANT_MODEL_CONFIG": "/opt/remnant-0731-config.json",
             **(
                 {"REMNANT_VALIDATION_TIMEOUT_S": str(VALIDATION_TIMEOUT_S)}
@@ -673,7 +691,7 @@ _GPU = {
     "gpu": "H100!",
     "cpu": 4 if MODEL_FAMILY == "glm53" else 8,
     "memory": 32768 if MODEL_FAMILY == "glm53" else 65536,
-    "timeout": GPU_TIMEOUT_S,
+    "timeout": 1620 if MODEL_FAMILY == "glm53" else GPU_TIMEOUT_S,
     "retries": 0,
     "max_containers": 1,
     "scaledown_window": 2,
@@ -694,15 +712,37 @@ def prepare_kernels(model_family: str = "dsv4") -> None:
 # Public workflows.
 
 
-@app.function(**{**_GPU, "timeout": 900})
+@app.function(**{**_GPU, "timeout": 1200 if MODEL_FAMILY == "glm53" else 900})
 def benchmark_kernels(
     run_id: str,
     keep_count: int = 256,
     modes: str = "",
     suite: str = "all",
     prefill_reader: str = "split",
+    model_family: str = "dsv4", max_seconds: int = RUN_BUDGETS_S["timing"],
+    qualification_runs: str = "",
 ) -> str:
     """Validate and time the complete matrix for the selected survivor budget."""
+    if model_family != MODEL_FAMILY:
+        raise ValueError("--model-family must match REMNANT_MODEL_FAMILY")
+    if model_family == "glm53":
+        if suite != "glm-attention" or keep_count != 256 or modes not in ("", "native,direct") or prefill_reader != "split":
+            raise ValueError("GLM timing requires --suite glm-attention and exactly native,direct")
+        if not 60 <= max_seconds <= 1140:
+            raise ValueError("GLM timing max_seconds must be between 60 and 1140")
+        with _run_context(run_id, "timing", max_seconds) as (root, record, deadline):
+            _verify_glm_image()
+            record["qualification"] = _glm_timing_qualification(qualification_runs)
+            _run_pytest((GLM_BENCHMARK_GRAPH,), root, "benchmark-graphs", deadline)
+            argv = _benchmark_command("--model-family", "glm53", "--suite", suite,
+                                      "--output", str(root / "timing"),
+                                      "--max-seconds", str(max(60, int(deadline-time.monotonic())-10)))
+            record.update(command=argv, modes=("native", "direct"), suite=suite)
+            _run_command(argv, root / "timing.log", deadline)
+            _glm_benchmark_contract().validate_timing(json.loads((root / "timing.json").read_text()))
+        return str(root)
+    if qualification_runs:
+        raise ValueError("qualification_runs is GLM-only")
     contract = _benchmark_cases()
     is_prefill = suite == "prefill-read"
     if prefill_reader not in ("split", "fused") or (
@@ -778,7 +818,7 @@ def benchmark_kernels(
 )
 def validate_kernels(
     run_id: str, sanitizer: bool = False, max_seconds: int = RUN_BUDGETS_S["validation"],
-    model_family: str = "dsv4", stage: str = "numerical", cases: str = ""
+    model_family: str = "dsv4", stage: str = "numerical", cases: str = "", sanitizer_tools: str = ""
 ) -> str:
     """Run existing GPU tests; skipped tests fail coverage. Optional three sanitizers."""
     if model_family != MODEL_FAMILY:
@@ -794,6 +834,7 @@ def validate_kernels(
             raise ValueError("--cases is only supported for the GLM corrective stage")
         selected_tests = VALIDATION_TESTS
     sanitizer = sanitizer or stage == "sanitizer"
+    selected_tools = _selected_sanitizer_tools(sanitizer_tools, sanitizer, model_family)
     maximum = min(2640, VALIDATION_TIMEOUT_S - 60)
     if not 60 <= max_seconds <= maximum:
         raise ValueError(f"max_seconds must be between 60 and {maximum}")
@@ -804,6 +845,10 @@ def validate_kernels(
     ):
         environment = dict(os.environ)
         record["sanitizer"] = sanitizer
+        record["selected_sanitizer_tools"] = selected_tools
+        record["sanitizer_qualification_complete"] = False
+        if MODEL_FAMILY == "glm53":
+            record["runtime_hashes"] = _glm_benchmark_contract().runtime_hashes(SGLANG_ROOT / "python/sglang")
         if sanitizer:
             record["sanitizer_results"] = {
                 tool: {"status": "not_run"} for tool in SANITIZER_ORDER
@@ -928,6 +973,7 @@ def validate_kernels(
                 _run_pytest(selected_tests, root, "corrective", deadline, environment=environment)
             else:
                 _run_pytest((GLM_CPU_TEST,), root, "startup-regressions", deadline, environment=environment)
+                _run_pytest((GLM_BENCHMARK_GRAPH,), root, "benchmark-graph-smoke", min(deadline, time.monotonic()+300), environment=environment)
         else:
             _run_pytest(VALIDATION_TESTS, root, "validation", deadline, environment=environment)
         if INTEGRATION["version"] == "v0.5.22" and (stage == "numerical" or (stage == "corrective" and GLM_TEST + "::test_real_gpu_allocations" in selected_tests)):
@@ -938,7 +984,7 @@ def validate_kernels(
                 raise RuntimeError("Incomplete real-allocation coverage")
             record["allocation"] = allocation
         if sanitizer:
-            for tool in SANITIZER_ORDER:
+            for tool in selected_tools:
                 # Commands use whole-second timeouts. Preserve the incomplete
                 # tool matrix instead of attempting a launch with zero seconds.
                 if int(deadline - time.monotonic()) <= 0:
@@ -964,9 +1010,11 @@ def validate_kernels(
                     results_volume.commit()
             incomplete = [
                 tool
-                for tool, result in record["sanitizer_results"].items()
-                if result["status"] != "passed"
+                for tool in selected_tools
+                if record["sanitizer_results"][tool]["status"] != "passed"
             ]
+            record["sanitizer_qualification_complete"] = all(
+                result["status"] == "passed" for result in record["sanitizer_results"].values())
             if incomplete:
                 raise RuntimeError(
                     f"Sanitizer qualification incomplete: {incomplete}; see tool logs"
@@ -1250,13 +1298,8 @@ def _run_command(
 
 def _benchmark_command(*options: str) -> list[str]:
     script = SGLANG_ROOT / "benchmark/remnant/microbench.py"
-    return [
-        sys.executable,
-        str(script),
-        "--native-library",
-        str(NATIVE_LIBRARY),
-        *options,
-    ]
+    return [sys.executable, str(script),
+            *([] if MODEL_FAMILY == "glm53" else ["--native-library", str(NATIVE_LIBRARY)]), *options]
 
 
 def _run_pytest(
@@ -1293,27 +1336,112 @@ def _run_pytest(
             raise RuntimeError(f"Incomplete validation {name}: {counts}")
         if prefix:
             tool = prefix[prefix.index("--tool") + 1]
-            summary = (
-                "RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)"
-                if tool == "racecheck"
-                else "ERROR SUMMARY: 0 errors"
-            )
-            # Pytest progress dots can precede the sanitizer record on the same
-            # line. Require one clean final report, not an earlier zero summary.
-            records = [r.strip() for r in re.findall(r"========= ([^\r\n]*)", output)]
-            summaries = [
-                r
-                for r in records
-                if r.startswith(("ERROR SUMMARY:", "RACECHECK SUMMARY:"))
-            ]
-            if (
-                summaries != [summary]
-                or any(r.startswith(("Warning:", "Error:")) for r in records)
-                or "terminated before first instrumented API call" in output
-            ):
-                raise RuntimeError(
-                    f"Incomplete sanitizer evidence {tool}; see {root / f'{name}.log'}"
-                )
+            try:
+                _check_sanitizer_report(output, tool)
+            except RuntimeError as error:
+                raise RuntimeError(f"Incomplete sanitizer evidence {tool}; see {root / f'{name}.log'}") from error
+
+
+
+def _selected_sanitizer_tools(value: str, enabled: bool, family: str) -> tuple[str, ...]:
+    if value and (not enabled or family != "glm53"):
+        raise ValueError("--sanitizer-tools requires GLM sanitizer validation")
+    tools = tuple(value.split(",")) if value else SANITIZER_ORDER
+    if not tools or len(set(tools)) != len(tools) or set(tools) - set(SANITIZER_ORDER):
+        raise ValueError("--sanitizer-tools must select unique memcheck,racecheck,synccheck")
+    return tools
+
+
+def _glm_benchmark_contract():
+    path = (SGLANG_SOURCE if modal.is_local() else SGLANG_ROOT) / "python/sglang/benchmark/remnant/glm_attention.py"
+    spec = importlib.util.spec_from_file_location("remnant_glm_benchmark", path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _verify_glm_image() -> None:
+    """Verify image inputs and CPU-produced binaries before benchmark work."""
+    manifest = json.loads(MANIFEST.read_text())
+    if manifest.get("model_family") != "glm53" or manifest["source_identities"] != SOURCE_IDENTITIES or manifest["sources"] != _source_hashes():
+        raise RuntimeError("GLM timing image source identity mismatch")
+    for artifacts in (manifest["binaries"], manifest["glm_compile"]["cache_files"]):
+        for path, expected in artifacts.items():
+            if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
+                raise RuntimeError(f"GLM timing artifact changed: {path}")
+    from sglang.srt.remnant.glm import compile_kernels
+    if [k.hash for k in compile_kernels()] != manifest["glm_compile"]["triton"]:
+        raise RuntimeError("GLM timing Triton variant mismatch")
+
+
+def _glm_timing_qualification(run_ids: str) -> dict:
+    """Accept per-tool evidence only with unchanged production code/toolchains.
+
+    A prior overall failed run may supply a completed synccheck group; its
+    failed or not-run groups cannot qualify. New partial-tool runs explicitly
+    remain incomplete as full qualifications until merged here.
+    """
+    ids = run_ids.split(",")
+    if not run_ids or any(not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", x) for x in ids):
+        raise ValueError("GLM timing requires explicit --qualification-runs IDs")
+    manifest = json.loads(MANIFEST.read_text())
+    current = _glm_benchmark_contract().runtime_hashes(SGLANG_ROOT / "python/sglang")
+    groups = {}
+    for run_id in ids:
+        root = RESULTS_ROOT / "microbench" / run_id / "validation"
+        result = json.loads((root / "result.json").read_text())
+        old = json.loads((root / "build-manifest.json").read_text())
+        if result.get("model_family") != "glm53":
+            raise RuntimeError(f"Not GLM qualification: {run_id}")
+        if result.get("runtime_hashes") is not None:
+            if result["runtime_hashes"] != current:
+                raise RuntimeError(f"GLM runtime hashes changed: {run_id}")
+        elif old["source_identities"]["sglang"]["commit"] != GLM_BASELINE or current != GLM_BASELINE_RUNTIME_HASHES:
+            raise RuntimeError(f"Cannot establish unchanged historical GLM runtime: {run_id}")
+        for key in ("torch", "cuda", "cuda_python", "cuda_bindings", "triton", "tilelang", "binaries"):
+            if old.get(key) != manifest.get(key):
+                raise RuntimeError(f"GLM qualification dependency changed: {run_id}/{key}")
+        for key in ("triton", "tilelang", "attention_scale"):
+            if old['glm_compile'][key] != manifest['glm_compile'][key]:
+                raise RuntimeError(f"GLM compiled variant identity changed: {run_id}/{key}")
+        if old['sanitizer']['binary_sha256'] != manifest['sanitizer']['binary_sha256']:
+            raise RuntimeError(f"GLM sanitizer identity changed: {run_id}")
+        for tool, status in result.get("sanitizer_results", {}).items():
+            if status.get("status") == "passed":
+                _check_sanitizer_report((root / f"{tool}.log").read_text(), tool)
+                tree = ET.parse(root / f"{tool}.xml")
+                _check_glm_sanitizer_cases(tree, run_id, historical=result.get('runtime_hashes') is None)
+                groups[tool] = dict(run_id=run_id, result_sha256=hashlib.sha256((root / 'result.json').read_bytes()).hexdigest())
+    if set(groups) != set(SANITIZER_ORDER):
+        raise RuntimeError(f"GLM timing blocked by missing sanitizer gates: {set(SANITIZER_ORDER)-set(groups)}")
+    return dict(status="passed", tools=groups, runtime_hashes=current)
+
+
+def _check_glm_sanitizer_cases(tree: ET.ElementTree, run_id: str, *, historical: bool) -> None:
+    required = {
+        "test_producer_reconstruction", "test_native_fp8_conversion", "test_allocator_accounting",
+        "test_invalid_attention", "test_partial_outputs", "test_attention[3-8-8]",
+        "test_changing_input_graph[adapter]", "test_changing_input_graph[direct]",
+        "test_production_backend_constructor", "test_attention[0-1-64]", "test_pool_lifecycle",
+    }
+    if not historical:
+        required |= {"test_benchmark_bank_graph_ownership[8-2]", "test_benchmark_bank_graph_ownership[16-4]"}
+    nodes = list(tree.getroot().iter("testcase"))
+    names = {node.get("name") for node in nodes
+             if node.get("classname", "").endswith("attention.unittests.test_glm5_remnant")}
+    suites = list(tree.getroot().iter("testsuite"))
+    if not required <= names or any(node.find(k) is not None for node in nodes for k in ("failure", "error", "skipped")) or any(int(x.get(k, 0)) for x in suites for k in ("errors", "failures", "skipped")):
+        raise RuntimeError(f"Incomplete GLM sanitizer fixture: {run_id}; missing={sorted(required-names)}")
+
+
+def _check_sanitizer_report(output: str, tool: str) -> None:
+    expected = ("RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)"
+                if tool == "racecheck" else "ERROR SUMMARY: 0 errors")
+    records = [r.strip() for r in re.findall(r"========= ([^\r\n]*)", output)]
+    summaries = [r for r in records if r.startswith(("ERROR SUMMARY:", "RACECHECK SUMMARY:"))]
+    if summaries != [expected] or any(r.startswith(("Warning:", "Error:")) for r in records) or "terminated before first instrumented API call" in output:
+        raise RuntimeError(f"Incomplete sanitizer evidence {tool}")
 
 
 def _benchmark_cases():
