@@ -16,6 +16,7 @@ import sys
 import tempfile
 import unittest
 from contextlib import nullcontext
+from dataclasses import dataclass, field
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
@@ -1131,6 +1132,41 @@ with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')
 
 
 class LocalScriptTests(unittest.TestCase):
+    def test_request_timing_probe_uses_valid_lifecycle_for_both_profiles(self):
+        """Author: Winston Cai. Exercise the real probe and fork exporters on CPU."""
+        launcher = (kernels.REPO_ROOT / "scripts/local/serve.sh").read_text()
+        probe = launcher.split(
+            "from sglang.srt.observability.req_time_stats import APIServerReqTimeStats\n", 1
+        )[1].split("\n' || exit 1", 1)[0]
+        for version in ("v0.5.18", "v0.5.22"):
+            source = (kernels.REPO_ROOT / integration_profile(version)["sglang"] /
+                      "python/sglang/srt/observability/req_time_stats.py")
+            # Execute the actual exporter class without importing optional GPU
+            # dependencies. Its base owns tracing, unused by this metadata probe.
+            stats_class = next(node for node in ast.parse(source.read_text()).body
+                               if isinstance(node, ast.ClassDef) and
+                               node.name == "APIServerReqTimeStats")
+            stats_class.bases = []
+            module = ast.Module(body=[
+                ast.ImportFrom(module="__future__", names=[ast.alias(name="annotations")], level=0),
+                stats_class,
+            ], type_ignores=[])
+            namespace = dict(__name__=__name__, dataclass=dataclass, field=field,
+                             SGLANG_FRONTEND_DIAGNOSTICS=False, inspect=inspect,
+                             convert_time_to_realtime=lambda stamp: 1000.0 + stamp)
+            exec(compile(ast.fix_missing_locations(module), str(source), "exec"), namespace)
+            with self.subTest(version=version), patch("builtins.print"):
+                exec(probe, namespace)
+                stats = namespace["stats"]
+                self.assertGreater(stats.created_time, 0)
+                self.assertGreater(stats.first_token_time, stats.created_time)
+                self.assertEqual(stats.convert_to_output_meta_info()["first_output_ts"], 1002.0)
+                # Keep rejecting an exporter that really lacks the timestamp.
+                namespace["APIServerReqTimeStats"] = lambda: SimpleNamespace(
+                    convert_to_output_meta_info=lambda: {})
+                with self.assertRaisesRegex(AssertionError, "lacks first_output_ts"):
+                    exec(probe, namespace)
+
     def test_container_preflight_uses_selected_argument_layout(self):
         """Run the real prep action and shell checks; fake Docker only."""
         with tempfile.TemporaryDirectory(prefix="remnant-container-prep-") as temporary:
