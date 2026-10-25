@@ -2,6 +2,13 @@
 
 Author: Winston Cai.
 
+Current attention result: **56/128 cases measured; descriptive comparison is
+incomplete and unqualified**. Direct is slower in every measured case. See
+[the current outcome](#current-descriptive-attention-outcome-2026-10-26),
+[all per-case samples and provenance](qualification.json), and [the flat CSV](attention.csv).
+The current aggregate authorization is $20; earlier budget/outcome sections below
+are historical. Native remains the default.
+
 Question: can eleven MLA layers use 320-byte rows while retaining Native FP8
 TileLang arithmetic and unchanged KDA/indexer/tail reservations on H100?
 
@@ -33,7 +40,7 @@ The analytic ratio is 5995/3883 = 1.5439093484 at unchanged KDA reservation.
 Physical tests must account for pages, indexer, KDA, tails, aliases and workspaces.
 This ratio is not measured serving capacity.
 
-## Outcome (2026-10-25)
+## Original runtime qualification (historical, 2026-10-25)
 
 **Decision: retain an opt-in candidate; qualification is incomplete.** Purpose:
 replace only the eleven MLA layers' persistent FP8 storage. Risk: the persistent
@@ -134,7 +141,7 @@ modules and their contract tests remain after the experiment; transient launch
 controllers are retired after their commands/source hashes enter the ledger.
 
 
-### Execution outcome: incomplete
+### Initial timing attempt (historical)
 
 Implementation is retained in SGLang `02cbbd92b802e0437a8597b6b14ec45c994cf98b`.
 Parent implementation commits are `9672503` and `d092f85`; FlashMLA remains
@@ -272,3 +279,89 @@ exact missing case names and `experiment_status=unqualified`. The default still
 blocks timing on missing gates. This option enables descriptive data collection,
 not acceptance or production promotion. Finish remaining memcheck only after
 timing if the same aggregate budget permits.
+
+
+## Current descriptive attention outcome (2026-10-26)
+
+**Purpose:** measure complete stock Native FP8 TileLang attention against Packed
+Direct on one H100. **Decision:** retain a reproducible descriptive comparison;
+do not promote Direct. Production kernels, serving defaults, FlashMLA and both
+v0.5.18 pins are unchanged. No kernel tuning was undertaken after observing a loss.
+
+**Evidence:** measured parent `853e4d6bc85acfb2ae56fcba92af77e1ae29b853`,
+SGLang `889edf56b33226c80b17ddf3472c1206df62c3f0`, FlashMLA
+`3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8`, CPU-prepared image
+`im-EomZZ0NhII6stVasjzgyo4`. SM90 runtime/compiled content is unchanged from
+qualification. All 81 maintained launcher tests and seven focused protocol tests
+passed. A fresh-context reviewer inspected the benchmark; targeted follow-ups
+covered later fixes and the explicit exploratory option. No unresolved concrete
+review finding remains in the implemented benchmark.
+
+There are **56 complete cases, two modes, 30 balanced paired rounds per case**:
+all TP4 (16 local heads) decode batches, plus prefill128/512/1536/4096, both tail
+phases, both locality policies and warm/rotating buffers. They passed exact Packed
+bytes/bitmap checks, full-output finiteness, independent sampled references at
+atol/rtol0.02, stock reconstruction controls and graph ownership/replay checks.
+The three resumed prefixes (46,51,54 cases) are preserved exactly. The final raw
+record deliberately says `incomplete` after a boundary SIGINT; its 56 valid cases
+are not relabeled as a complete128-case experiment.
+
+Medians below are milliseconds per complete attention call. Ratios are medians of
+paired Direct/Native round averages, not ratios of aggregate workload latencies.
+
+| TP4 case (tail phase0) | Native ms | Direct ms | Paired Direct/Native |
+|---|---:|---:|---:|
+| Decode batch1, warm | 0.020587 | 0.065171 | 3.16 |
+| Decode batch1, rotating | 0.019885 | 0.086035 | 4.33 |
+| Decode batch64, warm | 0.123745 | 1.147201 | 9.27 |
+| Prefill128, independent, warm | 0.156369 | 2.051651 | 13.12 |
+| Prefill512, independent, warm | 0.592497 | 8.171516 | 13.79 |
+| Prefill1536, independent, warm | 1.697530 | 24.269038 | 14.30 |
+| Prefill4096, independent, warm | 5.042905 | 72.045659 | 14.29 |
+
+Across these completed cases, per-case paired median ratios range3.1644–14.7105;
+every measured case favors Native. No workload-weighted headline is reported.
+The CSV contains112 mode rows, raw samples, p95 of round averages, paired ratios
+and fixture metadata. The canonical qualification JSON embeds all56 case records,
+source/artifact identities, commands, hashes and accrued costs. Timestamped raw
+exports remain in ignored `data/glm53-packed/` and Modal volume
+`caiw/remnant-stage2a-results/microbench/<run-id>/timing/`.
+
+**Risk and limitations:** this comparison is explicitly unqualified. Reconciled
+source-bound sanitizer evidence covers racecheck13/13 and synccheck13/13, both
+clean; memcheck6/13 completed cleanly before the user requested timing priority.
+Its intentional SIGINT produced a finalized six-case XML and zero-error summary,
+bound by a separate checkpoint note. Seven memcheck cases remain unverified.
+The72 missing timing cases are all eight8192-query TP4 cases and all64 TP8 cases.
+No full-model loading, true TP4/TP8 execution, serving capacity, model quality,
+serving latency/SLO or causal performance-profile claim is established.
+
+**Budget:** the user increased aggregate authorization from$15 to$20 and chose
+timing before unfinished memcheck. Conservative accrued cost is**$19.39082903**,
+including CPU/image preparation$2.27645383 and H100-worker upper-rate wall time
+$17.11437519. Observed compute high-water is$16.57580973 before credits; a later
+snapshot was lower and does not reduce conservative accrual. All allocations are
+released and apps stopped. Remaining routine headroom$0.35917097 cannot cover the
+next8192-query case, so no further GPU work is scheduled. The requested$35 cap is
+**not approved**. Earlier limits, failures and costs remain historical records;
+there is no account or budget reset.
+
+**Next entry point and exact source:** the maintained command is
+`benchmark/remnant/microbench.py --model-family glm53 --suite glm-attention`.
+Remote dispatch is `scripts/modal/kernels.py::benchmark_kernels` with explicit
+`--qualification-runs`, `--allow-incomplete-qualification` and
+`--resume-run glm53-attention-timing-20261025T173500Z`. Full qualification remains
+the default without the exploratory option. Further allocation needs increased
+budget and fresh preflight. Strict resume includes the complete compiled manifest,
+parent853e4d6 and the original managed worktree path: preserve the latest aggregate
+ledger outsideGit before restoring that measured source, and overlay the latest
+ledger afterward. Never restore an earlier spent amount from Git. The ignored
+`data/glm53-packed/attention-handoff-ledger.json` preserves the current ledger;
+the archived `attention-resumed-controller.py` preserves execution controls.
+Do not run the archived controller against an old ledger or assume its cap changed.
+
+**Rollback and lifecycle:** omit the GLM benchmark suite; Native serving remains
+the default. Maintained GLM fixtures, shared timing, tests and Modal dispatch stay
+active. The task-owned temporary controller and repair helper were retired after
+archiving the controller and hashes. Historical run evidence was preserved. No
+push was performed.

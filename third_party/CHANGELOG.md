@@ -13,6 +13,14 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Measured parent `853e4d6`, v0.5.22 SGLang `889edf56b332` / FlashMLA
+  `3eb85944fd7d`: saved56 complete Native FP8 TileLang/Packed Direct H100 cases,
+  30 paired rounds each; all measured TP4 cases favor Native. Descriptive only:
+  72 cases and7 memcheck cases remain unverified. Racecheck/synccheck13 cases
+  each reconcile cleanly. All allocations stopped; conservative cost$19.390829
+  under user-updated$20 cap. Canonical JSON and flat CSV retain raw samples and
+  source-bound resume history. Production kernels/defaults and all pins unchanged.
+
 - Parent based on `5c8b464`; v0.5.22 SGLang `889edf56b332` / FlashMLA
   `3eb85944fd7d`: add explicit exploratory GLM timing when sanitizer coverage
   is incomplete, following user authorization. Default qualification remains
