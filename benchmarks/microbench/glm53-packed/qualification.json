@@ -9,8 +9,8 @@
   "budget": {
     "authorized_usd": 15,
     "routine_cutoff_usd": 12,
-    "conservative_accrued_usd": 7.1536377079252915,
-    "h100_seconds": 4368.67316395801,
+    "conservative_accrued_usd": 9.013378165420875,
+    "h100_seconds": 5779.052262916011,
     "accounts": {
       "caiw": {
         "preparation_preflight": [
@@ -77,8 +77,8 @@
       "billed_after_credits": 0,
       "note": "Compute sum excludes unrelated baseline storage and credits; billing may lag. Conservative accrued includes full CLI wall time at worker resource caps; $3 reserve remains unused."
     },
-    "cpu_preparation_conservative_usd": 1.8199731828618888,
-    "h100_worker_conservative_usd": 5.333664525063402,
+    "cpu_preparation_conservative_usd": 1.9577974693185252,
+    "h100_worker_conservative_usd": 7.055580696102348,
     "latest_compute_reading_usd": 3.80780462,
     "latest_compute_reading_note": "Read-only final check, excludes credits/storage; lower than historical high-water, which is preserved. Conservative task ledger remains controlling."
   },
@@ -2880,6 +2880,696 @@
             "sha256": "ef18be1abf0cb140b3e4b960ed30d44abd510ee97c21a9f3f8f43cb33b1164cd"
           }
         }
+      },
+      {
+        "action": "prepare",
+        "run_id": "glm53-attention-prepare-20261025T141556Z",
+        "status": "completed",
+        "started_at": "2026-10-25T14:15:56.398870+00:00",
+        "compute_before": {
+          "metered_cost": "32.06333156",
+          "billed_cost": "0E-8",
+          "adjustments": {
+            "network_egress_allowance": "-0.00003223",
+            "free_storage": "-26.54329934",
+            "reservation_adjustment": "-0E-8",
+            "credits": "-5.52000000",
+            "plan_cost": "0E-8"
+          },
+          "metered_cost_breakdown": {
+            "network_egress": "0.00003223",
+            "deployed_apps": "0.04856797",
+            "llm_tokens": "0E-8",
+            "volumes": "26.54329934",
+            "ephemeral_apps": "5.47510152"
+          }
+        },
+        "rates": {
+          "cpu_hour_cost": "0.04730",
+          "cpu_hour_cost_sandbox": "0.141900",
+          "egress_gib_cost": "0.04000",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_cached_prompt_mtok_cost": "0.005",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_completion_mtok_cost": "1.00",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_prompt_mtok_cost": "0.25",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_reasoning_mtok_cost": "1.00",
+          "endpoints_moonshotai_kimi_k3_cached_prompt_mtok_cost": "0.30",
+          "endpoints_moonshotai_kimi_k3_completion_mtok_cost": "15.00",
+          "endpoints_moonshotai_kimi_k3_prompt_mtok_cost": "3.00",
+          "endpoints_moonshotai_kimi_k3_reasoning_mtok_cost": "15.00",
+          "endpoints_nvidia_glm_5.2_nvfp4_cached_prompt_mtok_cost": "1",
+          "endpoints_nvidia_glm_5.2_nvfp4_completion_mtok_cost": "1",
+          "endpoints_nvidia_glm_5.2_nvfp4_prompt_mtok_cost": "1",
+          "endpoints_nvidia_glm_5.2_nvfp4_reasoning_mtok_cost": "1",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_cached_prompt_mtok_cost": "0.25",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_completion_mtok_cost": "6.00",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_prompt_mtok_cost": "2.00",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_reasoning_mtok_cost": "6.00",
+          "endpoints_thinkingmachines_inkling_nvfp4_cached_prompt_mtok_cost": "0.27",
+          "endpoints_thinkingmachines_inkling_nvfp4_completion_mtok_cost": "5",
+          "endpoints_thinkingmachines_inkling_nvfp4_prompt_mtok_cost": "1.20",
+          "endpoints_thinkingmachines_inkling_nvfp4_reasoning_mtok_cost": "5",
+          "endpoints_zai_org_glm_5.3_cached_prompt_mtok_cost": "0.26",
+          "endpoints_zai_org_glm_5.3_completion_mtok_cost": "4.40",
+          "endpoints_zai_org_glm_5.3_flash_cached_prompt_mtok_cost": "0.09",
+          "endpoints_zai_org_glm_5.3_flash_completion_mtok_cost": "1.50",
+          "endpoints_zai_org_glm_5.3_flash_prompt_mtok_cost": "0.45",
+          "endpoints_zai_org_glm_5.3_flash_reasoning_mtok_cost": "1.50",
+          "endpoints_zai_org_glm_5.3_prompt_mtok_cost": "1.40",
+          "endpoints_zai_org_glm_5.3_reasoning_mtok_cost": "4.40",
+          "gpu_hour_cost_a100_40gb": "2.10000",
+          "gpu_hour_cost_a100_80gb": "2.50000",
+          "gpu_hour_cost_a10g": "1.10000",
+          "gpu_hour_cost_b200": "6.25000",
+          "gpu_hour_cost_b300": "7.10000",
+          "gpu_hour_cost_h100": "3.95000",
+          "gpu_hour_cost_h200": "4.54000",
+          "gpu_hour_cost_l4": "0.80000",
+          "gpu_hour_cost_l40s": "1.95000",
+          "gpu_hour_cost_rtx6000": "3.03000",
+          "gpu_hour_cost_t4": "0.59000",
+          "mem_gib_hour_cost": "0.00800",
+          "mem_gib_hour_cost_sandbox": "0.024000",
+          "volume_storage_gib_month_cost": "0.09000"
+        },
+        "containers_before": [],
+        "apps_before": [
+          {
+            "app_id": "ap-lnxruR4cIBQ4HzUPvWbAT6",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 21:46:54+08:00",
+            "stopped_at": "2026-10-25 22:08:54+08:00"
+          },
+          {
+            "app_id": "ap-tPOWBt7lvdwj2ZiCtIO1ky",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 21:40:16+08:00",
+            "stopped_at": "2026-10-25 21:46:26+08:00"
+          },
+          {
+            "app_id": "ap-lDahrtKl0D2SEdyiyF6DfH",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 21:32:39+08:00",
+            "stopped_at": "2026-10-25 21:39:20+08:00"
+          },
+          {
+            "app_id": "ap-WpjxRXpXECjNFQaT5SEpAD",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 20:44:12+08:00",
+            "stopped_at": "2026-10-25 20:46:43+08:00"
+          },
+          {
+            "app_id": "ap-RteW4CSfTBCPj4q1MlrPjY",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 20:35:24+08:00",
+            "stopped_at": "2026-10-25 20:42:09+08:00"
+          },
+          {
+            "app_id": "ap-0qyh2KAOPbctNyqNLvO2Dx",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 20:22:19+08:00",
+            "stopped_at": "2026-10-25 20:32:33+08:00"
+          }
+        ],
+        "sources": {
+          "parent": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations",
+            "commit": "ce8459291aefb45103ab4d69d099752199b61ad5"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+            "expected_commit": "a0d2f7d714743554bff88029732f11a5e9c3fcfa",
+            "commit": "a0d2f7d714743554bff88029732f11a5e9c3fcfa",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22",
+            "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "argv": [
+          "/Users/poohthewinnie/.local/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::prepare_kernels",
+          "--model-family",
+          "glm53"
+        ],
+        "environment": {
+          "MODAL_PROFILE": "caiw",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_COMPILED_IMAGE": "im-vwwDy7UMUgFqIHRwa0O0xK",
+          "REMNANT_VALIDATION_TIMEOUT_S": "1620"
+        },
+        "controller_timeout_seconds": 450,
+        "worker_hour_upper_rate_usd": 1.2688000000000001,
+        "conservative_wall_seconds": 391.0525151670008,
+        "log": "data/glm53-packed/glm53-attention-prepare-20261025T141556Z.log",
+        "log_sha256": "b5b667fd850545a134cb48ea97c39edf78def5e7c03cb83d9e9e9d2a022cb30a",
+        "containers_after": [],
+        "compute_after": {
+          "metered_cost": "32.14333452",
+          "billed_cost": "0E-8",
+          "adjustments": {
+            "free_storage": "-26.54329934",
+            "plan_cost": "0E-8",
+            "credits": "-5.60000000",
+            "network_egress_allowance": "-0.00003518",
+            "reservation_adjustment": "-0E-8"
+          },
+          "metered_cost_breakdown": {
+            "network_egress": "0.00003518",
+            "deployed_apps": "0.04856797",
+            "ephemeral_apps": "5.54720896",
+            "llm_tokens": "0E-8",
+            "volumes": "26.54329934"
+          }
+        }
+      },
+      {
+        "action": "graphs",
+        "run_id": "glm53-attention-graphs-20261025T142339Z",
+        "status": "failed",
+        "started_at": "2026-10-25T14:23:39.083934+00:00",
+        "compute_before": {
+          "metered_cost": "32.16333452",
+          "billed_cost": "0E-8",
+          "adjustments": {
+            "network_egress_allowance": "-0.00003518",
+            "reservation_adjustment": "-0E-8",
+            "plan_cost": "0E-8",
+            "credits": "-5.62000000",
+            "free_storage": "-26.54329934"
+          },
+          "metered_cost_breakdown": {
+            "ephemeral_apps": "5.57410733",
+            "llm_tokens": "0E-8",
+            "network_egress": "0.00003518",
+            "volumes": "26.54329934",
+            "deployed_apps": "0.04856797"
+          }
+        },
+        "rates": {
+          "cpu_hour_cost": "0.04730",
+          "cpu_hour_cost_sandbox": "0.141900",
+          "egress_gib_cost": "0.04000",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_cached_prompt_mtok_cost": "0.005",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_completion_mtok_cost": "1.00",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_prompt_mtok_cost": "0.25",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_reasoning_mtok_cost": "1.00",
+          "endpoints_moonshotai_kimi_k3_cached_prompt_mtok_cost": "0.30",
+          "endpoints_moonshotai_kimi_k3_completion_mtok_cost": "15.00",
+          "endpoints_moonshotai_kimi_k3_prompt_mtok_cost": "3.00",
+          "endpoints_moonshotai_kimi_k3_reasoning_mtok_cost": "15.00",
+          "endpoints_nvidia_glm_5.2_nvfp4_cached_prompt_mtok_cost": "1",
+          "endpoints_nvidia_glm_5.2_nvfp4_completion_mtok_cost": "1",
+          "endpoints_nvidia_glm_5.2_nvfp4_prompt_mtok_cost": "1",
+          "endpoints_nvidia_glm_5.2_nvfp4_reasoning_mtok_cost": "1",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_cached_prompt_mtok_cost": "0.25",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_completion_mtok_cost": "6.00",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_prompt_mtok_cost": "2.00",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_reasoning_mtok_cost": "6.00",
+          "endpoints_thinkingmachines_inkling_nvfp4_cached_prompt_mtok_cost": "0.27",
+          "endpoints_thinkingmachines_inkling_nvfp4_completion_mtok_cost": "5",
+          "endpoints_thinkingmachines_inkling_nvfp4_prompt_mtok_cost": "1.20",
+          "endpoints_thinkingmachines_inkling_nvfp4_reasoning_mtok_cost": "5",
+          "endpoints_zai_org_glm_5.3_cached_prompt_mtok_cost": "0.26",
+          "endpoints_zai_org_glm_5.3_completion_mtok_cost": "4.40",
+          "endpoints_zai_org_glm_5.3_flash_cached_prompt_mtok_cost": "0.09",
+          "endpoints_zai_org_glm_5.3_flash_completion_mtok_cost": "1.50",
+          "endpoints_zai_org_glm_5.3_flash_prompt_mtok_cost": "0.45",
+          "endpoints_zai_org_glm_5.3_flash_reasoning_mtok_cost": "1.50",
+          "endpoints_zai_org_glm_5.3_prompt_mtok_cost": "1.40",
+          "endpoints_zai_org_glm_5.3_reasoning_mtok_cost": "4.40",
+          "gpu_hour_cost_a100_40gb": "2.10000",
+          "gpu_hour_cost_a100_80gb": "2.50000",
+          "gpu_hour_cost_a10g": "1.10000",
+          "gpu_hour_cost_b200": "6.25000",
+          "gpu_hour_cost_b300": "7.10000",
+          "gpu_hour_cost_h100": "3.95000",
+          "gpu_hour_cost_h200": "4.54000",
+          "gpu_hour_cost_l4": "0.80000",
+          "gpu_hour_cost_l40s": "1.95000",
+          "gpu_hour_cost_rtx6000": "3.03000",
+          "gpu_hour_cost_t4": "0.59000",
+          "mem_gib_hour_cost": "0.00800",
+          "mem_gib_hour_cost_sandbox": "0.024000",
+          "volume_storage_gib_month_cost": "0.09000"
+        },
+        "containers_before": [],
+        "apps_before": [
+          {
+            "app_id": "ap-ZWSp28caWlJzsd7P6FPtWM",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 22:16:01+08:00",
+            "stopped_at": "2026-10-25 22:22:26+08:00"
+          },
+          {
+            "app_id": "ap-lnxruR4cIBQ4HzUPvWbAT6",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 21:46:54+08:00",
+            "stopped_at": "2026-10-25 22:08:54+08:00"
+          },
+          {
+            "app_id": "ap-tPOWBt7lvdwj2ZiCtIO1ky",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 21:40:16+08:00",
+            "stopped_at": "2026-10-25 21:46:26+08:00"
+          },
+          {
+            "app_id": "ap-lDahrtKl0D2SEdyiyF6DfH",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 21:32:39+08:00",
+            "stopped_at": "2026-10-25 21:39:20+08:00"
+          },
+          {
+            "app_id": "ap-WpjxRXpXECjNFQaT5SEpAD",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 20:44:12+08:00",
+            "stopped_at": "2026-10-25 20:46:43+08:00"
+          },
+          {
+            "app_id": "ap-RteW4CSfTBCPj4q1MlrPjY",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 20:35:24+08:00",
+            "stopped_at": "2026-10-25 20:42:09+08:00"
+          },
+          {
+            "app_id": "ap-0qyh2KAOPbctNyqNLvO2Dx",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 20:22:19+08:00",
+            "stopped_at": "2026-10-25 20:32:33+08:00"
+          }
+        ],
+        "sources": {
+          "parent": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations",
+            "commit": "ce8459291aefb45103ab4d69d099752199b61ad5"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+            "expected_commit": "a0d2f7d714743554bff88029732f11a5e9c3fcfa",
+            "commit": "a0d2f7d714743554bff88029732f11a5e9c3fcfa",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22",
+            "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "argv": [
+          "/Users/poohthewinnie/.local/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::validate_kernels",
+          "--model-family",
+          "glm53",
+          "--stage",
+          "corrective",
+          "--sanitizer",
+          "--cases",
+          "test/registered/attention/unittests/test_glm5_remnant.py::test_benchmark_sanitizer_bank_graph",
+          "--sanitizer-tools",
+          "racecheck,synccheck",
+          "--run-id",
+          "glm53-attention-graphs-20261025T142339Z",
+          "--max-seconds",
+          "600"
+        ],
+        "environment": {
+          "MODAL_PROFILE": "caiw",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_COMPILED_IMAGE": "im-vwwDy7UMUgFqIHRwa0O0xK",
+          "REMNANT_VALIDATION_TIMEOUT_S": "1620"
+        },
+        "controller_timeout_seconds": 780,
+        "worker_hour_upper_rate_usd": 4.3952,
+        "error": "CalledProcessError(1, ['/Users/poohthewinnie/.local/bin/modal', 'run', 'scripts/modal/kernels.py::validate_kernels', '--model-family', 'glm53', '--stage', 'corrective', '--sanitizer', '--cases', 'test/registered/attention/unittests/test_glm5_remnant.py::test_benchmark_sanitizer_bank_graph', '--sanitizer-tools', 'racecheck,synccheck', '--run-id', 'glm53-attention-graphs-20261025T142339Z', '--max-seconds', '600'])",
+        "conservative_wall_seconds": 753.6030873749987,
+        "log": "data/glm53-packed/glm53-attention-graphs-20261025T142339Z.log",
+        "log_sha256": "6a9718f1e7dcc4a7b661ea7be38adebfa64edb99b18295162d51983a66e26818",
+        "containers_after": [],
+        "compute_after": {
+          "metered_cost": "32.88333452",
+          "billed_cost": "0E-8",
+          "adjustments": {
+            "plan_cost": "0E-8",
+            "free_storage": "-26.54329934",
+            "network_egress_allowance": "-0.00003518",
+            "credits": "-6.34000000",
+            "reservation_adjustment": "-0E-8"
+          },
+          "metered_cost_breakdown": {
+            "ephemeral_apps": "6.28661597",
+            "volumes": "26.54329934",
+            "llm_tokens": "0E-8",
+            "deployed_apps": "0.04856797",
+            "network_egress": "0.00003518"
+          }
+        },
+        "exports": {
+          "result.json": {
+            "path": "data/glm53-packed/glm53-attention-graphs-20261025T142339Z-result.json",
+            "exit_code": 0,
+            "sha256": "2e5760f47c435a9541c55920cc92b6d5564b17443f3bed64ed1e404583961f42"
+          },
+          "build-manifest.json": {
+            "path": "data/glm53-packed/glm53-attention-graphs-20261025T142339Z-build-manifest.json",
+            "exit_code": 0,
+            "sha256": "be779a60708821ef995f7c5e19204fb58b1066216f3aaa00d9cfbb369aaee7bb"
+          },
+          "racecheck.log": {
+            "path": "data/glm53-packed/glm53-attention-graphs-20261025T142339Z-racecheck.log",
+            "exit_code": 0,
+            "sha256": "deb3b81369bc5f5b11c0696684fc4d25154066875f56a9f50d987a0de76df9d8"
+          },
+          "racecheck.xml": {
+            "path": "data/glm53-packed/glm53-attention-graphs-20261025T142339Z-racecheck.xml",
+            "exit_code": 1,
+            "error": "\u256d\u2500 Error \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 No such file or directory                                                    \u2502\n\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f\n"
+          },
+          "synccheck.log": {
+            "path": "data/glm53-packed/glm53-attention-graphs-20261025T142339Z-synccheck.log",
+            "exit_code": 1,
+            "error": "\u256d\u2500 Error \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 No such file or directory                                                    \u2502\n\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f\n"
+          },
+          "synccheck.xml": {
+            "path": "data/glm53-packed/glm53-attention-graphs-20261025T142339Z-synccheck.xml",
+            "exit_code": 1,
+            "error": "\u256d\u2500 Error \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 No such file or directory                                                    \u2502\n\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f\n"
+          },
+          "corrective.log": {
+            "path": "data/glm53-packed/glm53-attention-graphs-20261025T142339Z-corrective.log",
+            "exit_code": 0,
+            "sha256": "bf98ba8cd24b31214dcd9a39693f40de2e01b1b0d65a09767a3cac4cd865d974"
+          },
+          "corrective.xml": {
+            "path": "data/glm53-packed/glm53-attention-graphs-20261025T142339Z-corrective.xml",
+            "exit_code": 0,
+            "sha256": "c718ad9be666f56269d2506df808b6fcee587cc75a208511be0e76adefbb58db"
+          }
+        }
+      },
+      {
+        "action": "graphs",
+        "run_id": "glm53-attention-graphs-20261025T143821Z",
+        "status": "completed",
+        "started_at": "2026-10-25T14:38:21.307714+00:00",
+        "compute_before": {
+          "metered_cost": "33.11333452",
+          "billed_cost": "0E-8",
+          "adjustments": {
+            "network_egress_allowance": "-0.00003518",
+            "reservation_adjustment": "-0E-8",
+            "credits": "-6.57000000",
+            "free_storage": "-26.54329934",
+            "plan_cost": "0E-8"
+          },
+          "metered_cost_breakdown": {
+            "network_egress": "0.00003518",
+            "deployed_apps": "0.04856797",
+            "volumes": "26.54329934",
+            "ephemeral_apps": "6.51690647",
+            "llm_tokens": "0E-8"
+          }
+        },
+        "rates": {
+          "cpu_hour_cost": "0.04730",
+          "cpu_hour_cost_sandbox": "0.141900",
+          "egress_gib_cost": "0.04000",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_cached_prompt_mtok_cost": "0.005",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_completion_mtok_cost": "1.00",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_prompt_mtok_cost": "0.25",
+          "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_reasoning_mtok_cost": "1.00",
+          "endpoints_moonshotai_kimi_k3_cached_prompt_mtok_cost": "0.30",
+          "endpoints_moonshotai_kimi_k3_completion_mtok_cost": "15.00",
+          "endpoints_moonshotai_kimi_k3_prompt_mtok_cost": "3.00",
+          "endpoints_moonshotai_kimi_k3_reasoning_mtok_cost": "15.00",
+          "endpoints_nvidia_glm_5.2_nvfp4_cached_prompt_mtok_cost": "1",
+          "endpoints_nvidia_glm_5.2_nvfp4_completion_mtok_cost": "1",
+          "endpoints_nvidia_glm_5.2_nvfp4_prompt_mtok_cost": "1",
+          "endpoints_nvidia_glm_5.2_nvfp4_reasoning_mtok_cost": "1",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_cached_prompt_mtok_cost": "0.25",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_completion_mtok_cost": "6.00",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_prompt_mtok_cost": "2.00",
+          "endpoints_qwen_qwen3.8_2.4t_a95b_reasoning_mtok_cost": "6.00",
+          "endpoints_thinkingmachines_inkling_nvfp4_cached_prompt_mtok_cost": "0.27",
+          "endpoints_thinkingmachines_inkling_nvfp4_completion_mtok_cost": "5",
+          "endpoints_thinkingmachines_inkling_nvfp4_prompt_mtok_cost": "1.20",
+          "endpoints_thinkingmachines_inkling_nvfp4_reasoning_mtok_cost": "5",
+          "endpoints_zai_org_glm_5.3_cached_prompt_mtok_cost": "0.26",
+          "endpoints_zai_org_glm_5.3_completion_mtok_cost": "4.40",
+          "endpoints_zai_org_glm_5.3_flash_cached_prompt_mtok_cost": "0.09",
+          "endpoints_zai_org_glm_5.3_flash_completion_mtok_cost": "1.50",
+          "endpoints_zai_org_glm_5.3_flash_prompt_mtok_cost": "0.45",
+          "endpoints_zai_org_glm_5.3_flash_reasoning_mtok_cost": "1.50",
+          "endpoints_zai_org_glm_5.3_prompt_mtok_cost": "1.40",
+          "endpoints_zai_org_glm_5.3_reasoning_mtok_cost": "4.40",
+          "gpu_hour_cost_a100_40gb": "2.10000",
+          "gpu_hour_cost_a100_80gb": "2.50000",
+          "gpu_hour_cost_a10g": "1.10000",
+          "gpu_hour_cost_b200": "6.25000",
+          "gpu_hour_cost_b300": "7.10000",
+          "gpu_hour_cost_h100": "3.95000",
+          "gpu_hour_cost_h200": "4.54000",
+          "gpu_hour_cost_l4": "0.80000",
+          "gpu_hour_cost_l40s": "1.95000",
+          "gpu_hour_cost_rtx6000": "3.03000",
+          "gpu_hour_cost_t4": "0.59000",
+          "mem_gib_hour_cost": "0.00800",
+          "mem_gib_hour_cost_sandbox": "0.024000",
+          "volume_storage_gib_month_cost": "0.09000"
+        },
+        "containers_before": [],
+        "apps_before": [
+          {
+            "app_id": "ap-3dvV9mDYhDw73QF2bPzGWn",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 22:23:42+08:00",
+            "stopped_at": "2026-10-25 22:36:10+08:00"
+          },
+          {
+            "app_id": "ap-ZWSp28caWlJzsd7P6FPtWM",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 22:16:01+08:00",
+            "stopped_at": "2026-10-25 22:22:26+08:00"
+          },
+          {
+            "app_id": "ap-lnxruR4cIBQ4HzUPvWbAT6",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 21:46:54+08:00",
+            "stopped_at": "2026-10-25 22:08:54+08:00"
+          },
+          {
+            "app_id": "ap-tPOWBt7lvdwj2ZiCtIO1ky",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 21:40:16+08:00",
+            "stopped_at": "2026-10-25 21:46:26+08:00"
+          },
+          {
+            "app_id": "ap-lDahrtKl0D2SEdyiyF6DfH",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 21:32:39+08:00",
+            "stopped_at": "2026-10-25 21:39:20+08:00"
+          },
+          {
+            "app_id": "ap-WpjxRXpXECjNFQaT5SEpAD",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 20:44:12+08:00",
+            "stopped_at": "2026-10-25 20:46:43+08:00"
+          },
+          {
+            "app_id": "ap-RteW4CSfTBCPj4q1MlrPjY",
+            "description": "remnant-kernel-dev",
+            "state": "stopped",
+            "tasks": "0",
+            "created_at": "2026-10-25 20:35:24+08:00",
+            "stopped_at": "2026-10-25 20:42:09+08:00"
+          }
+        ],
+        "sources": {
+          "parent": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations",
+            "commit": "ce8459291aefb45103ab4d69d099752199b61ad5"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+            "expected_commit": "a0d2f7d714743554bff88029732f11a5e9c3fcfa",
+            "commit": "a0d2f7d714743554bff88029732f11a5e9c3fcfa",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22",
+            "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "argv": [
+          "/Users/poohthewinnie/.local/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::validate_kernels",
+          "--model-family",
+          "glm53",
+          "--stage",
+          "corrective",
+          "--sanitizer",
+          "--cases",
+          "test/registered/attention/unittests/test_glm5_remnant.py::test_benchmark_sanitizer_bank_graph[8-2-2-33]",
+          "--sanitizer-tools",
+          "racecheck",
+          "--run-id",
+          "glm53-attention-graphs-20261025T143821Z",
+          "--max-seconds",
+          "1500"
+        ],
+        "environment": {
+          "MODAL_PROFILE": "caiw",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_COMPILED_IMAGE": "im-vwwDy7UMUgFqIHRwa0O0xK",
+          "REMNANT_VALIDATION_TIMEOUT_S": "1620"
+        },
+        "controller_timeout_seconds": 1680,
+        "worker_hour_upper_rate_usd": 4.3952,
+        "conservative_wall_seconds": 656.7760115830024,
+        "log": "data/glm53-packed/glm53-attention-graphs-20261025T143821Z.log",
+        "log_sha256": "03eee7b73f77a83f8ccca082c4d5abe831fd08b90e14b5e5e9b051029c00e6cd",
+        "containers_after": [],
+        "compute_after": {
+          "metered_cost": "33.52333452",
+          "billed_cost": "0E-8",
+          "adjustments": {
+            "free_storage": "-26.54329934",
+            "reservation_adjustment": "-0E-8",
+            "plan_cost": "0E-8",
+            "network_egress_allowance": "-0.00003518",
+            "credits": "-6.98000000"
+          },
+          "metered_cost_breakdown": {
+            "network_egress": "0.00003518",
+            "ephemeral_apps": "6.93101385",
+            "deployed_apps": "0.04856797",
+            "llm_tokens": "0E-8",
+            "volumes": "26.54329934"
+          }
+        },
+        "exports": {
+          "result.json": {
+            "path": "data/glm53-packed/glm53-attention-graphs-20261025T143821Z-result.json",
+            "exit_code": 0,
+            "sha256": "b174841d4a74ec8072fa073de9979690f282862e12074ab43fb1e109221d6480"
+          },
+          "build-manifest.json": {
+            "path": "data/glm53-packed/glm53-attention-graphs-20261025T143821Z-build-manifest.json",
+            "exit_code": 0,
+            "sha256": "be779a60708821ef995f7c5e19204fb58b1066216f3aaa00d9cfbb369aaee7bb"
+          },
+          "racecheck.log": {
+            "path": "data/glm53-packed/glm53-attention-graphs-20261025T143821Z-racecheck.log",
+            "exit_code": 0,
+            "sha256": "094b1017b0ccac65c664fed7d9b7f5fb622a8fc30bf41549c4307c1a51e6ca9b"
+          },
+          "racecheck.xml": {
+            "path": "data/glm53-packed/glm53-attention-graphs-20261025T143821Z-racecheck.xml",
+            "exit_code": 0,
+            "sha256": "e30490ace4d18b48c82eabd4db547c226ec3a04ee251e57b1252ae845c14b69b"
+          },
+          "synccheck.log": {
+            "path": "data/glm53-packed/glm53-attention-graphs-20261025T143821Z-synccheck.log",
+            "exit_code": 1,
+            "error": "\u256d\u2500 Error \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 No such file or directory                                                    \u2502\n\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f\n"
+          },
+          "synccheck.xml": {
+            "path": "data/glm53-packed/glm53-attention-graphs-20261025T143821Z-synccheck.xml",
+            "exit_code": 1,
+            "error": "\u256d\u2500 Error \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 No such file or directory                                                    \u2502\n\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f\n"
+          },
+          "corrective.log": {
+            "path": "data/glm53-packed/glm53-attention-graphs-20261025T143821Z-corrective.log",
+            "exit_code": 0,
+            "sha256": "7832a929471f7765fda2075972a433a45b1d4abee73a81e35c8c821516c486b7"
+          },
+          "corrective.xml": {
+            "path": "data/glm53-packed/glm53-attention-graphs-20261025T143821Z-corrective.xml",
+            "exit_code": 0,
+            "sha256": "62a63354755af948950f19f2dbb9f4f82bdf0537a05f9dbcf5c5db1a007c8c21"
+          }
+        }
       }
     ],
     "review": {
@@ -3818,7 +4508,8 @@
     "resume_authorization": {
       "date": "2026-10-25",
       "user": "Do not stop until microbench can run and Direct vs Native comparison exists; reruns approved within aggregate $15",
-      "scope": "Supersedes no-corrective-allocation restriction; original aggregate ledger, qualification requirements and resource ceilings retained."
+      "scope": "Supersedes no-corrective-allocation restriction; original aggregate ledger, qualification requirements and resource ceilings retained.",
+      "budget_interpretation": "User explicitly approved reruns until comparison within $15. This supersedes prior no-corrective and time/category/routine scheduling subcaps where needed; absolute aggregate $15 retained. Controller rejects projected conservative spend above $14.75, preserving $0.25 shutdown/storage/export margin. Resource shape, no concurrency/automatic Function retries and numerical acceptance remain unchanged."
     },
     "resumed_fixture": {
       "sglang": "b0819bb879919489995b1224a46dcf4c34d715e7",
@@ -3834,9 +4525,19 @@
         "checkpoint_note": "data/glm53-packed/glm53-attention-racecheck-20261025T134651Z-racecheck-coverage-checkpoint.json",
         "checkpoint_sha256": "a93e687b98d8bed4a199c9dff1ab6ef1cd410d33b755a2be1a99a8ea45dd8e38"
       },
-      "focused_graph_sanitizers": "pending",
+      "focused_graph_sanitizers": "Initial 600-second group incomplete: one pass marker but no finalized XML or sanitizer summary, no coverage accepted. Retry individually with bounded1500-second work deadlines.",
       "memcheck": "pending",
-      "timing": "pending"
+      "timing": "pending",
+      "head8_focused_racecheck": {
+        "status": "passed",
+        "run_id": "glm53-attention-graphs-20261025T143821Z",
+        "heads": 8,
+        "banks": 2,
+        "queries": 2,
+        "inner": 33,
+        "reference_device": "cuda",
+        "reported_hazards": 0
+      }
     },
     "focused_sanitizer_policy": {
       "required_cases": "original11 unchanged plus two explicit probes, per tool, merged only with matching source/runtime/artifact identities and clean final reports",
@@ -3857,6 +4558,15 @@
       "limits": "Does not qualify full Q128/Q512 allocation/grid dimensions under sanitizers; full-size numerical/ownership smoke remains required. Full128 timing matrix unchanged.",
       "review": "glm_benchmark_review: no concrete findings; actual warmup count records corrected",
       "cpu": "13 GLM contracts, 7 launcher contracts, focused ruff/diff checks passed"
+    },
+    "oracle_revision": {
+      "focused_reference_device": "cpu",
+      "head16_queries": 2,
+      "full_size_and_timing_reference_device": "cuda unchanged",
+      "bridge": "CPU/GPU parity on8actualqueryrows/allheads in full-size smoke before focused sanitizer run",
+      "cpu": "14 GLM contracts,7 launcher contracts passed",
+      "review": "glm_benchmark_review: no concrete math/device/coverage issue",
+      "production_instrumentation": "All production kernels remain instrumented; no exclusion filters"
     }
   }
 }

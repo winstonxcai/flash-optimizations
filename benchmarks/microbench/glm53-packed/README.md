@@ -230,3 +230,26 @@ cycle (actual2/4 calls per mode). Full-size ownership/numerical smoke and all128
 measured cases retain their original sizes and ten-warmup policy. Original11
 sanitizer cases remain unchanged. All13 identities are required per tool across
 clean reports before timing; historical synccheck is supplemented by the probes.
+
+
+Single-case racecheck `glm53-attention-graphs-20261025T143821Z` finalized the
+8-head/Q2/two-bank/inner33 probe with one passed case and zero reported hazards.
+The preceding short combined probe allocation had only a pass marker before
+its hard deadline, no final report; it supplies no sanitizer coverage.
+
+The focused 16-head representative grid is revised from Q8 to Q2, retaining
+four banks and inner66. Focused independent attention oracles now execute the
+same FP8-Q rounding and FP32 attention math on CPU, returning BF16 to the original
+device. This avoids instrumentation of reference-only cuBLAS work without
+excluding any production CUDA kernel. A CPU analytic ties/empty-selection check
+and an unprofiled full-size CPU/GPU oracle bridge precede instrumented probes.
+Full-size ownership smoke and all128 timing fixtures keep their original query
+sizes and GPU oracle. New identities/geometry/reference-device metadata distinguish
+this revision from earlier attempts. Review found no concrete math/device issue.
+
+The user's renewed rerun authorization makes $15 the controlling aggregate cap;
+necessary reruns may exceed the earlier120-minute/category estimates. The
+controller conservatively rejects projected totals above$14.75, retaining$0.25
+for shutdown/export/storage. Historical caps, attempts and costs remain recorded.
+A small CPU preparation reallocation avoids much more expensive reference-only
+GPU sanitizer work. No numerical acceptance criterion or timing count changes.

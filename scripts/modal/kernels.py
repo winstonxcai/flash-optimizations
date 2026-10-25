@@ -190,7 +190,7 @@ if INTEGRATION["version"] == "v0.5.22":
     )
 if MODEL_FAMILY == "glm53":
     VALIDATION_TESTS = (GLM_CPU_TEST, GLM_TEST)
-    CPU_TESTS = (GLM_CPU_TEST, GLM_BENCHMARK_CPU + "::test_glm_matrix_order_and_baseline_identity", GLM_BENCHMARK_CPU + "::test_glm_grouped_causal_prefill_and_shared_prefix", GLM_BENCHMARK_CPU + "::test_glm_separate_decode_requests_and_page_mapping", GLM_BENCHMARK_CPU + "::test_glm_rotation_and_call_normalization", GLM_BENCHMARK_CPU + "::test_glm_shared_round_schedule_and_preconditioning", GLM_BENCHMARK_CPU + "::test_glm_cli_rejects_adapter_and_deepseek_options", GLM_BENCHMARK_CPU + "::test_glm_entrypoint_dispatches_before_deepseek_imports", GLM_BENCHMARK_CPU + "::test_glm_rejects_incomplete_timing")
+    CPU_TESTS = (GLM_CPU_TEST, GLM_BENCHMARK_CPU + "::test_glm_matrix_order_and_baseline_identity", GLM_BENCHMARK_CPU + "::test_glm_grouped_causal_prefill_and_shared_prefix", GLM_BENCHMARK_CPU + "::test_glm_separate_decode_requests_and_page_mapping", GLM_BENCHMARK_CPU + "::test_glm_rotation_and_call_normalization", GLM_BENCHMARK_CPU + "::test_glm_shared_round_schedule_and_preconditioning", GLM_BENCHMARK_CPU + "::test_glm_cli_rejects_adapter_and_deepseek_options", GLM_BENCHMARK_CPU + "::test_glm_entrypoint_dispatches_before_deepseek_imports", GLM_BENCHMARK_CPU + "::test_glm_rejects_incomplete_timing", GLM_BENCHMARK_CPU + "::test_glm_cpu_oracle_preserves_fp8_rounding_and_empty_rows")
     SANITIZER_TESTS = (*GLM_SANITIZER, GLM_SANITIZER_GRAPH)
     BENCHMARK_TESTS = ()
 
@@ -976,6 +976,8 @@ def validate_kernels(
                 _run_pytest(GLM_SMOKE, root, "smoke", min(deadline, time.monotonic() + 600), environment=environment)
                 _run_pytest(VALIDATION_TESTS, root, "validation", deadline, environment=environment)
             elif stage == "corrective":
+                if sanitizer and any(node.startswith(GLM_SANITIZER_GRAPH) for node in selected_tests):
+                    _run_pytest((GLM_BENCHMARK_GRAPH,), root, "oracle-bridge", deadline, environment=environment)
                 record["corrective_tests"] = selected_tests
                 _run_pytest(selected_tests, root, "corrective", deadline, environment=environment)
             else:
@@ -1472,7 +1474,7 @@ def _glm_required_sanitizer_cases(*, historical: bool) -> set[str]:
         "test_production_backend_constructor", "test_attention[0-1-64]", "test_pool_lifecycle",
     }
     if not historical:
-        required |= {"test_benchmark_sanitizer_bank_graph[8-2-2-33]", "test_benchmark_sanitizer_bank_graph[16-4-8-66]"}
+        required |= {"test_benchmark_sanitizer_bank_graph[8-2-2-33]", "test_benchmark_sanitizer_bank_graph[16-4-2-66]"}
     return required
 
 

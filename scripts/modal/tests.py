@@ -2112,7 +2112,7 @@ class GLMAttentionProtocolTests(unittest.TestCase):
         kernels._check_glm_sanitizer_cases(tree, 'historical', historical=True)
         with self.assertRaisesRegex(RuntimeError, 'missing'):
             kernels._check_glm_sanitizer_cases(tree, 'current', historical=False)
-        for dimensions in ((8,2,2,33),(16,4,8,66)):
+        for dimensions in ((8,2,2,33),(16,4,2,66)):
             name = 'test_benchmark_sanitizer_bank_graph[' + '-'.join(map(str, dimensions)) + ']'
             node = ET.SubElement(suite, 'testcase', name=name, classname='registered.attention.unittests.test_glm5_remnant')
             geometry = dict(zip(('heads','banks','queries','forced_inner'), dimensions), warmup_calls=1, measured_warmup_calls=10, actual_warmup_calls_per_mode=dimensions[1])
