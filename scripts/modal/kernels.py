@@ -56,6 +56,7 @@ GLM_TEST = "test/registered/attention/unittests/test_glm5_remnant.py"
 GLM_CPU_TEST = "test/registered/unit/test_glm5_mla_cache_format.py"
 GLM_BENCHMARK_CPU = "benchmark/remnant/test_microbench.py"
 GLM_BENCHMARK_GRAPH = GLM_TEST + "::test_benchmark_bank_graph_ownership"
+GLM_SANITIZER_GRAPH = GLM_TEST + "::test_benchmark_sanitizer_bank_graph"
 GLM_BASELINE = "9e42a0d8886dd93944dc6b47ef3bffef4e033b5a"
 GLM_SMOKE = (GLM_TEST + "::test_producer_reconstruction", GLM_TEST + "::test_native_fp8_conversion", GLM_TEST + "::test_allocator_accounting", GLM_TEST + "::test_invalid_attention", GLM_TEST + "::test_partial_outputs",
              GLM_TEST + "::test_attention[3-8-8]",
@@ -190,7 +191,7 @@ if INTEGRATION["version"] == "v0.5.22":
 if MODEL_FAMILY == "glm53":
     VALIDATION_TESTS = (GLM_CPU_TEST, GLM_TEST)
     CPU_TESTS = (GLM_CPU_TEST, GLM_BENCHMARK_CPU + "::test_glm_matrix_order_and_baseline_identity", GLM_BENCHMARK_CPU + "::test_glm_grouped_causal_prefill_and_shared_prefix", GLM_BENCHMARK_CPU + "::test_glm_separate_decode_requests_and_page_mapping", GLM_BENCHMARK_CPU + "::test_glm_rotation_and_call_normalization", GLM_BENCHMARK_CPU + "::test_glm_shared_round_schedule_and_preconditioning", GLM_BENCHMARK_CPU + "::test_glm_cli_rejects_adapter_and_deepseek_options", GLM_BENCHMARK_CPU + "::test_glm_entrypoint_dispatches_before_deepseek_imports", GLM_BENCHMARK_CPU + "::test_glm_rejects_incomplete_timing")
-    SANITIZER_TESTS = (*GLM_SANITIZER, GLM_BENCHMARK_GRAPH)
+    SANITIZER_TESTS = (*GLM_SANITIZER, GLM_SANITIZER_GRAPH)
     BENCHMARK_TESTS = ()
 
 # Finish missing synchronization coverage before retrying the slower memcheck.
@@ -1423,17 +1424,47 @@ def _glm_timing_qualification(run_ids: str) -> dict:
         if old['sanitizer']['binary_sha256'] != manifest['sanitizer']['binary_sha256']:
             raise RuntimeError(f"GLM sanitizer identity changed: {run_id}")
         for tool, status in result.get("sanitizer_results", {}).items():
-            if status.get("status") == "passed":
-                _check_sanitizer_report((root / f"{tool}.log").read_text(), tool)
-                tree = ET.parse(root / f"{tool}.xml")
-                _check_glm_sanitizer_cases(tree, run_id, historical=result.get('runtime_hashes') is None)
-                groups[tool] = dict(run_id=run_id, result_sha256=hashlib.sha256((root / 'result.json').read_bytes()).hexdigest())
-    if set(groups) != set(SANITIZER_ORDER):
-        raise RuntimeError(f"GLM timing blocked by missing sanitizer gates: {set(SANITIZER_ORDER)-set(groups)}")
-    return dict(status="passed", tools=groups, runtime_hashes=current)
+            if status.get("status") == "not_run":
+                continue
+            log = (root / f"{tool}.log").read_text()
+            if status.get("status") != "passed":
+                # An intentional graceful checkpoint is not a passed run. Reuse
+                # only its completed cases, independently bound to raw reports.
+                note = root / f"{tool}-coverage-checkpoint.json"
+                if not note.is_file():
+                    continue
+                _check_glm_interrupted_checkpoint(json.loads(note.read_text()), root, run_id, tool, log)
+            _check_sanitizer_report(log, tool)
+            names = _check_glm_sanitizer_cases(ET.parse(root / f"{tool}.xml"), run_id,
+                                             historical=result.get('runtime_hashes') is None,
+                                             allow_partial=True)
+            group = groups.setdefault(tool, dict(cases=set(), runs=[]))
+            group['cases'].update(names)
+            group['runs'].append(dict(run_id=run_id, cases=sorted(names),
+                                      overall_run_status=result.get('status'),
+                                      tool_status=status.get('status'),
+                                      result_sha256=hashlib.sha256((root / 'result.json').read_bytes()).hexdigest()))
+    required = _glm_required_sanitizer_cases(historical=False)
+    missing = {tool: sorted(required - groups.get(tool, {}).get('cases', set())) for tool in SANITIZER_ORDER}
+    if any(missing.values()):
+        raise RuntimeError(f"GLM timing blocked by missing sanitizer gates: {missing}")
+    return dict(status="passed", tools={tool: dict(cases=sorted(group['cases']), runs=group['runs'])
+                                        for tool, group in groups.items()}, runtime_hashes=current)
 
 
-def _check_glm_sanitizer_cases(tree: ET.ElementTree, run_id: str, *, historical: bool) -> None:
+def _check_glm_interrupted_checkpoint(note: dict, root: Path, run_id: str, tool: str, log: str) -> None:
+    if (note.get('schema') != 'remnant-glm-sanitizer-checkpoint-v1'
+            or note.get('run_id') != run_id or note.get('tool') != tool
+            or note.get('action') != 'intentional SIGINT to owned pytest'
+            or 'KeyboardInterrupt' not in log):
+        raise RuntimeError(f"Invalid intentional sanitizer checkpoint: {run_id}/{tool}")
+    for suffix in ('log', 'xml'):
+        actual = hashlib.sha256((root / f'{tool}.{suffix}').read_bytes()).hexdigest()
+        if note.get(f'{suffix}_sha256') != actual:
+            raise RuntimeError(f"Sanitizer checkpoint report changed: {run_id}/{tool}.{suffix}")
+
+
+def _glm_required_sanitizer_cases(*, historical: bool) -> set[str]:
     required = {
         "test_producer_reconstruction", "test_native_fp8_conversion", "test_allocator_accounting",
         "test_invalid_attention", "test_partial_outputs", "test_attention[3-8-8]",
@@ -1441,13 +1472,30 @@ def _check_glm_sanitizer_cases(tree: ET.ElementTree, run_id: str, *, historical:
         "test_production_backend_constructor", "test_attention[0-1-64]", "test_pool_lifecycle",
     }
     if not historical:
-        required |= {"test_benchmark_bank_graph_ownership[8-2]", "test_benchmark_bank_graph_ownership[16-4]"}
+        required |= {"test_benchmark_sanitizer_bank_graph[8-2-2-33]", "test_benchmark_sanitizer_bank_graph[16-4-8-66]"}
+    return required
+
+
+def _check_glm_sanitizer_cases(tree: ET.ElementTree, run_id: str, *, historical: bool,
+                              allow_partial: bool = False) -> set[str]:
+    required = _glm_required_sanitizer_cases(historical=historical)
     nodes = list(tree.getroot().iter("testcase"))
     names = {node.get("name") for node in nodes
              if node.get("classname", "").endswith("attention.unittests.test_glm5_remnant")}
     suites = list(tree.getroot().iter("testsuite"))
-    if not required <= names or any(node.find(k) is not None for node in nodes for k in ("failure", "error", "skipped")) or any(int(x.get(k, 0)) for x in suites for k in ("errors", "failures", "skipped")):
+    if (not names or not names <= required or (not allow_partial and not required <= names)
+            or any(node.find(k) is not None for node in nodes for k in ("failure", "error", "skipped"))
+            or any(int(x.get(k, 0)) for x in suites for k in ("errors", "failures", "skipped"))
+            or sum(int(x.get('tests', 0)) for x in suites) != len(names)):
         raise RuntimeError(f"Incomplete GLM sanitizer fixture: {run_id}; missing={sorted(required-names)}")
+    for node in nodes:
+        if node.get('name', '').startswith('test_benchmark_sanitizer_bank_graph['):
+            dimensions = tuple(map(int, node.get('name').split('[')[1].rstrip(']').split('-')))
+            properties = {x.get('name'): x.get('value') for x in node.findall('properties/property')}
+            geometry = json.loads(properties.get('probe_geometry', '{}'))
+            if tuple(geometry.get(k) for k in ('heads', 'banks', 'queries', 'forced_inner')) != dimensions or geometry.get('warmup_calls') != 1 or geometry.get('measured_warmup_calls') != 10 or geometry.get('actual_warmup_calls_per_mode') != dimensions[1]:
+                raise RuntimeError(f"Missing focused sanitizer geometry: {run_id}/{node.get('name')}")
+    return names
 
 
 def _check_sanitizer_report(output: str, tool: str) -> None:

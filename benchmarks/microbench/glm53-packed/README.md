@@ -210,3 +210,23 @@ all completed per-case checks must match exactly. Only an unfinished final case
 is discarded; interior gaps and changed fixtures are rejected. Full acceptance
 still requires all 128 cases. This avoids repeating completed work after a
 bounded deadline and does not change sample counts or combine independent ratios.
+
+
+Racecheck run `glm53-attention-racecheck-20261025T134651Z` completed the original
+11 cases. An intentional SIGINT to its owned pytest process finalized JUnit
+(11 passed, zero failures/errors/skips) and RACECHECK SUMMARY with zero hazards,
+errors and warnings. The unfinished bank test is absent from completed coverage;
+its unnamed JUnit interrupt placeholder is not counted. The raw overall result
+remains failed/interrupted. A separate hash-bound checkpoint note records the
+interruption without rewriting the raw result. The maintained gate can merge
+only finalized clean completed cases; missing identities remain blocking.
+
+Focused graph sanitizer probes explicitly use Q2/Q8, heads8/16, banks2/4 and
+forced inner33/66, with JUnit geometry metadata. Their compiled partial/combine
+variants match the full Q128/Q512 smoke, but their allocation/grid dimensions do
+not. They preserve independent references, all banks, invalid indices, alternating
+and changing-input replay. They perform one requested warmup with a full bank
+cycle (actual2/4 calls per mode). Full-size ownership/numerical smoke and all128
+measured cases retain their original sizes and ten-warmup policy. Original11
+sanitizer cases remain unchanged. All13 identities are required per tool across
+clean reports before timing; historical synccheck is supplemented by the probes.

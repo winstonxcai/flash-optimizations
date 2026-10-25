@@ -2112,8 +2112,12 @@ class GLMAttentionProtocolTests(unittest.TestCase):
         kernels._check_glm_sanitizer_cases(tree, 'historical', historical=True)
         with self.assertRaisesRegex(RuntimeError, 'missing'):
             kernels._check_glm_sanitizer_cases(tree, 'current', historical=False)
-        for name in ('test_benchmark_bank_graph_ownership[8-2]', 'test_benchmark_bank_graph_ownership[16-4]'):
-            ET.SubElement(suite, 'testcase', name=name, classname='registered.attention.unittests.test_glm5_remnant')
+        for dimensions in ((8,2,2,33),(16,4,8,66)):
+            name = 'test_benchmark_sanitizer_bank_graph[' + '-'.join(map(str, dimensions)) + ']'
+            node = ET.SubElement(suite, 'testcase', name=name, classname='registered.attention.unittests.test_glm5_remnant')
+            geometry = dict(zip(('heads','banks','queries','forced_inner'), dimensions), warmup_calls=1, measured_warmup_calls=10, actual_warmup_calls_per_mode=dimensions[1])
+            ET.SubElement(ET.SubElement(node, 'properties'), 'property', name='probe_geometry', value=json.dumps(geometry))
+        suite.set('tests', '13')
         kernels._check_glm_sanitizer_cases(tree, 'current', historical=False)
         suite[0].set('name', 'unrelated_test')
         with self.assertRaisesRegex(RuntimeError, 'missing'):
@@ -2128,6 +2132,56 @@ class GLMAttentionProtocolTests(unittest.TestCase):
             command = kernels._benchmark_command('--model-family', 'glm53', '--suite', 'glm-attention')
         self.assertNotIn('--native-library', command)
         self.assertIn('glm-attention', command)
+
+    def test_glm_sanitizer_merge_requires_clean_explicit_complete_union(self):
+        import hashlib
+        import xml.etree.ElementTree as ET
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = dict(glm_compile=dict(triton=[], tilelang=[], attention_scale=0.0625), sanitizer={'binary_sha256':'tool'})
+            manifest_path = root / 'manifest.json'; manifest_path.write_text(json.dumps(manifest))
+            original = kernels._glm_required_sanitizer_cases(historical=True)
+            focused = kernels._glm_required_sanitizer_cases(historical=False) - original
+            def write_group(run, tool, names, interrupted=False):
+                folder = root / 'microbench' / run / 'validation'; folder.mkdir(parents=True)
+                (folder / 'build-manifest.json').write_text(json.dumps(manifest))
+                (folder / 'result.json').write_text(json.dumps(dict(model_family='glm53', status='failed' if interrupted else 'passed', runtime_hashes={'kernel':'same'}, sanitizer_results={tool:{'status':'failed' if interrupted else 'passed'}})))
+                log = ('KeyboardInterrupt\n' if interrupted else '') + ('========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)\n' if tool=='racecheck' else '========= ERROR SUMMARY: 0 errors\n')
+                (folder / f'{tool}.log').write_text(log)
+                suite = ET.Element('testsuite', tests=str(len(names)), errors='0', failures='0', skipped='0')
+                for name in sorted(names):
+                    node = ET.SubElement(suite,'testcase',name=name,classname='registered.attention.unittests.test_glm5_remnant')
+                    if name.startswith('test_benchmark_sanitizer_bank_graph['):
+                        dimensions = tuple(map(int,name.split('[')[1][:-1].split('-')))
+                        geometry = dict(zip(('heads','banks','queries','forced_inner'),dimensions), warmup_calls=1,measured_warmup_calls=10,actual_warmup_calls_per_mode=dimensions[1])
+                        ET.SubElement(ET.SubElement(node,'properties'),'property',name='probe_geometry',value=json.dumps(geometry))
+                if interrupted: ET.SubElement(suite, 'testcase', time='0.001')  # pytest interrupted-node placeholder
+                ET.ElementTree(suite).write(folder / f'{tool}.xml')
+                if interrupted:
+                    note = dict(schema='remnant-glm-sanitizer-checkpoint-v1',run_id=run,tool=tool,action='intentional SIGINT to owned pytest')
+                    note.update({f'{suffix}_sha256':hashlib.sha256((folder / f'{tool}.{suffix}').read_bytes()).hexdigest() for suffix in ('log','xml')})
+                    (folder / f'{tool}-coverage-checkpoint.json').write_text(json.dumps(note))
+                return folder
+            interrupted = write_group('race-original','racecheck',original,True)
+            write_group('race-focused','racecheck',focused)
+            write_group('sync-original','synccheck',original)
+            write_group('sync-focused','synccheck',focused)
+            write_group('mem-all','memcheck',original|focused)
+            ids = 'race-original,race-focused,sync-original,sync-focused,mem-all'
+            with patch.object(kernels,'RESULTS_ROOT',root), patch.object(kernels,'MANIFEST',manifest_path), patch.object(kernels,'_glm_benchmark_contract') as contract:
+                contract.return_value.runtime_hashes.return_value = {'kernel':'same'}
+                result = kernels._glm_timing_qualification(ids)
+                self.assertEqual(set(result['tools']['racecheck']['cases']),original|focused)
+                with self.assertRaisesRegex(RuntimeError,'missing sanitizer gates'):
+                    kernels._glm_timing_qualification(ids.replace(',race-focused',''))
+                note = interrupted / 'racecheck-coverage-checkpoint.json'
+                saved = note.read_text(); note.unlink()
+                with self.assertRaisesRegex(RuntimeError,'missing sanitizer gates'):
+                    kernels._glm_timing_qualification(ids)
+                note.write_text(saved)
+                (interrupted / 'racecheck.log').write_text('KeyboardInterrupt\n========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)\nchanged')
+                with self.assertRaisesRegex(RuntimeError,'report changed'):
+                    kernels._glm_timing_qualification(ids)
 
     def test_glm_checkpoint_path_rejects_traversal_and_missing_records(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(kernels, 'RESULTS_ROOT', Path(directory)):
