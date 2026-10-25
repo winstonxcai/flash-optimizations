@@ -17,8 +17,8 @@ Folder suffixes identify the SGLang integration pair, not a FlashMLA release.
 |---|---|---|---|
 | `sglang-v0.5.18/` | `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` | `6687a7c` |
 | `flashmla-v0.5.18/` | `05e26647fe840b8baedae486c2d86d5ce4efeb7c` | `remnant/flashmla-v0518` | `97f3faa` |
-| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `codex/v41-packed-fp4` | `0a36a662562f` |
-| `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `codex/v41-packed-fp4` | `91463e004ec9` |
+| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `codex/v41-packed-fp4` | `98991169803f` |
+| `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `codex/v41-packed-fp4` | `e274b715f49a` |
 
 Both FlashMLA checkouts pin CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`.
 The default remains v0.5.18; `REMNANT_INTEGRATION=v0.5.22` selects the other pair.
@@ -84,21 +84,23 @@ transfer, speculation/DSpark, replay and legacy layout overrides are rejected.
   and Modal kernel runner. Set `REMNANT_INTEGRATION=v0.5.22` and
   `REMNANT_VALIDATION_SUITE=v41-fp4`. CPU builds/preflight precede one H100;
   no weights, model volumes, serving, GPUQ or SM100 work. Independent source
-  review is complete. The candidate is **unqualified**: 37 ordinary cases,
-  complete 32-case synccheck/racecheck and allocation passed; memcheck was
-  interrupted after 27/32 when Modal disabled the workspace. No clean memory
-  sanitizer gate is inferred. Reported task compute is $11.91; all allocations
-  are stopped and the remaining work allowance cannot fund a full rerun.
+  review is complete. Current fragment reconstruction passed 39 ordinary cases,
+  all 34 cases under each strict sanitizer, and all 20 paired timing cases.
+  Packed Direct is 2.69% slower than Native for SWA64 and 2.58% for SWA128
+  (geometric-mean case ratios); no speedup or serving claim. The prior scalar
+  candidate's interrupted memcheck remains historical. Follow-up compute is
+  approximately $7.81 before billing settlement; all allocations are stopped.
   Completed sanitizer tools may be combined only with identical runtime,
-  fixture, binary and sanitizer hashes and the full 32-case matrix per tool.
+  fixture, binary and sanitizer hashes and the full 34-case matrix per tool.
   The runner supports tool permutations and checkpoints; no missing tool can
   pass its per-run gate.
   See the [single experiment record](../benchmarks/microbench/v41-packed-fp4/README.md)
   for source identities, commands, gates, budget and actual outcomes.
 
-This candidate is opt-in and unqualified until numerical, graph, stream,
-allocation and all-three-sanitizer gates pass. It makes no quality, performance
-or serving-capacity claim. Roll back with `auto` or the recorded baseline pins.
+This candidate passed scoped model-free numerical, graph, stream, allocation,
+all-three-sanitizer and review gates. It remains experimental and opt-in; measured
+Direct latency is slightly slower than Native. Quality and serving capacity remain
+unverified. Roll back with `auto` or the recorded baseline pins.
 
 ## Parallel v0.5.22 integration
 
@@ -375,7 +377,8 @@ this guide and the changelog are its curated index.
 The fragment reconstruction follow-up stages Packed FP4 rows and prefix ranks
 once, reusing V4's fragment selectors with nibble adaptation. Producer geometry
 and persistent formats stay fixed. The maintained microbenchmark now includes
-`v41-fp4-decode`, all10 V4 decode shapes at both SWA64 and SWA128, with
+`v41-fp4-decode`, all 10 V4 decode shapes at both SWA64 and SWA128, with
 actual captured-output checks and fresh dense Native FP4 controls. Timing is
-blocked until identical source/binary/tool receipts pass34 cases per sanitizer.
-These new pins are source-reviewed; executable qualification is pending.
+blocked until identical source/binary/tool receipts pass 34 cases per sanitizer.
+These pins passed scoped model-free correctness and timing. Fresh-context
+source/artifact review passed with no blocking findings.
