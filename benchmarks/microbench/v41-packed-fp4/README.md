@@ -47,6 +47,13 @@ to the mocked test subprocess. Native compiled base `im-RktGCcyR8NG0ZMsXcxRWvY`
 is reusable for the unchanged fork inputs; no failed preflight qualifies timing.
 Reported account compute after compilation was $21.53509255 before settlement.
 
+CPU retry `v41-reviewfix-20261026-b` / app `ap-nIywTHLvoWIX0d6iUR5Ik3`
+was stopped during preparation after source review found `_run_command` replaces
+`PYTHONPATH`; no H100 was allocated. The corrected bootstrap appends only the
+injected Modal SDK directory inside the test subprocess, preserving the helper's
+protection against `/root/kernels.py` shadowing Hugging Face's optional package.
+Both stopped attempts count toward the existing cumulative budget.
+
 ## Current production-geometry matrix
 
 The active `v41-fp4-decode` suite now uses **H64, SWA128/page256, Q1/K512**,

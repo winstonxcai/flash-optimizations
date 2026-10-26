@@ -570,6 +570,10 @@ print('FP4 CPU SM90 precompilation passed')
                 # Child Python processes do not inherit Modal's execution context.
                 # Mock only that context while importing launcher boundary tests;
                 # real source preflight already ran before the image was built.
+                # _run_command deliberately replaces PYTHONPATH to avoid the
+                # serialized launcher's /root/kernels.py shadowing HF kernels.
+                # Bootstrap only Modal's injected SDK directory for this test.
+                f"import sys; sys.path.append({str(Path(modal.__file__).resolve().parents[1])!r}); "
                 "import unittest; from unittest.mock import patch; "
                 "context = patch('modal.is_local', return_value=False); context.start(); "
                 "from scripts.modal import tests; "
@@ -580,15 +584,7 @@ print('FP4 CPU SM90 precompilation passed')
             ],
             build / "qualification-tests.log",
             deadline,
-            # Modal injects its SDK/dependencies into the builder's sys.path,
-            # not the vendor Python environment. Share them only with this
-            # mocked launcher-test subprocess; GPU loader paths stay untouched.
-            environment={
-                **cpu_environment,
-                "PYTHONPATH": os.pathsep.join(
-                    [cpu_environment.get("PYTHONPATH", ""), *sys.path]
-                ),
-            },
+            environment=cpu_environment,
         )
     # Profiler tools are not a correctness gate for the serving-image qualification.
     manifest = {
