@@ -588,3 +588,10 @@ unchanged. Focused tools use `regex=glm_packed_(partial|bytes)`: they check the
 changed loader and in-partial synchronization while all Native/combine/framework
 operations still execute as uninstrumented numerical/graph controls. This is
 Packed-loader qualification, not complete attention-path sanitizer qualification.
+
+A later full stack showed time inside reference-only GPU `torch.unique`, so
+combine/stream attribution alone was incomplete. Focused CPU-oracle validation
+now performs metadata uniqueness, bitmap scatter, finiteness and close checks
+on CPU as well as attention reference math. Production H100 calls and full
+graphs remain unchanged. Default timing validation still uses GPU references;
+its inputs, 30 rounds and measured calls are unchanged.
