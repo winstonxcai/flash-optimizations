@@ -13,7 +13,7 @@ Review follow-up, 2026-10-26: SGLang `9185c6d25115` passed fresh focused
 H100 Direct byte/numerical/graph checks and memcheck/racecheck/synccheck. Adapter
 reconstruction across the 2 GiB boundary passed numerical and all three sanitizer
 tools, joined across identical source/artifact runs. The final `979839b` adds only
-missing server-argument documentation. Pinned lint CI is green at `9185c6d`;
+missing server-argument documentation. Pinned lint CI is green at final `979839b`;
 `run-ci` is applied and its gate passes. Broad GPU CI has no self-hosted runners.
 See [current validation](#review-gpu-validation-and-ci-cleanup-2026-10-26).
 The 48-case timing result retains its historical source identity.
@@ -821,7 +821,7 @@ are stopped. The $3 reserve remains protected; no more routine runs are needed.
 
 Local checks: 176 SGLang CPU checks and ten subtests pass (104 explicit GPU skips),
 110 parent CPU checks pass under each integration profile, and six focused rebuild
-regressions pass. Repository-wide pinned lint succeeds in GitHub run 40344880119.
+regressions pass. Repository-wide pinned lint succeeds at final `979839b` in GitHub run 40352029193.
 The newly enabled base CPU suite found seven undocumented fork flags; documentation
 commit `979839b` adds the rows without changing runtime code. The `run-ci` label
 was created/applied and the gate rerun passed; broader GPU jobs remain queued with

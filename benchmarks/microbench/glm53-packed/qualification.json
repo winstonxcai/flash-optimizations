@@ -57424,15 +57424,21 @@
     ],
     "ci": {
       "lint": {
-        "run": 40344880119,
-        "head": "9185c6d2511508ecf40e86101040bbc2dffb1135",
+        "run": 40352029193,
+        "head": "979839b0b160c2e545c116aebd04866495e541b8",
         "conclusion": "success"
       },
       "run_ci_label": "created and applied",
       "base_gate": "passed after explicit failed-job rerun",
       "registered_self_hosted_runners": 0,
       "base_cpu_failure": "Seven Remnant flags absent from server-arguments reference; fixed in documentation-only follow-up.",
-      "remaining": "Broad GPU CI queued without self-hosted runners; no full-CI success claim."
+      "remaining": "Broad GPU CI queued without self-hosted runners; no full-CI success claim.",
+      "prior_lint": {
+        "run": 40344880119,
+        "head": "9185c6d2511508ecf40e86101040bbc2dffb1135",
+        "conclusion": "success"
+      },
+      "documentation_contract": "All table rows have four columns; seven new rows match actual source defaults and choices."
     },
     "final_sglang": "979839b0b160c2e545c116aebd04866495e541b8",
     "final_pin_difference": "Documentation only: seven server-argument rows; runtime/kernel/artifact source hashes unchanged."
