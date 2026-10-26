@@ -300,9 +300,17 @@ def _check_cuda_binding_requirements() -> list[dict[str, str]]:
     return sorted(checks, key=lambda item: (item["consumer"], item["requirement"]))
 
 
+def _glm_launch_metadata(build: Path, deadline: float, environment: dict) -> None:
+    # TileLang imports use the same CPU driver stubs as compilation/preflight.
+    code = ("import json; from pathlib import Path; from scripts.sources import glm_partial_launch_metadata; "
+            "p=Path('/opt/remnant-glm-compile.json'); d=json.loads(p.read_text()); "
+            "glm_partial_launch_metadata(d); p.write_text(json.dumps(d,indent=2)+'\\n')")
+    _run_command([sys.executable,"-c",code],build / "glm-launch-metadata.log",deadline,environment=environment)
+
+
 def _reuse_glm_cpu_artifacts(build: Path, deadline: float, binding_requirements: dict) -> bool:
     """Fast CPU preparation for harness-only changes, with strict binary binding."""
-    from scripts.sources import glm_compile_owner_digest, glm_partial_launch_metadata
+    from scripts.sources import glm_compile_owner_digest
 
     snapshot = Path("/opt/remnant-glm-reuse-base.json")
     if not os.environ.get("REMNANT_COMPILED_IMAGE") or not snapshot.is_file():
@@ -326,9 +334,10 @@ def _reuse_glm_cpu_artifacts(build: Path, deadline: float, binding_requirements:
     expected = {(h,i,p) for h in (8,16,32,64) for i in (1,2,33,66) for p in (False,True)}
     if {(v["heads"],v["inner"],v["packed"]) for v in compiled["tilelang"]} != expected:
         raise RuntimeError("Harness-only CPU reuse lacks maintained SM90 variants")
-    glm_partial_launch_metadata(compiled)
     Path("/opt/remnant-glm-compile.json").write_text(json.dumps(compiled,indent=2)+"\n")
     environment = _cpu_preflight_environment(build)
+    _glm_launch_metadata(build,deadline,environment)
+    compiled = json.loads(Path("/opt/remnant-glm-compile.json").read_text())
     _run_command(_benchmark_command("--model-family","glm53","--suite","glm-attention","--check-imports"),
                  build / "glm-benchmark-imports.log",deadline,environment=environment)
     _run_pytest(CPU_TESTS,build,"cpu-tests",deadline,environment=environment)
@@ -514,8 +523,8 @@ def _build_image() -> None:
                      build / "glm-sm90-compile.log", deadline, environment=cpu_environment)
         compile_path = Path("/opt/remnant-glm-compile.json")
         compiled = json.loads(compile_path.read_text())
-        from scripts.sources import glm_partial_launch_metadata
-        glm_partial_launch_metadata(compiled)
+        _glm_launch_metadata(build,deadline,cpu_environment)
+        compiled = json.loads(compile_path.read_text())
         entrypoints = {}
         probe_sources = {}
         current = {v["source_sha256"]: v for v in compiled["tilelang"]}
