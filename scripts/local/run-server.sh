@@ -35,6 +35,9 @@ if [ -n "${HICACHE_RATIO:-}" ]; then
   }
 fi
 
+. "$(dirname -- "${BASH_SOURCE[0]}")/launch-config.sh"
+resolve_launch_config || exit $?
+
 # The local-container launcher sets this after starting us in a dedicated
 # session. Record identity before exec so cleanup can recognize this exact
 # process even while SGLang is still importing or initializing.
@@ -54,10 +57,6 @@ if [ -n "${SERVER_PID_FILE:-}" ]; then
   mv -f -- "$pid_file_tmp" "$SERVER_PID_FILE"
 fi
 
-if [ "${MODEL_FAMILY:-dsv4}" = glm53 ]; then
-  TP=${TP:-8}
-  MODEL_NAME=${MODEL_NAME:-glm53-flash}
-fi
 
 args=(
   serve
@@ -95,7 +94,7 @@ case "${MODEL_FAMILY:-dsv4}" in
     args+=(--glm5-mla-cache-format "$CACHE_FORMAT"
       --glm5-mla-cache-implementation "$GLM_IMPLEMENTATION"
       --dsa-prefill-backend tilelang --dsa-decode-backend tilelang
-      --moe-runner-backend deep_gemm --ep "${EP:-8}" --language-model-only)
+      --moe-runner-backend deep_gemm --ep "$EP" --language-model-only)
     ;;
   *) echo "MODEL_FAMILY must be dsv4 or glm53" >&2; exit 2 ;;
 esac

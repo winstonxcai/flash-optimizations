@@ -382,7 +382,40 @@ The optional seven-row/batched-transfer fixture trial was rejected and reverted
 because it did not improve tool runtime and its memcheck was incomplete.
 
 All 48 paired cases completed at SGLang `246ee03c1ad5`, with 1.60% batch-weighted
-overhead. Final fork `23e2e08` has the identical Git tree. Focused sync/race/memcheck
+overhead. The measured implementation at `23e2e08` has the identical Git tree. Focused sync/race/memcheck
 passes; full-grid/combine instrumentation and broad qualification remain incomplete.
 See the experiment README, canonical JSON and decode CSV for identities, every
 case, costs and limits. Native remains default; rollback is Native or `889edf56`.
+
+
+Review follow-up (SGLang `35f9ee90`, based on parent `b010b379`): Adapter now
+uses int64 cache offsets, startup rejects effective non-DSA attention dispatch,
+and the shared timing loop preserves single-mode DeepSeek benchmarks. The
+Direct loader, 320-byte ABI, producer and attention arithmetic are unchanged.
+These follow-up changes have CPU evidence only; the new Adapter >2 GiB GPU
+regression and rebuilt-artifact execution are pending. Historical H100 results
+remain bound to their recorded commits, never the current pin automatically.
+
+Ownership for new contributors:
+
+- The fork's `python/sglang/benchmark/remnant/glm_artifacts.py` owns CPU SM90
+  preparation and a complete, hash-verified manifest. The public command is
+  `python -m sglang.benchmark.remnant.glm_artifacts` inside the maintained CUDA
+  build environment, with explicit Triton/TileLang cache and manifest paths.
+  GPU tests consume that manifest without parent-side ABI enrichment. Compile
+  reuse fingerprints complete owner modules, independent of test fixture edits.
+  Older verified images lacking the module trigger fresh CPU preparation.
+- Parent `scripts/local/launch-config.sh` resolves model family, TP, EP and
+  visible GPUs for both local/container and direct launchers. GLM defaults to
+  TP8, EP=TP and eight GPU IDs; TP4 resolves four by default. Explicit scheduler
+  assignments take precedence and mismatched counts fail before startup. Named
+  environment arguments replace the 28-field positional configuration transport;
+  translated metric paths and JSON remain individual arguments.
+- Parent `scripts/modal/kernel_qualification.py` owns evidence acceptance with
+  explicit inputs and immutable baseline hashes. `kernels.py` retains builds,
+  execution and export through its unchanged CLI. No historical Git object is
+  needed to import GLM commands or prepare current sources in a shallow clone.
+
+CPU regression entry points: `python -m unittest scripts.modal.tests` in the
+parent, and the fork command in `benchmark/remnant/README.md`. Native remains
+the rollback. Full-model loading, serving and fresh GPU qualification are deferred.

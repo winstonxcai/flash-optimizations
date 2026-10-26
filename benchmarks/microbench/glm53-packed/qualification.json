@@ -56558,5 +56558,55 @@
       "containers": [],
       "compute_excludes_credits_and_storage": true
     }
+  },
+  "post_review_fixes": {
+    "date": "2026-10-26",
+    "parent_base": "b010b3790745b1b58a7b7fe0e47f3b663f9b9c1d",
+    "sglang": "35f9ee90a40bcde509ed8f4d8b285a1453fe1c03",
+    "flashmla": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "status": "cpu_checks_passed_parent_full_pending_committed_pin",
+    "changes": [
+      "Adapter int64 offsets before byte multiplication",
+      "Effective outer DSA backend validation",
+      "Single-mode shared timing support",
+      "Shared model/TP/EP/GPU configuration and named Docker transport",
+      "Fork-owned complete SM90 artifact manifest and whole-module reuse identity",
+      "Qualification policy separated from orchestration; immutable historical hashes",
+      "Safe CPU preparation fallback for verified legacy images",
+      "Named budget-default regression assertions"
+    ],
+    "commands": [
+      {
+        "command": "PYTHONPATH=python python -m pytest -q -p no:cacheprovider test/registered/unit/test_glm5_mla_cache_format.py benchmark/remnant/test_microbench.py",
+        "cwd": "third_party/sglang-v0.5.22",
+        "passed": 126,
+        "skipped": 103
+      },
+      {
+        "command": "python -m unittest scripts.modal.tests",
+        "cwd": ".",
+        "status": "initial_run_blocked_by_expected_dirty_fork_preflight; rerun_after_pin_commit",
+        "tests": 107
+      },
+      {
+        "command": "ruff check --select F401,F821,F823,UP037 <changed Python files>; bash -n <changed shell files>; git diff --check",
+        "status": "passed"
+      }
+    ],
+    "independent_review": [
+      "kernel/benchmark review: no remaining findings; 21 focused CPU checks",
+      "orchestration review: no remaining findings; 17 focused CPU checks; all five baseline hashes verified",
+      "runtime review: no remaining findings; 31 startup checks and 64 backend-resolution combinations"
+    ],
+    "gpu_execution": false,
+    "image_build": false,
+    "phase_spend_delta_usd": 0,
+    "pending": [
+      "New Adapter >2 GiB GPU regression",
+      "SM90 recompilation and execution after artifact-owner relocation",
+      "Full-model/serving qualification"
+    ],
+    "historical_evidence": "Preserved unchanged; no GPU result promoted to the current pin"
   }
+
 }

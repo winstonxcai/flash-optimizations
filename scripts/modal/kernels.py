@@ -46,6 +46,13 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import modal
+from scripts.modal.kernel_qualification import (
+    QualificationContext,
+    check_glm_scope_audit as _check_glm_scope_audit,
+    check_sanitizer_report as _check_sanitizer_report,
+    qualification_run_ids,
+    qualify_glm_timing,
+)
 from scripts.sources import check_sources, integration_profile
 
 INTEGRATION = integration_profile()
@@ -58,10 +65,7 @@ GLM_BENCHMARK_CPU = "benchmark/remnant/test_microbench.py"
 GLM_BENCHMARK_GRAPH = GLM_TEST + "::test_benchmark_bank_graph_ownership"
 GLM_DECODE_GRAPH = GLM_TEST + "::test_decode_bank_graph"
 GLM_DECODE_PARTIAL = GLM_TEST + "::test_decode_partial_graph"
-GLM_DECODE_REQUIRED = {"test_packed_loader_bytes", "test_decode_partial_graph[8-1]", "test_decode_partial_graph[8-2]",
-                       "test_decode_partial_graph[16-1]", "test_decode_partial_graph[16-2]"}
 GLM_SANITIZER_GRAPH = GLM_TEST + "::test_benchmark_sanitizer_bank_graph"
-GLM_BASELINE = "9e42a0d8886dd93944dc6b47ef3bffef4e033b5a"
 GLM_SMOKE = (GLM_TEST + "::test_producer_reconstruction", GLM_TEST + "::test_native_fp8_conversion", GLM_TEST + "::test_allocator_accounting", GLM_TEST + "::test_invalid_attention", GLM_TEST + "::test_partial_outputs",
              GLM_TEST + "::test_attention[3-8-8]",
              GLM_TEST + "::test_changing_input_graph", GLM_TEST + "::test_production_backend_constructor")
@@ -101,16 +105,6 @@ if modal.is_local():
     )
 else:
     SOURCE_IDENTITIES = json.loads(os.environ["REMNANT_SOURCE_IDENTITIES"])
-if MODEL_FAMILY == "glm53" and modal.is_local():
-    GLM_BASELINE_RUNTIME_HASHES = {
-        path: hashlib.sha256(subprocess.check_output(
-            ["git", "-C", str(SGLANG_SOURCE), "show", f"{GLM_BASELINE}:python/sglang/{path}"], timeout=30
-        )).hexdigest()
-        for path in ("kernels/ops/attention/dsa/tilelang_kernel.py", "srt/remnant/glm.py",
-                     "srt/remnant/glm_pool.py", "srt/remnant/reference.py", "srt/layers/layernorm.py")
-    }
-else:
-    GLM_BASELINE_RUNTIME_HASHES = json.loads(os.environ.get("REMNANT_GLM_BASELINE_RUNTIME_HASHES", "{}"))
 RESULTS_ROOT = Path("/results")
 NATIVE_LIBRARY = Path("/opt/remnant-native-store.so")
 MANIFEST = Path("/opt/remnant-build.json")
@@ -302,10 +296,17 @@ def _check_cuda_binding_requirements() -> list[dict[str, str]]:
 
 def _glm_launch_metadata(build: Path, deadline: float, environment: dict) -> None:
     # TileLang imports use the same CPU driver stubs as compilation/preflight.
-    code = ("import json; from pathlib import Path; from scripts.sources import glm_partial_launch_metadata; "
-            "p=Path('/opt/remnant-glm-compile.json'); d=json.loads(p.read_text()); "
-            "glm_partial_launch_metadata(d); p.write_text(json.dumps(d,indent=2)+'\\n')")
-    _run_command([sys.executable,"-c",code],build / "glm-launch-metadata.log",deadline,environment=environment)
+    code = (
+        "import json; from pathlib import Path; from sglang.benchmark.remnant.glm_artifacts import bind_partial_launch_metadata; "
+        "p=Path('/opt/remnant-glm-compile.json'); d=json.loads(p.read_text()); "
+        "bind_partial_launch_metadata(d); p.write_text(json.dumps(d,indent=2)+'\\n')"
+    )
+    _run_command(
+        [sys.executable, "-c", code],
+        build / "glm-launch-metadata.log",
+        deadline,
+        environment=environment,
+    )
 
 
 def _reuse_glm_cpu_artifacts(build: Path, deadline: float, binding_requirements: dict) -> bool:
@@ -519,11 +520,9 @@ def _build_image() -> None:
         model_config = {"revision": revision, "sha256": digest, "url": url}
         _run_command([sys.executable, "-c", f"import runpy; tests=runpy.run_path({str(SGLANG_ROOT / GLM_TEST)!r}); tests['test_allocator_accounting'](); tests['test_compiled_launch_contract']()"],
                      build / "glm-allocator-cpu.log", deadline, environment=cpu_environment)
-        _run_command([sys.executable, str(SGLANG_ROOT / GLM_TEST), "--compile-only"],
+        _run_command([sys.executable, "-m", "sglang.benchmark.remnant.glm_artifacts"],
                      build / "glm-sm90-compile.log", deadline, environment=cpu_environment)
         compile_path = Path("/opt/remnant-glm-compile.json")
-        compiled = json.loads(compile_path.read_text())
-        _glm_launch_metadata(build,deadline,cpu_environment)
         compiled = json.loads(compile_path.read_text())
         entrypoints = {}
         probe_sources = {}
@@ -760,7 +759,6 @@ kernel_image = (
             "REMNANT_FLASHMLA_SOURCE_DIR": str(FLASHMLA_ROOT),
             "REMNANT_NATIVE_STORE_LIBRARY": str(NATIVE_LIBRARY),
             "REMNANT_BUILD_MANIFEST_PATH": str(MANIFEST),
-            "REMNANT_GLM_BASELINE_RUNTIME_HASHES": json.dumps(GLM_BASELINE_RUNTIME_HASHES),
             "REMNANT_VALIDATION_TIMEOUT_S": str(VALIDATION_TIMEOUT_S),
             "REMNANT_MODEL_CONFIG": "/opt/remnant-0731-config.json",
             **(
@@ -785,6 +783,10 @@ kernel_image = (
         REPO_ROOT / "scripts/sources.py",
         str(REMOTE_REPO / "scripts/sources.py"),
         copy=True,
+    )
+    .add_local_file(
+        REPO_ROOT / "scripts/modal/kernel_qualification.py",
+        str(REMOTE_REPO / "scripts/modal/kernel_qualification.py"), copy=True,
     )
     .run_function(_build_image, cpu=16, memory=65536, timeout=CPU_BUILD_TIMEOUT_S)
 )
@@ -1539,165 +1541,21 @@ def _glm_timing_checkpoint(run_id: str) -> Path:
     return checkpoint
 
 
-def _glm_timing_qualification(run_ids: str, *, allow_incomplete: bool = False, phase: str = "all") -> dict:
-    """Accept per-tool evidence only with unchanged production code/toolchains.
-
-    A prior overall failed run may supply a completed synccheck group; its
-    failed or not-run groups cannot qualify. New partial-tool runs explicitly
-    remain incomplete as full qualifications until merged here.
-    """
-    ids = run_ids.split(",")
-    if not run_ids or any(not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", x) for x in ids):
-        raise ValueError("GLM timing requires explicit --qualification-runs IDs")
-    manifest = json.loads(MANIFEST.read_text())
-    current = _glm_benchmark_contract().runtime_hashes(SGLANG_ROOT / "python/sglang")
-    groups = {}
-    for run_id in ids:
-        root = RESULTS_ROOT / "microbench" / run_id / "validation"
-        result = json.loads((root / "result.json").read_text())
-        old = json.loads((root / "build-manifest.json").read_text())
-        if result.get("model_family") != "glm53":
-            raise RuntimeError(f"Not GLM qualification: {run_id}")
-        if result.get("runtime_hashes") is not None:
-            if result["runtime_hashes"] != current:
-                raise RuntimeError(f"GLM runtime hashes changed: {run_id}")
-        elif old["source_identities"]["sglang"]["commit"] != GLM_BASELINE or current != GLM_BASELINE_RUNTIME_HASHES:
-            raise RuntimeError(f"Cannot establish unchanged historical GLM runtime: {run_id}")
-        if phase == "decode" and (old.get("sources") != manifest.get("sources")
-                or old['glm_compile'].get('cache_files') != manifest['glm_compile'].get('cache_files')
-                or old.get('nvcc') != manifest.get('nvcc')):
-            raise RuntimeError(f"GLM focused fixture/binary/source identity changed: {run_id}")
-        for key in ("torch", "cuda", "cuda_python", "cuda_bindings", "triton", "tilelang", "binaries"):
-            if old.get(key) != manifest.get(key):
-                raise RuntimeError(f"GLM qualification dependency changed: {run_id}/{key}")
-        for key in ("triton", "tilelang", "attention_scale"):
-            if old['glm_compile'][key] != manifest['glm_compile'][key]:
-                raise RuntimeError(f"GLM compiled variant identity changed: {run_id}/{key}")
-        if old['sanitizer']['binary_sha256'] != manifest['sanitizer']['binary_sha256']:
-            raise RuntimeError(f"GLM sanitizer identity changed: {run_id}")
-        for tool, status in result.get("sanitizer_results", {}).items():
-            if status.get("status") == "not_run":
-                continue
-            log = (root / f"{tool}.log").read_text()
-            if status.get("status") != "passed":
-                # An intentional graceful checkpoint is not a passed run. Reuse
-                # only its completed cases, independently bound to raw reports.
-                note = root / f"{tool}-coverage-checkpoint.json"
-                if not note.is_file():
-                    continue
-                _check_glm_interrupted_checkpoint(json.loads(note.read_text()), root, run_id, tool, log)
-            _check_sanitizer_report(log, tool)
-            if phase == "decode" and result.get("sanitizer_scope") == "glm-decode":
-                audit = result.get("scope_audit", {})
-                audit_log = (root / "scope-audit.log").read_text()
-                if (audit.get("status") != "passed" or audit.get("filter") != "regex=glm_packed_(partial|bytes)"
-                        or audit.get("log_sha256") != hashlib.sha256(audit_log.encode()).hexdigest()
-                        or audit.get("entrypoints") != manifest["glm_compile"].get("scope_symbol_audit")):
-                    raise RuntimeError(f"Focused instrumentation audit changed: {run_id}")
-                _check_sanitizer_report(audit_log, "racecheck")
-                _check_glm_scope_audit(audit_log, run_id)
-            if phase == "decode":
-                tree = ET.parse(root / f"{tool}.xml")
-                tests = list(tree.iter("testcase"))
-                names = {x.attrib["name"] for x in tests}
-                if (not names or not names <= GLM_DECODE_REQUIRED or len(names) != len(tests)
-                        or any(not x.get("classname", "").endswith("attention.unittests.test_glm5_remnant") for x in tests)
-                        or any(x.find(k) is not None for x in tests for k in ("failure", "error", "skipped"))):
-                    raise RuntimeError(f"Incomplete focused cases: {run_id}/{tool}")
-                for node in tests:
-                    name = node.attrib["name"]
-                    if name.startswith("test_decode_partial_graph["):
-                        heads, inner = map(int, name.split("[")[1].rstrip("]").split("-"))
-                        props = {x.get("name"): x.get("value") for x in node.findall("properties/property")}
-                        expected_geometry = dict(heads=heads, inner=inner, banks=2, queries=1,
-                                                 tails=[0,1,2,3], nondefault_stream=True,
-                                                 launched_partitions=1, binary_partitions=66//inner)
-                        cubins = {str(v["packed"]):v["cubin_sha256"] for v in manifest["glm_compile"]["tilelang"]
-                                  if v["heads"] == heads and v["inner"] == inner}
-                        if json.loads(props.get("partial_cubins", "{}")) != cubins:
-                            raise RuntimeError(f"Focused production cubin changed: {run_id}/{name}")
-                        if json.loads(props.get("decode_geometry", "{}")) != expected_geometry:
-                            raise RuntimeError(f"Focused decode geometry changed: {run_id}/{name}")
-            else:
-                names = _check_glm_sanitizer_cases(ET.parse(root / f"{tool}.xml"), run_id,
-                                                 historical=result.get('runtime_hashes') is None,
-                                                 allow_partial=True)
-            group = groups.setdefault(tool, dict(cases=set(), runs=[]))
-            group['cases'].update(names)
-            group['runs'].append(dict(run_id=run_id, cases=sorted(names),
-                                      overall_run_status=result.get('status'),
-                                      tool_status=status.get('status'),
-                                      result_sha256=hashlib.sha256((root / 'result.json').read_bytes()).hexdigest()))
-    required = GLM_DECODE_REQUIRED if phase == "decode" else _glm_required_sanitizer_cases(historical=False)
-    missing = {tool: sorted(required - groups.get(tool, {}).get('cases', set())) for tool in SANITIZER_ORDER}
-    incomplete = any(missing.values())
-    if incomplete and not allow_incomplete:
-        raise RuntimeError(f"GLM timing blocked by missing sanitizer gates: {missing}")
-    return dict(status="incomplete" if incomplete else "passed", missing=missing,
-                tools={tool: dict(cases=sorted(group['cases']), runs=group['runs'])
-                                        for tool, group in groups.items()}, runtime_hashes=current)
-
-
-def _check_glm_scope_audit(log: str, identity: str) -> None:
-    """Pinned tool trace proves helper warp and handoff CTA synchronization."""
-    if ("glm_packed_bytes" not in log or not re.search(r"(?i)(warp|warpsync)", log)
-            or not re.search(r"(?i)(block|cta|barrier)", log)):
-        raise RuntimeError(f"Missing positive TileLang synchronization trace: {identity}")
-
-
-def _check_glm_interrupted_checkpoint(note: dict, root: Path, run_id: str, tool: str, log: str) -> None:
-    if (note.get('schema') != 'remnant-glm-sanitizer-checkpoint-v1'
-            or note.get('run_id') != run_id or note.get('tool') != tool
-            or note.get('action') != 'intentional SIGINT to owned pytest'
-            or 'KeyboardInterrupt' not in log):
-        raise RuntimeError(f"Invalid intentional sanitizer checkpoint: {run_id}/{tool}")
-    for suffix in ('log', 'xml'):
-        actual = hashlib.sha256((root / f'{tool}.{suffix}').read_bytes()).hexdigest()
-        if note.get(f'{suffix}_sha256') != actual:
-            raise RuntimeError(f"Sanitizer checkpoint report changed: {run_id}/{tool}.{suffix}")
-
-
-def _glm_required_sanitizer_cases(*, historical: bool) -> set[str]:
-    required = {
-        "test_producer_reconstruction", "test_native_fp8_conversion", "test_allocator_accounting",
-        "test_invalid_attention", "test_partial_outputs", "test_attention[3-8-8]",
-        "test_changing_input_graph[adapter]", "test_changing_input_graph[direct]",
-        "test_production_backend_constructor", "test_attention[0-1-64]", "test_pool_lifecycle",
-    }
-    if not historical:
-        required |= {"test_benchmark_sanitizer_bank_graph[8-2-2-33]", "test_benchmark_sanitizer_bank_graph[16-4-2-66]"}
-    return required
-
-
-def _check_glm_sanitizer_cases(tree: ET.ElementTree, run_id: str, *, historical: bool,
-                              allow_partial: bool = False) -> set[str]:
-    required = _glm_required_sanitizer_cases(historical=historical)
-    nodes = list(tree.getroot().iter("testcase"))
-    names = {node.get("name") for node in nodes
-             if node.get("classname", "").endswith("attention.unittests.test_glm5_remnant")}
-    suites = list(tree.getroot().iter("testsuite"))
-    if (not names or not names <= required or (not allow_partial and not required <= names)
-            or any(node.find(k) is not None for node in nodes for k in ("failure", "error", "skipped"))
-            or any(int(x.get(k, 0)) for x in suites for k in ("errors", "failures", "skipped"))
-            or sum(int(x.get('tests', 0)) for x in suites) != len(names)):
-        raise RuntimeError(f"Incomplete GLM sanitizer fixture: {run_id}; missing={sorted(required-names)}")
-    for node in nodes:
-        if node.get('name', '').startswith('test_benchmark_sanitizer_bank_graph['):
-            dimensions = tuple(map(int, node.get('name').split('[')[1].rstrip(']').split('-')))
-            properties = {x.get('name'): x.get('value') for x in node.findall('properties/property')}
-            geometry = json.loads(properties.get('probe_geometry', '{}'))
-            if tuple(geometry.get(k) for k in ('heads', 'banks', 'queries', 'forced_inner')) != dimensions or geometry.get('warmup_calls') != 1 or geometry.get('measured_warmup_calls') != 10 or geometry.get('actual_warmup_calls_per_mode') != dimensions[1]:
-                raise RuntimeError(f"Missing focused sanitizer geometry: {run_id}/{node.get('name')}")
-    return names
-
-
-def _check_sanitizer_report(output: str, tool: str) -> None:
-    expected = ("RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)"
-                if tool == "racecheck" else "ERROR SUMMARY: 0 errors")
-    records = [r.strip() for r in re.findall(r"========= ([^\r\n]*)", output)]
-    summaries = [r for r in records if r.startswith(("ERROR SUMMARY:", "RACECHECK SUMMARY:"))]
-    if summaries != [expected] or any(r.startswith(("Warning:", "Error:")) for r in records) or "terminated before first instrumented API call" in output:
-        raise RuntimeError(f"Incomplete sanitizer evidence {tool}")
+def _glm_timing_qualification(
+    run_ids: str, *, allow_incomplete: bool = False, phase: str = "all"
+) -> dict:
+    qualification_run_ids(run_ids)
+    context = QualificationContext(
+        results_root=RESULTS_ROOT,
+        manifest=json.loads(MANIFEST.read_text()),
+        runtime_hashes=_glm_benchmark_contract().runtime_hashes(
+            SGLANG_ROOT / "python/sglang"
+        ),
+        sanitizer_order=SANITIZER_ORDER,
+    )
+    return qualify_glm_timing(
+        run_ids, context=context, allow_incomplete=allow_incomplete, phase=phase
+    )
 
 
 def _benchmark_cases():

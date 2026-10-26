@@ -21,6 +21,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
 
+from scripts.modal import kernel_qualification as qualification
 from scripts.modal import kernels
 from scripts.sources import check_sources, integration_profile
 
@@ -453,7 +454,9 @@ class LauncherTests(unittest.TestCase):
 
     def test_validation_budget_is_bounded_before_execution(self):
         function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
-        self.assertEqual(function.__defaults__, (False, 1100, "dsv4", "numerical", "", ""))
+        parameters = inspect.signature(function).parameters
+        self.assertEqual(parameters["max_seconds"].default, 1100)
+        self.assertEqual(parameters["sanitizer_scope"].default, "all")
         with patch.object(kernels, "_run_context") as run:
             for seconds in (0, 59, 2641, 2700):
                 with self.assertRaisesRegex(ValueError, "max_seconds"):
@@ -2085,30 +2088,185 @@ class GlmLauncherTests(unittest.TestCase):
                 function("fixture", model_family="glm53")
             run.assert_not_called()
 
-    def test_glm_local_launcher_uses_raw_fp8_tilelang_and_tp8(self):
+    def test_glm_local_launcher_resolves_tp_ep_and_gpu_count(self):
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary)
             command = path / "sglang"
-            command.write_text("#!/usr/bin/env python3\nimport json,sys\nprint(json.dumps(sys.argv[1:]))\n")
+            command.write_text(
+                "#!/usr/bin/env python3\nimport json,sys\nprint(json.dumps(sys.argv[1:]))\n"
+            )
             command.chmod(0o755)
-            for mode, implementation in (("native", "direct"), ("triton", "adapter"), ("kernel", "direct")):
-                env = {**os.environ, "PATH": str(path) + os.pathsep + os.environ["PATH"],
-                       "MODEL_FAMILY": "glm53", "DECODE_CFG": "{}"}
-                for name in ("TP", "EP", "MODEL_NAME", "SERVER_PID_FILE", "STORE_IMPLEMENTATION", "C4_KEEP_COUNT", "C4_LAYER_KEEP_COUNTS", "HICACHE_RATIO"):
+            base = {
+                **os.environ,
+                "PATH": str(path) + os.pathsep + os.environ["PATH"],
+                "MODEL_FAMILY": "glm53",
+                "DECODE_CFG": "{}",
+            }
+            for name in (
+                "TP",
+                "EP",
+                "GPUS",
+                "CUDA_VISIBLE_DEVICES",
+                "MODEL_NAME",
+                "SERVER_PID_FILE",
+                "STORE_IMPLEMENTATION",
+                "C4_KEEP_COUNT",
+                "C4_LAYER_KEEP_COUNTS",
+                "HICACHE_RATIO",
+            ):
+                base.pop(name, None)
+            script = str(kernels.REPO_ROOT / "scripts/local/run-server.sh")
+            for tp in (4, 8):
+                for mode, implementation in (
+                    ("native", "direct"),
+                    ("triton", "adapter"),
+                    ("kernel", "direct"),
+                ):
+                    with self.subTest(tp=tp, mode=mode):
+                        result = subprocess.run(
+                            [
+                                "bash",
+                                script,
+                                mode,
+                                "/config-only",
+                                "127.0.0.1",
+                                "30212",
+                            ],
+                            env={**base, "TP": str(tp)},
+                            capture_output=True,
+                            text=True,
+                            check=True,
+                            timeout=10,
+                        )
+                        args = json.loads(result.stdout)
+                        for flag, expected in (
+                            ("--tp", str(tp)),
+                            ("--ep", str(tp)),
+                            ("--kv-cache-dtype", "fp8_e4m3"),
+                            ("--dsa-prefill-backend", "tilelang"),
+                            ("--dsa-decode-backend", "tilelang"),
+                            ("--glm5-mla-cache-implementation", implementation),
+                            ("--moe-runner-backend", "deep_gemm"),
+                        ):
+                            self.assertEqual(args[args.index(flag) + 1], expected)
+                        self.assertNotIn("--dsv4-c4-cache-format", args)
+                        self.assertIn("--language-model-only", args)
+            for changes, error in (
+                ({"TP": "4", "EP": "8"}, "positive divisor"),
+                ({"TP": "8", "GPUS": "0,1,2,3"}, "visible GPUs"),
+                ({"TP": "4", "GPUS": "0,1,2,"}, "visible GPUs"),
+            ):
+                result = subprocess.run(
+                    ["bash", script, "kernel", "/config-only", "127.0.0.1", "30212"],
+                    env={**base, **changes},
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                self.assertIn(error, result.stderr)
+
+    def test_glm_container_launch_transports_named_configuration(self):
+        """Execute serve.sh's real launch block with an isolated Docker stand-in.
+
+        The stand-in retains only explicit -e settings, as docker exec does.
+        No server, GPU, container or long-lived process is created.
+        """
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            output = root / "args.json"
+            tools = root / "tools"
+            tools.mkdir()
+            (tools / "sglang").write_text(
+                f"#!{sys.executable}\nimport json,sys\n"
+                f"from pathlib import Path\nPath({str(output)!r}).write_text(json.dumps(sys.argv[1:]))\n"
+            )
+            # macOS has no /proc; process-record lifecycle is tested separately.
+            (tools / "setsid").write_text(
+                '#!/bin/bash\nunset SERVER_PID_FILE\nexec "$@"\n'
+            )
+            (tools / "docker").write_text(
+                f"#!{sys.executable}\nimport os,subprocess,sys,time\n"
+                "args=sys.argv[1:]; assert args[:2]==['exec','-i'],args\n"
+                "args=args[2:]; env={'PATH':os.environ['PATH']}\n"
+                "while args and args[0]=='-e':\n"
+                "    name,value=args[1].split('=',1);env[name]=value;args=args[2:]\n"
+                "assert args[0]=='fixture',args\n"
+                "subprocess.run(args[1:],env=env,check=True,timeout=5)\n"
+                f"output={str(output)!r}\n"
+                "for _ in range(100):\n"
+                "    if os.path.exists(output): break\n"
+                "    time.sleep(.02)\n"
+                "assert os.path.exists(output),'launcher did not reach sglang'\n"
+            )
+            for tool in tools.iterdir():
+                tool.chmod(0o755)
+            serve = (kernels.REPO_ROOT / "scripts/local/serve.sh").read_text()
+            start = serve.index(
+                'REQUEST_METRICS_DIR="$REQUEST_METRICS_DIR_CT" ct_launch_script'
+            )
+            end = serve.index("\nBASH", start) + len("\nBASH")
+            prefix = (
+                '. "$1"\nTREE="$2"; SGLANG_PY="$2/python"; REPO_CT="$2"; MODE=kernel\n'
+            )
+            prefix += (
+                'MODEL_CT="/model with spaces"; SERVE_LOG_CT="$3"; NSYS_OUTPUT_CT=\n'
+            )
+            prefix += 'REQUEST_METRICS_DIR_CT="$4"\n'
+            metrics = root / "container metrics with spaces"
+            metrics.mkdir()
+            for tp in (4, 8):
+                env = {
+                    **os.environ,
+                    "MODEL_FAMILY": "glm53",
+                    "TP": str(tp),
+                    "EP": "2",
+                    "CONTAINER": "fixture",
+                    "GPUS": ",".join(map(str, range(tp))),
+                    "DECODE_CFG": '{"decode": {"bs": [1, 8]}}',
+                    "PATH": str(tools) + os.pathsep + os.environ["PATH"],
+                }
+                for name in (
+                    "SERVER_SEED",
+                    "STORE_IMPLEMENTATION",
+                    "C4_KEEP_COUNT",
+                    "C4_LAYER_KEEP_COUNTS",
+                    "HICACHE_RATIO",
+                ):
                     env.pop(name, None)
-                result = subprocess.run(["bash", str(kernels.REPO_ROOT / "scripts/local/run-server.sh"), mode,
-                                         "/config-only", "127.0.0.1", "30212"], env=env, capture_output=True,
-                                        text=True, check=True, timeout=10)
-                args = json.loads(result.stdout)
-                for flag, expected in (("--tp", "8"), ("--ep", "8"), ("--kv-cache-dtype", "fp8_e4m3"),
-                    ("--dsa-prefill-backend", "tilelang"), ("--dsa-decode-backend", "tilelang"),
-                    ("--glm5-mla-cache-implementation", implementation), ("--moe-runner-backend", "deep_gemm")):
+                output.unlink(missing_ok=True)
+                result = subprocess.run(
+                    [
+                        "bash",
+                        "-c",
+                        prefix + serve[start:end],
+                        "launch-test",
+                        str(kernels.REPO_ROOT / "scripts/local/env.sh"),
+                        str(kernels.REPO_ROOT),
+                        str(root / "launch.log"),
+                        str(metrics),
+                    ],
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                self.assertEqual(
+                    result.returncode,
+                    0,
+                    result.stdout + result.stderr + (root / "launch.log").read_text(),
+                )
+                args = json.loads(output.read_text())
+                for flag, expected in (
+                    ("--tp", str(tp)),
+                    ("--ep", "2"),
+                    ("--model-path", "/model with spaces"),
+                    ("--glm5-mla-cache-format", "remnant"),
+                    ("--cuda-graph-config", env["DECODE_CFG"]),
+                    ("--export-metrics-to-file-dir", str(metrics)),
+                ):
                     self.assertEqual(args[args.index(flag) + 1], expected)
                 self.assertNotIn("--dsv4-c4-cache-format", args)
-                self.assertIn("--language-model-only", args)
-
-
-
 
 
 class GLMCPURebuildTests(unittest.TestCase):
@@ -2116,29 +2274,63 @@ class GLMCPURebuildTests(unittest.TestCase):
 
     def test_compile_owner_digest_excludes_only_harness_edits(self):
         from scripts.sources import glm_compile_owner_digest
+
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            script = root / "test/registered/attention/unittests/test_glm5_remnant.py"
-            runtime = root / "python/sglang/srt/remnant/glm.py"
-            script.parent.mkdir(parents=True)
-            runtime.parent.mkdir(parents=True)
-            runtime.write_text("runtime")
-            owners = "ATTENTION_SCALE = 256**-.5\ndef _packed_loader_probe(): return 1\ndef _compile_sm90_variant(): return 2\ndef precompile_sm90(): return 3\n"
-            script.write_text(owners + "def test_fixture(): return 4\n")
+            owners = [
+                root / "python/sglang/benchmark/remnant/glm_artifacts.py",
+                root / "python/sglang/srt/remnant/glm.py",
+            ]
+            test = root / "test/registered/attention/unittests/test_glm5_remnant.py"
+            for path in [*owners, test]:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("original")
             expected = glm_compile_owner_digest(root)
-            script.write_text(owners + "def test_fixture(): return 5\n")
+            test.write_text("unrelated fixture edits")
             self.assertEqual(glm_compile_owner_digest(root), expected)
-            script.write_text(owners.replace("return 1", "return 6"))
-            self.assertNotEqual(glm_compile_owner_digest(root), expected)
-            script.write_text(owners)
-            runtime.write_text("changed")
-            self.assertNotEqual(glm_compile_owner_digest(root), expected)
-            script.write_text("ATTENTION_SCALE=1")
-            with self.assertRaises(RuntimeError):
+            for path in owners:
+                path.write_text("changed owner")
+                self.assertNotEqual(glm_compile_owner_digest(root), expected)
+                path.write_text("original")
+            owners[0].unlink()
+            with self.assertRaisesRegex(RuntimeError, "Missing GLM CPU compile owner"):
                 glm_compile_owner_digest(root)
+
+    def test_legacy_image_snapshot_requires_fresh_cpu_preparation(self):
+        from scripts import sources
+
+        real_path = Path
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            base = root / "base.json"
+            output = root / "snapshot.json"
+            base.write_text(json.dumps({"glm_compile": {"tilelang": []}}))
+
+            def mapped(path):
+                if str(path) == "/opt/remnant-build.json":
+                    return base
+                if str(path) == "/opt/remnant-glm-reuse-base.json":
+                    return output
+                return real_path(path)
+
+            with patch.object(sources, "Path", side_effect=mapped):
+                sources.snapshot_glm_artifacts(str(root))
+            self.assertIsNone(json.loads(output.read_text())["compile_owner_digest"])
+            owner = root / "python/sglang/benchmark/remnant/glm_artifacts.py"
+            runtime = root / "python/sglang/srt/remnant/glm.py"
+            for path in (owner, runtime):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("current owner")
+            with patch.object(sources, "Path", side_effect=mapped):
+                sources.snapshot_glm_artifacts(str(root))
+            self.assertEqual(
+                json.loads(output.read_text())["compile_owner_digest"],
+                sources.glm_compile_owner_digest(root),
+            )
 
     def test_compiled_source_allowlist(self):
         from scripts.sources import glm_rebuild_source_digest
+
         with tempfile.TemporaryDirectory() as tmp:
             roots = [Path(tmp) / "kernels", Path(tmp) / "flash"]
             for root in roots:
@@ -2165,6 +2357,7 @@ class GLMCPURebuildTests(unittest.TestCase):
     def test_base_identity_and_artifacts(self):
         import hashlib
         from scripts import sources
+
         real_path = Path
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -2174,35 +2367,67 @@ class GLMCPURebuildTests(unittest.TestCase):
             binary, cache = root / "aot.so", root / "jit.cubin"
             binary.write_bytes(b"native")
             cache.write_bytes(b"cached")
-            manifest = dict(source_identities={"sglang": {"commit": "sg"}, "flashmla": {"commit": "fm"}},
-                            binaries={str(binary): hashlib.sha256(binary.read_bytes()).hexdigest()},
-                            glm_compile={"cache_files": {str(cache): hashlib.sha256(cache.read_bytes()).hexdigest()}})
+            manifest = dict(
+                source_identities={
+                    "sglang": {"commit": "sg"},
+                    "flashmla": {"commit": "fm"},
+                },
+                binaries={str(binary): hashlib.sha256(binary.read_bytes()).hexdigest()},
+                glm_compile={
+                    "cache_files": {
+                        str(cache): hashlib.sha256(cache.read_bytes()).hexdigest()
+                    }
+                },
+            )
             base = root / "manifest.json"
             base.write_text(json.dumps(manifest))
+
             def mapped(path):
                 if str(path) == "/opt/remnant-build.json":
                     return base
                 if str(path) == "/opt/remnant-cpu-rebuild-base.json":
                     return root / "verified.json"
                 return real_path(path)
-            with patch.object(sources, "Path", side_effect=mapped), patch.dict(os.environ, REMNANT_BUILT_INTEGRATION="v0.5.22"):
+
+            with (
+                patch.object(sources, "Path", side_effect=mapped),
+                patch.dict(os.environ, REMNANT_BUILT_INTEGRATION="v0.5.22"),
+            ):
                 digest = sources.glm_rebuild_source_digest(roots)
                 expected = dict(sglang="sg", flashmla="fm")
                 sources.verify_glm_cpu_rebuild(expected, digest, list(map(str, roots)))
                 with self.assertRaises(RuntimeError):
-                    sources.verify_glm_cpu_rebuild({**expected,"sglang":"wrong"}, digest, list(map(str, roots)))
+                    sources.verify_glm_cpu_rebuild(
+                        {**expected, "sglang": "wrong"}, digest, list(map(str, roots))
+                    )
                 for artifact in (binary, cache):
                     original = artifact.read_bytes()
                     artifact.write_bytes(b"changed")
                     with self.assertRaises(RuntimeError):
-                        sources.verify_glm_cpu_rebuild(expected, digest, list(map(str, roots)))
+                        sources.verify_glm_cpu_rebuild(
+                            expected, digest, list(map(str, roots))
+                        )
                     artifact.write_bytes(original)
-                with patch.dict(os.environ, REMNANT_BUILT_INTEGRATION="v0.5.18"), self.assertRaises(RuntimeError):
-                    sources.verify_glm_cpu_rebuild(expected, digest, list(map(str, roots)))
+                with (
+                    patch.dict(os.environ, REMNANT_BUILT_INTEGRATION="v0.5.18"),
+                    self.assertRaises(RuntimeError),
+                ):
+                    sources.verify_glm_cpu_rebuild(
+                        expected, digest, list(map(str, roots))
+                    )
 
 
 class GLMAttentionProtocolTests(unittest.TestCase):
     """Coverage identities and model-specific dispatch must fail closed."""
+
+    def test_qualification_import_needs_no_historical_git_objects(self):
+        import importlib
+        from scripts.modal import kernel_qualification
+
+        with patch("subprocess.check_output", side_effect=AssertionError("no Git at import")):
+            policy = importlib.reload(kernel_qualification)
+        self.assertEqual(len(policy.GLM_BASELINE_RUNTIME_HASHES), 5)
+        self.assertTrue(all(len(value) == 64 for value in policy.GLM_BASELINE_RUNTIME_HASHES.values()))
 
     def test_scoped_audit_requires_helper_and_handoff_trace(self):
         for text in ("glm_packed_bytes", "glm_packed_bytes warp", "other_kernel warp CTA barrier"):
@@ -2241,23 +2466,23 @@ class GLMAttentionProtocolTests(unittest.TestCase):
         for name in names:
             ET.SubElement(suite, 'testcase', name=name, classname='registered.attention.unittests.test_glm5_remnant')
         tree = ET.ElementTree(root)
-        kernels._check_glm_sanitizer_cases(tree, 'historical', historical=True)
+        qualification.check_glm_sanitizer_cases(tree, 'historical', historical=True)
         with self.assertRaisesRegex(RuntimeError, 'missing'):
-            kernels._check_glm_sanitizer_cases(tree, 'current', historical=False)
+            qualification.check_glm_sanitizer_cases(tree, 'current', historical=False)
         for dimensions in ((8,2,2,33),(16,4,2,66)):
             name = 'test_benchmark_sanitizer_bank_graph[' + '-'.join(map(str, dimensions)) + ']'
             node = ET.SubElement(suite, 'testcase', name=name, classname='registered.attention.unittests.test_glm5_remnant')
             geometry = dict(zip(('heads','banks','queries','forced_inner'), dimensions), warmup_calls=1, measured_warmup_calls=10, actual_warmup_calls_per_mode=dimensions[1])
             ET.SubElement(ET.SubElement(node, 'properties'), 'property', name='probe_geometry', value=json.dumps(geometry))
         suite.set('tests', '13')
-        kernels._check_glm_sanitizer_cases(tree, 'current', historical=False)
+        qualification.check_glm_sanitizer_cases(tree, 'current', historical=False)
         suite[0].set('name', 'unrelated_test')
         with self.assertRaisesRegex(RuntimeError, 'missing'):
-            kernels._check_glm_sanitizer_cases(tree, 'spoofed', historical=False)
+            qualification.check_glm_sanitizer_cases(tree, 'spoofed', historical=False)
         suite[0].set('name', names[0])
         ET.SubElement(suite[0], 'skipped')
         with self.assertRaises(RuntimeError):
-            kernels._check_glm_sanitizer_cases(tree, 'skipped', historical=False)
+            qualification.check_glm_sanitizer_cases(tree, 'skipped', historical=False)
 
     def test_glm_command_does_not_load_deepseek_native_library(self):
         with patch.object(kernels, 'MODEL_FAMILY', 'glm53'):
@@ -2272,8 +2497,8 @@ class GLMAttentionProtocolTests(unittest.TestCase):
             root = Path(directory)
             manifest = dict(glm_compile=dict(triton=[], tilelang=[], attention_scale=0.0625), sanitizer={'binary_sha256':'tool'})
             manifest_path = root / 'manifest.json'; manifest_path.write_text(json.dumps(manifest))
-            original = kernels._glm_required_sanitizer_cases(historical=True)
-            focused = kernels._glm_required_sanitizer_cases(historical=False) - original
+            original = qualification.required_glm_sanitizer_cases(historical=True)
+            focused = qualification.required_glm_sanitizer_cases(historical=False) - original
             def write_group(run, tool, names, interrupted=False):
                 folder = root / 'microbench' / run / 'validation'; folder.mkdir(parents=True)
                 (folder / 'build-manifest.json').write_text(json.dumps(manifest))

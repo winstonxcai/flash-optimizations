@@ -80,82 +80,35 @@ def verify_glm_cpu_rebuild(expected_base: dict, candidate: str, roots: list[str]
 
 
 def glm_compile_owner_digest(sglang: Path) -> str:
-    """Hash JIT probe/factory owners, allowing unrelated test-harness edits.
+    """Fingerprint fork-owned artifact preparation and runtime compilation.
 
-    Production kernel trees have a separate whole-tree gate before any overlay.
-    These test definitions own additional compile artifacts; changing one forces
-    CPU compilation, while changing fixtures or assertions does not.
+    GPU test fixtures are consumers, not compile owners. Whole compiled kernel
+    trees remain guarded separately before any source overlay.
     """
-    import ast
-
-    test = sglang / "test/registered/attention/unittests/test_glm5_remnant.py"
-    text = test.read_text()
-    nodes = ast.parse(text).body
-    names = {"_packed_loader_probe", "_compile_sm90_variant", "precompile_sm90", "ATTENTION_SCALE"}
-    owners = {}
-    for node in nodes:
-        name = getattr(node, "name", None)
-        if isinstance(node, ast.Assign):
-            name = next((t.id for t in node.targets if isinstance(t, ast.Name) and t.id in names), None)
-        if name in names:
-            owners[name] = ast.get_source_segment(text, node)
-    if set(owners) != names:
-        raise RuntimeError("Missing GLM CPU compile owner definitions")
-    owners["runtime"] = (sglang / "python/sglang/srt/remnant/glm.py").read_text()
-    return hashlib.sha256(json.dumps(owners, sort_keys=True).encode()).hexdigest()
+    digest = hashlib.sha256()
+    for name in ("benchmark/remnant/glm_artifacts.py", "srt/remnant/glm.py"):
+        path = sglang / "python/sglang" / name
+        if not path.is_file():
+            raise RuntimeError(f"Missing GLM CPU compile owner: {path}")
+        digest.update(name.encode() + b"\0" + path.read_bytes())
+    return digest.hexdigest()
 
 
 def snapshot_glm_artifacts(sglang: str) -> None:
     """Called on the verified base BEFORE overlaying candidate test sources."""
     manifest = json.loads(Path("/opt/remnant-build.json").read_text())
-    manifest["compile_owner_digest"] = glm_compile_owner_digest(Path(sglang))
+    # Qualified images built before the fork-owned artifact interface can still
+    # supply unchanged AOT binaries, but must CPU-prepare their JIT artifacts.
+    artifact_owner = Path(sglang) / "python/sglang/benchmark/remnant/glm_artifacts.py"
+    manifest["compile_owner_digest"] = (
+        glm_compile_owner_digest(Path(sglang)) if artifact_owner.is_file() else None
+    )
+    manifest["compile_owner_status"] = (
+        "available"
+        if artifact_owner.is_file()
+        else "legacy image; CPU preparation required"
+    )
     Path("/opt/remnant-glm-reuse-base.json").write_text(json.dumps(manifest))
-
-
-def glm_partial_launch_metadata(compiled: dict) -> None:
-    """Bind exact production cubins, generated ABI and dynamic shared bytes.
-
-    The qualified TileLang version uses this public CUDA cache key API. Resolve
-    it on CPU, require a manifest hash, and fail before H100 on any mismatch.
-    """
-    import tilelang
-    from tilelang.cache.cuda_binary_cache import CUDABinaryCache
-
-    package = Path(tilelang.__file__).parent
-    options = ["-std=c++20", f"-I{package}/3rdparty/../src", f"-I{package}/3rdparty/cutlass/include"]
-    cache = compiled["cache_files"]
-    for variant in compiled["tilelang"]:
-        matches = [Path(p) for p,h in cache.items()
-                   if p.endswith("/device_kernel.cu") and h == variant["source_sha256"]]
-        if not matches:
-            raise RuntimeError(f"Missing generated GLM source: {variant}")
-        source = matches[0].read_text()
-        key = CUDABinaryCache.make_key(code=source, target_kind="cuda", target_arch="90a",
-                target_code=[], compile_format="cubin", options=options)
-        cubin = Path(CUDABinaryCache.get_path(key, "cubin"))
-        if str(cubin) not in cache or hashlib.sha256(cubin.read_bytes()).hexdigest() != cache[str(cubin)]:
-            raise RuntimeError(f"Unverified production GLM cubin: {cubin}")
-        symbol = "glm_packed_partial_kernel" if variant["packed"] else "main_kernel"
-        match = re.search(r"\b" + symbol + r"\(([^)]*)\)\s*\{", source)
-        if not match:
-            raise RuntimeError(f"Missing production CUDA definition: {symbol}")
-        parameters = []
-        for declaration in match[1].split(","):
-            declaration = declaration.strip()
-            name = declaration.split()[-1]
-            pointer = "*" in declaration
-            if not pointer and declaration != f"int {name}":
-                raise RuntimeError(f"Unsupported GLM CUDA ABI: {declaration}")
-            parameters.append(dict(name=name, pointer=pointer, type="pointer" if pointer else "int"))
-        expected = (["bitmap"] if variant["packed"] else []) + ["indices","kv_fp8","partial_lse","partial_o","q_fp8","num_pages","seq_len"]
-        if [p["name"] for p in parameters] != expected:
-            raise RuntimeError(f"GLM partial ABI changed: {parameters}")
-        host = (matches[0].parent / "host_kernel.cu").read_text()
-        sizes = re.findall(r"v_int64\) = \(\(int64_t\)(\d+)\);", host)
-        if not sizes:
-            raise RuntimeError("Missing generated dynamic shared-memory size")
-        variant.update(cubin_path=str(cubin), cubin_sha256=cache[str(cubin)], symbol=symbol,
-                       parameters=parameters, dynamic_shared=int(sizes[-1]))
 
 
 def integration_profile(value: str | None = None) -> dict[str, str]:

@@ -9,6 +9,14 @@ unoptimized 56/128 attention comparison below remains historical and incomplete.
 Aggregate authorization is $35 ($20 historical plus the additional $15 phase).
 Native remains the serving default.
 
+Review follow-up, 2026-10-26: code at SGLang `35f9ee90` fixes Adapter int64
+addressing, validates effective attention dispatch and restores single-mode
+shared timing. Launch geometry/configuration and artifact/evidence ownership
+are consolidated; see the [fork guide](../../../third_party/README.md#glm-53-flash-candidate-v0522-only).
+The 48-case result above remains historical at its recorded source identity.
+This follow-up uses local CPU checks only; no new GPU or image-build spend.
+Its Adapter large-address regression and rebuilt-artifact execution are pending.
+
 Question: can eleven MLA layers use 320-byte rows while retaining Native FP8
 TileLang arithmetic and unchanged KDA/indexer/tail reservations on H100?
 
