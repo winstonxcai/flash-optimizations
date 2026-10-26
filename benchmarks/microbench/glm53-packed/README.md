@@ -16,6 +16,9 @@ are consolidated; see the [fork guide](../../../third_party/README.md#glm-53-fla
 The 48-case result above remains historical at its recorded source identity.
 This follow-up uses local CPU checks only; no new GPU or image-build spend.
 Its Adapter large-address regression and rebuilt-artifact execution are pending.
+CPU validation: 126 SGLang checks passed (103 GPU benchmark checks skipped),
+and all 108 parent checks passed under each integration profile. Independent
+review found no remaining defects in the fixes.
 
 Question: can eleven MLA layers use 320-byte rows while retaining Native FP8
 TileLang arithmetic and unchanged KDA/indexer/tail reservations on H100?

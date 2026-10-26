@@ -13,16 +13,17 @@ records rather than this milestone log.
 
 ## Unreleased
 
-- Parent based on `b010b379`, v0.5.22 SGLang `35f9ee90a40b` / FlashMLA
-  `3eb85944fd7d`: address review findings in Adapter int64 addressing, effective
+- Parent implementation `6f83b1f` (based on `b010b379`), v0.5.22 SGLang
+  `35f9ee90a40b` / FlashMLA `3eb85944fd7d`: address review findings in Adapter int64 addressing, effective
   attention dispatch, single-mode timing, named container configuration, TP/EP/
   GPU consistency and the CPU budget regression. Move complete SM90 manifests
   to a fork-owned module; separate parent evidence policy from orchestration,
   retain immutable legacy hashes and safely CPU-recompile older verified images.
   Validation: 126 SGLang CPU checks pass, 103 GPU benchmark checks skip; focused
-  parent/independent reviews pass. Full parent verification follows the committed
-  pin update. No image build or GPU run; the new Adapter boundary regression and
-  rebuilt-artifact execution remain unverified. Native and other pins unchanged.
+  parent/independent reviews pass. All 108 parent CPU tests pass under each of
+  v0.5.18 and v0.5.22 after the committed pin update. No image build or GPU run;
+  the new Adapter boundary regression and rebuilt-artifact execution remain
+  unverified. Native and other pins unchanged.
 
 
 - Parent implementation `06f2058` (measured parent `8aea70a`), v0.5.22 SGLang

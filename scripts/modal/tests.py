@@ -2179,7 +2179,8 @@ class GlmLauncherTests(unittest.TestCase):
             tools.mkdir()
             (tools / "sglang").write_text(
                 f"#!{sys.executable}\nimport json,sys\n"
-                f"from pathlib import Path\nPath({str(output)!r}).write_text(json.dumps(sys.argv[1:]))\n"
+                f"from pathlib import Path\np=Path({str(output)!r}); temporary=p.with_suffix('.tmp')\n"
+                "temporary.write_text(json.dumps(sys.argv[1:])); temporary.replace(p)\n"
             )
             # macOS has no /proc; process-record lifecycle is tested separately.
             (tools / "setsid").write_text(

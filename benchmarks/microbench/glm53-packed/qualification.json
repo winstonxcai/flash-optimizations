@@ -56564,7 +56564,7 @@
     "parent_base": "b010b3790745b1b58a7b7fe0e47f3b663f9b9c1d",
     "sglang": "35f9ee90a40bcde509ed8f4d8b285a1453fe1c03",
     "flashmla": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
-    "status": "cpu_checks_passed_parent_full_pending_committed_pin",
+    "status": "cpu_checks_passed_gpu_requalification_pending",
     "changes": [
       "Adapter int64 offsets before byte multiplication",
       "Effective outer DSA backend validation",
@@ -56591,6 +56591,24 @@
       {
         "command": "ruff check --select F401,F821,F823,UP037 <changed Python files>; bash -n <changed shell files>; git diff --check",
         "status": "passed"
+      },
+      {
+        "command": "python -m unittest scripts.modal.tests",
+        "cwd": ".",
+        "integration": "v0.5.18",
+        "passed": 108,
+        "elapsed_seconds": 97.988
+      },
+      {
+        "command": "REMNANT_INTEGRATION=v0.5.22 python -m unittest scripts.modal.tests",
+        "cwd": ".",
+        "integration": "v0.5.22",
+        "passed": 108,
+        "elapsed_seconds": 93.515
+      },
+      {
+        "command": "REMNANT_INTEGRATION=v0.5.22 python scripts/sources.py .",
+        "status": "passed_exact_clean_pins"
       }
     ],
     "independent_review": [
@@ -56606,7 +56624,22 @@
       "SM90 recompilation and execution after artifact-owner relocation",
       "Full-model/serving qualification"
     ],
-    "historical_evidence": "Preserved unchanged; no GPU result promoted to the current pin"
+    "historical_evidence": "Preserved unchanged; no GPU result promoted to the current pin",
+    "parent_implementation": "6f83b1fb6238d68bd2dbda2ae725a5715340e3cc",
+    "cpu_environment": {
+      "python": "3.12.5",
+      "torch": "2.10.0",
+      "modal": "1.5.4",
+      "msgspec": "0.22.0",
+      "ruff": "0.17.2"
+    },
+    "source_content_sha256": {
+      "scripts/local/launch-config.sh": "8fa706b99cf14cb1a953ff614b9cae4b2561382299f054df20b12116fdd6cbbc",
+      "scripts/modal/kernel_qualification.py": "d70e201e0952e18ee5e190aff79b7b764991c1eeb68882184ecf02ba8f50ed87",
+      "scripts/sources.py": "89adef0dda7694ae529ee172a04d6d045b7b1d94753532de5c9fbeb9d7274d67",
+      "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/glm_artifacts.py": "f7c6c634798838462b5dee836f1b34761c8b8bde7026f20a28c2f08872d039c1",
+      "third_party/sglang-v0.5.22/python/sglang/srt/remnant/glm.py": "419a0acfddf17f312f62fea39c7f3a7a5de2fe8825929267d9f32bdab99fbcda"
+    }
   }
 
 }
