@@ -469,14 +469,25 @@ def _build_image() -> None:
         compile_path = Path("/opt/remnant-glm-compile.json")
         compiled = json.loads(compile_path.read_text())
         entrypoints = {}
+        probe_sources = {}
+        current = {v["source_sha256"]: v for v in compiled["tilelang"]}
         for path, digest in compiled["cache_files"].items():
-            if path.endswith("/device_kernel.cu"):
-                if not re.search(r"__global__[^\n]*\bmain_kernel\s*\(", Path(path).read_text()):
-                    raise RuntimeError(f"Focused filter cannot match TileLang entrypoint: {path}")
-                entrypoints[path] = digest
-        if not entrypoints:
-            raise RuntimeError("No verified TileLang entrypoint sources")
-        compiled["scope_symbol_audit"] = dict(symbol="main_kernel", sources=entrypoints)
+            if not path.endswith("/device_kernel.cu"):
+                continue
+            text = Path(path).read_text()
+            names = re.findall(r"__global__\s+void\s+(?:__launch_bounds__\([^)]*\)\s+)?(\w+)\s*\(", text)
+            if digest in current:
+                expected = "glm_packed_partial" if current[digest]["packed"] else "main"
+                if len(names) != 1 or not names[0].startswith(expected):
+                    raise RuntimeError(f"Unexpected current TileLang entrypoint: {path}: {names}")
+                entrypoints[path] = dict(sha256=digest, symbol=names[0])
+            if any(name.startswith("glm_packed_bytes") for name in names):
+                probe_sources[path] = dict(sha256=digest, symbol=names[0])
+        if len(entrypoints) != 32 or not probe_sources:
+            raise RuntimeError("Incomplete verified TileLang entrypoint sources")
+        compiled["scope_symbol_audit"] = dict(filter="regex=glm_packed_(partial|bytes)",
+            partial_sources=entrypoints, probe_sources=probe_sources,
+            excluded="Unchanged Native, combine and framework kernels")
         compile_path.write_text(json.dumps(compiled, indent=2) + "\n")
     else:
         model_config = None
@@ -1045,13 +1056,13 @@ def validate_kernels(
             record["allocation"] = allocation
         if sanitizer and sanitizer_scope == "glm-decode":
             audit_prefix = (SANITIZER, "--tool", "racecheck", "--error-exitcode", "1",
-                            "--kernel-name", "kns=main_kernel", "--racecheck-trace-sync", "yes")
+                            "--kernel-name", "regex=glm_packed_(partial|bytes)", "--racecheck-trace-sync", "yes")
             _run_pytest((GLM_TEST + "::test_packed_loader_bytes",), root, "scope-audit",
                         min(deadline, time.monotonic() + 180), prefix=audit_prefix)
             audit_log = (root / "scope-audit.log").read_text()
             _check_sanitizer_report(audit_log, "racecheck")
             _check_glm_scope_audit(audit_log, run_id)
-            record["scope_audit"] = dict(status="passed", filter="kns=main_kernel",
+            record["scope_audit"] = dict(status="passed", filter="regex=glm_packed_(partial|bytes)",
                 log_sha256=hashlib.sha256(audit_log.encode()).hexdigest(),
                 entrypoints=manifest["glm_compile"]["scope_symbol_audit"],
                 basis="Racecheck synchronization trace; other tools use completed tests, identical entrypoints and common filter contract")
@@ -1063,10 +1074,10 @@ def validate_kernels(
                     break
                 prefix = (SANITIZER, "--tool", tool, "--error-exitcode", "1")
                 if sanitizer_scope == "glm-decode":
-                    # All compiled byte/partial/combine entry points have this
-                    # name. Include their inline device helpers; retain full graph
-                    # execution while excluding unchanged framework kernels.
-                    prefix += ("--kernel-name", "kns=main_kernel", "--print-level", "info")
+                    # Distinct Packed entrypoints include their inline helper.
+                    # Full graphs still execute Native/combine as numerical
+                    # controls; those unchanged kernels are not instrumented.
+                    prefix += ("--kernel-name", "regex=glm_packed_(partial|bytes)", "--print-level", "info")
                 try:
                     tool_environment = dict(environment)
                     if sanitizer_scope == "glm-decode":
@@ -1520,7 +1531,7 @@ def _glm_timing_qualification(run_ids: str, *, allow_incomplete: bool = False, p
             if phase == "decode" and result.get("sanitizer_scope") == "glm-decode":
                 audit = result.get("scope_audit", {})
                 audit_log = (root / "scope-audit.log").read_text()
-                if (audit.get("status") != "passed" or audit.get("filter") != "kns=main_kernel"
+                if (audit.get("status") != "passed" or audit.get("filter") != "regex=glm_packed_(partial|bytes)"
                         or audit.get("log_sha256") != hashlib.sha256(audit_log.encode()).hexdigest()
                         or audit.get("entrypoints") != manifest["glm_compile"].get("scope_symbol_audit")):
                     raise RuntimeError(f"Focused instrumentation audit changed: {run_id}")
@@ -1565,7 +1576,7 @@ def _glm_timing_qualification(run_ids: str, *, allow_incomplete: bool = False, p
 
 def _check_glm_scope_audit(log: str, identity: str) -> None:
     """Pinned tool trace proves helper warp and handoff CTA synchronization."""
-    if ("main_kernel" not in log or not re.search(r"(?i)(warp|warpsync)", log)
+    if ("glm_packed_bytes" not in log or not re.search(r"(?i)(warp|warpsync)", log)
             or not re.search(r"(?i)(block|cta|barrier)", log)):
         raise RuntimeError(f"Missing positive TileLang synchronization trace: {identity}")
 

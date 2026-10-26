@@ -579,3 +579,12 @@ now capture explicitly on their owned non-default stream, removing Torch's
 implicit cross-stream capture handoff. The timing path retains default capture.
 Full-trace/120-second Python stack diagnostics are enabled only for focused tools.
 This is a harness correction; the loader, arithmetic and cached cubins are unchanged.
+
+Full timeout stacks identified the expensive instrumented call at
+`tilelang_sparse_fwd`'s unchanged combine launch. Earlier short interrupt stacks
+were insufficient to attribute this to graph handoff. Packed partial and byte
+probe now have distinct entrypoint names, verified on CPU; Native code remains
+unchanged. Focused tools use `regex=glm_packed_(partial|bytes)`: they check the
+changed loader and in-partial synchronization while all Native/combine/framework
+operations still execute as uninstrumented numerical/graph controls. This is
+Packed-loader qualification, not complete attention-path sanitizer qualification.

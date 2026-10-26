@@ -2146,10 +2146,10 @@ class GLMAttentionProtocolTests(unittest.TestCase):
     """Coverage identities and model-specific dispatch must fail closed."""
 
     def test_scoped_audit_requires_helper_and_handoff_trace(self):
-        for text in ("main_kernel", "main_kernel warp", "other_kernel warp CTA barrier"):
+        for text in ("glm_packed_bytes", "glm_packed_bytes warp", "other_kernel warp CTA barrier"):
             with self.assertRaises(RuntimeError):
                 kernels._check_glm_scope_audit(text, "test")
-        kernels._check_glm_scope_audit("main_kernel WarpSync CTA barrier", "test")
+        kernels._check_glm_scope_audit("glm_packed_bytes WarpSync CTA barrier", "test")
 
     def test_preparation_reports_already_built_image_without_second_build(self):
         source = ast.parse((kernels.REPO_ROOT / "scripts/modal/kernels.py").read_text())
