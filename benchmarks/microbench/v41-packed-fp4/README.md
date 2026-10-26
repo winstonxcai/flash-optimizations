@@ -38,6 +38,15 @@ synchronization, runtime prefill policy and receipt identity. It found an odd
 page-stride alignment gap and a child-process import-context issue; both were
 fixed before launch. No local executable validation is used.
 
+CPU attempt `v41-reviewfix-20261026-a` / app `ap-zNfyKaNmp952L6ePGqCavZ`
+stopped before H100 allocation. CPU native compilation, core precompilation,
+imports and preceding fixture tests completed; the last launcher-contract
+subprocess could not import Modal because the SDK is injected into the builder's
+`sys.path`, not the vendor Python environment. The retry passes that path only
+to the mocked test subprocess. Native compiled base `im-RktGCcyR8NG0ZMsXcxRWvY`
+is reusable for the unchanged fork inputs; no failed preflight qualifies timing.
+Reported account compute after compilation was $21.53509255 before settlement.
+
 ## Current production-geometry matrix
 
 The active `v41-fp4-decode` suite now uses **H64, SWA128/page256, Q1/K512**,

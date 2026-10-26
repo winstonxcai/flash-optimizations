@@ -580,7 +580,15 @@ print('FP4 CPU SM90 precompilation passed')
             ],
             build / "qualification-tests.log",
             deadline,
-            environment=cpu_environment,
+            # Modal injects its SDK/dependencies into the builder's sys.path,
+            # not the vendor Python environment. Share them only with this
+            # mocked launcher-test subprocess; GPU loader paths stay untouched.
+            environment={
+                **cpu_environment,
+                "PYTHONPATH": os.pathsep.join(
+                    [cpu_environment.get("PYTHONPATH", ""), *sys.path]
+                ),
+            },
         )
     # Profiler tools are not a correctness gate for the serving-image qualification.
     manifest = {
