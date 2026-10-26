@@ -9,8 +9,8 @@
 [submodule "third_party/flashmla-v0.5.22"]
 	path = third_party/flashmla-v0.5.22
 	url = https://github.com/winstonxcai/FlashMLA.git
-	branch = remnant/flashmla-v0522
+	branch = ds41-flash-packed
 [submodule "third_party/sglang-v0.5.22"]
 	path = third_party/sglang-v0.5.22
 	url = https://github.com/winstonxcai/sglang.git
-	branch = remnant/v0.5.22
+	branch = ds41-flash-packed

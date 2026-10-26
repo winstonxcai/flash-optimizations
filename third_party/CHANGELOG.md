@@ -13,6 +13,12 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Publish the completed V4.1 experiment from parent `81c0777` on matching
+  `ds41-flash-packed` branches in all three repositories. Fork pins remain
+  SGLang `f5afebd90750` / FlashMLA `e274b715f49a`; only v0.5.22 branch hints
+  and integration documentation change. No runtime/kernel or validation change.
+  v0.5.18 and the original development branches are preserved.
+
 - SWA page correction from parent `c6c9f0f`: SGLang `f5afebd90750` /
   FlashMLA `e274b715f49a` (unchanged). The paged H100 factory requires
   SWA page256 while attention reads a 128-token window; v2 mistakenly used

@@ -17,8 +17,8 @@ Folder suffixes identify the SGLang integration pair, not a FlashMLA release.
 |---|---|---|---|
 | `sglang-v0.5.18/` | `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` | `6687a7c` |
 | `flashmla-v0.5.18/` | `05e26647fe840b8baedae486c2d86d5ce4efeb7c` | `remnant/flashmla-v0518` | `97f3faa` |
-| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `codex/v41-packed-fp4` | `f5afebd90750` |
-| `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `codex/v41-packed-fp4` | `e274b715f49a` |
+| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `ds41-flash-packed` | `f5afebd90750` |
+| `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `ds41-flash-packed` | `e274b715f49a` |
 
 Both FlashMLA checkouts pin CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`.
 The default remains v0.5.18; `REMNANT_INTEGRATION=v0.5.22` selects the other pair.
@@ -51,7 +51,7 @@ that an existing container's loaded binaries match; source changes need a rebuil
 
 ## Experimental V4.1 FP4 on SM90
 
-The isolated `codex/v41-packed-fp4` candidate starts from parent
+The isolated `ds41-flash-packed` candidate starts from parent
 `9419d0e18e1e7677c0e48b8e40ad54bbc30010ca`; the original integration/worktrees
 remain unchanged. It adds `--dsv41-main-kv-cache-format auto|fp4|remnant` to the
 v0.5.22 pair. Default `auto` retains upstream behavior. Explicit modes require

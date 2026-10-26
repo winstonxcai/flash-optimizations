@@ -1,6 +1,12 @@
 <!-- Author: Winston Cai. -->
 # V4.1 Packed FP4 on H100
 
+Published branch: **`ds41-flash-packed`** in the parent, SGLang v0.5.22 and
+FlashMLA v0.5.22 repositories. It continues the completed local
+`codex/v41-packed-fp4` work; the original branches remain available. Exact
+validated source commits and historical measurements below remain authoritative.
+The v0.5.22 submodule branch hints follow the new branch; v0.5.18 stays unchanged.
+
 ## Current production-geometry matrix
 
 The active `v41-fp4-decode` suite now uses **H64, SWA128/page256, Q1/K512**,
