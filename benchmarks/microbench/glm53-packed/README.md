@@ -595,3 +595,30 @@ now performs metadata uniqueness, bitmap scatter, finiteness and close checks
 on CPU as well as attention reference math. Production H100 calls and full
 graphs remain unchanged. Default timing validation still uses GPU references;
 its inputs, 30 rounds and measured calls are unchanged.
+
+## Fast optimized-loader iteration (2026-10-26)
+
+Question: can changed-loader qualification avoid repeatedly instrumenting the
+unchanged Torch/reference/combine path? Kernel sources and the 48-case paired
+benchmark remain unchanged. CPU contract checks run first. Harness-only overlays
+reuse cached artifacts only after whole compiled-source, compile-owner AST,
+artifact, toolchain, configuration and sanitizer identities match; changes to
+kernel/probe/factory owners force CPU compilation. No compilation occurs on H100.
+
+`validate_kernels --stage corrective --sanitizer --sanitizer-scope glm-decode`
+with the existing byte/full-graph cases runs those five full numerical tests
+uninstrumented once. The three tools then run the byte probe and four
+`test_decode_partial_graph` cases: H8/H16 × inner1/2, one CTA of the exact CPU-built
+production cubin, two alternating banks, changing-input graphs on an owned stream,
+independent reconstructed Packed control, partition output and LSE checks at
+atol=rtol=0.02. The generated ABI, dynamic shared bytes and cubin hashes are bound
+to CPU metadata and JUnit properties. Fixture/reference/assertion work runs on CPU.
+The byte probe retains real >2 GiB address and malformed/edge bitmap coverage.
+
+This narrower sanitizer evidence excludes later partitions, actual tail columns
+2048–2050, full dispatch/combine and full-grid interactions. The tiny partition
+fixtures include local 0–3 tail-like rows, invalid entries and page boundaries;
+actual tail columns/full graphs remain covered by the uninstrumented full test.
+Broad sanitizer qualification remains incomplete. This is an iteration gate,
+not a replacement claim for full integration qualification. Each sanitizer is
+bounded and failures are retained; no tolerance or 48×30 timing coverage changes.

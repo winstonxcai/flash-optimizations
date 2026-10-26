@@ -2078,6 +2078,29 @@ class GlmLauncherTests(unittest.TestCase):
 class GLMCPURebuildTests(unittest.TestCase):
     """The explicit rebuild excludes exactly two JIT inputs, never AOT sources."""
 
+    def test_compile_owner_digest_excludes_only_harness_edits(self):
+        from scripts.sources import glm_compile_owner_digest
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            script = root / "test/registered/attention/unittests/test_glm5_remnant.py"
+            runtime = root / "python/sglang/srt/remnant/glm.py"
+            script.parent.mkdir(parents=True)
+            runtime.parent.mkdir(parents=True)
+            runtime.write_text("runtime")
+            owners = "ATTENTION_SCALE = 256**-.5\ndef _packed_loader_probe(): return 1\ndef _compile_sm90_variant(): return 2\ndef precompile_sm90(): return 3\n"
+            script.write_text(owners + "def test_fixture(): return 4\n")
+            expected = glm_compile_owner_digest(root)
+            script.write_text(owners + "def test_fixture(): return 5\n")
+            self.assertEqual(glm_compile_owner_digest(root), expected)
+            script.write_text(owners.replace("return 1", "return 6"))
+            self.assertNotEqual(glm_compile_owner_digest(root), expected)
+            script.write_text(owners)
+            runtime.write_text("changed")
+            self.assertNotEqual(glm_compile_owner_digest(root), expected)
+            script.write_text("ATTENTION_SCALE=1")
+            with self.assertRaises(RuntimeError):
+                glm_compile_owner_digest(root)
+
     def test_compiled_source_allowlist(self):
         from scripts.sources import glm_rebuild_source_digest
         with tempfile.TemporaryDirectory() as tmp:

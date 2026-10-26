@@ -57,8 +57,9 @@ GLM_CPU_TEST = "test/registered/unit/test_glm5_mla_cache_format.py"
 GLM_BENCHMARK_CPU = "benchmark/remnant/test_microbench.py"
 GLM_BENCHMARK_GRAPH = GLM_TEST + "::test_benchmark_bank_graph_ownership"
 GLM_DECODE_GRAPH = GLM_TEST + "::test_decode_bank_graph"
-GLM_DECODE_REQUIRED = {"test_packed_loader_bytes", "test_decode_bank_graph[8-1]", "test_decode_bank_graph[8-2]",
-                       "test_decode_bank_graph[16-1]", "test_decode_bank_graph[16-2]"}
+GLM_DECODE_PARTIAL = GLM_TEST + "::test_decode_partial_graph"
+GLM_DECODE_REQUIRED = {"test_packed_loader_bytes", "test_decode_partial_graph[8-1]", "test_decode_partial_graph[8-2]",
+                       "test_decode_partial_graph[16-1]", "test_decode_partial_graph[16-2]"}
 GLM_SANITIZER_GRAPH = GLM_TEST + "::test_benchmark_sanitizer_bank_graph"
 GLM_BASELINE = "9e42a0d8886dd93944dc6b47ef3bffef4e033b5a"
 GLM_SMOKE = (GLM_TEST + "::test_producer_reconstruction", GLM_TEST + "::test_native_fp8_conversion", GLM_TEST + "::test_allocator_accounting", GLM_TEST + "::test_invalid_attention", GLM_TEST + "::test_partial_outputs",
@@ -299,6 +300,49 @@ def _check_cuda_binding_requirements() -> list[dict[str, str]]:
     return sorted(checks, key=lambda item: (item["consumer"], item["requirement"]))
 
 
+def _reuse_glm_cpu_artifacts(build: Path, deadline: float, binding_requirements: dict) -> bool:
+    """Fast CPU preparation for harness-only changes, with strict binary binding."""
+    from scripts.sources import glm_compile_owner_digest, glm_partial_launch_metadata
+
+    snapshot = Path("/opt/remnant-glm-reuse-base.json")
+    if not os.environ.get("REMNANT_COMPILED_IMAGE") or not snapshot.is_file():
+        return False
+    previous = json.loads(snapshot.read_text())
+    if previous["compile_owner_digest"] != glm_compile_owner_digest(SGLANG_ROOT):
+        return False
+    for path, expected in {**previous["binaries"], **previous["glm_compile"]["cache_files"]}.items():
+        if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
+            raise RuntimeError(f"Harness-only CPU reuse found changed artifact: {path}")
+    for package,key in (("torch","torch"),("triton","triton"),("tilelang","tilelang"),
+                        ("cuda-python","cuda_python"),("cuda-bindings","cuda_bindings")):
+        if importlib.metadata.version(package) != previous[key]:
+            raise RuntimeError(f"Harness-only CPU reuse toolchain changed: {package}")
+    if (hashlib.sha256(Path(SANITIZER).read_bytes()).hexdigest() != previous["sanitizer"]["binary_sha256"]
+            or hashlib.sha256(Path("/opt/remnant-glm-config.json").read_bytes()).hexdigest() != previous["model_config"]["sha256"]):
+        raise RuntimeError("Harness-only CPU reuse sanitizer/config artifact changed")
+    if _run_command(["nvcc","--version"],build / "nvcc.log",deadline) != previous["nvcc"]:
+        raise RuntimeError("Harness-only CPU reuse NVCC changed")
+    compiled = previous["glm_compile"]
+    expected = {(h,i,p) for h in (8,16,32,64) for i in (1,2,33,66) for p in (False,True)}
+    if {(v["heads"],v["inner"],v["packed"]) for v in compiled["tilelang"]} != expected:
+        raise RuntimeError("Harness-only CPU reuse lacks maintained SM90 variants")
+    glm_partial_launch_metadata(compiled)
+    Path("/opt/remnant-glm-compile.json").write_text(json.dumps(compiled,indent=2)+"\n")
+    environment = _cpu_preflight_environment(build)
+    _run_command(_benchmark_command("--model-family","glm53","--suite","glm-attention","--check-imports"),
+                 build / "glm-benchmark-imports.log",deadline,environment=environment)
+    _run_pytest(CPU_TESTS,build,"cpu-tests",deadline,environment=environment)
+    _run_pytest((GLM_TEST,),build,"collection",deadline,collect=True,environment=environment)
+    previous.update(glm_compile=compiled, sources=_source_hashes(),source_identities=SOURCE_IDENTITIES,
+        launcher_sha256=hashlib.sha256(Path("/opt/remnant-launcher.py").read_bytes()).hexdigest(),
+        compiled_base_image=os.environ["REMNANT_COMPILED_IMAGE"],cpu_rebuild_from=None,
+        cuda_binding_requirements=binding_requirements,
+        cpu_import_driver_stub_sha256=hashlib.sha256((build / "cpu-driver-stubs/libcuda.so.1").read_bytes()).hexdigest(),
+        artifact_reuse="Verified unchanged compiled sources and compile owners; harness-only overlay")
+    MANIFEST.write_text(json.dumps(previous,indent=2)+"\n")
+    return True
+
+
 def _build_image() -> None:
     """CPU image layer: compile existing SM90 targets, install, then preflight."""
     import torch
@@ -316,6 +360,8 @@ def _build_image() -> None:
         if INTEGRATION["version"] == "v0.5.22"
         else None
     )
+    if MODEL_FAMILY == "glm53" and _reuse_glm_cpu_artifacts(build, deadline, binding_requirements):
+        return
     sanitizer_identity = None
     if INTEGRATION["version"] == "v0.5.22":
         # 2025.3.1 predates Hopper warpgroup/indirect-cluster-barrier fixes.
@@ -468,6 +514,8 @@ def _build_image() -> None:
                      build / "glm-sm90-compile.log", deadline, environment=cpu_environment)
         compile_path = Path("/opt/remnant-glm-compile.json")
         compiled = json.loads(compile_path.read_text())
+        from scripts.sources import glm_partial_launch_metadata
+        glm_partial_launch_metadata(compiled)
         entrypoints = {}
         probe_sources = {}
         current = {v["source_sha256"]: v for v in compiled["tilelang"]}
@@ -636,8 +684,8 @@ if compiled_image_id:
     from scripts.sources import compiled_source_digest
 
     expected = compiled_source_digest([SGLANG_SOURCE / "python/sglang/kernels", FLASHMLA_SOURCE / "csrc"])
-    code = ("from scripts.sources import verify_compiled_image_sources; "
-            f"verify_compiled_image_sources({expected!r}, {[str(SGLANG_ROOT / 'python/sglang/kernels'), str(FLASHMLA_ROOT / 'csrc')]!r}, {INTEGRATION['version']!r})")
+    code = ("from scripts.sources import verify_compiled_image_sources, snapshot_glm_artifacts; "
+            f"verify_compiled_image_sources({expected!r}, {[str(SGLANG_ROOT / 'python/sglang/kernels'), str(FLASHMLA_ROOT / 'csrc')]!r}, {INTEGRATION['version']!r}); snapshot_glm_artifacts({str(SGLANG_ROOT)!r})")
     kernel_base = (
         modal.Image.from_id(compiled_image_id)
         .env({"PYTHONPATH": f"{REMOTE_REPO}:{SGLANG_ROOT / 'python'}"})
@@ -1075,15 +1123,17 @@ def validate_kernels(
                 prefix = (SANITIZER, "--tool", tool, "--error-exitcode", "1")
                 if sanitizer_scope == "glm-decode":
                     # Distinct Packed entrypoints include their inline helper.
-                    # Full graphs still execute Native/combine as numerical
-                    # controls; those unchanged kernels are not instrumented.
+                    # One exact production CTA per bank; stock Native partial
+                    # is the control. Full attention has its own numerical gate.
                     prefix += ("--kernel-name", "regex=glm_packed_(partial|bytes)", "--print-level", "info")
                 try:
                     tool_environment = dict(environment)
                     if sanitizer_scope == "glm-decode":
                         tool_environment["PYTEST_ADDOPTS"] = "--full-trace -o faulthandler_timeout=120"
-                    _run_pytest(selected_tests if stage == "corrective" else SANITIZER_TESTS, root, tool, deadline, prefix=prefix,
-                                environment=tool_environment)
+                    _run_pytest((GLM_TEST + "::test_packed_loader_bytes", GLM_DECODE_PARTIAL) if sanitizer_scope == "glm-decode"
+                                else (selected_tests if stage == "corrective" else SANITIZER_TESTS),
+                                root, tool, deadline, prefix=prefix,
+                                environment=tool_environment if sanitizer_scope == "glm-decode" else None)
                 except TimeoutError:
                     # The boundary may expire between this loop and the command
                     # check. No process started; keep this tool marked not_run.
@@ -1547,11 +1597,16 @@ def _glm_timing_qualification(run_ids: str, *, allow_incomplete: bool = False, p
                     raise RuntimeError(f"Incomplete focused cases: {run_id}/{tool}")
                 for node in tests:
                     name = node.attrib["name"]
-                    if name.startswith("test_decode_bank_graph["):
+                    if name.startswith("test_decode_partial_graph["):
                         heads, inner = map(int, name.split("[")[1].rstrip("]").split("-"))
                         props = {x.get("name"): x.get("value") for x in node.findall("properties/property")}
-                        expected_geometry = dict(heads=heads, inner=inner, banks=4, queries=2,
-                                                 tails=[0,1,2,3], nondefault_stream=True)
+                        expected_geometry = dict(heads=heads, inner=inner, banks=2, queries=1,
+                                                 tails=[0,1,2,3], nondefault_stream=True,
+                                                 launched_partitions=1, binary_partitions=66//inner)
+                        cubins = {str(v["packed"]):v["cubin_sha256"] for v in manifest["glm_compile"]["tilelang"]
+                                  if v["heads"] == heads and v["inner"] == inner}
+                        if json.loads(props.get("partial_cubins", "{}")) != cubins:
+                            raise RuntimeError(f"Focused production cubin changed: {run_id}/{name}")
                         if json.loads(props.get("decode_geometry", "{}")) != expected_geometry:
                             raise RuntimeError(f"Focused decode geometry changed: {run_id}/{name}")
             else:
