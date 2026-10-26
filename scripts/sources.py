@@ -46,7 +46,24 @@ def verify_compiled_image_sources(expected: str, roots: list[str], integration: 
     if compiled_source_digest([Path(root) for root in roots]) != expected:
         raise RuntimeError("Compiled source changed; rebuild the selected Dockerfile")
 
-def verify_glm_cpu_rebuild(expected_base: dict, candidate: dict, roots: list[str]) -> None:
+def glm_rebuild_source_digest(roots: list[Path]) -> str:
+    """Hash every compiled source except the two authorized GLM JIT inputs."""
+    allowed = {"ops/attention/dsa/tilelang_kernel.py", "jit/include/sgl_kernel/glm_packed_decode.cuh"}
+    digest = hashlib.sha256()
+    for i, root in enumerate(map(Path, roots)):
+        if not root.is_dir():
+            raise RuntimeError(f"Missing CPU rebuild source root: {root}")
+        for path in sorted(root.rglob("*")):
+            relative = str(path.relative_to(root))
+            if i == 0 and relative in allowed:
+                continue
+            if path.is_file() and path.suffix in {".cu", ".cuh", ".cc", ".cpp", ".h", ".hpp", ".cmake", ".txt", ".py"}:
+                digest.update(f"{i}/{relative}".encode() + b"\0")
+                digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+def verify_glm_cpu_rebuild(expected_base: dict, candidate: str, roots: list[str]) -> None:
     """Verify a CPU JIT-only overlay; ordinary compiled-image reuse stays strict."""
     if os.environ.get("REMNANT_BUILT_INTEGRATION") != "v0.5.22":
         raise RuntimeError("GLM CPU rebuild requires the verified v0.5.22 image")
@@ -57,15 +74,8 @@ def verify_glm_cpu_rebuild(expected_base: dict, candidate: dict, roots: list[str
     for name, digest in {**manifest["binaries"], **manifest["glm_compile"]["cache_files"]}.items():
         if hashlib.sha256(Path(name).read_bytes()).hexdigest() != digest:
             raise RuntimeError(f"CPU rebuild base artifact changed: {name}")
-    allowed = {"0/ops/attention/dsa/tilelang_kernel.py", "0/jit/include/sgl_kernel/glm_packed_decode.cuh"}
-    actual = {}
-    for i, root in enumerate(map(Path, roots)):
-        for path in sorted(root.rglob("*")):
-            if path.is_file() and path.suffix in {".cu", ".cuh", ".cc", ".cpp", ".h", ".hpp", ".cmake", ".txt", ".py"}:
-                actual[f"{i}/{path.relative_to(root)}"] = hashlib.sha256(path.read_bytes()).hexdigest()
-    changed = {p for p in actual.keys() | candidate.keys() if actual.get(p) != candidate.get(p)}
-    if not changed or changed - allowed:
-        raise RuntimeError(f"CPU rebuild accepts only GLM loader/header changes: {sorted(changed)}")
+    if glm_rebuild_source_digest([Path(root) for root in roots]) != candidate:
+        raise RuntimeError("CPU rebuild found changes outside the authorized GLM loader/header")
     Path("/opt/remnant-cpu-rebuild-base.json").write_text(json.dumps(manifest))
 
 

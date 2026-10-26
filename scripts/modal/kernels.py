@@ -621,11 +621,8 @@ if compiled_image_id:
     )
 elif MODEL_FAMILY == "glm53" and os.environ.get("REMNANT_GLM_CPU_REBUILD_FROM"):
     # Explicit CPU rebuild, never a relaxed ordinary source-reuse check.
-    candidate = {}
-    for i, root in enumerate((SGLANG_SOURCE / "python/sglang/kernels", FLASHMLA_SOURCE / "csrc")):
-        for path in sorted(root.rglob("*")):
-            if path.is_file() and path.suffix in {".cu", ".cuh", ".cc", ".cpp", ".h", ".hpp", ".cmake", ".txt", ".py"}:
-                candidate[f"{i}/{path.relative_to(root)}"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    from scripts.sources import glm_rebuild_source_digest
+    candidate = glm_rebuild_source_digest([SGLANG_SOURCE / "python/sglang/kernels", FLASHMLA_SOURCE / "csrc"])
     base = dict(sglang="889edf56b33226c80b17ddf3472c1206df62c3f0", flashmla="3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8")
     code = ("from scripts.sources import verify_glm_cpu_rebuild; "
             f"verify_glm_cpu_rebuild({base!r}, {candidate!r}, {[str(SGLANG_ROOT / 'python/sglang/kernels'), str(FLASHMLA_ROOT / 'csrc')]!r})")
