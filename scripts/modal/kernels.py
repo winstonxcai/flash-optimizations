@@ -347,8 +347,8 @@ def _build_image() -> None:
         }
     if MODEL_FAMILY == "glm53":
         help_text = _run_command([SANITIZER, "--help"], build / "sanitizer-help.log", deadline)
-        if any(option not in help_text for option in ("kernel-name", "dump-kernel-launches")):
-            raise RuntimeError("Qualified sanitizer lacks focused launch reporting")
+        if any(option not in help_text for option in ("kernel-name", "racecheck-trace-sync")):
+            raise RuntimeError("Qualified sanitizer lacks focused filter/synchronization audit")
     cpu_environment = _cpu_preflight_environment(build)
     # Fail on a broken base-image driver linkage before paying for compilation.
     _run_command(
@@ -466,6 +466,18 @@ def _build_image() -> None:
                      build / "glm-allocator-cpu.log", deadline, environment=cpu_environment)
         _run_command([sys.executable, str(SGLANG_ROOT / GLM_TEST), "--compile-only"],
                      build / "glm-sm90-compile.log", deadline, environment=cpu_environment)
+        compile_path = Path("/opt/remnant-glm-compile.json")
+        compiled = json.loads(compile_path.read_text())
+        entrypoints = {}
+        for path, digest in compiled["cache_files"].items():
+            if path.endswith("/device_kernel.cu"):
+                if not re.search(r"__global__[^\n]*\bmain_kernel\s*\(", Path(path).read_text()):
+                    raise RuntimeError(f"Focused filter cannot match TileLang entrypoint: {path}")
+                entrypoints[path] = digest
+        if not entrypoints:
+            raise RuntimeError("No verified TileLang entrypoint sources")
+        compiled["scope_symbol_audit"] = dict(symbol="main_kernel", sources=entrypoints)
+        compile_path.write_text(json.dumps(compiled, indent=2) + "\n")
     else:
         model_config = None
         if INTEGRATION["version"] == "v0.5.22":
@@ -1031,6 +1043,18 @@ def validate_kernels(
             } != ({"native", "adapter", "direct"} if MODEL_FAMILY == "glm53" else {"native", "triton", "kernel"}):
                 raise RuntimeError("Incomplete real-allocation coverage")
             record["allocation"] = allocation
+        if sanitizer and sanitizer_scope == "glm-decode":
+            audit_prefix = (SANITIZER, "--tool", "racecheck", "--error-exitcode", "1",
+                            "--kernel-name", "kns=main_kernel", "--racecheck-trace-sync", "yes")
+            _run_pytest((GLM_TEST + "::test_packed_loader_bytes",), root, "scope-audit",
+                        min(deadline, time.monotonic() + 180), prefix=audit_prefix)
+            audit_log = (root / "scope-audit.log").read_text()
+            _check_sanitizer_report(audit_log, "racecheck")
+            _check_glm_scope_audit(audit_log, run_id)
+            record["scope_audit"] = dict(status="passed", filter="kns=main_kernel",
+                log_sha256=hashlib.sha256(audit_log.encode()).hexdigest(),
+                entrypoints=manifest["glm_compile"]["scope_symbol_audit"],
+                basis="Racecheck synchronization trace; other tools use completed tests, identical entrypoints and common filter contract")
         if sanitizer:
             for tool in selected_tools:
                 # Commands use whole-second timeouts. Preserve the incomplete
@@ -1042,7 +1066,7 @@ def validate_kernels(
                     # All compiled byte/partial/combine entry points have this
                     # name. Include their inline device helpers; retain full graph
                     # execution while excluding unchanged framework kernels.
-                    prefix += ("--kernel-name", "kns=main_kernel", "--dump-kernel-launches")
+                    prefix += ("--kernel-name", "kns=main_kernel", "--print-level", "info")
                 try:
                     _run_pytest(selected_tests if stage == "corrective" else SANITIZER_TESTS, root, tool, deadline, prefix=prefix)
                 except TimeoutError:
@@ -1490,7 +1514,14 @@ def _glm_timing_qualification(run_ids: str, *, allow_incomplete: bool = False, p
                 _check_glm_interrupted_checkpoint(json.loads(note.read_text()), root, run_id, tool, log)
             _check_sanitizer_report(log, tool)
             if phase == "decode" and result.get("sanitizer_scope") == "glm-decode":
-                _check_glm_checked_launches(log, f"{run_id}/{tool}")
+                audit = result.get("scope_audit", {})
+                audit_log = (root / "scope-audit.log").read_text()
+                if (audit.get("status") != "passed" or audit.get("filter") != "kns=main_kernel"
+                        or audit.get("log_sha256") != hashlib.sha256(audit_log.encode()).hexdigest()
+                        or audit.get("entrypoints") != manifest["glm_compile"].get("scope_symbol_audit")):
+                    raise RuntimeError(f"Focused instrumentation audit changed: {run_id}")
+                _check_sanitizer_report(audit_log, "racecheck")
+                _check_glm_scope_audit(audit_log, run_id)
             if phase == "decode":
                 tree = ET.parse(root / f"{tool}.xml")
                 tests = list(tree.iter("testcase"))
@@ -1528,19 +1559,11 @@ def _glm_timing_qualification(run_ids: str, *, allow_incomplete: bool = False, p
                                         for tool, group in groups.items()}, runtime_hashes=current)
 
 
-def _check_glm_checked_launches(log: str, identity: str) -> list[str]:
-    """Launch dumps include excluded kernels too: names alone are not evidence."""
-    checked = []
-    for line in log.splitlines():
-        if "main_kernel" not in line:
-            continue
-        if re.search(r"(?i)(unchecked|not checked|filtered\s*[:=]\s*(yes|true)|excluded)", line):
-            continue
-        if re.search(r"(?i)(\bchecking\b|\bchecked\b|not filtered|filtered\s*[:=]\s*(no|false))", line):
-            checked.append(line)
-    if not checked:
-        raise RuntimeError(f"Missing explicitly checked TileLang launch evidence: {identity}")
-    return checked
+def _check_glm_scope_audit(log: str, identity: str) -> None:
+    """Pinned tool trace proves helper warp and handoff CTA synchronization."""
+    if ("main_kernel" not in log or not re.search(r"(?i)(warp|warpsync)", log)
+            or not re.search(r"(?i)(block|cta|barrier)", log)):
+        raise RuntimeError(f"Missing positive TileLang synchronization trace: {identity}")
 
 
 def _check_glm_interrupted_checkpoint(note: dict, root: Path, run_id: str, tool: str, log: str) -> None:

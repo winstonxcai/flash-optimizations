@@ -565,7 +565,10 @@ Focused decode sanitizer runs can select `--sanitizer-scope glm-decode`. The
 filter `kns=main_kernel` covers the byte probe, Native/Direct partial attention
 and combine entry points, including inline expansion. Full graphs still execute;
 unchanged PyTorch/FlashInfer kernels are excluded from this focused instrumented
-scope. Launch dumps must prove checked TileLang launches. Default instrumentation
+scope. The qualified 13.3.75 tool lacks newer launch dumps. A separate byte-probe
+racecheck synchronization trace must prove main_kernel warp and CTA checks;
+memcheck/synccheck use completed tests, verified cached entrypoints and the same
+filter contract. Default instrumentation
 remains all kernels, and broad qualification remains incomplete. The initial
 unfiltered attempt passed all five numerical/graph cases, then was stopped after
 synccheck stalled in CUDA graph replay; it provides no completed sanitizer gate.
