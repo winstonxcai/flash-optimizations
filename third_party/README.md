@@ -17,7 +17,7 @@ Folder suffixes identify the SGLang integration pair, not a FlashMLA release.
 |---|---|---|---|
 | `sglang-v0.5.18/` | `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` | `6687a7c` |
 | `flashmla-v0.5.18/` | `05e26647fe840b8baedae486c2d86d5ce4efeb7c` | `remnant/flashmla-v0518` | `97f3faa` |
-| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `remnant/v0.5.22` | `7856615` |
+| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `glm53-flash-packed` | `23e2e08` |
 | `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `remnant/flashmla-v0522` | `3eb8594` |
 
 Both FlashMLA checkouts pin CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`.
@@ -319,3 +319,130 @@ git log --oneline -- third_party/sglang-v0.5.18 third_party/flashmla-v0.5.18
 Use `git ls-tree <parent-commit> third_party/sglang-v0.5.18 third_party/flashmla-v0.5.18` to
 recover an integration's exact pair. Git history remains the detailed record;
 this guide and the changelog are its curated index.
+
+## GLM-5.3-Flash candidate (v0.5.22 only)
+
+Author: Winston Cai.
+
+GLM Packed is opt-in with `--glm5-mla-cache-format remnant` and
+`--glm5-mla-cache-implementation adapter|direct` (Direct by default). Native
+remains unchanged. The fork owns `srt/remnant/glm_config.py`, `glm.py`, and
+`glm_pool.py`: two planes of 256 raw E4M3 bytes and eight uint64 bitmap words,
+with no DeepSeek scale plane. Raw latent selection precedes the existing GLM
+RMSNorm; the producer stores once and the DSA backend skips the ordinary write.
+Only hybrid full-attention storage changes; KDA, indexer and tail ownership stays
+with the existing pools. Full-page relocation and retraction carry both planes.
+The Adapter shares one 128-query workspace; Direct specializes only TileLang's
+KV tile loads. All Native FP8 attention and combine arithmetic is retained.
+
+Shared launchers select `MODEL_FAMILY=glm53`; Modal image selection additionally
+uses `REMNANT_MODEL_FAMILY=glm53 REMNANT_INTEGRATION=v0.5.22`. Maintained
+`kernels.py::validate_kernels --model-family glm53` owns model-free qualification.
+Full weights/serving are outside the current $15 authorization. See
+`benchmarks/microbench/glm53-packed/README.md` and its canonical JSON for exact
+coverage and promotion status. FlashMLA and both v0.5.18 pins are unchanged.
+
+Original runtime qualification (historical): 90 H100 numerical and 11 synccheck
+tests passed; racecheck/memcheck and independent review were incomplete then.
+Current optimized-loader focused qualification and decode results are recorded
+below. Broad runtime qualification remains incomplete; Packed stays opt-in.
+
+GLM attention microbenchmark: the maintained entry point now accepts
+`--model-family glm53 --suite glm-attention`, comparing unpruned Native with
+Packed Direct in 128 paired graph cases. The fork owns the GLM fixture/reference
+module and shared timing primitives. Modal validates explicit per-tool testcase
+coverage and matching production runtime/compiled-artifact identities before
+timing. This does not change production attention kernels or serving defaults.
+
+
+Early harness failures are historical: the initial four-bank memory-accounting
+assertion was replaced with graph-private segment accounting. That repair and
+the resulting full graph path have since executed on H100. Failed attempts and
+the earlier incomplete128-case comparison remain in the canonical experiment
+record; the completed48-case optimized decode scope is described below.
+
+GLM exploratory timing is explicitly selected with
+`benchmark_kernels --model-family glm53 --suite glm-attention --allow-incomplete-qualification`
+plus source-bound `--qualification-runs`. Missing sanitizer coverage remains
+recorded and the experiment is unqualified; this does not promote Packed or
+change the default gate. See the canonical GLM experiment README/ledger.
+
+GLM Packed cooperative loader: `sglang-v0.5.22/python/sglang/kernels/jit/include/sgl_kernel/glm_packed_decode.cuh`
+is embedded by the Packed TileLang specialization. It owns raw-byte expansion only;
+the 320-byte cache ABI and Native arithmetic remain unchanged. Decode-only
+benchmark scope uses `--model-family glm53 --suite glm-attention --phase decode`.
+
+The optimized GLM decode comparison uses `--phase decode` (48 cases; default
+`all` still requires 128). The helper is embedded through TileLang `import_source`;
+the producer/320-byte ABI and Native arithmetic are unchanged. The maintained
+`test_glm5_remnant.py` owns an exact-cubin Driver launcher for one-CTA sanitizer
+checks; modules outlive graphs and explicit streams own launches. CPU references
+and verified binary reuse avoid instrumenting unchanged reference/framework paths.
+The optional seven-row/batched-transfer fixture trial was rejected and reverted
+because it did not improve tool runtime and its memcheck was incomplete.
+
+All 48 paired cases completed at SGLang `246ee03c1ad5`, with 1.60% batch-weighted
+overhead. The measured implementation at `23e2e08` has the identical Git tree. Focused sync/race/memcheck
+passes; full-grid/combine instrumentation and broad qualification remain incomplete.
+See the experiment README, canonical JSON and decode CSV for identities, every
+case, costs and limits. Native remains default; rollback is Native or `889edf56`.
+
+
+Review follow-up (SGLang `fbd8a022`, based on parent `b010b379`): Adapter now
+uses int64 cache offsets, startup rejects effective non-DSA attention dispatch,
+and the shared timing loop preserves single-mode DeepSeek benchmarks. The
+Direct loader, 320-byte ABI, producer and attention arithmetic are unchanged.
+These follow-up changes have CPU evidence only; the new Adapter >2 GiB GPU
+regression and rebuilt-artifact execution are pending. Historical H100 results
+remain bound to their recorded commits, never the current pin automatically.
+
+Ownership for new contributors:
+
+- The fork's `python/sglang/benchmark/remnant/glm_artifacts.py` owns CPU SM90
+  preparation and a complete, hash-verified manifest. The public command is
+  `python -m sglang.benchmark.remnant.glm_artifacts` inside the maintained CUDA
+  build environment, with explicit Triton/TileLang cache and manifest paths.
+  GPU tests consume that manifest without parent-side ABI enrichment. Compile
+  reuse fingerprints complete owner modules, independent of test fixture edits.
+  Older verified images lacking the module trigger fresh CPU preparation.
+- Parent `scripts/local/launch-config.sh` resolves model family, TP, EP and
+  visible GPUs for both local/container and direct launchers. GLM defaults to
+  TP8, EP=TP and eight GPU IDs; TP4 resolves four by default. Explicit scheduler
+  assignments take precedence and mismatched counts fail before startup. Named
+  environment arguments replace the 28-field positional configuration transport;
+  translated metric paths and JSON remain individual arguments.
+- Parent `scripts/modal/kernel_qualification.py` owns evidence acceptance with
+  explicit inputs and immutable baseline hashes. `kernels.py` retains builds,
+  execution and export through its unchanged CLI. No historical Git object is
+  needed to import GLM commands or prepare current sources in a shallow clone.
+
+CPU regression entry points: `python -m unittest scripts.modal.tests` in the
+parent, and the fork command in `benchmark/remnant/README.md`. Native remains
+the rollback. Full-model loading, serving and fresh GPU qualification are deferred.
+
+GLM CPU startup tests declare the standard CPU CI registry and a real pytest
+entry point. Artifact-dependent H100 tests declare manual qualification with an
+explicit reason; their maintained Modal pytest runner and required gates are
+unchanged. GLM-owned Python files use the CI-pinned isort 7 / Ruff 0.15.1 tools.
+Repository-wide pinned lint now passes. The `run-ci` label is applied and its
+gate passes; broader GPU jobs remain queued with zero registered self-hosted
+runners. A documentation-only follow-up (`979839b`) adds seven missing flag rows.
+
+
+The explicit GLM CPU rebuild can accept a recorded formatting transition via
+`REMNANT_GLM_CPU_REBUILD_FROM` and `REMNANT_GLM_FORMAT_TRANSITION`. This gate is
+limited to five named compiled inputs, exact old/new hashes, pinned C++ formatter
+output and Python-minor-specific AST identity; all other compiled sources and
+base binaries remain exact. Candidate raw hashes are verified after overlay.
+It clears inherited image selectors and records retained AOT provenance while
+CPU-preparing the GLM JIT artifacts. Normal compiled-image reuse is unchanged.
+See the existing GLM experiment index for the approved budget and execution.
+
+Fresh H100 qualification at SGLang `9185c6d25115` passes Direct exact-byte,
+numerical/graph and focused three-tool sanitizer checks, plus unfiltered Adapter
+reconstruction across 2 GiB under all three tools. The final pin adds only flag
+documentation; runtime/kernel hashes are unchanged. All 32 JIT variants were
+CPU-prepared in `im-PO9F017Jyq5riB4Ndegpi9`; retained AOT binaries were verified.
+Broad/full-grid/combine sanitizer coverage, serving and H20 qualification remain
+incomplete. The experiment README and canonical ledger own exact scopes, failures,
+commands and costs. Native remains the default and rollback.

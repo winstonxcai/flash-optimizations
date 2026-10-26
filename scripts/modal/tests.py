@@ -21,6 +21,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
 
+from scripts.modal import kernel_qualification as qualification
 from scripts.modal import kernels
 from scripts.sources import check_sources, integration_profile
 
@@ -453,7 +454,9 @@ class LauncherTests(unittest.TestCase):
 
     def test_validation_budget_is_bounded_before_execution(self):
         function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
-        self.assertEqual(function.__defaults__, (False, 1100))
+        parameters = inspect.signature(function).parameters
+        self.assertEqual(parameters["max_seconds"].default, 1100)
+        self.assertEqual(parameters["sanitizer_scope"].default, "all")
         with patch.object(kernels, "_run_context") as run:
             for seconds in (0, 59, 2641, 2700):
                 with self.assertRaisesRegex(ValueError, "max_seconds"):
@@ -777,6 +780,8 @@ class LauncherTests(unittest.TestCase):
             return io.BytesIO(b"config fixture" if url.endswith("config.json") else b"sanitizer fixture")
 
         def build_path(value):
+            if str(value) == "/opt/remnant-launcher.py":
+                return kernels.REPO_ROOT / "scripts/modal/kernels.py"
             if str(value) == "/opt/remnant-0731-config.json":
                 return self.root / "config.json"
             return Path(value)
@@ -2070,6 +2075,616 @@ class PrefillReadLauncherTests(unittest.TestCase):
             {(name, mode) for name in names for mode in contract.PREFILL_VARIANTS},
         )
 
+
+
+
+class GlmLauncherTests(unittest.TestCase):
+    """GLM selection must stay explicit and fail before remote execution."""
+
+    def test_family_mismatch_never_opens_run_context(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        with patch.object(kernels, "_run_context") as run:
+            with self.assertRaisesRegex(ValueError, "model-family"):
+                function("fixture", model_family="glm53")
+            run.assert_not_called()
+
+    def test_glm_local_launcher_resolves_tp_ep_and_gpu_count(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary)
+            command = path / "sglang"
+            command.write_text(
+                "#!/usr/bin/env python3\nimport json,sys\nprint(json.dumps(sys.argv[1:]))\n"
+            )
+            command.chmod(0o755)
+            base = {
+                **os.environ,
+                "PATH": str(path) + os.pathsep + os.environ["PATH"],
+                "MODEL_FAMILY": "glm53",
+                "DECODE_CFG": "{}",
+            }
+            for name in (
+                "TP",
+                "EP",
+                "GPUS",
+                "CUDA_VISIBLE_DEVICES",
+                "MODEL_NAME",
+                "SERVER_PID_FILE",
+                "STORE_IMPLEMENTATION",
+                "C4_KEEP_COUNT",
+                "C4_LAYER_KEEP_COUNTS",
+                "HICACHE_RATIO",
+            ):
+                base.pop(name, None)
+            script = str(kernels.REPO_ROOT / "scripts/local/run-server.sh")
+            for tp in (4, 8):
+                for mode, implementation in (
+                    ("native", "direct"),
+                    ("triton", "adapter"),
+                    ("kernel", "direct"),
+                ):
+                    with self.subTest(tp=tp, mode=mode):
+                        result = subprocess.run(
+                            [
+                                "bash",
+                                script,
+                                mode,
+                                "/config-only",
+                                "127.0.0.1",
+                                "30212",
+                            ],
+                            env={**base, "TP": str(tp)},
+                            capture_output=True,
+                            text=True,
+                            check=True,
+                            timeout=10,
+                        )
+                        args = json.loads(result.stdout)
+                        for flag, expected in (
+                            ("--tp", str(tp)),
+                            ("--ep", str(tp)),
+                            ("--kv-cache-dtype", "fp8_e4m3"),
+                            ("--dsa-prefill-backend", "tilelang"),
+                            ("--dsa-decode-backend", "tilelang"),
+                            ("--glm5-mla-cache-implementation", implementation),
+                            ("--moe-runner-backend", "deep_gemm"),
+                        ):
+                            self.assertEqual(args[args.index(flag) + 1], expected)
+                        self.assertNotIn("--dsv4-c4-cache-format", args)
+                        self.assertIn("--language-model-only", args)
+            for changes, error in (
+                ({"TP": "4", "EP": "8"}, "positive divisor"),
+                ({"TP": "8", "GPUS": "0,1,2,3"}, "visible GPUs"),
+                ({"TP": "4", "GPUS": "0,1,2,"}, "visible GPUs"),
+            ):
+                result = subprocess.run(
+                    ["bash", script, "kernel", "/config-only", "127.0.0.1", "30212"],
+                    env={**base, **changes},
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                self.assertIn(error, result.stderr)
+
+    def test_glm_container_launch_transports_named_configuration(self):
+        """Execute serve.sh's real launch block with an isolated Docker stand-in.
+
+        The stand-in retains only explicit -e settings, as docker exec does.
+        No server, GPU, container or long-lived process is created.
+        """
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            output = root / "args.json"
+            tools = root / "tools"
+            tools.mkdir()
+            (tools / "sglang").write_text(
+                f"#!{sys.executable}\nimport json,sys\n"
+                f"from pathlib import Path\np=Path({str(output)!r}); temporary=p.with_suffix('.tmp')\n"
+                "temporary.write_text(json.dumps(sys.argv[1:])); temporary.replace(p)\n"
+            )
+            # macOS has no /proc; process-record lifecycle is tested separately.
+            (tools / "setsid").write_text(
+                '#!/bin/bash\nunset SERVER_PID_FILE\nexec "$@"\n'
+            )
+            (tools / "docker").write_text(
+                f"#!{sys.executable}\nimport os,subprocess,sys,time\n"
+                "args=sys.argv[1:]; assert args[:2]==['exec','-i'],args\n"
+                "args=args[2:]; env={'PATH':os.environ['PATH']}\n"
+                "while args and args[0]=='-e':\n"
+                "    name,value=args[1].split('=',1);env[name]=value;args=args[2:]\n"
+                "assert args[0]=='fixture',args\n"
+                "subprocess.run(args[1:],env=env,check=True,timeout=5)\n"
+                f"output={str(output)!r}\n"
+                "for _ in range(100):\n"
+                "    if os.path.exists(output): break\n"
+                "    time.sleep(.02)\n"
+                "assert os.path.exists(output),'launcher did not reach sglang'\n"
+            )
+            for tool in tools.iterdir():
+                tool.chmod(0o755)
+            serve = (kernels.REPO_ROOT / "scripts/local/serve.sh").read_text()
+            start = serve.index(
+                'REQUEST_METRICS_DIR="$REQUEST_METRICS_DIR_CT" ct_launch_script'
+            )
+            end = serve.index("\nBASH", start) + len("\nBASH")
+            prefix = (
+                '. "$1"\nTREE="$2"; SGLANG_PY="$2/python"; REPO_CT="$2"; MODE=kernel\n'
+            )
+            prefix += (
+                'MODEL_CT="/model with spaces"; SERVE_LOG_CT="$3"; NSYS_OUTPUT_CT=\n'
+            )
+            prefix += 'REQUEST_METRICS_DIR_CT="$4"\n'
+            metrics = root / "container metrics with spaces"
+            metrics.mkdir()
+            for tp in (4, 8):
+                env = {
+                    **os.environ,
+                    "MODEL_FAMILY": "glm53",
+                    "TP": str(tp),
+                    "EP": "2",
+                    "CONTAINER": "fixture",
+                    "GPUS": ",".join(map(str, range(tp))),
+                    "DECODE_CFG": '{"decode": {"bs": [1, 8]}}',
+                    "PATH": str(tools) + os.pathsep + os.environ["PATH"],
+                }
+                for name in (
+                    "SERVER_SEED",
+                    "STORE_IMPLEMENTATION",
+                    "C4_KEEP_COUNT",
+                    "C4_LAYER_KEEP_COUNTS",
+                    "HICACHE_RATIO",
+                ):
+                    env.pop(name, None)
+                output.unlink(missing_ok=True)
+                result = subprocess.run(
+                    [
+                        "bash",
+                        "-c",
+                        prefix + serve[start:end],
+                        "launch-test",
+                        str(kernels.REPO_ROOT / "scripts/local/env.sh"),
+                        str(kernels.REPO_ROOT),
+                        str(root / "launch.log"),
+                        str(metrics),
+                    ],
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                self.assertEqual(
+                    result.returncode,
+                    0,
+                    result.stdout + result.stderr + (root / "launch.log").read_text(),
+                )
+                args = json.loads(output.read_text())
+                for flag, expected in (
+                    ("--tp", str(tp)),
+                    ("--ep", "2"),
+                    ("--model-path", "/model with spaces"),
+                    ("--glm5-mla-cache-format", "remnant"),
+                    ("--cuda-graph-config", env["DECODE_CFG"]),
+                    ("--export-metrics-to-file-dir", str(metrics)),
+                ):
+                    self.assertEqual(args[args.index(flag) + 1], expected)
+                self.assertNotIn("--dsv4-c4-cache-format", args)
+
+
+class GLMCPURebuildTests(unittest.TestCase):
+    """The explicit rebuild excludes exactly two JIT inputs, never AOT sources."""
+
+    def test_compile_owner_digest_excludes_only_harness_edits(self):
+        from scripts.sources import glm_compile_owner_digest
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            owners = [
+                root / "python/sglang/benchmark/remnant/glm_artifacts.py",
+                root / "python/sglang/srt/remnant/glm.py",
+            ]
+            test = root / "test/registered/attention/unittests/test_glm5_remnant.py"
+            for path in [*owners, test]:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("original")
+            expected = glm_compile_owner_digest(root)
+            test.write_text("unrelated fixture edits")
+            self.assertEqual(glm_compile_owner_digest(root), expected)
+            for path in owners:
+                path.write_text("changed owner")
+                self.assertNotEqual(glm_compile_owner_digest(root), expected)
+                path.write_text("original")
+            owners[0].unlink()
+            with self.assertRaisesRegex(RuntimeError, "Missing GLM CPU compile owner"):
+                glm_compile_owner_digest(root)
+
+    def test_legacy_image_snapshot_requires_fresh_cpu_preparation(self):
+        from scripts import sources
+
+        real_path = Path
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            base = root / "base.json"
+            output = root / "snapshot.json"
+            base.write_text(json.dumps({"glm_compile": {"tilelang": []}}))
+
+            def mapped(path):
+                if str(path) == "/opt/remnant-build.json":
+                    return base
+                if str(path) == "/opt/remnant-glm-reuse-base.json":
+                    return output
+                return real_path(path)
+
+            with patch.object(sources, "Path", side_effect=mapped):
+                sources.snapshot_glm_artifacts(str(root))
+            self.assertIsNone(json.loads(output.read_text())["compile_owner_digest"])
+            owner = root / "python/sglang/benchmark/remnant/glm_artifacts.py"
+            runtime = root / "python/sglang/srt/remnant/glm.py"
+            for path in (owner, runtime):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("current owner")
+            with patch.object(sources, "Path", side_effect=mapped):
+                sources.snapshot_glm_artifacts(str(root))
+            self.assertEqual(
+                json.loads(output.read_text())["compile_owner_digest"],
+                sources.glm_compile_owner_digest(root),
+            )
+
+    def test_format_transition_checks_raw_hashes_ast_and_formatter(self):
+        import hashlib
+        from scripts.sources import verify_glm_formatting
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            python = root / "aot/python/sgl_kernel/flash_mla.py"
+            cpp = root / "aot/csrc/flashmla_extension.cc"
+            for path in (python, cpp):
+                path.parent.mkdir(parents=True, exist_ok=True)
+            old_py, new_py = b"x=1\n", b"x = 1\n"
+            old_cpp, new_cpp = b"int x=1;\n", b"int x = 1;\n"
+            sha = lambda data: hashlib.sha256(data).hexdigest()
+            proof = dict(
+                schema="remnant-glm-format-transition-v1",
+                ast_python_minor=list(sys.version_info[:2]),
+                files={
+                    "0/aot/python/sgl_kernel/flash_mla.py": dict(
+                        before=sha(old_py),
+                        after=sha(new_py),
+                        ast_sha256=sha(
+                            ast.dump(
+                                ast.parse(old_py), include_attributes=False
+                            ).encode()
+                        ),
+                    ),
+                    "0/aot/csrc/flashmla_extension.cc": dict(
+                        before=sha(old_cpp), after=sha(new_cpp)
+                    ),
+                },
+            )
+            python.write_bytes(old_py)
+            cpp.write_bytes(old_cpp)
+            with self.assertRaisesRegex(RuntimeError, "Python minor"):
+                verify_glm_formatting(
+                    {**proof, "ast_python_minor": [0, 0]}, [str(root)], candidate=True
+                )
+
+            def formatter(args, **kwargs):
+                return "clang-format version 20.1.7" if "--version" in args else new_cpp
+
+            with patch(
+                "scripts.sources.subprocess.check_output", side_effect=formatter
+            ):
+                verify_glm_formatting(proof, [str(root)], candidate=False)
+            python.write_bytes(new_py)
+            cpp.write_bytes(new_cpp)
+            verify_glm_formatting(proof, [str(root)], candidate=True)
+            python.write_bytes(b"x = 2\n")
+            with self.assertRaisesRegex(RuntimeError, "source changed"):
+                verify_glm_formatting(proof, [str(root)], candidate=True)
+            proof["files"]["0/aot/python/sgl_kernel/flash_mla.py"]["after"] = sha(
+                python.read_bytes()
+            )
+            with self.assertRaisesRegex(RuntimeError, "Python semantics"):
+                verify_glm_formatting(proof, [str(root)], candidate=True)
+            with self.assertRaisesRegex(RuntimeError, "Unsupported"):
+                verify_glm_formatting(
+                    dict(
+                        schema=proof["schema"],
+                        ast_python_minor=list(sys.version_info[:2]),
+                        files={"0/../unsafe": {}},
+                    ),
+                    [str(root)],
+                    candidate=True,
+                )
+
+    def test_explicit_cpu_rebuild_never_uses_inherited_ordinary_cache(self):
+        with (
+            patch.dict(
+                os.environ,
+                REMNANT_GLM_CPU_REBUILD_FROM="explicit",
+                REMNANT_COMPILED_IMAGE="inherited",
+            ),
+            patch.object(kernels, "_glm_launch_metadata") as metadata,
+        ):
+            self.assertFalse(kernels._reuse_glm_cpu_artifacts(Path("/unused"), 0, {}))
+            metadata.assert_not_called()
+        tree = ast.parse((kernels.REPO_ROOT / "scripts/modal/kernels.py").read_text())
+        image = next(
+            node.value
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name) and target.id == "kernel_image"
+                for target in node.targets
+            )
+        )
+        env = next(
+            node.args[0]
+            for node in ast.walk(image)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "env"
+        )
+        namespace = dict(
+            MODEL_FAMILY="glm53",
+            INTEGRATION={"version": "v0.5.22"},
+            json=json,
+            os=SimpleNamespace(environ={"REMNANT_GLM_CPU_REBUILD_FROM": "explicit"}),
+            compiled_image_id=None,
+            transition={"proof": "verified"},
+            SOURCE_IDENTITIES={},
+            SGLANG_ROOT=Path("/sg"),
+            FLASHMLA_ROOT=Path("/fm"),
+            REMOTE_REPO=Path("/repo"),
+            NATIVE_LIBRARY=Path("/native"),
+            MANIFEST=Path("/manifest"),
+            VALIDATION_TIMEOUT_S=660,
+        )
+        values = eval(compile(ast.Expression(env), "image-env", "eval"), namespace)
+        self.assertEqual(values["REMNANT_COMPILED_IMAGE"], "")
+        self.assertEqual(values["REMNANT_GLM_CPU_REBUILD_FROM"], "explicit")
+        self.assertEqual(
+            json.loads(values["REMNANT_GLM_FORMAT_TRANSITION_JSON"]),
+            {"proof": "verified"},
+        )
+
+    def test_compiled_source_allowlist(self):
+        from scripts.sources import glm_rebuild_source_digest
+
+        with tempfile.TemporaryDirectory() as tmp:
+            roots = [Path(tmp) / "kernels", Path(tmp) / "flash"]
+            for root in roots:
+                root.mkdir()
+            loader = roots[0] / "ops/attention/dsa/tilelang_kernel.py"
+            helper = roots[0] / "jit/include/sgl_kernel/glm_packed_decode.cuh"
+            for path in (loader, helper):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("before")
+            native = roots[0] / "aot.cu"
+            native.write_text("native")
+            flash = roots[1] / "kernel.cuh"
+            flash.write_text("flash")
+            expected = glm_rebuild_source_digest(roots)
+            loader.write_text("after")
+            helper.write_text("after")
+            self.assertEqual(glm_rebuild_source_digest(roots), expected)
+            native.write_text("changed")
+            self.assertNotEqual(glm_rebuild_source_digest(roots), expected)
+            native.write_text("native")
+            flash.write_text("changed")
+            self.assertNotEqual(glm_rebuild_source_digest(roots), expected)
+
+    def test_base_identity_and_artifacts(self):
+        import hashlib
+        from scripts import sources
+
+        real_path = Path
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            roots = [root / "kernels", root / "flash"]
+            for folder in roots:
+                folder.mkdir()
+            binary, cache = root / "aot.so", root / "jit.cubin"
+            binary.write_bytes(b"native")
+            cache.write_bytes(b"cached")
+            manifest = dict(
+                source_identities={
+                    "sglang": {"commit": "sg"},
+                    "flashmla": {"commit": "fm"},
+                },
+                binaries={str(binary): hashlib.sha256(binary.read_bytes()).hexdigest()},
+                glm_compile={
+                    "cache_files": {
+                        str(cache): hashlib.sha256(cache.read_bytes()).hexdigest()
+                    }
+                },
+            )
+            base = root / "manifest.json"
+            base.write_text(json.dumps(manifest))
+
+            def mapped(path):
+                if str(path) == "/opt/remnant-build.json":
+                    return base
+                if str(path) == "/opt/remnant-cpu-rebuild-base.json":
+                    return root / "verified.json"
+                return real_path(path)
+
+            with (
+                patch.object(sources, "Path", side_effect=mapped),
+                patch.dict(os.environ, REMNANT_BUILT_INTEGRATION="v0.5.22"),
+            ):
+                digest = sources.glm_rebuild_source_digest(roots)
+                expected = dict(sglang="sg", flashmla="fm")
+                sources.verify_glm_cpu_rebuild(expected, digest, list(map(str, roots)))
+                with self.assertRaises(RuntimeError):
+                    sources.verify_glm_cpu_rebuild(
+                        {**expected, "sglang": "wrong"}, digest, list(map(str, roots))
+                    )
+                for artifact in (binary, cache):
+                    original = artifact.read_bytes()
+                    artifact.write_bytes(b"changed")
+                    with self.assertRaises(RuntimeError):
+                        sources.verify_glm_cpu_rebuild(
+                            expected, digest, list(map(str, roots))
+                        )
+                    artifact.write_bytes(original)
+                with (
+                    patch.dict(os.environ, REMNANT_BUILT_INTEGRATION="v0.5.18"),
+                    self.assertRaises(RuntimeError),
+                ):
+                    sources.verify_glm_cpu_rebuild(
+                        expected, digest, list(map(str, roots))
+                    )
+
+
+class GLMAttentionProtocolTests(unittest.TestCase):
+    """Coverage identities and model-specific dispatch must fail closed."""
+
+    def test_qualification_import_needs_no_historical_git_objects(self):
+        import importlib
+        from scripts.modal import kernel_qualification
+
+        with patch("subprocess.check_output", side_effect=AssertionError("no Git at import")):
+            policy = importlib.reload(kernel_qualification)
+        self.assertEqual(len(policy.GLM_BASELINE_RUNTIME_HASHES), 5)
+        self.assertTrue(all(len(value) == 64 for value in policy.GLM_BASELINE_RUNTIME_HASHES.values()))
+
+    def test_scoped_audit_requires_helper_and_handoff_trace(self):
+        for text in ("glm_packed_bytes", "glm_packed_bytes warp", "other_kernel warp CTA barrier"):
+            with self.assertRaises(RuntimeError):
+                kernels._check_glm_scope_audit(text, "test")
+        kernels._check_glm_scope_audit("glm_packed_bytes WarpSync CTA barrier", "test")
+
+    def test_preparation_reports_already_built_image_without_second_build(self):
+        source = ast.parse((kernels.REPO_ROOT / "scripts/modal/kernels.py").read_text())
+        function = next(n for n in source.body if isinstance(n, ast.FunctionDef) and n.name == "prepare_kernels")
+        function.decorator_list = []
+        image = MagicMock(object_id="im-built")
+        namespace = dict(MODEL_FAMILY="glm53", kernel_image=image, SOURCE_IDENTITIES={}, json=json)
+        exec(compile(ast.Module([function], type_ignores=[]), "prepare", "exec"), namespace)
+        with patch("builtins.print"):
+            namespace["prepare_kernels"]("glm53")
+        image.build.assert_not_called()
+
+    def test_explicit_sanitizer_selection_preserves_full_gate(self):
+        self.assertEqual(kernels._selected_sanitizer_tools('racecheck', True, 'glm53'), ('racecheck',))
+        self.assertEqual(kernels._selected_sanitizer_tools('', True, 'glm53'), kernels.SANITIZER_ORDER)
+        for value, enabled, family in [('memcheck', False, 'glm53'), ('racecheck', True, 'dsv4'), ('memcheck,memcheck', True, 'glm53'), ('unknown', True, 'glm53')]:
+            with self.assertRaises(ValueError):
+                kernels._selected_sanitizer_tools(value, enabled, family)
+
+    def test_sanitizer_count_cannot_replace_required_case_identities(self):
+        import xml.etree.ElementTree as ET
+        # Construct independent fixtures instead of relying on ignored artifacts.
+        names = ['test_producer_reconstruction', 'test_native_fp8_conversion',
+                 'test_allocator_accounting', 'test_invalid_attention', 'test_partial_outputs',
+                 'test_attention[3-8-8]', 'test_changing_input_graph[adapter]',
+                 'test_changing_input_graph[direct]', 'test_production_backend_constructor',
+                 'test_attention[0-1-64]', 'test_pool_lifecycle']
+        root = ET.Element('testsuites')
+        suite = ET.SubElement(root, 'testsuite', tests='11', errors='0', failures='0', skipped='0')
+        for name in names:
+            ET.SubElement(suite, 'testcase', name=name, classname='registered.attention.unittests.test_glm5_remnant')
+        tree = ET.ElementTree(root)
+        qualification.check_glm_sanitizer_cases(tree, 'historical', historical=True)
+        with self.assertRaisesRegex(RuntimeError, 'missing'):
+            qualification.check_glm_sanitizer_cases(tree, 'current', historical=False)
+        for dimensions in ((8,2,2,33),(16,4,2,66)):
+            name = 'test_benchmark_sanitizer_bank_graph[' + '-'.join(map(str, dimensions)) + ']'
+            node = ET.SubElement(suite, 'testcase', name=name, classname='registered.attention.unittests.test_glm5_remnant')
+            geometry = dict(zip(('heads','banks','queries','forced_inner'), dimensions), warmup_calls=1, measured_warmup_calls=10, actual_warmup_calls_per_mode=dimensions[1])
+            ET.SubElement(ET.SubElement(node, 'properties'), 'property', name='probe_geometry', value=json.dumps(geometry))
+        suite.set('tests', '13')
+        qualification.check_glm_sanitizer_cases(tree, 'current', historical=False)
+        suite[0].set('name', 'unrelated_test')
+        with self.assertRaisesRegex(RuntimeError, 'missing'):
+            qualification.check_glm_sanitizer_cases(tree, 'spoofed', historical=False)
+        suite[0].set('name', names[0])
+        ET.SubElement(suite[0], 'skipped')
+        with self.assertRaises(RuntimeError):
+            qualification.check_glm_sanitizer_cases(tree, 'skipped', historical=False)
+
+    def test_glm_command_does_not_load_deepseek_native_library(self):
+        with patch.object(kernels, 'MODEL_FAMILY', 'glm53'):
+            command = kernels._benchmark_command('--model-family', 'glm53', '--suite', 'glm-attention')
+        self.assertNotIn('--native-library', command)
+        self.assertIn('glm-attention', command)
+
+    def test_glm_sanitizer_merge_requires_clean_explicit_complete_union(self):
+        import hashlib
+        import xml.etree.ElementTree as ET
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = dict(glm_compile=dict(triton=[], tilelang=[], attention_scale=0.0625), sanitizer={'binary_sha256':'tool'})
+            manifest_path = root / 'manifest.json'; manifest_path.write_text(json.dumps(manifest))
+            original = qualification.required_glm_sanitizer_cases(historical=True)
+            focused = qualification.required_glm_sanitizer_cases(historical=False) - original
+            def write_group(run, tool, names, interrupted=False):
+                folder = root / 'microbench' / run / 'validation'; folder.mkdir(parents=True)
+                (folder / 'build-manifest.json').write_text(json.dumps(manifest))
+                (folder / 'result.json').write_text(json.dumps(dict(model_family='glm53', status='failed' if interrupted else 'passed', runtime_hashes={'kernel':'same'}, sanitizer_results={tool:{'status':'failed' if interrupted else 'passed'}})))
+                log = ('KeyboardInterrupt\n' if interrupted else '') + ('========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)\n' if tool=='racecheck' else '========= ERROR SUMMARY: 0 errors\n')
+                (folder / f'{tool}.log').write_text(log)
+                suite = ET.Element('testsuite', tests=str(len(names)), errors='0', failures='0', skipped='0')
+                for name in sorted(names):
+                    node = ET.SubElement(suite,'testcase',name=name,classname='registered.attention.unittests.test_glm5_remnant')
+                    if name.startswith('test_benchmark_sanitizer_bank_graph['):
+                        dimensions = tuple(map(int,name.split('[')[1][:-1].split('-')))
+                        geometry = dict(zip(('heads','banks','queries','forced_inner'),dimensions), warmup_calls=1,measured_warmup_calls=10,actual_warmup_calls_per_mode=dimensions[1])
+                        ET.SubElement(ET.SubElement(node,'properties'),'property',name='probe_geometry',value=json.dumps(geometry))
+                if interrupted: ET.SubElement(suite, 'testcase', time='0.001')  # pytest interrupted-node placeholder
+                ET.ElementTree(suite).write(folder / f'{tool}.xml')
+                if interrupted:
+                    note = dict(schema='remnant-glm-sanitizer-checkpoint-v1',run_id=run,tool=tool,action='intentional SIGINT to owned pytest')
+                    note.update({f'{suffix}_sha256':hashlib.sha256((folder / f'{tool}.{suffix}').read_bytes()).hexdigest() for suffix in ('log','xml')})
+                    (folder / f'{tool}-coverage-checkpoint.json').write_text(json.dumps(note))
+                return folder
+            interrupted = write_group('race-original','racecheck',original,True)
+            write_group('race-focused','racecheck',focused)
+            write_group('sync-original','synccheck',original)
+            write_group('sync-focused','synccheck',focused)
+            write_group('mem-all','memcheck',original|focused)
+            ids = 'race-original,race-focused,sync-original,sync-focused,mem-all'
+            with patch.object(kernels,'RESULTS_ROOT',root), patch.object(kernels,'MANIFEST',manifest_path), patch.object(kernels,'_glm_benchmark_contract') as contract:
+                contract.return_value.runtime_hashes.return_value = {'kernel':'same'}
+                result = kernels._glm_timing_qualification(ids)
+                self.assertEqual(set(result['tools']['racecheck']['cases']),original|focused)
+                with self.assertRaisesRegex(RuntimeError,'missing sanitizer gates'):
+                    kernels._glm_timing_qualification(ids.replace(',race-focused',''))
+                exploratory = kernels._glm_timing_qualification(
+                    ids.replace(',mem-all', ''), allow_incomplete=True
+                )
+                self.assertEqual(exploratory['status'], 'incomplete')
+                self.assertEqual(set(exploratory['missing']['memcheck']), original | focused)
+                self.assertFalse(exploratory['missing']['racecheck'])
+                self.assertFalse(exploratory['missing']['synccheck'])
+                note = interrupted / 'racecheck-coverage-checkpoint.json'
+                saved = note.read_text(); note.unlink()
+                with self.assertRaisesRegex(RuntimeError,'missing sanitizer gates'):
+                    kernels._glm_timing_qualification(ids)
+                note.write_text(saved)
+                (interrupted / 'racecheck.log').write_text('KeyboardInterrupt\n========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)\nchanged')
+                with self.assertRaisesRegex(RuntimeError,'report changed'):
+                    kernels._glm_timing_qualification(ids)
+                with self.assertRaisesRegex(RuntimeError,'report changed'):
+                    kernels._glm_timing_qualification(ids, allow_incomplete=True)
+
+    def test_glm_checkpoint_path_rejects_traversal_and_missing_records(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(kernels, 'RESULTS_ROOT', Path(directory)):
+            for name in ('../other', 'bad/path', ''):
+                with self.assertRaises(ValueError):
+                    kernels._glm_timing_checkpoint(name)
+            with self.assertRaises(FileNotFoundError):
+                kernels._glm_timing_checkpoint('prior')
+            expected = Path(directory) / 'microbench/prior/timing/timing.json'
+            expected.parent.mkdir(parents=True)
+            expected.write_text('{}')
+            self.assertEqual(kernels._glm_timing_checkpoint('prior'), expected)
+
+    def test_glm_qualified_timing_rejects_missing_tools(self):
+        with self.assertRaises(ValueError):
+            kernels._glm_timing_qualification('')
+        with self.assertRaises(ValueError):
+            kernels._glm_timing_qualification('../invalid')
 
 
 class LswbSweepTests(unittest.TestCase):

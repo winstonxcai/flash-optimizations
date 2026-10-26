@@ -39,10 +39,13 @@ from scripts.sources import check_sources, integration_profile
 
 INTEGRATION = integration_profile()
 
-MODEL_REPO = "deepseek-ai/DeepSeek-V4-Flash-0731"
-MODEL_REVISION = "7872f01b1d1fe23eabc4c98b48bffcef5a386062"
+MODEL_FAMILY = os.environ.get("REMNANT_MODEL_FAMILY", "dsv4")
+if MODEL_FAMILY not in ("dsv4", "glm53") or (MODEL_FAMILY == "glm53" and INTEGRATION["version"] != "v0.5.22"):
+    raise ValueError("GLM launchers require REMNANT_INTEGRATION=v0.5.22")
+MODEL_REPO = "zai-org/GLM-5.3-Flash" if MODEL_FAMILY == "glm53" else "deepseek-ai/DeepSeek-V4-Flash-0731"
+MODEL_REVISION = "46a050bec13002ad29ee795c16e61cf4fa3c4a9c" if MODEL_FAMILY == "glm53" else "7872f01b1d1fe23eabc4c98b48bffcef5a386062"
 MODEL_ROOT = Path("/models")
-MODEL_DIR = MODEL_ROOT / "DeepSeek-V4-Flash-0731"
+MODEL_DIR = MODEL_ROOT / ("GLM-5.3-Flash" if MODEL_FAMILY == "glm53" else "DeepSeek-V4-Flash-0731")
 RESULTS_ROOT = Path("/results")
 SGLANG_ROOT = Path("/sgl-workspace/sglang-remnant")
 REMOTE_REPO = Path("/opt/flash-optimizations")
@@ -67,26 +70,7 @@ def _source_revision(identity: str) -> str:
     return SOURCE_IDENTITIES[identity]["commit"]
 
 
-def _compiled_source_digest(roots: list[Path]) -> str:
-    digest = hashlib.sha256()
-    for root in map(Path, roots):
-        if not root.is_dir():
-            raise RuntimeError(f"compiled source directory absent: {root}")
-        for path in sorted(root.rglob("*")):
-            if path.is_file() and path.suffix in {
-                ".cu",
-                ".cuh",
-                ".cc",
-                ".cpp",
-                ".h",
-                ".hpp",
-                ".cmake",
-                ".txt",
-                ".py",
-            }:
-                digest.update(str(path.relative_to(root)).encode() + b"\0")
-                digest.update(path.read_bytes())
-    return digest.hexdigest()
+from scripts.sources import compiled_source_digest as _compiled_source_digest
 
 
 def _verify_compiled_sources(expected: str) -> None:
@@ -113,8 +97,9 @@ SOURCE_ENV = {
 }
 SOURCE_ENV["REMNANT_SOURCE_IDENTITIES"] = json.dumps(SOURCE_IDENTITIES)
 SOURCE_ENV["REMNANT_INTEGRATION"] = INTEGRATION["version"]
+SOURCE_ENV["REMNANT_MODEL_FAMILY"] = MODEL_FAMILY
 app = modal.App("remnant")
-model_volume = modal.Volume.from_name("deepseek-v4-flash-0731", create_if_missing=True)
+model_volume = modal.Volume.from_name("glm53-flash" if MODEL_FAMILY == "glm53" else "deepseek-v4-flash-0731", create_if_missing=True)
 # Keep the existing volume name: renaming the public modes must not orphan results.
 results_volume = modal.Volume.from_name(
     "remnant-stage2a-results", create_if_missing=True
@@ -230,7 +215,7 @@ def inspect_model_cache() -> dict:
     config = json.loads((MODEL_DIR / "config.json").read_text())
     index = json.loads((MODEL_DIR / "model.safetensors.index.json").read_text())
     names = sorted(set(index["weight_map"].values()))
-    if len(names) != 48:
+    if not names or (MODEL_FAMILY == "dsv4" and len(names) != 48):
         raise RuntimeError("expected 48 pinned checkpoint shards")
     for name in names + ["config.json", "model.safetensors.index.json"]:
         path = MODEL_DIR / name
@@ -246,8 +231,8 @@ def inspect_model_cache() -> dict:
         "revision": MODEL_REVISION,
         "shards": len(names),
         "bytes": sum((MODEL_DIR / n).stat().st_size for n in names),
-        "heads": config["num_attention_heads"],
-        "layers": len(config["compress_ratios"]),
+        "heads": config.get("text_config", config)["num_attention_heads"],
+        "layers": config["text_config"]["num_hidden_layers"] if MODEL_FAMILY == "glm53" else len(config["compress_ratios"]),
     }
     print(json.dumps(result), flush=True)
     return result
@@ -336,7 +321,7 @@ def _running_serving_server(
 
 @app.function(
     image=server_image,
-    gpu="H100!:4",
+    gpu="H100!:8" if MODEL_FAMILY == "glm53" else "H100!:4",
     cpu=32,
     memory=262144,
     timeout=4 * 3600 + 60,
@@ -373,6 +358,8 @@ def benchmark_serving(
         **os.environ,
         "PYTHON": sys.executable,
         "MODEL_PATH": str(MODEL_DIR),
+        "MODEL_FAMILY": MODEL_FAMILY,
+        **({"TP": "8", "MODEL_NAME": "glm53-flash"} if MODEL_FAMILY == "glm53" else {}),
         "SGLANG_ROOT": str(SGLANG_ROOT),
         "RESULTS_HOST": str(run),
         "BENCH_EXECUTION": "direct",

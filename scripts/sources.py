@@ -16,6 +16,200 @@ import sys
 from pathlib import Path
 
 
+def compiled_source_digest(roots: list[Path]) -> str:
+    digest = hashlib.sha256()
+    for root in map(Path, roots):
+        if not root.is_dir():
+            raise RuntimeError(f"compiled source directory absent: {root}")
+        for path in sorted(root.rglob("*")):
+            if path.is_file() and path.suffix in {
+                ".cu",
+                ".cuh",
+                ".cc",
+                ".cpp",
+                ".h",
+                ".hpp",
+                ".cmake",
+                ".txt",
+                ".py",
+            }:
+                digest.update(str(path.relative_to(root)).encode() + b"\0")
+                digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+def verify_compiled_image_sources(
+    expected: str, roots: list[str], integration: str
+) -> None:
+    """CPU-only reuse gate; never overlay runtime code on mismatched kernels."""
+    if os.environ.get("REMNANT_BUILT_INTEGRATION", "v0.5.18") != integration:
+        raise RuntimeError("Compiled image belongs to a different integration")
+    if compiled_source_digest([Path(root) for root in roots]) != expected:
+        raise RuntimeError("Compiled source changed; rebuild the selected Dockerfile")
+
+
+def glm_rebuild_source_digest(
+    roots: list[Path], formatting_paths: tuple[str, ...] = ()
+) -> str:
+    """Hash every compiled source except the two authorized GLM JIT inputs."""
+    allowed = {
+        "ops/attention/dsa/tilelang_kernel.py",
+        "jit/include/sgl_kernel/glm_packed_decode.cuh",
+    }
+    digest = hashlib.sha256()
+    for i, root in enumerate(map(Path, roots)):
+        if not root.is_dir():
+            raise RuntimeError(f"Missing CPU rebuild source root: {root}")
+        for path in sorted(root.rglob("*")):
+            relative = str(path.relative_to(root))
+            if (
+                i == 0 and relative in allowed
+            ) or f"{i}/{relative}" in formatting_paths:
+                continue
+            if path.is_file() and path.suffix in {
+                ".cu",
+                ".cuh",
+                ".cc",
+                ".cpp",
+                ".h",
+                ".hpp",
+                ".cmake",
+                ".txt",
+                ".py",
+            }:
+                digest.update(f"{i}/{relative}".encode() + b"\0")
+                digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+def verify_glm_cpu_rebuild(
+    expected_base: dict,
+    candidate: str,
+    roots: list[str],
+    formatting: dict | None = None,
+) -> None:
+    """Verify a CPU JIT-only overlay; ordinary compiled-image reuse stays strict."""
+    if os.environ.get("REMNANT_BUILT_INTEGRATION") != "v0.5.22":
+        raise RuntimeError("GLM CPU rebuild requires the verified v0.5.22 image")
+    manifest_path = Path("/opt/remnant-build.json")
+    manifest = json.loads(manifest_path.read_text())
+    if (
+        manifest["source_identities"]["sglang"]["commit"] != expected_base["sglang"]
+        or manifest["source_identities"]["flashmla"]["commit"]
+        != expected_base["flashmla"]
+    ):
+        raise RuntimeError("CPU rebuild base source identity mismatch")
+    for name, digest in {
+        **manifest["binaries"],
+        **manifest["glm_compile"]["cache_files"],
+    }.items():
+        if hashlib.sha256(Path(name).read_bytes()).hexdigest() != digest:
+            raise RuntimeError(f"CPU rebuild base artifact changed: {name}")
+    if formatting:
+        verify_glm_formatting(formatting, roots, candidate=False)
+    paths = tuple(formatting["files"]) if formatting else ()
+    if glm_rebuild_source_digest([Path(root) for root in roots], paths) != candidate:
+        raise RuntimeError(
+            "CPU rebuild found changes outside the authorized GLM loader/header"
+        )
+    if formatting:
+        manifest["formatting_transition"] = formatting
+    Path("/opt/remnant-cpu-rebuild-base.json").write_text(json.dumps(manifest))
+
+
+def verify_glm_formatting(
+    transition: dict, roots: list[str], *, candidate: bool
+) -> None:
+    """Explicit format-only experiment gate; ordinary binary reuse stays strict.
+
+    On the verified base image, C++ must format to the exact candidate bytes
+    with the pinned CI formatter. Python must retain the same AST. On the
+    overlaid candidate, every raw source hash is checked again. All other
+    compiled inputs are covered by the unchanged-tree digest in the caller.
+    """
+    import ast
+
+    allowed = {
+        "0/aot/csrc/flashmla_extension.cc",
+        "0/aot/csrc/remnant/packed_to_native.cu",
+        "0/aot/python/sgl_kernel/flash_mla.py",
+        "0/jit/include/sgl_kernel/glm_packed_decode.cuh",
+        "0/ops/attention/dsa/tilelang_kernel.py",
+    }
+    files = transition.get("files", {})
+    if transition.get("ast_python_minor") != list(sys.version_info[:2]):
+        raise RuntimeError(
+            "GLM formatting AST proof needs its recorded Python minor version"
+        )
+    if (
+        transition.get("schema") != "remnant-glm-format-transition-v1"
+        or not files
+        or not set(files) <= allowed
+    ):
+        raise RuntimeError("Unsupported GLM formatting transition")
+    if not candidate:
+        version = subprocess.check_output(
+            ["clang-format", "--version"], text=True, timeout=15
+        )
+        if "20.1.7" not in version:
+            raise RuntimeError(
+                f"GLM formatting proof needs clang-format 20.1.7: {version}"
+            )
+    for relative, proof in files.items():
+        index, name = relative.split("/", 1)
+        path = Path(roots[int(index)]) / name
+        source = path.read_bytes()
+        phase = "after" if candidate else "before"
+        if hashlib.sha256(source).hexdigest() != proof[phase]:
+            raise RuntimeError(f"GLM formatting {phase} source changed: {relative}")
+        if path.suffix == ".py":
+            semantic = ast.dump(ast.parse(source), include_attributes=False).encode()
+            if hashlib.sha256(semantic).hexdigest() != proof["ast_sha256"]:
+                raise RuntimeError(
+                    f"GLM formatting changed Python semantics: {relative}"
+                )
+        elif not candidate:
+            formatted = subprocess.check_output(
+                ["clang-format", "--style=file", str(path)], timeout=30
+            )
+            if hashlib.sha256(formatted).hexdigest() != proof["after"]:
+                raise RuntimeError(
+                    f"GLM formatting changed C++ beyond formatting: {relative}"
+                )
+
+
+def glm_compile_owner_digest(sglang: Path) -> str:
+    """Fingerprint fork-owned artifact preparation and runtime compilation.
+
+    GPU test fixtures are consumers, not compile owners. Whole compiled kernel
+    trees remain guarded separately before any source overlay.
+    """
+    digest = hashlib.sha256()
+    for name in ("benchmark/remnant/glm_artifacts.py", "srt/remnant/glm.py"):
+        path = sglang / "python/sglang" / name
+        if not path.is_file():
+            raise RuntimeError(f"Missing GLM CPU compile owner: {path}")
+        digest.update(name.encode() + b"\0" + path.read_bytes())
+    return digest.hexdigest()
+
+
+def snapshot_glm_artifacts(sglang: str) -> None:
+    """Called on the verified base BEFORE overlaying candidate test sources."""
+    manifest = json.loads(Path("/opt/remnant-build.json").read_text())
+    # Qualified images built before the fork-owned artifact interface can still
+    # supply unchanged AOT binaries, but must CPU-prepare their JIT artifacts.
+    artifact_owner = Path(sglang) / "python/sglang/benchmark/remnant/glm_artifacts.py"
+    manifest["compile_owner_digest"] = (
+        glm_compile_owner_digest(Path(sglang)) if artifact_owner.is_file() else None
+    )
+    manifest["compile_owner_status"] = (
+        "available"
+        if artifact_owner.is_file()
+        else "legacy image; CPU preparation required"
+    )
+    Path("/opt/remnant-glm-reuse-base.json").write_text(json.dumps(manifest))
+
+
 def integration_profile(value: str | None = None) -> dict[str, str]:
     """One explicit source/image pair; Native defaults remain v0.5.18."""
     version = (
@@ -28,8 +222,12 @@ def integration_profile(value: str | None = None) -> dict[str, str]:
     newer = version == "v0.5.22"
     return {
         "version": version,
-        "sglang": "third_party/sglang-v0.5.22" if newer else "third_party/sglang-v0.5.18",
-        "flashmla": "third_party/flashmla-v0.5.22" if newer else "third_party/flashmla-v0.5.18",
+        "sglang": "third_party/sglang-v0.5.22"
+        if newer
+        else "third_party/sglang-v0.5.18",
+        "flashmla": "third_party/flashmla-v0.5.22"
+        if newer
+        else "third_party/flashmla-v0.5.18",
         "base_image": (
             "lmsysorg/sglang:v0.5.22" if newer else "lmsysorg/sglang:v0.5.18-cu130"
         ),
