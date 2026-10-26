@@ -429,3 +429,117 @@ margin. Aggregate task accrual is now **$19.40082903 of $20**; GPU seconds are
 unchanged. Attention remains incomplete at 56/128 cases and memcheck remains
 incomplete. No runtime, kernels, fork pins or serving defaults changed. Rollback
 is to revert this evidence-only parent commit; Native remains the default.
+
+
+## CPU-only Native/Direct SASS comparison (2026-10-26)
+
+Question: with identical theoretical residency, what extra compiled work does
+GLM Direct issue versus Native, and which V4 loader mechanisms should replace it?
+Compare unchanged hash-matched cubins, preserving Native as the baseline. Require
+all sixteen H8/H16, inner1/2/33/66 variants, raw SASS, source/CFG/opcode checks and
+explicit separation of static sites from executed work/cycles. Stop on artifact
+mismatch, unexpected GPU devices, failed preflight or the 180-second controller
+ceiling. No kernel compilation, GPU context or H100 allocation is allowed.
+
+**Complete: Direct's extra code is concentrated in the scalar expansion path.**
+One CPU-only Function reused image `im-EomZZ0NhII6stVasjzgyo4` on `caiw`: one CPU,
+1 GiB RAM, no retries, one container maximum, two-second idle timeout. All 421 cache
+hashes and 16 SASS hashes/code sizes passed; all 8 paired generated-CUDA math suffixes
+are identical after renaming compiler-generated identifiers. Independent CFG and
+PTX/SASS reviews agree. The worker is stopped, with zero active containers.
+
+Source remains SGLang `889edf56b33226c80b17ddf3472c1206df62c3f0` and FlashMLA
+`3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8`. `cuobjdump --dump-sass` inspected all 16
+cached partial kernels; `nvdisasm --print-code --print-line-info` also inspected
+the H16/inner2 pair. No kernels were imported, JIT-compiled or executed.
+
+Representative H16/inner2 **static instruction sites inside the main selected-tile
+loop**, including mutually exclusive predicated paths:
+
+| Item | Native | Direct |
+|---|---:|---:|
+| Loop instruction sites | 1,618 | 11,567 |
+| Loop entry to first HMMA | 634 | 10,586 |
+| First HMMA to backedge | 984 | 981 |
+| Population counts (`POPC`) | 0 | 2,304 |
+| 128-bit global loads | 8 | 0 |
+| 64-bit global bitmap loads | 0 | 1,152 |
+| 8-bit global payload loads | 0 | 128 |
+| 128-bit shared stores | 8 | 0 |
+| 8-bit shared stores | 0 | 380 |
+| Branches (`BRA`) | 1 | 640 |
+| Reconvergence begin/end (`BSSY`/`BSYNC`) | 0/0 | 132/132 |
+| Matrix multiplies (`HMMA.16816.F32`) | 64 | 64 |
+| CTA barriers | 23 | 23 |
+
+The loop backedges are Native `0x6b80 -> 0x670` and Direct `0x2dae0 -> 0x800`.
+Whole-function code is 2,040/12,016 sites (32,640/192,256bytes), including padding.
+All 16 Direct variants have 2,304 POPC, 1,152 bitmap-load and 128 payload-byte-load sites.
+All 16 variants have 64 HMMA sites; matched CTA-barrier counts are 22 for inner1 or 23 for
+loop variants. No LDL/STL sites occur. These facts do not imply executed lane counts,
+DRAM transactions, cache misses or a measured stall breakdown.
+
+The generated Native loader assigns eight threads per row and two rows per
+thread, moving 16-byte vectors. Direct assigns one coordinate per thread, then
+fully unrolls four separate 32-row loops. It repeats bitmap loads, preceding-word
+population counts, validity/rank tests and predicated byte loads/stores before
+any attention GEMM. The dependent chain is bitmap -> rank -> payload address ->
+byte load -> shared store. The post-loader source suffix preserves QK, softmax,
+PV, barriers and output; this is a loader/code-generation problem. Direct's byte
+loads can still coalesce because compact ranks ascend; scalarization alone does
+not prove uncoalesced DRAM traffic. Large code also creates possible front-end
+pressure, but instruction-cache misses remain unmeasured.
+
+There is a secondary raw-byte opportunity: H16/inner2 has 256 FP8 zero-constructor
+instructions with RZ/RZ/RZ operands, versus 2 Native; the two nonzero quantization
+instructions match. These zero constructions belong to dropped/invalid branches,
+not retained-code conversion. H8/inner1 has one zero-constructor in both modes, so this
+is shape-dependent and does not explain the universal rank/load expansion cost.
+
+**Arithmetic clarification:** both cached PTX programs request FP8 E4M3
+`mma.sync.aligned.m16n8k32...f32.e4m3.e4m3.f32`, but final SM90 SASS unpacks FP8 to
+FP16 (`F2FP.F16.E4M3.UNPACK_B`) and uses `HMMA.16816.F32`. The representative pair
+has 264 unpack and 64 HMMA sites each. Thus Native FP8 describes cache/input and
+quantization semantics here; it does not establish native Hopper FP8/WGMMA
+execution. This common backend does not explain Direct's differential slowdown.
+
+The V4-inspired candidate should change only the Packed loader in
+`python/sglang/kernels/ops/attention/dsa/tilelang_kernel.py`:
+
+1. Explicitly map four cooperating threads to each of 32 rows. Avoid the current
+   coordinate-per-thread, 32-row unrolling.
+2. Stage each aligned 256-byte compact payload once with vector loads. Cooperatively
+   own the eight bitmap words and calculate per-word prefixes once per row.
+3. Expand 8/16 coordinates using integer windows, funnel shifts and byte permutations.
+   Produce dropped/invalid zeros through raw masks, not numeric FP8 constructors.
+4. Store vector fragments into the existing Native-swizzled FP8 tiles, reuse them
+   for QK and PV, and retain established completion/synchronization before reuse.
+5. Preserve query conversion, arithmetic, partial outputs and combine. CPU-compile
+   all 16 variants and inspect actual SASS/resources before any GPU validation; reject
+   recurring scalar row-loop growth, hidden local traffic or changed Native code.
+
+Current FlashMLA 3eb source provides cooperative payload/metadata staging and 8/16-code
+expansion. A separately identified historical v0.5.18 production128 P4 binary
+`2cd69b26...` provides further SASS evidence: its whole-function 5,432 sites include
+38 POPC, 125 PRMT, 18 LDGSTS and 6 SHFL.UP sites. Its CPU-disassembly manifest is 1396a71d...;
+full hashes are in the ledger. This differs from current 3eb and the user-supplied
+V4.1 timing table and is not an instruction budget or speed prediction for GLM.
+Omit V4's stored scales, RoPE, BF16 conversion and 328-byte-row misalignment paths
+when loading GLM's aligned raw-code planes. Preserve the 320-byte persistent ABI.
+
+Asynchronous next-tile staging is a later mechanism: inner1 has no next tile, while
+inner2/33/66 can provide overlap. Do not transplant V4's 512-thread producer quotas
+into GLM's 128-thread CTA. A WGMMA/backend rewrite is also separate from this loader
+fix and would require its own controlled baseline and numerical qualification.
+Static analysis establishes a concrete implementation defect but cannot predict
+its cycle share or promise parity. The next GPU step remains a small paired
+performance/numerical screen after CPU preparation, not another full matrix.
+
+[sass-summary.csv](sass-summary.csv) contains per-variant static counts; the
+canonical qualification JSON links raw SASS, exact commands, CFG/source/backend
+reviews and source/binary hashes. Raw evidence and reproducible temporary probes
+are archived outside Git under `data/glm53-packed/sass-inspection-20261026T042319Z/`. No new maintained runner was added.
+Conservative CPU/egress/billing-lag accrual is $0.01; aggregate task accrual is now
+**$19.41082903 of $20**, with GPU seconds unchanged. Attention remains 56/128 and
+memcheck incomplete. No runtime, kernels, pins or serving defaults changed;
+rollback is to revert this evidence-only parent commit. Native remains default.
