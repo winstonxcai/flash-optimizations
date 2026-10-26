@@ -22,6 +22,111 @@ machines or Modal. On shared machines, run GPU commands inside your GPUQ job or
 active lease. Bare serving/capture examples below assume you already hold an
 allocation. Build the image and prepare inputs before queueing GPU work.
 
+## LongSWE concurrency sweep
+
+Question: does Packed improve successful requests/s under the same TTFT p90
+budget? `sweep-lswb.sh` owns one Native or Packed Kernel server, calls the existing
+replay client for each point, and stops only its own server on every exit path.
+No image builds, GPUQ submissions, source changes or automatic Git transfers occur.
+Implementation is split between the small shell environment adapter and
+`business_replay/sweep.py`, which owns configuration identity and artifact indexing;
+existing replay code remains the numerical accounting owner.
+
+Prepare the selected integration and existing container before queueing. Use the
+same full image ID for both modes. `RESULTS_HOST` must remain under the host repository for the existing metrics mount.
+GPUQ must set `CUDA_VISIBLE_DEVICES` with exactly
+`TP` distinct devices; the sweep never chooses GPU IDs. The initial no-HiCache
+protocol uses MF0.88, TP4, a 1,200-second dispatch window, original session-owned
+scheduling, and the common C20/C22/C24/C26/C28/C30 ladder. The first v0.5.22 use
+requires its integration launchers and GPU qualification; older launchers reject
+that selector rather than silently using v0.5.18. Keep image/source files frozen
+while either node has an active sweep.
+
+Inside one authorized GPUQ job, for example:
+
+```bash
+REMNANT_INTEGRATION=v0.5.22 MEM_FRAC=0.88 TP=4 \
+CONTAINER=remnant-v0522 PORT=30381 MASTER_PORT=29781 \
+REPLAY_DATASET=/absolute/path/to/records \
+REPLAY_MANIFEST=/absolute/path/to/manifest.json \
+bash scripts/local/sweep-lswb.sh kernel \
+  --concurrencies 20,22,24,26,28,30 --duration-s 1200 --repeats 1 \
+  --tag no-hicache-slo --expected-image-id sha256:<full-image-id>
+```
+
+Use `native` in a separate invocation with distinct ports. Do not enable HiCache
+for this first sweep: leave `HICACHE_RATIO` unset. `--help` needs no Docker/data;
+`--dry-run` performs read-only argument/source/container/data/port preflight and
+prints the resolved plan without GPU allocation or output directories. Dry-run
+permits missing GPUQ device assignments. It does not establish model startup,
+actual graph capture, numerical correctness or serving performance.
+
+Required arguments are mode, ordered distinct positive `--concurrencies`, a
+simple `--tag`, and a full `--expected-image-id`. Defaults: `--duration-s 1200`,
+`--repeats 1`, `--ttft-slo-ms 10000`, `--minimum-success-rate 0.99`, and
+`--point-timeout-s` equal to duration +900 seconds. Server seed defaults to
+20260919; existing environment variables select the serving configuration and
+replay scheduler. The point timeout includes flushing, replay drain and collection;
+model startup has a separate 1,800-second bound. Use a GPUQ job timeout covering
+startup plus every point's bound and cleanup.
+
+Repeats are consecutive per concurrency, e.g. C20 R1/R2/R3 then C22 R1/R2/R3.
+Each replay starts a fresh client at the frozen manifest's initial order after a
+successful idle/cache flush. Weights, compiled kernels and graphs remain loaded;
+there is no added inference warm-up. These are repetitions within one boot, not
+independent model startups. A failed TTFT or response-success gate is retained
+and does not stop later points. Failed flushing, unhealthy server, changed
+sources/settings, missing/inconsistent artifacts or timeout stop the sweep and
+trigger owned-server cleanup. Exit zero means operational completion of every
+point, not that every point passed its measured gates.
+
+A unique `results/lswb-replay/<tag>-<mode>-<time>-<suffix>/` contains the resolved
+`manifest.json`, reproduction command, shared `boot/` evidence and metrics,
+`cN/repeat-NN/` replay artifacts, `replay.log`, and incremental `summary.json` /
+`summary.csv`. Summaries preserve the existing runner's rates and duration basis;
+original replay includes drain in its rate denominator, while request-slot FIFO
+uses its existing fixed-window and queue-inclusive SLO accounting. Never combine
+these protocols as one comparison. Completeness, response success (inclusive)
+and TTFT p90 (strictly below threshold) are separate fields. All failed points
+remain visible, and no best configuration is selected automatically. The legacy
+request-timing collector is count-based; this script does not relabel it as an
+exact per-request join or enable the older frontend diagnostic patch.
+
+For direct replay use, `LSWB_RUN_ROOT` optionally supplies a fresh absolute output
+path under `RESULTS_HOST/lswb-replay`; `REPLAY_MINIMUM_SUCCESS_RATE` forwards a
+finite threshold in [0,1]. Unset both to preserve standalone defaults.
+
+### HiCache reset qualification
+
+A fixed `HICACHE_RATIO` reuses the existing CPU-L2 policy for an entire sweep.
+A ratio alone does **not** establish equal host-memory bytes between modes.
+The CPU implementation cannot establish that GPU copies finish before host/device
+cache reset. Until independently qualified on H100, HiCache sweeps fail before
+loading the model. Supply `HICACHE_RESET_RECEIPT=/absolute/path/to/receipt.json`
+only after separately authorized reset qualification for that exact mode, ratio,
+image and fork pair. The JSON receipt binds those identities to checks
+`gpu_cache_empty`, `host_cache_empty`, and `transfers_drained`, all true, plus an
+absolute `evidence_path` and its `evidence_sha256`. Required identity fields are
+`image_id`, `integration`, `mode`, numeric `hicache_ratio`, and `fork_commits`
+(the non-parent source-preflight keys and their exact commits). The receipt and
+its hash are retained in the sweep manifest. This is an explicit evidence gate,
+not a flag that certifies reset safety or proof that host budgets are matched.
+Do not fabricate a receipt to bypass the GPU qualification gate.
+
+CPU checks (no Docker server, weights or GPUs):
+
+```bash
+python3 -W error::ResourceWarning -m unittest \
+  scripts.modal.tests.LswbSweepTests scripts.modal.tests.LocalScriptTests \
+  scripts.modal.tests.ServingClientTests -v
+bash -n scripts/local/sweep-lswb.sh scripts/local/bench-lswb.sh
+```
+
+A separately authorized two-point GPU smoke per mode remains required once the
+v0.5.22 image is ready. Check cold-cache isolation, graph coverage, distinct
+artifacts and server cleanup. Rollback: use `serve.sh` and `bench-lswb.sh` directly;
+no runtime or kernel behavior changes in this sweep feature.
+
 ## CPU-L2 HiCache screening
 
 Set `HICACHE_RATIO=2` before `serve.sh native` to enable CPU-L2 HiCache with

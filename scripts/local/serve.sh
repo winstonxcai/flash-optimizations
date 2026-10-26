@@ -215,7 +215,9 @@ if [ -n "${REQUEST_METRICS_DIR:-}" ]; then
 import inspect
 from sglang.srt.observability.req_time_stats import APIServerReqTimeStats
 stats = APIServerReqTimeStats()
-stats.first_token_time = 1.0
+# A real first output follows request creation; v0.5.22 enforces that contract.
+stats.created_time = 1.0
+stats.first_token_time = 2.0
 assert "first_output_ts" in stats.convert_to_output_meta_info(), "active SGLang source lacks first_output_ts; pull/select the updated Python fork"
 print("Request timing source:", inspect.getsourcefile(APIServerReqTimeStats))
 ' || exit 1

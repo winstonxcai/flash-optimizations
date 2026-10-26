@@ -112,6 +112,32 @@ The VDI has separate VS Code Remote SSH windows for two GPU nodes:
   Add or retain `Author: Winston Cai.` in the top docstring/comment for Remnant
   changes, using the file's existing language and format.
 
+### Branch naming
+
+Use model-oriented names for new branches. `<model>` includes the model family
+and variant, for example `glm53-flash`.
+
+| Purpose | Pattern | Example |
+|---|---|---|
+| Maintained model implementation | `<model>-packed` | `glm53-flash-packed` |
+| Performance work | `perf/<model>/<topic>` | `perf/glm53-flash/loader` |
+| Fixes | `fix/<model>/<topic>` | `fix/glm53-flash/retraction` |
+| Experiments | `exp/<model>/<topic>` | `exp/glm53-flash/cache-layout` |
+| Shared infrastructure | `<type>/shared/<topic>` | `fix/shared/modal-budget` |
+
+- Use lowercase names and hyphens within each slash-separated component. Do not
+  automatically prepend agent or tool names such as `codex/`; honor an exact
+  branch name explicitly requested by the user.
+- Use matching implementation branch names in the parent and affected forks.
+  Each repository still owns its commits; update submodule pins separately.
+- Include hardware or backend names only when the implementation differs.
+  H100 and H20 can share an implementation branch when they use the same kernels.
+- Preserve existing integration branches and published legacy names until an
+  explicit migration is agreed. This convention does not authorize renaming or
+  deleting existing branches.
+- Exact submodule commits remain authoritative for source identity. A branch
+  name does not establish which code was built or which validation passed.
+
 ## Code quality and engineering practices
 
 Aim for code that another engineer can read, reproduce, and safely extend.
