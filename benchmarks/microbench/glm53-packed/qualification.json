@@ -7,8 +7,8 @@
     "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/resolve/46a050bec13002ad29ee795c16e61cf4fa3c4a9c/config.json"
   },
   "budget": {
-    "authorized_usd": 35,
-    "routine_cutoff_usd": 31.410829025143784,
+    "authorized_usd": 40,
+    "routine_cutoff_usd": 36.410829025143784,
     "conservative_accrued_usd": 29.746413092417114,
     "h100_seconds": 21093.469966748977,
     "accounts": {
@@ -29694,12 +29694,12 @@
     "status": "complete",
     "protocol": "remnant-glm-decode-v1",
     "budget": {
-      "authorized_usd": 15,
-      "routine_cutoff_usd": 12,
+      "authorized_usd": 20,
+      "routine_cutoff_usd": 17,
       "cpu_cap_usd": 3,
-      "gpu_cap_usd": 9,
+      "gpu_cap_usd": 14,
       "reserve_usd": 3,
-      "h100_seconds_cap": 7200,
+      "h100_seconds_cap": 8100,
       "conservative_usd": 10.33558406727334,
       "cpu_usd": 1.338440686884328,
       "gpu_usd": 8.638407919896165,
@@ -56557,7 +56557,29 @@
       },
       "containers": [],
       "compute_excludes_credits_and_storage": true
-    }
+    },
+    "limit_changes": [
+      {
+        "date": "2026-10-26T14:54:42.492887+00:00",
+        "reason": "User approved 15 extra H100 minutes and an additional $5 for pending GPU validation and lint/CI cleanup",
+        "before": {
+          "authorized_usd": 15,
+          "routine_cutoff_usd": 12,
+          "cpu_cap_usd": 3,
+          "gpu_cap_usd": 9,
+          "reserve_usd": 3,
+          "h100_seconds_cap": 7200
+        },
+        "after": {
+          "authorized_usd": 20,
+          "routine_cutoff_usd": 17,
+          "cpu_cap_usd": 3,
+          "gpu_cap_usd": 14,
+          "reserve_usd": 3,
+          "h100_seconds_cap": 8100
+        }
+      }
+    ]
   },
   "post_review_fixes": {
     "date": "2026-10-26",
@@ -56678,6 +56700,78 @@
       "run_url": "https://github.com/winstonxcai/sglang/actions/runs/40325901613"
     },
     "parent_pin_update": "4150a42d3969cd8264ebc5d333ef67148bc6b6c7"
+  },
+  "review_gpu_validation": {
+    "status": "prepared_locally_cloud_pending",
+    "scope": "Adapter >2GiB addressing; relocated CPU artifacts; focused Direct numerical/graph and three-tool sanitizer validation",
+    "account": "caiw",
+    "formatting_transition": {
+      "schema": "remnant-glm-format-transition-v1",
+      "base_image": "im-mOJP6OgY2aRiQ72iNrHoMk",
+      "base_commits": {
+        "sglang": "246ee03c1ad5e0b647383644039c32b8c71bf680",
+        "flashmla": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8"
+      },
+      "files": {
+        "0/aot/csrc/flashmla_extension.cc": {
+          "before": "378d84fe704e26b9c33faab5d14d9c84d028635c65ef35722b96c551c9cd80a4",
+          "after": "9bbe5fccdba88e4cdd7e2b241f247a3010182d4d38d5fb73650e6a76b013b016"
+        },
+        "0/aot/csrc/remnant/packed_to_native.cu": {
+          "before": "2e96fb5fca9ebc0654db17ef1a774f0c6798619e61534a8f844aab0671bcd8bb",
+          "after": "a0a6a680945118148d137a9207c3b0685ded4f8e4c9a20ad4d15f852d8f81f77"
+        },
+        "0/aot/python/sgl_kernel/flash_mla.py": {
+          "before": "cf53845b399dda5b5172c0afab1ea159ac8d11ea48f4c0ec61a907e73a866744",
+          "after": "b0696a52d1c4e08ecac51fb9537205cad3af7424e025ead38196c4e6cc241461",
+          "ast_sha256": "518a1bbfceab44006dd20c48f388d3044f7c597bd9526b221c34bab8abe9218d"
+        },
+        "0/jit/include/sgl_kernel/glm_packed_decode.cuh": {
+          "before": "fe80ac2befd8726e056775770f665a34ff7df17ae73546a7e3aa2e79c2e1512f",
+          "after": "98cdd5b3e0a448384315b9de656991598165071e13d7839990d05fb633775fad"
+        },
+        "0/ops/attention/dsa/tilelang_kernel.py": {
+          "before": "20660ea4580c546319126f1d1c890b9975b048f06ca75d1f97e9d6bc22efa6a3",
+          "after": "896bcc9eeea917aff8d0283d06a6201ef0205a5739395825d1d20a852601847b",
+          "ast_sha256": "97c77357dece31a9ddc1b91d3ed459059336758f2e24d9edc0d458d56e02b4c2"
+        }
+      },
+      "formatter": "clang-format 20.1.7",
+      "scope": "Formatting only; JIT variants CPU-prepared; base AOT binaries hash-verified",
+      "ast_python_minor": [
+        3,
+        12
+      ]
+    },
+    "local_checks": {
+      "cpu_passed": 176,
+      "gpu_skips": 104,
+      "subtests": 10,
+      "source_rebuild_unit_tests": 6,
+      "lint_hooks": [
+        "isort",
+        "ruff",
+        "ruff-format",
+        "clang-format",
+        "codespell",
+        "registered-test ownership",
+        "pytest entry points"
+      ]
+    },
+    "historical_results": "Preserved without relabeling; no new attention timing requested",
+    "run_ids": [],
+    "initial_compute_snapshot": "data/glm53-packed/review-validation-20261026/initial-spend.json",
+    "sglang": "9185c6d2511508ecf40e86101040bbc2dffb1135",
+    "parent_base": "855ca87ee5e9454607980301f9d2605c3678c953",
+    "controller": {
+      "path": "data/glm53-packed/review-validation-20261026/controller.py",
+      "sha256": "463d74346d1ffa45aabc2b7db9192e23677e0cd1c7954604ddd169f14f6b00f0",
+      "template": "data/glm53-packed/glm53-optimized-prepare-20261026T084937Z/controller.py"
+    },
+    "format_transition_artifact": {
+      "path": "data/glm53-packed/review-validation-20261026/format-transition.json",
+      "sha256": "730900d55109e450c0056358398d231138e1531e69ae426fe4db93cb79184a6e"
+    },
+    "independent_review": "Two preflight findings (AST interpreter mismatch and inherited image selectors) fixed before paid work; independent follow-up found no blockers."
   }
-
 }

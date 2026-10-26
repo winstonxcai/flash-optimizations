@@ -13,6 +13,18 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Parent based on `855ca87`, v0.5.22 SGLang `9185c6d25115` / FlashMLA
+  `3eb85944fd7d`: resolve fork lint debt, preserve immutable historical fixtures,
+  register executable CPU tests and explicit custom-build CUDA ownership, and
+  propagate pytest exit codes. Explicit CPU preparation verifies a five-file
+  format-only transition with raw hashes, pinned clang-format and Python3.12 AST
+  identity before retaining base AOT binaries; ordinary reuse remains strict.
+  Independent review and six rebuild regressions pass. Expanded local checks:
+  176 passed, 104 GPU skips and 10 subtests; previously failing lint hooks pass.
+  Cloud preparation and focused H100 checks are pending in the canonical ledger.
+  The user added $5 and 15 H100 minutes; retain every previous cost and failure.
+
+
 - Parent integration `4150a42` (runtime fixes `6f83b1f`), v0.5.22 SGLang
   `fbd8a02269f7` / FlashMLA `3eb85944fd7d`: address review findings in Adapter int64 addressing, effective
   attention dispatch, single-mode timing, named container configuration, TP/EP/

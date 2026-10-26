@@ -313,6 +313,8 @@ def _reuse_glm_cpu_artifacts(build: Path, deadline: float, binding_requirements:
     """Fast CPU preparation for harness-only changes, with strict binary binding."""
     from scripts.sources import glm_compile_owner_digest
 
+    if os.environ.get("REMNANT_GLM_CPU_REBUILD_FROM"):
+        return False
     snapshot = Path("/opt/remnant-glm-reuse-base.json")
     if not os.environ.get("REMNANT_COMPILED_IMAGE") or not snapshot.is_file():
         return False
@@ -611,6 +613,8 @@ def _build_image() -> None:
         "base_image": INTEGRATION["base_image"],
         "compiled_base_image": os.environ.get("REMNANT_COMPILED_IMAGE"),
         "cpu_rebuild_from": os.environ.get("REMNANT_GLM_CPU_REBUILD_FROM"),
+        "formatting_transition": (json.loads(Path("/opt/remnant-cpu-rebuild-base.json").read_text()).get("formatting_transition")
+                                  if os.environ.get("REMNANT_GLM_CPU_REBUILD_FROM") else None),
         "launcher_sha256": hashlib.sha256(Path("/opt/remnant-launcher.py").read_bytes()).hexdigest(),
         "sources": sources,
         "source_identities": SOURCE_IDENTITIES,
@@ -687,6 +691,7 @@ _ignore = modal.FilePatternMatcher(
 )
 
 
+transition = None
 compiled_image_id = os.environ.get("REMNANT_COMPILED_IMAGE") if MODEL_FAMILY == "glm53" else None
 if compiled_image_id:
     from scripts.sources import compiled_source_digest
@@ -705,15 +710,64 @@ if compiled_image_id:
 elif MODEL_FAMILY == "glm53" and os.environ.get("REMNANT_GLM_CPU_REBUILD_FROM"):
     # Explicit CPU rebuild, never a relaxed ordinary source-reuse check.
     from scripts.sources import glm_rebuild_source_digest
-    candidate = glm_rebuild_source_digest([SGLANG_SOURCE / "python/sglang/kernels", FLASHMLA_SOURCE / "csrc"])
-    base = dict(sglang="889edf56b33226c80b17ddf3472c1206df62c3f0", flashmla="3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8")
-    code = ("from scripts.sources import verify_glm_cpu_rebuild; "
-            f"verify_glm_cpu_rebuild({base!r}, {candidate!r}, {[str(SGLANG_ROOT / 'python/sglang/kernels'), str(FLASHMLA_ROOT / 'csrc')]!r})")
-    kernel_base = (modal.Image.from_id(os.environ["REMNANT_GLM_CPU_REBUILD_FROM"])
+
+    transition_path = os.environ.get("REMNANT_GLM_FORMAT_TRANSITION")
+    transition_json = os.environ.get("REMNANT_GLM_FORMAT_TRANSITION_JSON")
+    transition = (
+        json.loads(transition_json)
+        if transition_json
+        else json.loads(Path(transition_path).read_text())
+        if transition_path
+        else None
+    )
+    if (
+        transition
+        and transition["base_image"] != os.environ["REMNANT_GLM_CPU_REBUILD_FROM"]
+    ):
+        raise RuntimeError("GLM formatting transition names a different base image")
+    roots = [SGLANG_SOURCE / "python/sglang/kernels", FLASHMLA_SOURCE / "csrc"]
+    candidate = glm_rebuild_source_digest(
+        roots, tuple(transition["files"]) if transition else ()
+    )
+    base = (
+        transition["base_commits"]
+        if transition
+        else dict(
+            sglang="889edf56b33226c80b17ddf3472c1206df62c3f0",
+            flashmla="3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+        )
+    )
+    remote_roots = [
+        str(SGLANG_ROOT / "python/sglang/kernels"),
+        str(FLASHMLA_ROOT / "csrc"),
+    ]
+    code = (
+        "from scripts.sources import verify_glm_cpu_rebuild; "
+        f"verify_glm_cpu_rebuild({base!r}, {candidate!r}, {remote_roots!r}, {transition!r})"
+    )
+    kernel_base = (
+        modal.Image.from_id(os.environ["REMNANT_GLM_CPU_REBUILD_FROM"])
         .env({"PYTHONPATH": f"{REMOTE_REPO}:{SGLANG_ROOT / 'python'}"})
-        .add_local_file(REPO_ROOT / "scripts/sources.py", str(REMOTE_REPO / "scripts/sources.py"), copy=True)
-        .run_commands("python3 -c " + shlex.quote(code))
-        .add_local_dir(SGLANG_SOURCE, str(SGLANG_ROOT), copy=True, ignore=_ignore))
+        .add_local_file(
+            REPO_ROOT / "scripts/sources.py",
+            str(REMOTE_REPO / "scripts/sources.py"),
+            copy=True,
+        )
+    )
+    if transition:
+        kernel_base = kernel_base.pip_install("clang-format==20.1.7")
+    kernel_base = kernel_base.run_commands(
+        "python3 -c " + shlex.quote(code)
+    ).add_local_dir(SGLANG_SOURCE, str(SGLANG_ROOT), copy=True, ignore=_ignore)
+    if transition:
+        proof = (
+            "from scripts.sources import verify_glm_formatting; "
+            f"verify_glm_formatting({transition!r}, {remote_roots!r}, candidate=True)"
+        )
+        kernel_base = kernel_base.run_commands("python3 -c " + shlex.quote(proof))
+    kernel_base = kernel_base.dockerfile_commands(
+        f"LABEL remnant.integration={INTEGRATION['version']} remnant.sglang={SOURCE_IDENTITIES['sglang']['commit']} remnant.flashmla={SOURCE_IDENTITIES['flashmla']['commit']}"
+    )
 elif INTEGRATION["version"] == "v0.5.22":
     kernel_base = modal.Image.from_dockerfile(
         str(REPO_ROOT / INTEGRATION["dockerfile"]),
@@ -768,10 +822,11 @@ kernel_image = (
             ),
             "TRITON_CACHE_DIR": "/opt/remnant-triton-glm" if MODEL_FAMILY == "glm53" else "/triton-cache",
             "REMNANT_MODEL_FAMILY": MODEL_FAMILY,
-            **({"REMNANT_COMPILED_IMAGE": compiled_image_id} if compiled_image_id else {}),
-            **({"REMNANT_GLM_CPU_REBUILD_FROM": os.environ["REMNANT_GLM_CPU_REBUILD_FROM"]} if os.environ.get("REMNANT_GLM_CPU_REBUILD_FROM") else {}),
+            "REMNANT_COMPILED_IMAGE": compiled_image_id or "",
+            "REMNANT_GLM_CPU_REBUILD_FROM": "" if compiled_image_id else os.environ.get("REMNANT_GLM_CPU_REBUILD_FROM", ""),
             "REMNANT_GLM_MODEL_CONFIG": "/opt/remnant-glm-config.json",
             "REMNANT_GLM_COMPILE_MANIFEST": "/opt/remnant-glm-compile.json",
+            "REMNANT_GLM_FORMAT_TRANSITION_JSON": json.dumps(transition) if transition else "",
             **({"TILELANG_DEFAULT_TARGET": json.dumps({"kind": "cuda", "arch": "sm_90a"}), "TILELANG_CACHE_DIR": "/opt/remnant-tilelang-glm"} if MODEL_FAMILY == "glm53" else {}),
         }
     )

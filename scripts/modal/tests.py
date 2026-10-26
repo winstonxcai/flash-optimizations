@@ -2329,6 +2329,124 @@ class GLMCPURebuildTests(unittest.TestCase):
                 sources.glm_compile_owner_digest(root),
             )
 
+    def test_format_transition_checks_raw_hashes_ast_and_formatter(self):
+        import hashlib
+        from scripts.sources import verify_glm_formatting
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            python = root / "aot/python/sgl_kernel/flash_mla.py"
+            cpp = root / "aot/csrc/flashmla_extension.cc"
+            for path in (python, cpp):
+                path.parent.mkdir(parents=True, exist_ok=True)
+            old_py, new_py = b"x=1\n", b"x = 1\n"
+            old_cpp, new_cpp = b"int x=1;\n", b"int x = 1;\n"
+            sha = lambda data: hashlib.sha256(data).hexdigest()
+            proof = dict(
+                schema="remnant-glm-format-transition-v1",
+                ast_python_minor=list(sys.version_info[:2]),
+                files={
+                    "0/aot/python/sgl_kernel/flash_mla.py": dict(
+                        before=sha(old_py),
+                        after=sha(new_py),
+                        ast_sha256=sha(
+                            ast.dump(
+                                ast.parse(old_py), include_attributes=False
+                            ).encode()
+                        ),
+                    ),
+                    "0/aot/csrc/flashmla_extension.cc": dict(
+                        before=sha(old_cpp), after=sha(new_cpp)
+                    ),
+                },
+            )
+            python.write_bytes(old_py)
+            cpp.write_bytes(old_cpp)
+            with self.assertRaisesRegex(RuntimeError, "Python minor"):
+                verify_glm_formatting(
+                    {**proof, "ast_python_minor": [0, 0]}, [str(root)], candidate=True
+                )
+
+            def formatter(args, **kwargs):
+                return "clang-format version 20.1.7" if "--version" in args else new_cpp
+
+            with patch(
+                "scripts.sources.subprocess.check_output", side_effect=formatter
+            ):
+                verify_glm_formatting(proof, [str(root)], candidate=False)
+            python.write_bytes(new_py)
+            cpp.write_bytes(new_cpp)
+            verify_glm_formatting(proof, [str(root)], candidate=True)
+            python.write_bytes(b"x = 2\n")
+            with self.assertRaisesRegex(RuntimeError, "source changed"):
+                verify_glm_formatting(proof, [str(root)], candidate=True)
+            proof["files"]["0/aot/python/sgl_kernel/flash_mla.py"]["after"] = sha(
+                python.read_bytes()
+            )
+            with self.assertRaisesRegex(RuntimeError, "Python semantics"):
+                verify_glm_formatting(proof, [str(root)], candidate=True)
+            with self.assertRaisesRegex(RuntimeError, "Unsupported"):
+                verify_glm_formatting(
+                    dict(
+                        schema=proof["schema"],
+                        ast_python_minor=list(sys.version_info[:2]),
+                        files={"0/../unsafe": {}},
+                    ),
+                    [str(root)],
+                    candidate=True,
+                )
+
+    def test_explicit_cpu_rebuild_never_uses_inherited_ordinary_cache(self):
+        with (
+            patch.dict(
+                os.environ,
+                REMNANT_GLM_CPU_REBUILD_FROM="explicit",
+                REMNANT_COMPILED_IMAGE="inherited",
+            ),
+            patch.object(kernels, "_glm_launch_metadata") as metadata,
+        ):
+            self.assertFalse(kernels._reuse_glm_cpu_artifacts(Path("/unused"), 0, {}))
+            metadata.assert_not_called()
+        tree = ast.parse((kernels.REPO_ROOT / "scripts/modal/kernels.py").read_text())
+        image = next(
+            node.value
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name) and target.id == "kernel_image"
+                for target in node.targets
+            )
+        )
+        env = next(
+            node.args[0]
+            for node in ast.walk(image)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "env"
+        )
+        namespace = dict(
+            MODEL_FAMILY="glm53",
+            INTEGRATION={"version": "v0.5.22"},
+            json=json,
+            os=SimpleNamespace(environ={"REMNANT_GLM_CPU_REBUILD_FROM": "explicit"}),
+            compiled_image_id=None,
+            transition={"proof": "verified"},
+            SOURCE_IDENTITIES={},
+            SGLANG_ROOT=Path("/sg"),
+            FLASHMLA_ROOT=Path("/fm"),
+            REMOTE_REPO=Path("/repo"),
+            NATIVE_LIBRARY=Path("/native"),
+            MANIFEST=Path("/manifest"),
+            VALIDATION_TIMEOUT_S=660,
+        )
+        values = eval(compile(ast.Expression(env), "image-env", "eval"), namespace)
+        self.assertEqual(values["REMNANT_COMPILED_IMAGE"], "")
+        self.assertEqual(values["REMNANT_GLM_CPU_REBUILD_FROM"], "explicit")
+        self.assertEqual(
+            json.loads(values["REMNANT_GLM_FORMAT_TRANSITION_JSON"]),
+            {"proof": "verified"},
+        )
+
     def test_compiled_source_allowlist(self):
         from scripts.sources import glm_rebuild_source_digest
 

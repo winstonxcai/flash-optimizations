@@ -426,3 +426,13 @@ explicit reason; their maintained Modal pytest runner and required gates are
 unchanged. GLM-owned Python files use the CI-pinned isort 7 / Ruff 0.15.1 tools.
 Repository-wide CI still reports older formatting/registry debt elsewhere and
 the missing `run-ci` GPU gate; this follow-up does not enable broader GPU jobs.
+
+
+The explicit GLM CPU rebuild can accept a recorded formatting transition via
+`REMNANT_GLM_CPU_REBUILD_FROM` and `REMNANT_GLM_FORMAT_TRANSITION`. This gate is
+limited to five named compiled inputs, exact old/new hashes, pinned C++ formatter
+output and Python-minor-specific AST identity; all other compiled sources and
+base binaries remain exact. Candidate raw hashes are verified after overlay.
+It clears inherited image selectors and records retained AOT provenance while
+CPU-preparing the GLM JIT artifacts. Normal compiled-image reuse is unchanged.
+See the existing GLM experiment index for the approved budget and execution.

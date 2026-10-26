@@ -758,3 +758,30 @@ Rollback: Native selection or SGLang `889edf56b332`. Code and evidence are commi
 without pushing. The maintained entry point for reproduction is
 `scripts/modal/kernels.py::benchmark_kernels --model-family glm53 --suite glm-attention --phase decode`;
 exact scoped qualification/run IDs, image recipe, commands and costs are in JSON.
+
+
+## Review GPU validation and CI cleanup (2026-10-26)
+
+Question: do the reviewed Adapter address fix and relocated artifact interface
+execute correctly on H100 after resolving the fork's lint debt? Use the maintained
+`kernels.py::prepare_kernels` and `validate_kernels` entry points. Run the existing
+focused Direct byte/graph/partial gates and all three sanitizers, then the new
+Adapter >2 GiB test under all three tools. This is validation, not new timing.
+
+The user added $5 and 15 H100 minutes: this phase now has $20 total, $17 routine
+cutoff, $3 CPU, $14 GPU, $3 protected reserve and 135 aggregate H100 minutes.
+Previous expenditure and all failures remain counted. Full-model loading and
+serving remain outside this task. Stop on failed preparation; no GPU compilation.
+
+Lint cleanup uses the pinned isort7/Ruff0.15.1/clang-format20.1.7 tools. Immutable
+`main_packed` historical fixtures and generated API files retain their bytes.
+CPU test registrations have executable entry points; custom-build CUDA tests
+retain explicit manual qualification ownership through the maintained runner.
+
+The explicit CPU rebuild consumes `format-transition.json` in this task's ignored
+artifact directory. It verifies the accepted base image/commits, every existing
+binary, and all unchanged compiled sources. Five declared formatting inputs are
+bound by exact before/after hashes, pinned C++ formatting, and Python3.12 AST
+identity. Exact candidate hashes are checked after overlay; JIT owners are CPU
+prepared again. Ordinary source/image reuse checks remain strict. Record all
+new artifact identities and results in the existing canonical JSON.
