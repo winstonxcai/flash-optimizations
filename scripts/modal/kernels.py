@@ -345,6 +345,10 @@ def _build_image() -> None:
                 deadline,
             ),
         }
+    if MODEL_FAMILY == "glm53":
+        help_text = _run_command([SANITIZER, "--help"], build / "sanitizer-help.log", deadline)
+        if any(option not in help_text for option in ("kernel-name", "dump-kernel-launches")):
+            raise RuntimeError("Qualified sanitizer lacks focused launch reporting")
     cpu_environment = _cpu_preflight_environment(build)
     # Fail on a broken base-image driver linkage before paying for compilation.
     _run_command(
@@ -853,7 +857,8 @@ def benchmark_kernels(
 )
 def validate_kernels(
     run_id: str, sanitizer: bool = False, max_seconds: int = RUN_BUDGETS_S["validation"],
-    model_family: str = "dsv4", stage: str = "numerical", cases: str = "", sanitizer_tools: str = ""
+    model_family: str = "dsv4", stage: str = "numerical", cases: str = "", sanitizer_tools: str = "",
+    sanitizer_scope: str = "all",
 ) -> str:
     """Run existing GPU tests; skipped tests fail coverage. Optional three sanitizers."""
     if model_family != MODEL_FAMILY:
@@ -868,6 +873,11 @@ def validate_kernels(
         if cases:
             raise ValueError("--cases is only supported for the GLM corrective stage")
         selected_tests = VALIDATION_TESTS
+    if sanitizer_scope not in ("all", "glm-decode"):
+        raise ValueError("sanitizer_scope must be all or glm-decode")
+    if sanitizer_scope == "glm-decode" and (MODEL_FAMILY != "glm53" or stage != "corrective"
+            or not sanitizer or set(selected_tests) != {GLM_TEST + "::test_packed_loader_bytes", GLM_DECODE_GRAPH}):
+        raise ValueError("glm-decode sanitizer scope requires the exact focused decode tests")
     sanitizer = sanitizer or stage == "sanitizer"
     selected_tools = _selected_sanitizer_tools(sanitizer_tools, sanitizer, model_family)
     maximum = min(2640, VALIDATION_TIMEOUT_S - 60)
@@ -880,6 +890,7 @@ def validate_kernels(
     ):
         environment = dict(os.environ)
         record["sanitizer"] = sanitizer
+        record["sanitizer_scope"] = sanitizer_scope
         record["selected_sanitizer_tools"] = selected_tools
         record["sanitizer_qualification_complete"] = False
         if MODEL_FAMILY == "glm53":
@@ -1027,6 +1038,11 @@ def validate_kernels(
                 if int(deadline - time.monotonic()) <= 0:
                     break
                 prefix = (SANITIZER, "--tool", tool, "--error-exitcode", "1")
+                if sanitizer_scope == "glm-decode":
+                    # All compiled byte/partial/combine entry points have this
+                    # name. Include their inline device helpers; retain full graph
+                    # execution while excluding unchanged framework kernels.
+                    prefix += ("--kernel-name", "kns=main_kernel", "--dump-kernel-launches")
                 try:
                     _run_pytest(selected_tests if stage == "corrective" else SANITIZER_TESTS, root, tool, deadline, prefix=prefix)
                 except TimeoutError:
@@ -1473,6 +1489,9 @@ def _glm_timing_qualification(run_ids: str, *, allow_incomplete: bool = False, p
                     continue
                 _check_glm_interrupted_checkpoint(json.loads(note.read_text()), root, run_id, tool, log)
             _check_sanitizer_report(log, tool)
+            if phase == "decode" and result.get("sanitizer_scope") == "glm-decode":
+                if "main_kernel" not in log or not re.search(r"(?i)(checked|checking|filter|launch)", log):
+                    raise RuntimeError(f"Missing checked TileLang launch evidence: {run_id}/{tool}")
             if phase == "decode":
                 tree = ET.parse(root / f"{tool}.xml")
                 tests = list(tree.iter("testcase"))

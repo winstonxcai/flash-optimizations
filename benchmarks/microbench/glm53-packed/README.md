@@ -560,3 +560,12 @@ Stop on correctness, source, codegen, resource or budget failures. No prefill
 timing, weights, serving, WGMMA or asynchronous staging changes. Rollback: Native
 or SGLang 889edf56. Raw outputs live in timestamped data/glm53-packed directories;
 qualification.json remains the aggregate ledger.
+
+Focused decode sanitizer runs can select `--sanitizer-scope glm-decode`. The
+filter `kns=main_kernel` covers the byte probe, Native/Direct partial attention
+and combine entry points, including inline expansion. Full graphs still execute;
+unchanged PyTorch/FlashInfer kernels are excluded from this focused instrumented
+scope. Launch dumps must prove checked TileLang launches. Default instrumentation
+remains all kernels, and broad qualification remains incomplete. The initial
+unfiltered attempt passed all five numerical/graph cases, then was stopped after
+synccheck stalled in CUDA graph replay; it provides no completed sanitizer gate.
