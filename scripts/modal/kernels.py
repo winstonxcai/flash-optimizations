@@ -35,13 +35,14 @@ import os
 import re
 import shutil
 import shlex
+import signal
 import subprocess
 import sys
 import sysconfig
 import time
 import urllib.request
 import xml.etree.ElementTree as ET
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -55,10 +56,28 @@ from scripts.modal.kernel_qualification import (
 )
 from scripts.sources import check_sources, integration_profile
 
+
+def _resolve_image_sources(
+    model_family: str, environment: Mapping[str, str]
+) -> tuple[str | None, str | None]:
+    """Resolve mutually exclusive reuse/rebuild settings before image creation."""
+    if model_family != "glm53":
+        return None, None
+    compiled = environment.get("REMNANT_COMPILED_IMAGE") or None
+    rebuild = environment.get("REMNANT_GLM_CPU_REBUILD_FROM") or None
+    if compiled and rebuild:
+        raise ValueError(
+            "REMNANT_COMPILED_IMAGE and REMNANT_GLM_CPU_REBUILD_FROM are mutually "
+            "exclusive; unset the inherited setting before selecting an image"
+        )
+    return compiled, rebuild
+
+
 INTEGRATION = integration_profile()
 MODEL_FAMILY = os.environ.get("REMNANT_MODEL_FAMILY", "dsv4")
 if MODEL_FAMILY not in ("dsv4", "glm53") or (MODEL_FAMILY == "glm53" and INTEGRATION["version"] != "v0.5.22"):
     raise ValueError("GLM validation requires REMNANT_INTEGRATION=v0.5.22")
+compiled_image_id, rebuild_image_id = _resolve_image_sources(MODEL_FAMILY, os.environ)
 GLM_TEST = "test/registered/attention/unittests/test_glm5_remnant.py"
 GLM_CPU_TEST = "test/registered/unit/test_glm5_mla_cache_format.py"
 GLM_BENCHMARK_CPU = "benchmark/remnant/test_microbench.py"
@@ -692,7 +711,6 @@ _ignore = modal.FilePatternMatcher(
 
 
 transition = None
-compiled_image_id = os.environ.get("REMNANT_COMPILED_IMAGE") if MODEL_FAMILY == "glm53" else None
 if compiled_image_id:
     from scripts.sources import compiled_source_digest
 
@@ -707,7 +725,7 @@ if compiled_image_id:
         .add_local_dir(SGLANG_SOURCE, str(SGLANG_ROOT), copy=True, ignore=_ignore)
         .dockerfile_commands(f"LABEL remnant.integration={INTEGRATION['version']} remnant.sglang={SOURCE_IDENTITIES['sglang']['commit']} remnant.flashmla={SOURCE_IDENTITIES['flashmla']['commit']}")
     )
-elif MODEL_FAMILY == "glm53" and os.environ.get("REMNANT_GLM_CPU_REBUILD_FROM"):
+elif rebuild_image_id:
     # Explicit CPU rebuild, never a relaxed ordinary source-reuse check.
     from scripts.sources import glm_rebuild_source_digest
 
@@ -722,7 +740,7 @@ elif MODEL_FAMILY == "glm53" and os.environ.get("REMNANT_GLM_CPU_REBUILD_FROM"):
     )
     if (
         transition
-        and transition["base_image"] != os.environ["REMNANT_GLM_CPU_REBUILD_FROM"]
+        and transition["base_image"] != rebuild_image_id
     ):
         raise RuntimeError("GLM formatting transition names a different base image")
     roots = [SGLANG_SOURCE / "python/sglang/kernels", FLASHMLA_SOURCE / "csrc"]
@@ -746,7 +764,7 @@ elif MODEL_FAMILY == "glm53" and os.environ.get("REMNANT_GLM_CPU_REBUILD_FROM"):
         f"verify_glm_cpu_rebuild({base!r}, {candidate!r}, {remote_roots!r}, {transition!r})"
     )
     kernel_base = (
-        modal.Image.from_id(os.environ["REMNANT_GLM_CPU_REBUILD_FROM"])
+        modal.Image.from_id(rebuild_image_id)
         .env({"PYTHONPATH": f"{REMOTE_REPO}:{SGLANG_ROOT / 'python'}"})
         .add_local_file(
             REPO_ROOT / "scripts/sources.py",
@@ -823,7 +841,7 @@ kernel_image = (
             "TRITON_CACHE_DIR": "/opt/remnant-triton-glm" if MODEL_FAMILY == "glm53" else "/triton-cache",
             "REMNANT_MODEL_FAMILY": MODEL_FAMILY,
             "REMNANT_COMPILED_IMAGE": compiled_image_id or "",
-            "REMNANT_GLM_CPU_REBUILD_FROM": "" if compiled_image_id else os.environ.get("REMNANT_GLM_CPU_REBUILD_FROM", ""),
+            "REMNANT_GLM_CPU_REBUILD_FROM": rebuild_image_id or "",
             "REMNANT_GLM_MODEL_CONFIG": "/opt/remnant-glm-config.json",
             "REMNANT_GLM_COMPILE_MANIFEST": "/opt/remnant-glm-compile.json",
             "REMNANT_GLM_FORMAT_TRANSITION_JSON": json.dumps(transition) if transition else "",
@@ -1471,6 +1489,29 @@ def _cpu_preflight_environment(build: Path) -> dict[str, str]:
     return environment
 
 
+def _stop_command_group(process: subprocess.Popen) -> None:
+    """Stop our session, including compiler workers after their leader exits.
+
+    The outer allocation reserves cleanup time. Waiting for the leader alone
+    does not establish that its workers stopped, so always signal the group
+    again after waiting for the leader. Orphan zombies need no additional waiting.
+    """
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        process.wait(timeout=5)
+        return
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        pass
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    process.wait(timeout=5)
+
+
 def _run_command(
     argv: Sequence[str],
     output: Path,
@@ -1478,7 +1519,7 @@ def _run_command(
     *,
     environment: dict[str, str] | None = None,
 ) -> str:
-    """Bound the child by the allocation budget; retain its output on failure."""
+    """Bound an owned process group; retain logs and clean up on interruption."""
     remaining = int(deadline - time.monotonic())
     if remaining <= 0:
         raise TimeoutError(f"Deadline reached before {list(argv)}")
@@ -1491,15 +1532,25 @@ def _run_command(
     ) + f"{SGLANG_ROOT / 'python'}:{REMOTE_REPO}"
     try:
         with output.open("w") as log:
-            subprocess.run(
+            process = subprocess.Popen(
                 list(argv),
                 stdout=log,
                 stderr=subprocess.STDOUT,
-                check=True,
-                timeout=remaining,
                 cwd=SGLANG_ROOT,
                 env=child_environment,
+                start_new_session=True,
             )
+            try:
+                returncode = process.wait(timeout=remaining)
+                if returncode:
+                    raise subprocess.CalledProcessError(returncode, list(argv))
+            except BaseException as error:
+                try:
+                    _stop_command_group(process)
+                except Exception as cleanup_error:
+                    error.add_note(f"Process group cleanup failed: {cleanup_error!r}")
+                    raise error from cleanup_error
+                raise
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as error:
         tail = output.read_text(errors="replace")[-4000:] if output.is_file() else ""
         raise RuntimeError(

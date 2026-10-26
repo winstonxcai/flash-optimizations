@@ -10,7 +10,9 @@ import inspect
 import io
 import json
 import os
+import runpy
 import shlex
+import signal
 import subprocess
 import sys
 import tempfile
@@ -534,7 +536,7 @@ class LauncherTests(unittest.TestCase):
             patch.object(kernels, "_run_context", return_value=nullcontext((self.root, record, 100))),
             patch.object(kernels.time, "monotonic", side_effect=[99.0, 99.01]),
             patch.object(kernels, "_run_pytest", side_effect=validate_or_run) as run,
-            patch.object(kernels.subprocess, "run") as command,
+            patch.object(kernels.subprocess, "Popen") as command,
         ):
             with self.assertRaisesRegex(RuntimeError, "qualification incomplete"):
                 function("fixture", sanitizer=True)
@@ -629,26 +631,117 @@ class LauncherTests(unittest.TestCase):
                     kernels._run_pytest(kernels.VALIDATION_TESTS, self.root, "missing", 100)
 
     def test_command_failures_show_log_path_tail_and_cause(self):
-        with patch.object(kernels.subprocess, "run") as process:
+        with patch.object(kernels.subprocess, "Popen") as process:
             with self.assertRaises(TimeoutError):
                 kernels._run_command(["command"], self.root / "output", 0)
             process.assert_not_called()
-            for failure in (
-                subprocess.CalledProcessError(1, ["command"]),
-                subprocess.TimeoutExpired(["command"], 30),
-                FileNotFoundError("command"),
+        with patch.object(kernels, "SGLANG_ROOT", self.root):
+            with self.assertRaisesRegex(RuntimeError, "specific compiler failure") as raised:
+                kernels._run_command(
+                    [sys.executable, "-c", "print('specific compiler failure'); raise SystemExit(7)"],
+                    self.root / "output", kernels.time.monotonic() + 30,
+                )
+            self.assertIn(str(self.root / "output"), str(raised.exception))
+            self.assertIsInstance(raised.exception.__cause__, subprocess.CalledProcessError)
+            self.assertEqual(raised.exception.__cause__.returncode, 7)
+            with self.assertRaises(RuntimeError) as missing:
+                kernels._run_command(
+                    [str(self.root / "absent")], self.root / "missing-command",
+                    kernels.time.monotonic() + 30,
+                )
+            self.assertIsInstance(missing.exception.__cause__, FileNotFoundError)
+
+    def test_command_timeout_stops_grandchild_after_leader_exits(self):
+        heartbeat = self.root / "heartbeat"
+        child = (
+            "import signal,sys,time\nfrom pathlib import Path\n"
+            "signal.signal(signal.SIGTERM, signal.SIG_IGN)\np=Path(sys.argv[1])\n"
+            "p.write_text('ready\\n')\nwhile True:\n"
+            "    with p.open('a') as stream: stream.write('alive\\n')\n"
+            "    time.sleep(.02)\n"
+        )
+        leader = (
+            "import subprocess,sys,time; "
+            "subprocess.Popen([sys.executable,'-c',sys.argv[1],sys.argv[2]]); "
+            "print('compiler workers started',flush=True); time.sleep(60)"
+        )
+        launched = []
+        real_popen = subprocess.Popen
+
+        def launch(*args, **kwargs):
+            process = real_popen(*args, **kwargs)
+            launched.append(process)
+            return process
+
+        try:
+            with (
+                patch.object(kernels, "SGLANG_ROOT", self.root),
+                patch.object(kernels.subprocess, "Popen", side_effect=launch) as start,
+                self.assertRaisesRegex(RuntimeError, "compiler workers started") as raised,
             ):
+                kernels._run_command(
+                    [sys.executable, "-c", leader, child, str(heartbeat)],
+                    self.root / "timeout.log", kernels.time.monotonic() + 2,
+                )
+            self.assertTrue(start.call_args.kwargs["start_new_session"])
+            self.assertIsInstance(raised.exception.__cause__, subprocess.TimeoutExpired)
+            self.assertLessEqual(raised.exception.__cause__.timeout, 2)
+            self.assertIsNotNone(launched[0].returncode)
+            self.assertIn("ready", heartbeat.read_text())
+            size = heartbeat.stat().st_size
+            kernels.time.sleep(.2)
+            self.assertEqual(heartbeat.stat().st_size, size)
+        finally:
+            for process in launched:
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                process.wait(timeout=5)
 
-                def fail(*args, failure=failure, **kwargs):
-                    kwargs["stdout"].write("specific compiler failure")
-                    raise failure
+    def test_command_interruption_cleans_group_and_preserves_interrupt(self):
+        process = MagicMock(pid=12345)
+        interruption = KeyboardInterrupt()
+        process.wait.side_effect = [interruption, 0, 0]
+        with (
+            patch.object(kernels.subprocess, "Popen", return_value=process),
+            patch.object(kernels.os, "killpg") as kill,
+            self.assertRaises(KeyboardInterrupt) as raised,
+        ):
+            kernels._run_command(["compiler"], self.root / "interrupted.log",
+                                 kernels.time.monotonic() + 30)
+        self.assertIs(raised.exception, interruption)
+        self.assertEqual(kill.call_args_list, [call(12345, signal.SIGTERM), call(12345, signal.SIGKILL)])
+        self.assertEqual(process.wait.call_args_list[-2:], [call(timeout=5), call(timeout=5)])
 
-                process.side_effect = fail
-                with self.assertRaisesRegex(RuntimeError, "specific compiler failure") as raised:
-                    kernels._run_command(["command"], self.root / "output", kernels.time.monotonic() + 30)
-                self.assertIn(str(self.root / "output"), str(raised.exception))
-                self.assertIs(raised.exception.__cause__, failure)
-                self.assertLessEqual(process.call_args.kwargs["timeout"], 30)
+    def test_command_cleanup_escalates_and_reports_failure(self):
+        process = MagicMock(pid=12345)
+        process.wait.side_effect = [subprocess.TimeoutExpired("compiler", 5), 0]
+        with patch.object(kernels.os, "killpg") as kill:
+            kernels._stop_command_group(process)
+        self.assertEqual(kill.call_args_list, [call(12345, signal.SIGTERM), call(12345, signal.SIGKILL)])
+        with (
+            patch.object(kernels.os, "killpg", side_effect=PermissionError("denied")),
+            self.assertRaises(PermissionError),
+        ):
+            kernels._stop_command_group(process)
+
+    def test_command_cleanup_failure_retains_original_exit_status(self):
+        process = MagicMock(pid=12345)
+        process.wait.return_value = 7
+        cleanup_error = PermissionError("denied")
+        with (
+            patch.object(kernels.subprocess, "Popen", return_value=process),
+            patch.object(kernels, "_stop_command_group", side_effect=cleanup_error),
+            self.assertRaises(RuntimeError) as raised,
+        ):
+            kernels._run_command(["compiler"], self.root / "cleanup-failure.log",
+                                 kernels.time.monotonic() + 30)
+        failure = raised.exception.__cause__
+        self.assertIsInstance(failure, subprocess.CalledProcessError)
+        self.assertEqual(failure.returncode, 7)
+        self.assertIs(failure.__cause__, cleanup_error)
+        self.assertIn("Process group cleanup failed", failure.__notes__[0])
 
     def test_records_survive_failure_and_ids_cannot_overwrite(self):
         manifest = self.root / "image.json"
@@ -1824,7 +1917,8 @@ class PrefillReadLauncherTests(unittest.TestCase):
             directory, original = environment["LD_LIBRARY_PATH"].split(":")
             self.assertEqual(original, "/real-driver")
             self.assertTrue(Path(directory, "libcuda.so.1").samefile(stub))
-            with patch.object(kernels.subprocess, "run") as process:
+            with patch.object(kernels.subprocess, "Popen") as process:
+                process.return_value.wait.return_value = 0
                 deadline = kernels.time.monotonic() + 30
                 kernels._run_command(
                     ["cpu-check"],
@@ -2396,6 +2490,35 @@ class GLMCPURebuildTests(unittest.TestCase):
                     candidate=True,
                 )
 
+    def test_image_source_resolver_requires_one_explicit_mode(self):
+        for environment, expected in (
+            ({}, (None, None)),
+            ({"REMNANT_COMPILED_IMAGE": "ordinary"}, ("ordinary", None)),
+            ({"REMNANT_GLM_CPU_REBUILD_FROM": "rebuild"}, (None, "rebuild")),
+            ({"REMNANT_COMPILED_IMAGE": "", "REMNANT_GLM_CPU_REBUILD_FROM": "rebuild"}, (None, "rebuild")),
+        ):
+            with self.subTest(environment=environment):
+                self.assertEqual(kernels._resolve_image_sources("glm53", environment), expected)
+                self.assertEqual(kernels._resolve_image_sources("dsv4", environment), (None, None))
+        conflicting = {
+            "REMNANT_COMPILED_IMAGE": "inherited", "REMNANT_GLM_CPU_REBUILD_FROM": "explicit",
+        }
+        self.assertEqual(kernels._resolve_image_sources("dsv4", conflicting), (None, None))
+        with self.assertRaisesRegex(ValueError, "mutually exclusive"):
+            kernels._resolve_image_sources("glm53", conflicting)
+
+    def test_conflicting_image_recipe_fails_before_source_or_image_work(self):
+        with (
+            patch.dict(os.environ, REMNANT_INTEGRATION="v0.5.22", REMNANT_MODEL_FAMILY="glm53",
+                       REMNANT_COMPILED_IMAGE="inherited", REMNANT_GLM_CPU_REBUILD_FROM="explicit"),
+            patch("scripts.sources.check_sources") as sources,
+            patch.object(kernels.modal, "Image") as image,
+            self.assertRaisesRegex(ValueError, "mutually exclusive"),
+        ):
+            runpy.run_path(str(kernels.REPO_ROOT / "scripts/modal/kernels.py"))
+        sources.assert_not_called()
+        self.assertEqual(image.mock_calls, [])
+
     def test_explicit_cpu_rebuild_never_uses_inherited_ordinary_cache(self):
         with (
             patch.dict(
@@ -2407,45 +2530,6 @@ class GLMCPURebuildTests(unittest.TestCase):
         ):
             self.assertFalse(kernels._reuse_glm_cpu_artifacts(Path("/unused"), 0, {}))
             metadata.assert_not_called()
-        tree = ast.parse((kernels.REPO_ROOT / "scripts/modal/kernels.py").read_text())
-        image = next(
-            node.value
-            for node in tree.body
-            if isinstance(node, ast.Assign)
-            and any(
-                isinstance(target, ast.Name) and target.id == "kernel_image"
-                for target in node.targets
-            )
-        )
-        env = next(
-            node.args[0]
-            for node in ast.walk(image)
-            if isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Attribute)
-            and node.func.attr == "env"
-        )
-        namespace = dict(
-            MODEL_FAMILY="glm53",
-            INTEGRATION={"version": "v0.5.22"},
-            json=json,
-            os=SimpleNamespace(environ={"REMNANT_GLM_CPU_REBUILD_FROM": "explicit"}),
-            compiled_image_id=None,
-            transition={"proof": "verified"},
-            SOURCE_IDENTITIES={},
-            SGLANG_ROOT=Path("/sg"),
-            FLASHMLA_ROOT=Path("/fm"),
-            REMOTE_REPO=Path("/repo"),
-            NATIVE_LIBRARY=Path("/native"),
-            MANIFEST=Path("/manifest"),
-            VALIDATION_TIMEOUT_S=660,
-        )
-        values = eval(compile(ast.Expression(env), "image-env", "eval"), namespace)
-        self.assertEqual(values["REMNANT_COMPILED_IMAGE"], "")
-        self.assertEqual(values["REMNANT_GLM_CPU_REBUILD_FROM"], "explicit")
-        self.assertEqual(
-            json.loads(values["REMNANT_GLM_FORMAT_TRANSITION_JSON"]),
-            {"proof": "verified"},
-        )
 
     def test_compiled_source_allowlist(self):
         from scripts.sources import glm_rebuild_source_digest
