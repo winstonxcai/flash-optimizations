@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "mode": "kernel",
+  "server_seed": 20260919,
+  "metrics_dir": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/boot/request-metrics",
+  "server_log": "/home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/boot/serve_kernel.log"
+}

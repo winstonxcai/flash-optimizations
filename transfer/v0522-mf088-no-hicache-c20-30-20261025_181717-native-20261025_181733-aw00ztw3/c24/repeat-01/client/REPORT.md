@@ -1,0 +1,22 @@
+# Business Replay Report
+
+- Valid: `false`
+- Protocol: `business-user-replay-v2`
+- Model: `deepseek-v4-flash`
+- Adapter: `/home/jovyan/winstonxcai/flash-optimizations/scripts/local/business_replay/adapters/openai_sse.py`
+- Selected / attempted / successful: `4916 / 2561 / 2268`
+- Success rate: `88.5592%`
+- Duration: `1205.806 s`
+- Scheduler: `fixed-active-user-pool`
+- Maximum active users: `24`
+- Warmup: `none (0 requests, not in metrics)`
+- Audit level: `candidate`
+- Comparison eligibility: `candidate`
+- Request throughput: `1.881 req/s`
+- Mean / P90 TTFT: `2383.383 / 2386.589 ms`
+- Mean / P90 TPOT: `71.455 / 101.591 ms`
+- Mean / P90 E2E: `12039.482 / 23097.637 ms`
+- GPU / CPU / total KV cache hit rate: `96.9757% / 0.0000% / 96.9757%`
+- KV cache detail coverage: `2268 / 2268`
+
+This report is a business replay episode and is not a baseline matrix result.

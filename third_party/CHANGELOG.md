@@ -13,6 +13,14 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Follow-up review candidate: SGLang `4f8fb0912c84` / FlashMLA `858bb1ccac6f`.
+  Resolve effective prefill policy, share page checks, name FP4 decode modes and
+  exercise actual C2 decode ownership. Persist sanitizer execution states and
+  audit interrupted evidence before receipt reuse. Merge main `be6ebcfd2c29`,
+  preserving both FP4 and replay test groups. Independent static review passed;
+  fresh Modal checks are pending. Prior qualification applies only to its frozen
+  sources. Rollback uses `auto` or previous pins `c4708870` / `4e72722`.
+
 - Review-fix integration parent `cc1b9a8`, CPU runner follow-up `2707db9`:
   SGLang `c47088700085` / FlashMLA `4e72722671d8`. Reject effective Q8KV8
   overrides and misaligned cache bases/page strides; retain startup prefill

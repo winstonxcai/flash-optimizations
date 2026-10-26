@@ -17,8 +17,8 @@ Folder suffixes identify the SGLang integration pair, not a FlashMLA release.
 |---|---|---|---|
 | `sglang-v0.5.18/` | `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` | `6687a7c` |
 | `flashmla-v0.5.18/` | `05e26647fe840b8baedae486c2d86d5ce4efeb7c` | `remnant/flashmla-v0518` | `97f3faa` |
-| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `ds41-flash-packed` | `c4708870` |
-| `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `ds41-flash-packed` | `4e72722` |
+| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `ds41-flash-packed` | `4f8fb091` |
+| `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `ds41-flash-packed` | `858bb1c` |
 
 Both FlashMLA checkouts pin CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`.
 The default remains v0.5.18; `REMNANT_INTEGRATION=v0.5.22` selects the other pair.
@@ -51,8 +51,16 @@ that an existing container's loaded binaries match; source changes need a rebuil
 
 ## Experimental V4.1 FP4 on SM90
 
-Review-fix integration: SGLang `c4708870`, FlashMLA `4e72722`, based on parent
-`af12dd9`. The current pins add effective Q8KV8 override rejection, retained
+Follow-up candidate: SGLang `4f8fb091`, FlashMLA `858bb1c`. Effective prefill
+resolution now accepts a Q8 CLI choice disabled by the environment; shared page
+validation and named CUDA dispatch modes reduce duplicate contracts. A synthetic
+C2 decode test exercises the actual producer, request ring and FP4 store.
+Interrupted sanitizer evidence is audited before complete sibling receipts can
+be reused. These pins are pending fresh validation; prior qualification does not
+transfer automatically. See the experiment record for budget and deferred gates.
+
+Previous review-fix integration: SGLang `c4708870`, FlashMLA `4e72722`, based on
+parent `af12dd9`. Those pins added effective Q8KV8 override rejection, retained
 prefill policy, aligned cache base/page checks, named FP4 layouts and explicit
 fixed-matrix CLI validation. Parent qualification uses
 `scripts/modal/qualification.py` to reject failed tools, compare complete runtime

@@ -205,6 +205,7 @@ if VALIDATION_SUITE == "v41-fp4":
             "test_fp4_direct",
             "test_fp4_graph_and_stream",
             "test_fp4_compressor_boundary",
+            "test_fp4_c2_decode_store",
             "test_fp4_fragment_masks",
         )
     )
@@ -356,6 +357,14 @@ def _build_image() -> None:
                 launcher_tests.FP4PreflightTests,
             )
         )
+        for name in (
+            "test_pytest_rejects_skipped_failed_and_empty_coverage",
+            "test_sanitizer_reordering_preserves_all_tools_and_checkpoints_receipts",
+            "test_sanitizer_failures_preserve_later_results_and_fail_the_run",
+            "test_sanitizer_deadline_keeps_unstarted_tools_explicitly_incomplete",
+            "test_sanitizer_prelaunch_timeout_keeps_tool_not_run",
+        ):
+            suite.addTest(launcher_tests.LauncherTests(name))
         report = build / "qualification-tests.log"
         with report.open("w") as stream:
             result = unittest.TextTestRunner(stream=stream, verbosity=2).run(suite)
@@ -516,6 +525,7 @@ import triton
 from triton.compiler import ASTSource
 from triton.backends.compiler import GPUTarget
 from sglang.kernels.ops.attention.dsv4.fp4_cache import _store, _read
+from sglang.kernels.ops.attention.dsv4.c2_decode_pool import _c2_decode_pool_kernel
 from sgl_kernel import flashmla_ops
 import torch
 assert hasattr(torch.ops.sgl_kernel, 'fp4_sparse_decode_fwd')
@@ -524,10 +534,15 @@ for p in (128,256):
     for packed in (False,True):
         stride=p*(224 if packed else 288)
         for rotate in (False,True):
-            src=ASTSource(_store, signature={'X':'*bf16','F':'*fp32' if rotate else '*bf16','LOC':'*i64','C':'*u8'}, constexprs={'XS':512,'FS':64 if rotate else 512,'P':p,'STRIDE':stride,'N':2,'PACKED':packed,'DATA_BYTES':192 if packed else 256,'VALUE_BYTES':128 if packed else 256,'ROTATE':rotate})
-            triton.compile(src,target=GPUTarget('cuda',90,32),options={'num_warps':4,'enable_fp_fusion':False})
+            for n in ((2,4) if p == 128 and rotate else (2,)):
+                src=ASTSource(_store, signature={'X':'*bf16','F':'*fp32' if rotate else '*bf16','LOC':'*i64','C':'*u8'}, constexprs={'XS':512,'FS':64 if rotate else 512,'P':p,'STRIDE':stride,'N':n,'PACKED':packed,'DATA_BYTES':192 if packed else 256,'VALUE_BYTES':128 if packed else 256,'ROTATE':rotate})
+                triton.compile(src,target=GPUTarget('cuda',90,32),options={'num_warps':4,'enable_fp_fusion':False})
         src=ASTSource(_read,signature={'C':'*u8','IDS':'*i32','OUT':'*bf16'},constexprs={'OS':512,'P':p,'STRIDE':stride,'N':2,'PACKED':packed,'DATA_BYTES':192 if packed else 256,'VALUE_BYTES':128 if packed else 256})
         triton.compile(src,target=GPUTarget('cuda',90,32),options={'num_warps':4})
+# The actual C2 decode producer keeps FP32 key/score halves in an interleaved
+# request ring. Compile its exercised ABI before model-free H100 integration.
+src=ASTSource(_c2_decode_pool_kernel, signature={'kv_ptr':'*fp32','score_ptr':'*fp32','pos_ptr':'*i64','raw_out_loc_ptr':'*i64','out_loc_ptr':'*i64','req_ptr':'*i64','state_kv_ptr':'*fp32','state_score_ptr':'*fp32','pooled_ptr':'*fp32','group_pos_ptr':'*i64','slots_ptr':'*i64','pad_row':'i32'}, constexprs={'RING_SIZE':2,'STATE_KV_STRIDE':1024,'STATE_SCORE_STRIDE':1024,'D':512,'BLOCK_D':512})
+triton.compile(src,target=GPUTarget('cuda',90,32),options={'num_warps':4})
 print('FP4 CPU SM90 precompilation passed')
 """
         _run_command(
@@ -1153,11 +1168,17 @@ def validate_kernels(
                 if int(deadline - time.monotonic()) <= 0:
                     break
                 prefix = (SANITIZER, "--tool", tool, "--error-exitcode", "1")
+                # A hard kill must leave an incomplete running checkpoint, never
+                # a misleading not_run state that hides partial failure output.
+                record["sanitizer_results"][tool] = {"status": "running"}
+                (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
+                results_volume.commit()
                 try:
                     _run_pytest(SANITIZER_TESTS, root, tool, deadline, prefix=prefix)
                 except TimeoutError:
                     # The boundary may expire between this loop and the command
-                    # check. No process started; keep this tool marked not_run.
+                    # check. No process started; return this tool to not_run.
+                    record["sanitizer_results"][tool] = {"status": "not_run"}
                     break
                 except RuntimeError as error:
                     record["sanitizer_results"][tool] = {
@@ -1166,11 +1187,19 @@ def validate_kernels(
                     }
                     # Each tool owns a fresh pytest process. Retain later tools'
                     # evidence without converting this failure into a pass.
+                except BaseException as error:
+                    # Reuse of completed siblings requires an independent audit
+                    # of this tool's partial XML/log; cancellation is never a pass.
+                    record["sanitizer_results"][tool] = {
+                        "status": "interrupted",
+                        "error": repr(error),
+                    }
+                    raise
                 else:
                     record["sanitizer_results"][tool] = {"status": "passed"}
-                # Preserve completed evidence even if a later tool is cancelled.
-                (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
-                results_volume.commit()
+                finally:
+                    (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
+                    results_volume.commit()
             incomplete = [
                 tool
                 for tool, result in record["sanitizer_results"].items()

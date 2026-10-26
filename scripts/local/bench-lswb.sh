@@ -22,11 +22,22 @@ set -u
 
 TAG=${1:-} PORT=${2:-$PORT} C=${3:-15} DUR=${4:-1200}
 NSYS_WINDOWS=${5:-}
+REPLAY_MINIMUM_SUCCESS_RATE=${REPLAY_MINIMUM_SUCCESS_RATE:-0.99}
 [ -n "$TAG" ] || { echo "usage: $0 <tag> [port] [concurrency] [duration_s]"; exit 1; }
 check_sources || exit 1
 require_replay_config || exit 1
 [[ "$C" =~ ^[1-9][0-9]*$ ]] || { echo "concurrency must be a positive integer" >&2; exit 2; }
 [[ "$DUR" =~ ^[1-9][0-9]*$ ]] || { echo "duration must be a positive integer" >&2; exit 2; }
+python3 - "$REPLAY_MINIMUM_SUCCESS_RATE" <<'PY_RATE' || exit 2
+import math
+import sys
+try:
+    rate = float(sys.argv[1])
+except ValueError:
+    raise SystemExit("REPLAY_MINIMUM_SUCCESS_RATE must be a finite number in [0, 1]")
+if not math.isfinite(rate) or not 0 <= rate <= 1:
+    raise SystemExit("REPLAY_MINIMUM_SUCCESS_RATE must be a finite number in [0, 1]")
+PY_RATE
 
 # The default remains the historical session-owned slot protocol. Optional
 # request-owned slots are a distinct workload with queue-inclusive SLO timing.
@@ -87,7 +98,23 @@ fi
 health () { curl -fsS -m 3 "http://127.0.0.1:$PORT/health" >/dev/null 2>&1; }
 health || { echo "FATAL: no server on 127.0.0.1:$PORT (run serve.sh first)"; exit 1; }
 
-RUN_ROOT="$RESULTS_HOST/lswb-replay/$TAG/$(ts)"
+if [ -n "${LSWB_RUN_ROOT:-}" ]; then
+  RUN_ROOT=$(python3 - "$LSWB_RUN_ROOT" "$RESULTS_HOST" <<'PY_ROOT'
+import sys
+from pathlib import Path
+root, results = map(Path, sys.argv[1:])
+if not root.is_absolute() or not root.resolve().is_relative_to((results / "lswb-replay").resolve()):
+    raise SystemExit("LSWB_RUN_ROOT must be an absolute path under RESULTS_HOST/lswb-replay")
+if root.exists() or root.is_symlink():
+    raise SystemExit(f"LSWB_RUN_ROOT must be fresh: {root}")
+print(root.resolve())
+PY_ROOT
+  ) || exit 2
+  mkdir -p -- "$(dirname -- "$RUN_ROOT")" || exit 1
+  mkdir -- "$RUN_ROOT" || exit 1
+else
+  RUN_ROOT="$RESULTS_HOST/lswb-replay/$TAG/$(ts)"
+fi
 mkdir -p "$RUN_ROOT/client"
 
 # Record the resolved server configuration and reject eager decode caused by
@@ -323,8 +350,8 @@ trap 'cleanup; exit 143' TERM
     --model "$MODEL_NAME" \
     --max-requests 4916 --max-concurrency "$C" --max-duration "$DUR" \
     --arrival-mode immediate --time-scale 60 --max-gap 30 \
-    --timeout 21600 --minimum-success-rate 0.99 \
-    --expected-protocol "$REPLAY_PROTOCOL" "${REPLAY_ARGS[@]}" \
+    --timeout 21600 --minimum-success-rate "$REPLAY_MINIMUM_SUCCESS_RATE" \
+    --expected-protocol "$REPLAY_PROTOCOL" ${REPLAY_ARGS[@]+"${REPLAY_ARGS[@]}"} \
     --audit-level candidate --return-cached-tokens-details \
     > "$RUN_ROOT/client.log" 2>&1 ) &
 CLIENT=$!

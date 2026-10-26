@@ -1,0 +1,37 @@
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "57e231baf4aabfba9b1a921af8b7f901b79cff8d"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang-v0.5.22",
+    "expected_commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22",
+    "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  }
+}
+Request timing source: /sgl-workspace/sglang-remnant/python/sglang/srt/observability/req_time_stats.py
+== serve kernel on gpus=4,5,6,7 port=30382 master=29782 (log: /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/boot/serve_kernel.log) ==
+launched pid 988
+  health OK after ~730s
+  pool(max_total_num_tokens)=5033728
+  max_total_num_tokens=5033728
+  is fired up and ready
+serve kernel UP on port 30382 -- leave running, tear down with: /home/jovyan/winstonxcai/flash-optimizations/scripts/local/serve.sh kernel stop

@@ -7,7 +7,32 @@ FlashMLA v0.5.22 repositories. It continues the completed local
 validated source commits and historical measurements below remain authoritative.
 The v0.5.22 submodule branch hints follow the new branch; v0.5.18 stays unchanged.
 
-## Review-fix milestone — completed
+## Follow-up review hardening — candidate
+
+Question: can interrupted sanitizer evidence remain fail-closed while startup
+policy and FP4 dispatch become easier to maintain? This update records sanitizer
+execution before launch and audits interrupted evidence, validates the effective
+prefill policy, shares page checks, names the CUDA dispatch modes, and exercises
+the actual C2 decode producer into Native/Packed storage. The parent merge keeps
+both the FP4 tests and the replay tests added on `main`.
+
+Baseline: parent `d385c1c`, SGLang `c4708870`, FlashMLA `4e72722`. Existing
+qualification and timing below belong to those recorded sources; they do not
+qualify the new candidate. Acceptance requires focused CPU regressions, a CPU
+native build/preflight, model-free H100 checks and independent review. Full
+sanitizer qualification and the final timing gate remain required before this
+candidate can replace the qualified baseline.
+
+The original $20 cumulative ceiling and $2 reserve still apply. The prior
+conservative phase spend is $14.86730972, leaving $3.13269028 of projected work.
+Current Modal compute is $28.33826767 against the $13.73409128 phase baseline;
+the higher historical estimate remains the budgeting bound. No competing
+allocations were present. Use only the existing runners and fixtures, no weights
+or serving, and stop before exceeding the remaining work budget. If complete
+qualification cannot fit, retain the code as unqualified and record deferred
+checks explicitly.
+
+## Review-fix milestone — completed on the recorded baseline
 
 Question: can the opt-in implementation expose one readable layout/prefill policy
 and fail closed at startup, Direct and qualification boundaries? The candidate
@@ -439,9 +464,10 @@ The temporary Modal CPU resource probe was removed. Owned local raw receipt
 downloads are removed after the summary commit; canonical raw files remain in
 the results volume. Compact timing/allocation CSVs and JSON stay in Git.
 
-No required implementation, measurement or review work remains. Performance tuning is a separate decision; a Native
-speedup has not been established. H20-3e, multi-GPU/full-model serving, quality,
-C2-page timing and production readiness remain unverified.
+This historical phase completed its declared work; later review milestones are
+recorded above. Performance tuning is a separate decision, and a Native speedup
+has not been established. The later v3 matrix includes C2-page timing. H20-3e,
+multi-GPU/full-model serving, quality and production readiness remain unverified.
 
 Rollback: select `--dsv41-main-kv-cache-format auto`, or restore the recorded
 baseline pins using the normal clean-worktree workflow. Native remains default.
