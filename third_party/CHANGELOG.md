@@ -13,7 +13,8 @@ records rather than this milestone log.
 
 ## Unreleased
 
-- Parent based on `855ca87`, v0.5.22 SGLang `9185c6d25115` / FlashMLA
+- Parent preparation `0639722`, v0.5.22 SGLang `979839b` (runtime-tested
+  `9185c6d25115`) / FlashMLA
   `3eb85944fd7d`: resolve fork lint debt, preserve immutable historical fixtures,
   register executable CPU tests and explicit custom-build CUDA ownership, and
   propagate pytest exit codes. Explicit CPU preparation verifies a five-file
@@ -21,7 +22,11 @@ records rather than this milestone log.
   identity before retaining base AOT binaries; ordinary reuse remains strict.
   Independent review and six rebuild regressions pass. Expanded local checks:
   176 passed, 104 GPU skips and 10 subtests; previously failing lint hooks pass.
-  Cloud preparation and focused H100 checks are pending in the canonical ledger.
+  CPU preparation and fresh focused H100 Direct/Adapter numerical, graph and
+  memcheck/racecheck/synccheck gates pass; broad instrumentation remains incomplete.
+  GitHub lint is green, `run-ci` is applied and its gate passes. Seven missing
+  flag rows fix the newly exposed CPU docs failure; broad GPU CI lacks runners.
+  Canonical evidence preserves both interrupted attempts and all charges.
   The user added $5 and 15 H100 minutes; retain every previous cost and failure.
 
 

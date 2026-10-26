@@ -424,8 +424,9 @@ GLM CPU startup tests declare the standard CPU CI registry and a real pytest
 entry point. Artifact-dependent H100 tests declare manual qualification with an
 explicit reason; their maintained Modal pytest runner and required gates are
 unchanged. GLM-owned Python files use the CI-pinned isort 7 / Ruff 0.15.1 tools.
-Repository-wide CI still reports older formatting/registry debt elsewhere and
-the missing `run-ci` GPU gate; this follow-up does not enable broader GPU jobs.
+Repository-wide pinned lint now passes. The `run-ci` label is applied and its
+gate passes; broader GPU jobs remain queued with zero registered self-hosted
+runners. A documentation-only follow-up (`979839b`) adds seven missing flag rows.
 
 
 The explicit GLM CPU rebuild can accept a recorded formatting transition via
@@ -436,3 +437,12 @@ base binaries remain exact. Candidate raw hashes are verified after overlay.
 It clears inherited image selectors and records retained AOT provenance while
 CPU-preparing the GLM JIT artifacts. Normal compiled-image reuse is unchanged.
 See the existing GLM experiment index for the approved budget and execution.
+
+Fresh H100 qualification at SGLang `9185c6d25115` passes Direct exact-byte,
+numerical/graph and focused three-tool sanitizer checks, plus unfiltered Adapter
+reconstruction across 2 GiB under all three tools. The final pin adds only flag
+documentation; runtime/kernel hashes are unchanged. All 32 JIT variants were
+CPU-prepared in `im-PO9F017Jyq5riB4Ndegpi9`; retained AOT binaries were verified.
+Broad/full-grid/combine sanitizer coverage, serving and H20 qualification remain
+incomplete. The experiment README and canonical ledger own exact scopes, failures,
+commands and costs. Native remains the default and rollback.

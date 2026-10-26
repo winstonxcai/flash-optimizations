@@ -9,8 +9,8 @@
   "budget": {
     "authorized_usd": 40,
     "routine_cutoff_usd": 36.410829025143784,
-    "conservative_accrued_usd": 29.746413092417114,
-    "h100_seconds": 21093.469966748977,
+    "conservative_accrued_usd": 31.44063414108861,
+    "h100_seconds": 22008.206854434495,
     "accounts": {
       "caiw": {
         "preparation_preflight": [
@@ -29700,10 +29700,10 @@
       "gpu_cap_usd": 14,
       "reserve_usd": 3,
       "h100_seconds_cap": 8100,
-      "conservative_usd": 10.33558406727334,
-      "cpu_usd": 1.338440686884328,
-      "gpu_usd": 8.638407919896165,
-      "h100_seconds": 7075.5070330419985,
+      "conservative_usd": 12.029805115944834,
+      "cpu_usd": 1.5365644248367962,
+      "gpu_usd": 10.134505230615192,
+      "h100_seconds": 7990.2439207275165,
       "conservative_overcount_usd": 0.358735460492845
     },
     "historical_conservative_usd": 19.410829025143784,
@@ -38785,6 +38785,413 @@
             }
           ]
         }
+      },
+      {
+        "run_id": "glm53-review-prepare-20261026T145910Z",
+        "action": "prepare",
+        "status": "completed",
+        "sources": {
+          "parent": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations",
+            "commit": "0639722c102a9117518e6be968ad256d31d9d6c4"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+            "expected_commit": "9185c6d2511508ecf40e86101040bbc2dffb1135",
+            "commit": "9185c6d2511508ecf40e86101040bbc2dffb1135",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22",
+            "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "command": [
+          "/Users/poohthewinnie/.local/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::prepare_kernels",
+          "--model-family",
+          "glm53"
+        ],
+        "environment": {
+          "MODAL_PROFILE": "caiw",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_VALIDATION_TIMEOUT_S": "660",
+          "REMNANT_COMPILED_IMAGE": "",
+          "REMNANT_GLM_CPU_REBUILD_FROM": "im-mOJP6OgY2aRiQ72iNrHoMk",
+          "REMNANT_GLM_FORMAT_TRANSITION": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/data/glm53-packed/review-validation-20261026/format-transition.json"
+        },
+        "controller_seconds": 1800,
+        "hourly_rate_usd": 1.2688000000000001,
+        "initial_compute_usd": 23.21618591,
+        "rates": {
+          "cpu_hour_cost": "0.04730",
+          "mem_gib_hour_cost": "0.00800",
+          "gpu_hour_cost_h100": "3.95000"
+        },
+        "output": "data/glm53-packed/glm53-review-prepare-20261026T145910Z",
+        "wall_seconds": 562.1417533329804,
+        "conservative_usd": 0.19812373795246824,
+        "app_ids": [
+          "ap-j69nUbsA119vNdVXxGbGE6"
+        ],
+        "final_compute_usd": 23.280869250000002,
+        "log_sha256": "9d78cc5ea85708ac54a3d2f4cde1e9fe2ea43e71b6cf42871d449de7bed03e57",
+        "active_workers_after": 0,
+        "image_id": "im-PO9F017Jyq5riB4Ndegpi9"
+      },
+      {
+        "run_id": "glm53-review-direct-20261026T151034Z",
+        "action": "direct",
+        "status": "completed",
+        "sources": {
+          "parent": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations",
+            "commit": "0639722c102a9117518e6be968ad256d31d9d6c4"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+            "expected_commit": "9185c6d2511508ecf40e86101040bbc2dffb1135",
+            "commit": "9185c6d2511508ecf40e86101040bbc2dffb1135",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22",
+            "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "command": [
+          "/Users/poohthewinnie/.local/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::validate_kernels",
+          "--model-family",
+          "glm53",
+          "--stage",
+          "corrective",
+          "--sanitizer",
+          "--sanitizer-scope",
+          "glm-decode",
+          "--cases",
+          "test/registered/attention/unittests/test_glm5_remnant.py::test_packed_loader_bytes,test/registered/attention/unittests/test_glm5_remnant.py::test_decode_bank_graph",
+          "--run-id",
+          "glm53-review-direct-20261026T151034Z",
+          "--max-seconds",
+          "540"
+        ],
+        "environment": {
+          "MODAL_PROFILE": "caiw",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_VALIDATION_TIMEOUT_S": "660",
+          "REMNANT_COMPILED_IMAGE": "",
+          "REMNANT_GLM_CPU_REBUILD_FROM": "im-mOJP6OgY2aRiQ72iNrHoMk",
+          "REMNANT_GLM_FORMAT_TRANSITION": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/data/glm53-packed/review-validation-20261026/format-transition.json"
+        },
+        "controller_seconds": 600,
+        "hourly_rate_usd": 4.3952,
+        "initial_compute_usd": 23.32947167,
+        "rates": {
+          "cpu_hour_cost": "0.04730",
+          "mem_gib_hour_cost": "0.00800",
+          "gpu_hour_cost_h100": "3.95000"
+        },
+        "output": "data/glm53-packed/glm53-review-direct-20261026T151034Z",
+        "wall_seconds": 455.09444008299033,
+        "conservative_usd": 0.5556197452924331,
+        "app_ids": [
+          "ap-2TA4YEfH8lsPPZyn0lxu89"
+        ],
+        "final_compute_usd": 23.59401321,
+        "log_sha256": "9c90adcb0114854b3aaf32eb0f32bc10f4277c05e253553e4dd23ceb031b55e7",
+        "active_workers_after": 0
+      },
+      {
+        "run_id": "glm53-review-adapter-20261026T152144Z",
+        "action": "adapter",
+        "status": "failed",
+        "controller_sha256": "f2f9dc74e6f62b176cc1f9b7b0ed5428b7b9c76603142e4a011ea1c6bd898e7d",
+        "sources": {
+          "parent": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations",
+            "commit": "0639722c102a9117518e6be968ad256d31d9d6c4"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+            "expected_commit": "9185c6d2511508ecf40e86101040bbc2dffb1135",
+            "commit": "9185c6d2511508ecf40e86101040bbc2dffb1135",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22",
+            "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "command": [
+          "/Users/poohthewinnie/.local/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::validate_kernels",
+          "--model-family",
+          "glm53",
+          "--stage",
+          "corrective",
+          "--sanitizer",
+          "--cases",
+          "test/registered/attention/unittests/test_glm5_remnant.py::test_adapter_reconstruction_above_2gib",
+          "--run-id",
+          "glm53-review-adapter-20261026T152144Z",
+          "--max-seconds",
+          "300"
+        ],
+        "environment": {
+          "MODAL_PROFILE": "caiw",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_VALIDATION_TIMEOUT_S": "660",
+          "REMNANT_COMPILED_IMAGE": "",
+          "REMNANT_GLM_CPU_REBUILD_FROM": "im-mOJP6OgY2aRiQ72iNrHoMk",
+          "REMNANT_GLM_FORMAT_TRANSITION": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/data/glm53-packed/review-validation-20261026/format-transition.json"
+        },
+        "controller_seconds": 360,
+        "hourly_rate_usd": 4.3952,
+        "initial_compute_usd": 23.69378018,
+        "rates": {
+          "cpu_hour_cost": "0.04730",
+          "mem_gib_hour_cost": "0.00800",
+          "gpu_hour_cost_h100": "3.95000"
+        },
+        "output": "data/glm53-packed/glm53-review-adapter-20261026T152144Z",
+        "error": "CalledProcessError(1, ['/Users/poohthewinnie/.local/bin/modal', 'run', 'scripts/modal/kernels.py::validate_kernels', '--model-family', 'glm53', '--stage', 'corrective', '--sanitizer', '--cases', 'test/registered/attention/unittests/test_glm5_remnant.py::test_adapter_reconstruction_above_2gib', '--run-id', 'glm53-review-adapter-20261026T152144Z', '--max-seconds', '300'])",
+        "wall_seconds": 341.47917679100647,
+        "conservative_usd": 0.4169081327310643,
+        "app_ids": [
+          "ap-Pv42LUDWWxiK34O3l1Srx8"
+        ],
+        "final_compute_usd": 23.82563554,
+        "log_sha256": "a7b87e7244f58cf1c38919ac5e524d66fcf30fe7599376957202801d29f62e2b",
+        "active_workers_after": 0,
+        "allocation_reconciliation": {
+          "evidence": "data/glm53-packed/glm53-review-adapter-20261026T152144Z/task-info.json",
+          "task_id": "ta-01M5WD1VCA1W8294DGTRKMN0VR",
+          "enqueued_at": 1793028320.787063,
+          "finished_at": 1793028445.389662,
+          "shutdown_margin_seconds": 10,
+          "h100_accounted_seconds": 134.60259914398193,
+          "client_wall_seconds": 341.47917679100647,
+          "excluded_client_only_seconds": 206.87657764702453,
+          "dollars_unchanged": true
+        }
+      },
+      {
+        "run_id": "glm53-review-adapter-20261026T153225Z",
+        "action": "adapter",
+        "status": "failed",
+        "controller_sha256": "62b7930a954647c5c09a1621206b7d491dc4f852a285494183e7198a70f2369b",
+        "sources": {
+          "parent": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations",
+            "commit": "0639722c102a9117518e6be968ad256d31d9d6c4"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+            "expected_commit": "9185c6d2511508ecf40e86101040bbc2dffb1135",
+            "commit": "9185c6d2511508ecf40e86101040bbc2dffb1135",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22",
+            "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "command": [
+          "/Users/poohthewinnie/.local/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::validate_kernels",
+          "--model-family",
+          "glm53",
+          "--stage",
+          "corrective",
+          "--sanitizer",
+          "--sanitizer-tools",
+          "racecheck,memcheck",
+          "--cases",
+          "test/registered/attention/unittests/test_glm5_remnant.py::test_adapter_reconstruction_above_2gib",
+          "--run-id",
+          "glm53-review-adapter-20261026T153225Z",
+          "--max-seconds",
+          "130"
+        ],
+        "environment": {
+          "MODAL_PROFILE": "caiw",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_VALIDATION_TIMEOUT_S": "660",
+          "REMNANT_COMPILED_IMAGE": "",
+          "REMNANT_GLM_CPU_REBUILD_FROM": "im-mOJP6OgY2aRiQ72iNrHoMk",
+          "REMNANT_GLM_FORMAT_TRANSITION": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/data/glm53-packed/review-validation-20261026/format-transition.json"
+        },
+        "controller_seconds": 160,
+        "hourly_rate_usd": 4.3952,
+        "initial_compute_usd": 23.90377293,
+        "rates": {
+          "cpu_hour_cost": "0.04730",
+          "mem_gib_hour_cost": "0.00800",
+          "gpu_hour_cost_h100": "3.95000"
+        },
+        "output": "data/glm53-packed/glm53-review-adapter-20261026T153225Z",
+        "error": "TimeoutExpired(['/Users/poohthewinnie/.local/bin/modal', 'run', 'scripts/modal/kernels.py::validate_kernels', '--model-family', 'glm53', '--stage', 'corrective', '--sanitizer', '--sanitizer-tools', 'racecheck,memcheck', '--cases', 'test/registered/attention/unittests/test_glm5_remnant.py::test_adapter_reconstruction_above_2gib', '--run-id', 'glm53-review-adapter-20261026T153225Z', '--max-seconds', '130'], 159.9999729580013)",
+        "wall_seconds": 161.90721945898258,
+        "conservative_usd": 0.19767072526836674,
+        "app_ids": [
+          "ap-scMaIteTLsbeRRgxIMNkn1"
+        ],
+        "final_compute_usd": 23.830519170000002,
+        "log_sha256": "5cc34da4d1c9007a1968dd8920a33e77f5346bc2cacdffa14f7aa89d4a7b8fd7",
+        "active_workers_after": 1,
+        "shutdown_error": "Workers remain; inspect owned app before any further launch",
+        "allocation_reconciliation": {
+          "evidence": "data/glm53-packed/glm53-review-adapter-20261026T153225Z/task-info.json",
+          "task_id": "ta-01M5WDJJ53BSVZXJX9K1XTR9DR",
+          "enqueued_at": 1793028868.467086,
+          "finished_at": 1793028916.571335,
+          "shutdown_margin_seconds": 10,
+          "h100_accounted_seconds": 58.104249000549316,
+          "client_wall_seconds": 161.90721945898258,
+          "excluded_client_only_seconds": 103.80297045843326,
+          "dollars_unchanged": true
+        },
+        "shutdown_confirmed_workers": 0
+      },
+      {
+        "run_id": "glm53-review-adapter-20261026T153740Z",
+        "action": "adapter",
+        "status": "completed",
+        "controller_sha256": "9ce4f99c58d88e6d1603b3af20a9af8376e5321616d4c19b939d0c0a4472ddb8",
+        "sources": {
+          "parent": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations",
+            "commit": "0639722c102a9117518e6be968ad256d31d9d6c4"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+            "expected_commit": "9185c6d2511508ecf40e86101040bbc2dffb1135",
+            "commit": "9185c6d2511508ecf40e86101040bbc2dffb1135",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22",
+            "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "command": [
+          "/Users/poohthewinnie/.local/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::validate_kernels",
+          "--model-family",
+          "glm53",
+          "--stage",
+          "corrective",
+          "--sanitizer",
+          "--sanitizer-tools",
+          "racecheck,memcheck",
+          "--cases",
+          "test/registered/attention/unittests/test_glm5_remnant.py::test_adapter_reconstruction_above_2gib",
+          "--run-id",
+          "glm53-review-adapter-20261026T153740Z",
+          "--max-seconds",
+          "180"
+        ],
+        "environment": {
+          "MODAL_PROFILE": "caiw",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_VALIDATION_TIMEOUT_S": "660",
+          "REMNANT_COMPILED_IMAGE": "",
+          "REMNANT_GLM_CPU_REBUILD_FROM": "im-mOJP6OgY2aRiQ72iNrHoMk",
+          "REMNANT_GLM_FORMAT_TRANSITION": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/data/glm53-packed/review-validation-20261026/format-transition.json"
+        },
+        "controller_seconds": 300,
+        "hourly_rate_usd": 4.3952,
+        "initial_compute_usd": 23.87950411,
+        "rates": {
+          "cpu_hour_cost": "0.04730",
+          "mem_gib_hour_cost": "0.00800",
+          "gpu_hour_cost_h100": "3.95000"
+        },
+        "output": "data/glm53-packed/glm53-review-adapter-20261026T153740Z",
+        "wall_seconds": 266.93559945799643,
+        "conservative_usd": 0.32589870742716276,
+        "app_ids": [
+          "ap-sX1S6azxCfVkJWIZ8bW2YB"
+        ],
+        "final_compute_usd": 24.123683240000002,
+        "log_sha256": "e3c8ab1d022ab293cee5c810bea2f0fbb8e2be289724a3eb54b882032b1eccf1",
+        "active_workers_after": 0
       }
     ],
     "review": {
@@ -56702,7 +57109,7 @@
     "parent_pin_update": "4150a42d3969cd8264ebc5d333ef67148bc6b6c7"
   },
   "review_gpu_validation": {
-    "status": "prepared_locally_cloud_pending",
+    "status": "focused_gpu_validation_passed",
     "scope": "Adapter >2GiB addressing; relocated CPU artifacts; focused Direct numerical/graph and three-tool sanitizer validation",
     "account": "caiw",
     "formatting_transition": {
@@ -56756,22 +57163,278 @@
         "codespell",
         "registered-test ownership",
         "pytest entry points"
-      ]
+      ],
+      "parent_cpu_tests_per_profile": 110
     },
     "historical_results": "Preserved without relabeling; no new attention timing requested",
-    "run_ids": [],
+    "run_ids": [
+      "glm53-review-prepare-20261026T145910Z",
+      "glm53-review-direct-20261026T151034Z",
+      "glm53-review-adapter-20261026T152144Z",
+      "glm53-review-adapter-20261026T153225Z",
+      "glm53-review-adapter-20261026T153740Z"
+    ],
     "initial_compute_snapshot": "data/glm53-packed/review-validation-20261026/initial-spend.json",
     "sglang": "9185c6d2511508ecf40e86101040bbc2dffb1135",
     "parent_base": "855ca87ee5e9454607980301f9d2605c3678c953",
     "controller": {
       "path": "data/glm53-packed/review-validation-20261026/controller.py",
-      "sha256": "463d74346d1ffa45aabc2b7db9192e23677e0cd1c7954604ddd169f14f6b00f0",
+      "sha256": "9ce4f99c58d88e6d1603b3af20a9af8376e5321616d4c19b939d0c0a4472ddb8",
       "template": "data/glm53-packed/glm53-optimized-prepare-20261026T084937Z/controller.py"
     },
     "format_transition_artifact": {
       "path": "data/glm53-packed/review-validation-20261026/format-transition.json",
       "sha256": "730900d55109e450c0056358398d231138e1531e69ae426fe4db93cb79184a6e"
     },
-    "independent_review": "Two preflight findings (AST interpreter mismatch and inherited image selectors) fixed before paid work; independent follow-up found no blockers."
+    "independent_review": "Two preflight findings (AST interpreter mismatch and inherited image selectors) fixed before paid work; independent follow-up found no blockers.",
+    "results": [
+      {
+        "run_id": "glm53-review-direct-20261026T151034Z",
+        "status": "passed",
+        "gpu_function_seconds": 315.93819150999997,
+        "error": null,
+        "tools": {
+          "synccheck": {
+            "status": "passed"
+          },
+          "racecheck": {
+            "status": "passed"
+          },
+          "memcheck": {
+            "status": "passed"
+          }
+        },
+        "selected_tools": [
+          "synccheck",
+          "racecheck",
+          "memcheck"
+        ],
+        "qualification_scope": "focused_decode",
+        "focused_decode_qualification_complete": true,
+        "runtime_hashes": {
+          "kernels/ops/attention/dsa/tilelang_kernel.py": "896bcc9eeea917aff8d0283d06a6201ef0205a5739395825d1d20a852601847b",
+          "kernels/jit/include/sgl_kernel/glm_packed_decode.cuh": "98cdd5b3e0a448384315b9de656991598165071e13d7839990d05fb633775fad",
+          "srt/remnant/glm.py": "419a0acfddf17f312f62fea39c7f3a7a5de2fe8825929267d9f32bdab99fbcda",
+          "srt/remnant/glm_pool.py": "964fb0127a53f0a2a8805381b1fc0558ffc23b22d6f3bb3ca9518e0e41eaa069",
+          "srt/remnant/reference.py": "6231ec9622623643eba8ab50d714f9433cd13672be927030c4070ae05452021e",
+          "srt/layers/layernorm.py": "98072d836e0c77312058521ee1015c80177b2c370da7408fd066eec61015ff21"
+        },
+        "tests": {
+          "scope-audit": {
+            "tests": 1.0,
+            "failures": 0.0,
+            "errors": 0.0,
+            "skipped": 0.0,
+            "time": 22.667
+          },
+          "racecheck": {
+            "tests": 5.0,
+            "failures": 0.0,
+            "errors": 0.0,
+            "skipped": 0.0,
+            "time": 40.588
+          },
+          "corrective": {
+            "tests": 5.0,
+            "failures": 0.0,
+            "errors": 0.0,
+            "skipped": 0.0,
+            "time": 25.713
+          },
+          "synccheck": {
+            "tests": 5.0,
+            "failures": 0.0,
+            "errors": 0.0,
+            "skipped": 0.0,
+            "time": 40.098
+          },
+          "memcheck": {
+            "tests": 5.0,
+            "failures": 0.0,
+            "errors": 0.0,
+            "skipped": 0.0,
+            "time": 131.044
+          }
+        },
+        "result_sha256": "56707be58156e4105b435819073a8b408d3e048def43818b6ed0d9961ce7ad55",
+        "manifest_sha256": "d3a4771119e922d953caa626745037fb170f91cf3c72846edbcf2554bfe3ee07",
+        "remote_volume_path": "caiw/remnant-stage2a-results/microbench/glm53-review-direct-20261026T151034Z/validation"
+      },
+      {
+        "run_id": "glm53-review-adapter-20261026T152144Z",
+        "status": "failed",
+        "gpu_function_seconds": 108.497594941,
+        "error": "KeyboardInterrupt()",
+        "tools": {
+          "synccheck": {
+            "status": "passed"
+          },
+          "racecheck": {
+            "status": "not_run"
+          },
+          "memcheck": {
+            "status": "not_run"
+          }
+        },
+        "selected_tools": [
+          "synccheck",
+          "racecheck",
+          "memcheck"
+        ],
+        "qualification_scope": null,
+        "focused_decode_qualification_complete": null,
+        "runtime_hashes": {
+          "kernels/ops/attention/dsa/tilelang_kernel.py": "896bcc9eeea917aff8d0283d06a6201ef0205a5739395825d1d20a852601847b",
+          "kernels/jit/include/sgl_kernel/glm_packed_decode.cuh": "98cdd5b3e0a448384315b9de656991598165071e13d7839990d05fb633775fad",
+          "srt/remnant/glm.py": "419a0acfddf17f312f62fea39c7f3a7a5de2fe8825929267d9f32bdab99fbcda",
+          "srt/remnant/glm_pool.py": "964fb0127a53f0a2a8805381b1fc0558ffc23b22d6f3bb3ca9518e0e41eaa069",
+          "srt/remnant/reference.py": "6231ec9622623643eba8ab50d714f9433cd13672be927030c4070ae05452021e",
+          "srt/layers/layernorm.py": "98072d836e0c77312058521ee1015c80177b2c370da7408fd066eec61015ff21"
+        },
+        "tests": {
+          "racecheck": {
+            "tests": 0.0,
+            "failures": 0.0,
+            "errors": 0.0,
+            "skipped": 0.0,
+            "time": 21.758
+          },
+          "corrective": {
+            "tests": 1.0,
+            "failures": 0.0,
+            "errors": 0.0,
+            "skipped": 0.0,
+            "time": 21.833
+          },
+          "synccheck": {
+            "tests": 1.0,
+            "failures": 0.0,
+            "errors": 0.0,
+            "skipped": 0.0,
+            "time": 25.978
+          }
+        },
+        "result_sha256": "a049a560c0933a6d844d097afe2b785f2aed69a2640d947630aaa123ec66fa0e",
+        "manifest_sha256": "d3a4771119e922d953caa626745037fb170f91cf3c72846edbcf2554bfe3ee07",
+        "remote_volume_path": "caiw/remnant-stage2a-results/microbench/glm53-review-adapter-20261026T152144Z/validation"
+      },
+      {
+        "run_id": "glm53-review-adapter-20261026T153225Z",
+        "status": "failed",
+        "gpu_function_seconds": 37.213382866,
+        "error": "KeyboardInterrupt()",
+        "tools": {
+          "synccheck": {
+            "status": "not_run"
+          },
+          "racecheck": {
+            "status": "not_run"
+          },
+          "memcheck": {
+            "status": "not_run"
+          }
+        },
+        "selected_tools": [
+          "racecheck",
+          "memcheck"
+        ],
+        "qualification_scope": null,
+        "focused_decode_qualification_complete": null,
+        "runtime_hashes": {
+          "kernels/ops/attention/dsa/tilelang_kernel.py": "896bcc9eeea917aff8d0283d06a6201ef0205a5739395825d1d20a852601847b",
+          "kernels/jit/include/sgl_kernel/glm_packed_decode.cuh": "98cdd5b3e0a448384315b9de656991598165071e13d7839990d05fb633775fad",
+          "srt/remnant/glm.py": "419a0acfddf17f312f62fea39c7f3a7a5de2fe8825929267d9f32bdab99fbcda",
+          "srt/remnant/glm_pool.py": "964fb0127a53f0a2a8805381b1fc0558ffc23b22d6f3bb3ca9518e0e41eaa069",
+          "srt/remnant/reference.py": "6231ec9622623643eba8ab50d714f9433cd13672be927030c4070ae05452021e",
+          "srt/layers/layernorm.py": "98072d836e0c77312058521ee1015c80177b2c370da7408fd066eec61015ff21"
+        },
+        "tests": {},
+        "result_sha256": "c3051d3799fef954d9897b0510fa4ace61e6b0377d612d492d620afac6a4232d",
+        "manifest_sha256": "d3a4771119e922d953caa626745037fb170f91cf3c72846edbcf2554bfe3ee07",
+        "remote_volume_path": "caiw/remnant-stage2a-results/microbench/glm53-review-adapter-20261026T153225Z/validation"
+      },
+      {
+        "run_id": "glm53-review-adapter-20261026T153740Z",
+        "status": "passed",
+        "gpu_function_seconds": 116.305804415,
+        "error": null,
+        "tools": {
+          "synccheck": {
+            "status": "not_run"
+          },
+          "racecheck": {
+            "status": "passed"
+          },
+          "memcheck": {
+            "status": "passed"
+          }
+        },
+        "selected_tools": [
+          "racecheck",
+          "memcheck"
+        ],
+        "qualification_scope": "corrective",
+        "focused_decode_qualification_complete": false,
+        "runtime_hashes": {
+          "kernels/ops/attention/dsa/tilelang_kernel.py": "896bcc9eeea917aff8d0283d06a6201ef0205a5739395825d1d20a852601847b",
+          "kernels/jit/include/sgl_kernel/glm_packed_decode.cuh": "98cdd5b3e0a448384315b9de656991598165071e13d7839990d05fb633775fad",
+          "srt/remnant/glm.py": "419a0acfddf17f312f62fea39c7f3a7a5de2fe8825929267d9f32bdab99fbcda",
+          "srt/remnant/glm_pool.py": "964fb0127a53f0a2a8805381b1fc0558ffc23b22d6f3bb3ca9518e0e41eaa069",
+          "srt/remnant/reference.py": "6231ec9622623643eba8ab50d714f9433cd13672be927030c4070ae05452021e",
+          "srt/layers/layernorm.py": "98072d836e0c77312058521ee1015c80177b2c370da7408fd066eec61015ff21"
+        },
+        "tests": {
+          "racecheck": {
+            "tests": 1.0,
+            "failures": 0.0,
+            "errors": 0.0,
+            "skipped": 0.0,
+            "time": 23.921
+          },
+          "corrective": {
+            "tests": 1.0,
+            "failures": 0.0,
+            "errors": 0.0,
+            "skipped": 0.0,
+            "time": 18.445
+          },
+          "memcheck": {
+            "tests": 1.0,
+            "failures": 0.0,
+            "errors": 0.0,
+            "skipped": 0.0,
+            "time": 34.49
+          }
+        },
+        "result_sha256": "e755f0a64a07e0e1b6cda37c29213e59f45fc1f1736876e80546d650cdf2dad8",
+        "manifest_sha256": "d3a4771119e922d953caa626745037fb170f91cf3c72846edbcf2554bfe3ee07",
+        "remote_volume_path": "caiw/remnant-stage2a-results/microbench/glm53-review-adapter-20261026T153740Z/validation"
+      }
+    ],
+    "gpu_source": {
+      "parent": "0639722c102a9117518e6be968ad256d31d9d6c4",
+      "sglang": "9185c6d2511508ecf40e86101040bbc2dffb1135",
+      "flashmla": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+      "image": "im-PO9F017Jyq5riB4Ndegpi9"
+    },
+    "scope_limits": [
+      "Direct sanitizer instrumentation: byte probe and one production partial CTA per specialization; complete graph numerical checks run separately.",
+      "Adapter >2GiB regression is unfiltered under all three sanitizer tools, joined across identical source/artifact runs.",
+      "Broad/full-grid/combine instrumentation, serving, model quality, H20 qualification remain incomplete; no new timing."
+    ],
+    "ci": {
+      "lint": {
+        "run": 40344880119,
+        "head": "9185c6d2511508ecf40e86101040bbc2dffb1135",
+        "conclusion": "success"
+      },
+      "run_ci_label": "created and applied",
+      "base_gate": "passed after explicit failed-job rerun",
+      "registered_self_hosted_runners": 0,
+      "base_cpu_failure": "Seven Remnant flags absent from server-arguments reference; fixed in documentation-only follow-up.",
+      "remaining": "Broad GPU CI queued without self-hosted runners; no full-CI success claim."
+    },
+    "final_sglang": "979839b0b160c2e545c116aebd04866495e541b8",
+    "final_pin_difference": "Documentation only: seven server-argument rows; runtime/kernel/artifact source hashes unchanged."
   }
 }

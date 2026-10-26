@@ -6,19 +6,17 @@ Current optimized decode result: **48/48 cases complete, 30 paired rounds each;
 Direct adds 1.60% batch-weighted overhead**. See [the decode outcome](#optimized-decode-outcome-2026-10-26),
 [canonical evidence](qualification.json) and [all cases](decode.csv). The earlier
 unoptimized 56/128 attention comparison below remains historical and incomplete.
-Aggregate authorization is $35 ($20 historical plus the additional $15 phase).
+Aggregate authorization is $40 ($20 historical plus the extended $20 phase).
 Native remains the serving default.
 
-Review follow-up, 2026-10-26: code at SGLang `fbd8a022` fixes Adapter int64
-addressing, validates effective attention dispatch and restores single-mode
-shared timing. Launch geometry/configuration and artifact/evidence ownership
-are consolidated; see the [fork guide](../../../third_party/README.md#glm-53-flash-candidate-v0522-only).
-The 48-case result above remains historical at its recorded source identity.
-This follow-up uses local CPU checks only; no new GPU or image-build spend.
-Its Adapter large-address regression and rebuilt-artifact execution are pending.
-CPU validation: 126 SGLang checks passed (103 GPU benchmark checks skipped),
-and all 108 parent checks passed under each integration profile. Independent
-review found no remaining defects in the fixes.
+Review follow-up, 2026-10-26: SGLang `9185c6d25115` passed fresh focused
+H100 Direct byte/numerical/graph checks and memcheck/racecheck/synccheck. Adapter
+reconstruction across the 2 GiB boundary passed numerical and all three sanitizer
+tools, joined across identical source/artifact runs. The final `979839b` adds only
+missing server-argument documentation. Pinned lint CI is green at `9185c6d`;
+`run-ci` is applied and its gate passes. Broad GPU CI has no self-hosted runners.
+See [current validation](#review-gpu-validation-and-ci-cleanup-2026-10-26).
+The 48-case timing result retains its historical source identity.
 
 Question: can eleven MLA layers use 320-byte rows while retaining Native FP8
 TileLang arithmetic and unchanged KDA/indexer/tail reservations on H100?
@@ -785,3 +783,51 @@ bound by exact before/after hashes, pinned C++ formatting, and Python3.12 AST
 identity. Exact candidate hashes are checked after overlay; JIT owners are CPU
 prepared again. Ordinary source/image reuse checks remain strict. Record all
 new artifact identities and results in the existing canonical JSON.
+
+Current outcome: **keep; focused GPU validation passed** at parent `0639722c102a`,
+SGLang `9185c6d25115`, FlashMLA `3eb85944fd7d`, CPU image
+`im-PO9F017Jyq5riB4Ndegpi9`. All 32 maintained TileLang variants were CPU-prepared;
+retained AOT binaries and source identities were verified before allocation.
+
+| Check | Passing executions | Test duration |
+|:--|--:|--:|
+| Direct complete byte/graph numerical checks | 5 | 25.713 s |
+| Direct instrumentation scope audit | 1 | 22.667 s |
+| Direct synccheck | 5 | 40.098 s |
+| Direct racecheck | 5 | 40.588 s |
+| Direct memcheck | 5 | 131.044 s |
+| Adapter >2 GiB numerical check | 1 | 18.445 s |
+| Adapter synccheck | 1 | 25.978 s |
+| Adapter racecheck | 1 | 23.921 s |
+| Adapter memcheck | 1 | 34.490 s |
+
+The Direct sanitizer scope is the byte probe and one production partial CTA per
+specialization. Complete attention graphs are checked numerically outside that
+instrumentation filter. Adapter tools run without that filter. Broad/full-grid
+and combine sanitizer qualification, serving, quality and H20 qualification
+remain incomplete. Native remains the rollback; no new timing was collected.
+
+Two interrupted Adapter attempts are retained. Modal startup delays consumed
+client time before any GPU container existed; authoritative task queue/finish
+records plus ten-second shutdown margins bound those allocations. Dollar charges
+still include the entire client wall time. No failed attempt was refunded or
+relabeled as passed. Each tool's passing result is bound to identical runtime
+hashes and compiled artifacts in the canonical ledger.
+
+This follow-up adds **$1.694222** conservatively, bringing the phase to
+**$12.029805 / $20**, and all experiments to **$31.440634 / $40**.
+Conservatively accounted phase H100 time is **133.171 / 135 minutes**. All workers
+are stopped. The $3 reserve remains protected; no more routine runs are needed.
+
+Local checks: 176 SGLang CPU checks and ten subtests pass (104 explicit GPU skips),
+110 parent CPU checks pass under each integration profile, and six focused rebuild
+regressions pass. Repository-wide pinned lint succeeds in GitHub run 40344880119.
+The newly enabled base CPU suite found seven undocumented fork flags; documentation
+commit `979839b` adds the rows without changing runtime code. The `run-ci` label
+was created/applied and the gate rerun passed; broader GPU jobs remain queued with
+zero registered self-hosted runners. This is not a full-CI success claim.
+
+Reproduce through `scripts/modal/kernels.py::prepare_kernels` and
+`validate_kernels`, using the exact environment/commands recorded per run in
+`qualification.json`. The latest Adapter retry selects only `racecheck,memcheck`;
+its earlier matching-source synccheck evidence is retained separately.
