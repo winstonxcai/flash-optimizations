@@ -17,8 +17,8 @@ Folder suffixes identify the SGLang integration pair, not a FlashMLA release.
 |---|---|---|---|
 | `sglang-v0.5.18/` | `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` | `6687a7c` |
 | `flashmla-v0.5.18/` | `05e26647fe840b8baedae486c2d86d5ce4efeb7c` | `remnant/flashmla-v0518` | `97f3faa` |
-| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `remnant/v0.5.22` | `7856615` |
-| `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `remnant/flashmla-v0522` | `3eb8594` |
+| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `ds41-flash-packed` | `f5afebd90750` |
+| `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `ds41-flash-packed` | `e274b715f49a` |
 
 Both FlashMLA checkouts pin CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`.
 The default remains v0.5.18; `REMNANT_INTEGRATION=v0.5.22` selects the other pair.
@@ -49,6 +49,59 @@ content hashes and nested-source identities are retained in the build manifest.
 Ordinary serving does not accept these overrides. A source check does not prove
 that an existing container's loaded binaries match; source changes need a rebuild.
 
+## Experimental V4.1 FP4 on SM90
+
+The isolated `ds41-flash-packed` candidate starts from parent
+`9419d0e18e1e7677c0e48b8e40ad54bbc30010ca`; the original integration/worktrees
+remain unchanged. It adds `--dsv41-main-kv-cache-format auto|fp4|remnant` to the
+v0.5.22 pair. Default `auto` retains upstream behavior. Explicit modes require
+SM90 FlashMLA and V4.1 ratio-1/2 shared global caches; HiCache, distributed cache
+transfer, speculation/DSpark, replay and legacy layout overrides are rejected.
+
+- **Storage/producer ownership:** SGLang's `kernels/ops/attention/dsv4/fp4_cache.py`
+  owns software SM90 E2M1 packing and BF16 reconstruction. It takes normalized
+  BF16 rows, applies upstream RoPE/BF16 rounding, quantizes with per-16 E4M3
+  scales, then optionally retains the 256 largest dequantized magnitudes.
+  Ties retain lower coordinates; codes/scales are unchanged. Indexer input is
+  unpruned. Native is 288 bytes; Packed is 224 (128 codes + 64 bitmap + 32 scales).
+- **Runtime ownership:** grouped model args, the existing remnant configuration
+  boundary, `deepseek_v4_memory_pool.py`, `pool_configurator.py`, and
+  `deepseek_v4_backend.py` select layouts, budget physical reserved rows and
+  dispatch. Existing SWA storage and FP8 Remnant interfaces are retained.
+- **FP4 prefill ownership:** FlashMLA `sm90/prefill/sparse/phase1.cuh` has an
+  opt-in named-barrier policy and two FP4-only D512 instantiations. Separate
+  `fp4_sparse_prefill_fwd`/`flash_mla_fp4_sparse_fwd` entries serve reconstructed
+  BF16 caches and SWA-only layers in explicit FP4 modes. Stock/auto retain the
+  existing policy. SGLang owns AOT registration and explicit-mode dispatch.
+- **Direct ownership:** FlashMLA's separate `flash_mla_with_fp4_kvcache` entry
+  point and SM90 template specializations read global FP4 beside V4 SWA. Packed
+  data rows hold ascending survivors and eight MSB-first uint64 bitmap words;
+  even ranks occupy low nibbles. Pages store all data rows then all scale rows.
+  Scale lookup uses original coordinate groups. Global records already have
+  RoPE applied. SGLang's AOT CMake, extension registration and Python binding
+  expose the same contract without importing experiment code.
+- **Validation:** model-free fixtures extend the existing attention unit tests
+  and Modal kernel runner. Set `REMNANT_INTEGRATION=v0.5.22` and
+  `REMNANT_VALIDATION_SUITE=v41-fp4`. CPU builds/preflight precede one H100;
+  no weights, model volumes, serving, GPUQ or SM100 work. Independent source
+  review is complete. Current fragment reconstruction passed 39 ordinary cases,
+  all 34 cases under each strict sanitizer, and all 20 paired timing cases.
+  Packed Direct is 2.69% slower than Native for SWA64 and 2.58% for SWA128
+  (geometric-mean case ratios); no speedup or serving claim. The prior scalar
+  candidate's interrupted memcheck remains historical. Follow-up compute is
+  approximately $7.81 before billing settlement; all allocations are stopped.
+  Completed sanitizer tools may be combined only with identical runtime,
+  fixture, binary and sanitizer hashes and the full 34-case matrix per tool.
+  The runner supports tool permutations and checkpoints; no missing tool can
+  pass its per-run gate.
+  See the [single experiment record](../benchmarks/microbench/v41-packed-fp4/README.md)
+  for source identities, commands, gates, budget and actual outcomes.
+
+This candidate passed scoped model-free numerical, graph, stream, allocation,
+all-three-sanitizer and review gates. It remains experimental and opt-in; measured
+Direct latency is slightly slower than Native. Quality and serving capacity remain
+unverified. Roll back with `auto` or the recorded baseline pins.
+
 ## Parallel v0.5.22 integration
 
 Parent branch `codex/sglang-v0.5.22` starts from local `main` `6fa18c7` in
@@ -61,7 +114,8 @@ launcher options and benchmark defaults. The v0.5.22 pair is unchanged. Main's
 custom asynchronous-preparation controls remain v0.5.18-specific; v0.5.22 keeps
 upstream conversion offload, and unsupported opt-ins fail the CPU preflight.
 
-Target: 0731 on H100/SM90, **V4 584-byte logical Native layout**, not V4.1.
+Baseline target: 0731 on H100/SM90, **V4 584-byte logical Native layout**.
+The separate experimental V4.1 candidate above extends this baseline.
 
 | Area | Decision | Contract / adaptation |
 |---|---|---|
@@ -319,3 +373,18 @@ git log --oneline -- third_party/sglang-v0.5.18 third_party/flashmla-v0.5.18
 Use `git ls-tree <parent-commit> third_party/sglang-v0.5.18 third_party/flashmla-v0.5.18` to
 recover an integration's exact pair. Git history remains the detailed record;
 this guide and the changelog are its curated index.
+
+The fragment reconstruction follow-up stages Packed FP4 rows and prefix ranks
+once, reusing V4's fragment selectors with nibble adaptation. Producer geometry
+and persistent formats stay fixed. The maintained microbenchmark now includes
+`v41-fp4-decode`. Its active v3 matrix uses H64/SWA128 with 256-token SWA pages, batches
+8/16/24/28/32, and both C1/page256 and C2/page128 (ten cases), with
+actual captured-output checks and fresh dense Native FP4 controls. Timing is
+blocked until identical source/binary/tool receipts pass 34 cases per sanitizer.
+The prior source pins passed scoped model-free correctness and v1 timing.
+Fresh-context source/artifact review passed with no blocking findings. The v3
+fixture correction passed its two existing matrix/contract tests on Modal CPU
+(2 passed in 0.14 s) and changes no runtime/kernel code. Historical v1 measurements
+retain their original source identities. V3 GPU timing has not been run. V2 incorrectly equated the 128-token
+window with page128; the runtime factory requires page256. The measured
+allocator fixture and capacity prediction already used page256.

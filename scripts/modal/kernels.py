@@ -15,6 +15,7 @@ Default profile captures: 30 for v0.5.18, 36 for v0.5.22; three modes per case.
 --suite prefill-read compares Native/Packed192/Packed256 on identical fixtures,
 with separate reconstruction/attention/complete stages and warm/rotating caches.
 --prefill-reader fused selects the opt-in unpack/RoPE candidate for that suite.
+Set REMNANT_VALIDATION_SUITE=v41-fp4 for scoped model-free SM90 FP4 validation.
 CPU build/preflight precedes H100; Modal caches source/binaries. Authorization required.
 Limits are caps, not ETAs; no weights/retries. Results: remnant-stage2a-results/microbench/<run-id>/<action>.
 Download: modal volume get remnant-stage2a-results microbench/<run-id> <local-dir>
@@ -43,6 +44,11 @@ import modal
 from scripts.sources import check_sources, integration_profile
 
 INTEGRATION = integration_profile()
+VALIDATION_SUITE = os.environ.get("REMNANT_VALIDATION_SUITE", "v4")
+if VALIDATION_SUITE not in ("v4", "v41-fp4") or (
+    VALIDATION_SUITE == "v41-fp4" and INTEGRATION["version"] != "v0.5.22"
+):
+    raise ValueError("REMNANT_VALIDATION_SUITE must be v4, or v41-fp4 with v0.5.22")
 
 REMOTE_REPO = Path("/opt/flash-optimizations")
 REPO_ROOT = Path(__file__).resolve().parents[2] if modal.is_local() else REMOTE_REPO
@@ -89,14 +95,21 @@ SANITIZER = (
     else "compute-sanitizer"
 )
 # Preserve existing work caps; reserve time inside the outer timeout for cleanup.
-CPU_BUILD_TIMEOUT_S = GPU_TIMEOUT_S = 3600
+GPU_TIMEOUT_S = 3600
+CPU_BUILD_TIMEOUT_S = 900 if VALIDATION_SUITE == "v41-fp4" else 3600
 VALIDATION_TIMEOUT_S = (
     int(os.environ.get("REMNANT_VALIDATION_TIMEOUT_S", "2700"))
     if INTEGRATION["version"] == "v0.5.22"
     else GPU_TIMEOUT_S
 )
-if INTEGRATION["version"] == "v0.5.22" and not 120 <= VALIDATION_TIMEOUT_S <= 2700:
-    raise ValueError("REMNANT_VALIDATION_TIMEOUT_S must be between 120 and 2700")
+VALIDATION_TIMEOUT_CAP_S = 5400 if VALIDATION_SUITE == "v41-fp4" else 2700
+if (
+    INTEGRATION["version"] == "v0.5.22"
+    and not 120 <= VALIDATION_TIMEOUT_S <= VALIDATION_TIMEOUT_CAP_S
+):
+    raise ValueError(
+        f"REMNANT_VALIDATION_TIMEOUT_S must be between 120 and {VALIDATION_TIMEOUT_CAP_S}"
+    )
 CPU_BUILD_BUDGET_S = CPU_BUILD_TIMEOUT_S - 200
 RUN_BUDGETS_S = {"timing": 850, "validation": 1100, "profile": 1800}
 PROFILE_CAPTURE_TIMEOUT_S, PROFILE_EXPORT_TIMEOUT_S = 110, 45
@@ -166,6 +179,34 @@ SANITIZER_ORDER = (
     if INTEGRATION["version"] == "v0.5.22"
     else ("memcheck", "racecheck", "synccheck")
 )
+# Scoped FP4 qualification keeps the legacy suite intact. Collection and XML
+# gates reject skips; these explicit lists are copied into each result manifest.
+if VALIDATION_SUITE == "v41-fp4":
+    fp4_tests = TEST_ROOT + "test_remnant_fp4.py"
+    VALIDATION_TESTS = (
+        fp4_tests,
+        TEST_MODULES["flashmla_direct"]
+        + "::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+        TEST_MODULES["flashmla_direct"]
+        + "::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]",
+    )
+    CPU_TESTS = (
+        fp4_tests + "::test_fp4_startup_contract",
+        fp4_tests + "::test_fp4_backend_dispatch",
+        TEST_MODULES["cache_format"],
+        "benchmark/remnant/test_microbench.py::test_v41_fp4_matrix_and_timing_gate",
+    )
+    SANITIZER_TESTS = tuple(
+        fp4_tests + "::" + name
+        for name in (
+            "test_fp4_store_and_reader",
+            "test_fp4_direct",
+            "test_fp4_graph_and_stream",
+            "test_fp4_compressor_boundary",
+            "test_fp4_fragment_masks",
+        )
+    )
+
 NCU_SECTIONS = [
     "SpeedOfLight",
     "MemoryWorkloadAnalysis",
@@ -261,11 +302,40 @@ def _check_cuda_binding_requirements() -> list[dict[str, str]]:
     return sorted(checks, key=lambda item: (item["consumer"], item["requirement"]))
 
 
+def _validation_sanitizer_order(value: str) -> tuple[str, ...]:
+    """Prioritize pending tools without permitting missing/duplicate tools."""
+    if not value:
+        return SANITIZER_ORDER
+    tools = tuple(value.split(","))
+    if len(tools) != 3 or set(tools) != set(SANITIZER_ORDER):
+        raise ValueError(
+            "sanitizer_order must list memcheck,racecheck,synccheck exactly once"
+        )
+    return tools
+
+
 def _build_image() -> None:
     """CPU image layer: compile existing SM90 targets, install, then preflight."""
     import torch
     from sglang.kernels.jit.utils import override_jit_cuda_arch
 
+    # CPU-only orchestration boundary checks before any GPU allocation.
+    expected_order = ("racecheck", "memcheck", "synccheck")
+    if _validation_sanitizer_order(",".join(expected_order)) != expected_order:
+        raise RuntimeError("Sanitizer order preflight changed the requested order")
+    for invalid in (
+        "memcheck",
+        "racecheck,memcheck",
+        "memcheck,memcheck,synccheck",
+        "racecheck,memcheck,unknown",
+    ):
+        try:
+            _validation_sanitizer_order(invalid)
+        except ValueError:
+            continue
+        raise RuntimeError(
+            f"Sanitizer order preflight accepted invalid input: {invalid}"
+        )
     deadline = time.monotonic() + CPU_BUILD_BUDGET_S
     build = BUILD_ROOT
     build.mkdir()
@@ -415,6 +485,33 @@ def _build_image() -> None:
             raise RuntimeError("Pinned 0731 configuration content changed")
         Path("/opt/remnant-0731-config.json").write_bytes(payload)
         model_config = {"revision": revision, "sha256": digest, "url": url}
+    if VALIDATION_SUITE == "v41-fp4":
+        # Compile every new core format/geometry on CPU before an H100 exists.
+        code = """
+import triton
+from triton.compiler import ASTSource
+from triton.backends.compiler import GPUTarget
+from sglang.kernels.ops.attention.dsv4.fp4_cache import _store, _read
+from sgl_kernel import flashmla_ops
+import torch
+assert hasattr(torch.ops.sgl_kernel, 'fp4_sparse_decode_fwd')
+assert hasattr(torch.ops.sgl_kernel, 'fp4_sparse_prefill_fwd')
+for p in (128,256):
+    for packed in (False,True):
+        stride=p*(224 if packed else 288)
+        for rotate in (False,True):
+            src=ASTSource(_store, signature={'X':'*bf16','F':'*fp32' if rotate else '*bf16','LOC':'*i64','C':'*u8'}, constexprs={'XS':512,'FS':64 if rotate else 512,'P':p,'STRIDE':stride,'N':2,'PACKED':packed,'ROTATE':rotate})
+            triton.compile(src,target=GPUTarget('cuda',90,32),options={'num_warps':4,'enable_fp_fusion':False})
+        src=ASTSource(_read,signature={'C':'*u8','IDS':'*i32','OUT':'*bf16'},constexprs={'OS':512,'P':p,'STRIDE':stride,'N':2,'PACKED':packed})
+        triton.compile(src,target=GPUTarget('cuda',90,32),options={'num_warps':4})
+print('FP4 CPU SM90 precompilation passed')
+"""
+        _run_command(
+            [sys.executable, "-c", code],
+            build / "fp4-precompile.log",
+            deadline,
+            environment=cpu_environment,
+        )
     # 4. Preflight imports, coverage and profiler availability on CPU.
     _run_command(
         _benchmark_command("--check-imports"),
@@ -428,6 +525,13 @@ def _build_image() -> None:
         deadline,
         environment=cpu_environment,
     )
+    if VALIDATION_SUITE == "v41-fp4":
+        _run_command(
+            _benchmark_command("--suite", "v41-fp4-decode", "--check-imports"),
+            build / "fp4-benchmark-imports.log",
+            deadline,
+            environment=cpu_environment,
+        )
     _run_pytest(
         VALIDATION_TESTS,
         build,
@@ -458,6 +562,12 @@ def _build_image() -> None:
         _check_profiler_tools(build, deadline)
     # Profiler tools are not a correctness gate for the serving-image qualification.
     manifest = {
+        "validation_suite": VALIDATION_SUITE,
+        "coverage": {
+            "validation": VALIDATION_TESTS,
+            "cpu": CPU_TESTS,
+            "sanitizer": SANITIZER_TESTS,
+        },
         "integration": INTEGRATION["version"],
         "base_image": INTEGRATION["base_image"],
         "sources": sources,
@@ -479,6 +589,15 @@ def _build_image() -> None:
         "sanitizer": sanitizer_identity,
         "arch": "sm_90a",
         "binary_architectures": binary_architectures,
+        "fp4_precompile_artifacts": (
+            {
+                str(p): hashlib.sha256(p.read_bytes()).hexdigest()
+                for p in Path(os.environ["TRITON_CACHE_DIR"]).rglob("*")
+                if p.is_file()
+            }
+            if VALIDATION_SUITE == "v41-fp4"
+            else {}
+        ),
         "native_dtype": "float32",
         "cpu_import_driver_stub_sha256": hashlib.sha256(
             (build / "cpu-driver-stubs/libcuda.so.1").read_bytes()
@@ -562,6 +681,7 @@ else:
 kernel_image = (
     kernel_base.env(
         {
+            "REMNANT_VALIDATION_SUITE": VALIDATION_SUITE,
             "REMNANT_INTEGRATION": INTEGRATION["version"],
             "REMNANT_BUILT_INTEGRATION": INTEGRATION["version"],
             "REMNANT_SOURCE_IDENTITIES": json.dumps(SOURCE_IDENTITIES),
@@ -607,24 +727,138 @@ _GPU = {
     "retries": 0,
     "max_containers": 1,
     "scaledown_window": 2,
-    "volumes": {str(RESULTS_ROOT): results_volume, "/triton-cache": triton_volume},
+    # FP4 precompilation populates this image path on CPU. Mounting a volume
+    # over a nonempty path fails Modal startup; retain its verified image cache.
+    "volumes": {
+        str(RESULTS_ROOT): results_volume,
+        **({"/triton-cache": triton_volume} if VALIDATION_SUITE != "v41-fp4" else {}),
+    },
 }
 
 
 # Public workflows.
 
 
-@app.function(**{**_GPU, "timeout": 900})
+def _fp4_timing_qualification(run_ids: str) -> dict:
+    """Author: Winston Cai. Aggregate only complete tools with identical inputs."""
+    ids = run_ids.split(",")
+    if (
+        not run_ids
+        or len(set(ids)) != len(ids)
+        or any(not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", i) for i in ids)
+    ):
+        raise ValueError("FP4 timing requires unique qualification run IDs")
+    current = json.loads(MANIFEST.read_text())
+    if (
+        current["sources"] != _source_hashes()
+        or current["source_identities"] != SOURCE_IDENTITIES
+    ):
+        raise RuntimeError("Timing source identity mismatch")
+    for path, digest in current["binaries"].items():
+        if hashlib.sha256(Path(path).read_bytes()).hexdigest() != digest:
+            raise RuntimeError(f"Timing binary changed: {path}")
+    passed, receipts = set(), {}
+    expected_ids = None
+    for run_id in ids:
+        base = RESULTS_ROOT / "microbench" / run_id / "validation"
+        manifest = json.loads((base / "build-manifest.json").read_text())
+        result = json.loads((base / "result.json").read_text())
+        for key in (
+            "sources",
+            "source_identities",
+            "binaries",
+            "sanitizer",
+            "coverage",
+            "fp4_precompile_artifacts",
+        ):
+            if manifest.get(key) != current.get(key):
+                raise RuntimeError(f"Qualification identity changed: {run_id}/{key}")
+        if result.get("allocation", {}).get("status") != "passed":
+            raise RuntimeError(f"Missing allocation qualification: {run_id}")
+        for tool, state in result.get("sanitizer_results", {}).items():
+            if state.get("status") != "passed":
+                continue
+            tests = list(ET.parse(base / f"{tool}.xml").getroot().iter("testcase"))
+            case_ids = {(t.get("classname"), t.get("name")) for t in tests}
+            if (
+                len(tests) != 34
+                or any(list(t) for t in tests)
+                or len(case_ids) != len(tests)
+            ):
+                raise RuntimeError(f"Incomplete qualification XML: {run_id}/{tool}")
+            if expected_ids is not None and case_ids != expected_ids:
+                raise RuntimeError(f"Sanitizer case identities differ: {run_id}/{tool}")
+            expected_ids = case_ids
+            passed.add(tool)
+        receipts[run_id] = hashlib.sha256(
+            (base / "result.json").read_bytes()
+        ).hexdigest()
+    if passed != {"memcheck", "racecheck", "synccheck"}:
+        raise RuntimeError(
+            f"FP4 timing blocked by incomplete sanitizer coverage: {sorted(passed)}"
+        )
+    return {
+        "receipts": receipts,
+        "tools": sorted(passed),
+        "case_count_per_tool": len(expected_ids),
+    }
+
+
+@app.function(
+    **{
+        **_GPU,
+        "timeout": 900,
+        **({"cpu": 2, "memory": 16384} if VALIDATION_SUITE == "v41-fp4" else {}),
+    }
+)
 def benchmark_kernels(
     run_id: str,
     keep_count: int = 256,
     modes: str = "",
     suite: str = "all",
     prefill_reader: str = "split",
+    qualification_runs: str = "",
 ) -> str:
     """Validate and time the complete matrix for the selected survivor budget."""
     contract = _benchmark_cases()
     is_prefill = suite == "prefill-read"
+    is_fp4 = suite == "v41-fp4-decode"
+    if is_fp4:
+        if (
+            VALIDATION_SUITE != "v41-fp4"
+            or keep_count != 256
+            or modes not in ("", "native,kernel")
+        ):
+            raise ValueError(
+                "FP4 timing requires v41-fp4 qualification and Native/Packed keep256"
+            )
+        if prefill_reader != "split":
+            raise ValueError("FP4 timing uses the Direct decode paths")
+        with _run_context(run_id, "timing", RUN_BUDGETS_S["timing"]) as (
+            root,
+            record,
+            deadline,
+        ):
+            record["qualification"] = _fp4_timing_qualification(qualification_runs)
+            _run_pytest(
+                (
+                    "benchmark/remnant/test_microbench.py::test_v41_fp4_matrix_and_timing_gate",
+                ),
+                root,
+                "contract",
+                deadline,
+            )
+            argv = _benchmark_command(
+                "--suite", suite, "--output", str(root / "timing")
+            )
+            record.update(command=argv, suite=suite)
+            _run_command(argv, root / "timing.log", deadline)
+            contract.validate_timing(
+                json.loads((root / "timing.json").read_text()), suite=suite
+            )
+        return str(root)
+    if qualification_runs:
+        raise ValueError("qualification_runs is only supported by v41-fp4-decode")
     if prefill_reader not in ("split", "fused") or (
         not is_prefill and prefill_reader != "split"
     ):
@@ -694,13 +928,20 @@ def benchmark_kernels(
     **{
         **_GPU,
         "timeout": VALIDATION_TIMEOUT_S,
+        **({"cpu": 2, "memory": 16384} if VALIDATION_SUITE == "v41-fp4" else {}),
     }
 )
 def validate_kernels(
-    run_id: str, sanitizer: bool = False, max_seconds: int = RUN_BUDGETS_S["validation"]
+    run_id: str,
+    sanitizer: bool = False,
+    max_seconds: int = RUN_BUDGETS_S["validation"],
+    sanitizer_order: str = "",
 ) -> str:
     """Run existing GPU tests; skipped tests fail coverage. Optional three sanitizers."""
-    maximum = min(2640, VALIDATION_TIMEOUT_S - 60)
+    tool_order = _validation_sanitizer_order(sanitizer_order)
+    if sanitizer_order and not sanitizer:
+        raise ValueError("sanitizer_order requires --sanitizer")
+    maximum = min(VALIDATION_TIMEOUT_CAP_S - 60, VALIDATION_TIMEOUT_S - 60)
     if not 60 <= max_seconds <= maximum:
         raise ValueError(f"max_seconds must be between 60 and {maximum}")
     with _run_context(run_id, "validation", max_seconds) as (
@@ -709,7 +950,13 @@ def validate_kernels(
         deadline,
     ):
         environment = dict(os.environ)
+        record["validation_suite"] = VALIDATION_SUITE
+        record["coverage"] = {
+            "validation": VALIDATION_TESTS,
+            "sanitizer": SANITIZER_TESTS,
+        }
         record["sanitizer"] = sanitizer
+        record["sanitizer_order"] = tool_order
         if sanitizer:
             record["sanitizer_results"] = {
                 tool: {"status": "not_run"} for tool in SANITIZER_ORDER
@@ -725,6 +972,8 @@ def validate_kernels(
             if "cpu-driver-stubs" in environment.get("LD_LIBRARY_PATH", ""):
                 raise RuntimeError("CPU-only driver stubs leaked into the GPU loader")
             manifest = json.loads(MANIFEST.read_text())
+            if manifest.get("validation_suite", "v4") != VALIDATION_SUITE:
+                raise RuntimeError("Validation suite mismatch")
             if manifest["integration"] != "v0.5.22":
                 raise RuntimeError("Serving image integration mismatch")
             if (
@@ -743,6 +992,13 @@ def validate_kernels(
             for path, expected in manifest["binaries"].items():
                 if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
                     raise RuntimeError(f"Loaded binary input changed: {path}")
+            if VALIDATION_SUITE == "v41-fp4":
+                artifacts = manifest.get("fp4_precompile_artifacts", {})
+                if not artifacts:
+                    raise RuntimeError("Missing CPU-precompiled FP4 artifacts")
+                for path, expected in artifacts.items():
+                    if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
+                        raise RuntimeError(f"FP4 precompiled artifact changed: {path}")
             tool = manifest["sanitizer"]
             if (
                 tool["path"] != SANITIZER
@@ -817,11 +1073,15 @@ def validate_kernels(
             allocation = json.loads((root / "allocation.json").read_text())
             if allocation["status"] != "passed" or {
                 r["mode"] for r in allocation["modes"]
-            } != {"native", "triton", "kernel"}:
+            } != (
+                {"Native", "Packed"}
+                if VALIDATION_SUITE == "v41-fp4"
+                else {"native", "triton", "kernel"}
+            ):
                 raise RuntimeError("Incomplete real-allocation coverage")
             record["allocation"] = allocation
         if sanitizer:
-            for tool in SANITIZER_ORDER:
+            for tool in tool_order:
                 # Commands use whole-second timeouts. Preserve the incomplete
                 # tool matrix instead of attempting a launch with zero seconds.
                 if int(deadline - time.monotonic()) <= 0:
@@ -842,6 +1102,9 @@ def validate_kernels(
                     # evidence without converting this failure into a pass.
                 else:
                     record["sanitizer_results"][tool] = {"status": "passed"}
+                # Preserve completed evidence even if a later tool is cancelled.
+                (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
+                results_volume.commit()
             incomplete = [
                 tool
                 for tool, result in record["sanitizer_results"].items()
@@ -939,7 +1202,7 @@ def profile_kernels(
             argv = ["ncu", *[arg for pair in options.items() for arg in pair]]
             if is_prefill:
                 argv += ["--nvtx"]
-            for section in ([] if is_prefill else NCU_SECTIONS):
+            for section in [] if is_prefill else NCU_SECTIONS:
                 argv += ["--section", section]
             argv += [
                 "--metrics",
@@ -1150,7 +1413,15 @@ def _run_pytest(
     environment: dict[str, str] | None = None,
 ) -> None:
     report = root / f"{name}.xml"
-    argv = [*prefix, sys.executable, *["-m", "pytest", "-q"]]
+    argv = [
+        *prefix,
+        sys.executable,
+        "-m",
+        "pytest",
+        "-q",
+        "--disable-warnings",
+        "--tb=short",
+    ]
     argv += [str(SGLANG_ROOT / path) for path in tests]
     argv += ["--collect-only"] if collect else [f"--junitxml={report}"]
     output = _run_command(argv, root / f"{name}.log", deadline, environment=environment)
@@ -1230,4 +1501,5 @@ def _run_context(
         try:
             results_volume.commit()
         finally:
-            triton_volume.commit()
+            if VALIDATION_SUITE != "v41-fp4":
+                triton_volume.commit()

@@ -13,6 +13,60 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Publish the completed V4.1 experiment from parent `81c0777` on matching
+  `ds41-flash-packed` branches in all three repositories. Fork pins remain
+  SGLang `f5afebd90750` / FlashMLA `e274b715f49a`; only v0.5.22 branch hints
+  and integration documentation change. No runtime/kernel or validation change.
+  v0.5.18 and the original development branches are preserved.
+
+- SWA page correction from parent `c6c9f0f`: SGLang `f5afebd90750` /
+  FlashMLA `e274b715f49a` (unchanged). The paged H100 factory requires
+  SWA page256 while attention reads a 128-token window; v2 mistakenly used
+  page128. V3 fixes only the fixture/protocol and adds a window-as-page
+  rejection check. The two existing contract/V4 matrix tests passed on Modal
+  CPU (2 passed in 0.14 s), cached image, no GPU run or native rebuild.
+  Allocation measurements/prediction already used page256. Historical receipts
+  remain unchanged; v3 GPU timing is unmeasured. CPU app stopped/zero containers.
+
+- Production-geometry fixture correction from parent `60e5bbe`: SGLang
+  `a0f7ff18314c` / FlashMLA `e274b715f49a` (unchanged). V4.1 FP4 timing now
+  uses H64/SWA128/page128, Q1/K512, five batches and both C1/page256 and
+  C2/page128 (ten cases). Protocol v2 rejects historical v1 timing; SWA64/H128
+  remain correctness coverage. Existing matrix/timing contract and V4 matrix
+  regression passed on Modal CPU (2 passed in 0.08 s). No native rebuild or GPU
+  rerun; v2 GPU timing remains unmeasured. Both CPU apps stopped. Rollback uses
+  the prior SGLang pin `98991169803f`; historical receipts/CSV remain intact.
+
+- Follow-up to parent `cc0f82f`: SGLang `98991169803f` / FlashMLA `e274b715f49a`.
+  Packed FP4 now stages survivors/bitmap prefixes once and reconstructs fragments
+  with V4-style selectors. Adds two exhaustive-mask Direct fixtures and paired
+  Native/Packed FP4 timing for all 20 H64/H128/batch/SWA cases. Scheduling, Native,
+  persistent layouts and v0.5.18 pins remain unchanged. Fresh-context source
+  review passed. From parent `8e9e3e9`, Modal CPU startup 24 tests + 15 subtests,
+  ordinary 39 cases, all 34 cases under each strict sanitizer, and 20 paired timing
+  cases passed. Packed Direct is 2.69%/2.58% slower than dense Native FP4 for
+  SWA64/128 (geometric-mean case ratios); record savings stay 22.22%. Follow-up
+  compute approximately $7.81 before billing settlement, all allocations stopped.
+  Fresh-context source/artifact review passed with no blocking findings.
+  No model/serving/production promotion.
+
+- Experimental V4.1 FP4 integration validated from parent `9ec5971`, based on
+  `9419d0e`. v0.5.22 pins: SGLang `0a36a662562f` / FlashMLA `91463e004ec9`;
+  v0.5.18 and CUTLASS pins unchanged. Adds opt-in Native 288-byte/Packed
+  224-byte storage, deterministic post-quantization 256-coordinate selection,
+  SM90 mixed-SWA Direct, BF16 reconstruction/prefill, reserved-page accounting
+  and model-free Modal fixtures. Separate FP4 prefill synchronization retains
+  stock auto behavior. Native CPU builds/preflight, 37 ordinary cases, full
+  32-case synccheck/racecheck and fresh-context review passed. **Unqualified:**
+  workspace disablement interrupted memcheck after 27/32; no clean memory
+  sanitizer summary/exit. Reported task compute $11.91, all allocations stopped;
+  a full rerun exceeds the remaining work allowance while preserving the $2
+  reserve. Physical 1-GiB allocation fixture: 656384 Native / 800512 Packed
+  tokens (+21.96%); record-byte savings 22.22% are separate. No model quality,
+  serving, performance or production claim. Source hashes, exact commands,
+  failed attempts, costs and the missing gate are indexed by the
+  [experiment record](../benchmarks/microbench/v41-packed-fp4/README.md).
+
 - Reconciled GitHub main `ffb11cb` in parent merge `814aaa8`, retaining its
   v0.5.18 SGLang `6687a7c36c0c`, FlashMLA `97f3faa58450`, frontend preparation/
   diagnostics and HiCache launcher options. The v0.5.22 pair remains SGLang
