@@ -9,8 +9,8 @@
   "budget": {
     "authorized_usd": 35,
     "routine_cutoff_usd": 19.75,
-    "conservative_accrued_usd": 26.57029077785315,
-    "h100_seconds": 19094.544874539963,
+    "conservative_accrued_usd": 28.620740447461454,
+    "h100_seconds": 20267.92639383198,
     "accounts": {
       "caiw": {
         "preparation_preflight": [
@@ -29698,10 +29698,11 @@
       "gpu_cap_usd": 9,
       "reserve_usd": 3,
       "h100_seconds_cap": 7200,
-      "conservative_usd": 7.159461752709372,
-      "cpu_usd": 0.9615192676123898,
-      "gpu_usd": 6.1979424850969815,
-      "h100_seconds": 5076.581940832984
+      "conservative_usd": 9.209911422317678,
+      "cpu_usd": 1.2206650173966649,
+      "gpu_usd": 7.630510944428167,
+      "h100_seconds": 6249.963460125,
+      "conservative_overcount_usd": 0.358735460492845
     },
     "historical_conservative_usd": 19.410829025143784,
     "attempts": [
@@ -36398,6 +36399,1476 @@
             }
           ]
         }
+      },
+      {
+        "run_id": "glm53-optimized-prepare-20261026T084937Z",
+        "action": "prepare",
+        "status": "completed",
+        "preflight": {
+          "spend": {
+            "metered_cost": "47.80466805",
+            "billed_cost": "0E-8",
+            "adjustments": {
+              "credits": "-21.26000000",
+              "free_storage": "-26.54329934",
+              "reservation_adjustment": "-0E-8",
+              "plan_cost": "0E-8",
+              "network_egress_allowance": "-0.00136871"
+            },
+            "metered_cost_breakdown": {
+              "ephemeral_apps": "21.21173496",
+              "deployed_apps": "0.04856797",
+              "volumes": "26.54329934",
+              "network_egress": "0.00136871",
+              "llm_tokens": "0E-8"
+            }
+          },
+          "rates": {
+            "cpu_hour_cost": "0.04730",
+            "cpu_hour_cost_sandbox": "0.141900",
+            "egress_gib_cost": "0.04000",
+            "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_cached_prompt_mtok_cost": "0.005",
+            "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_completion_mtok_cost": "1.00",
+            "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_prompt_mtok_cost": "0.25",
+            "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_reasoning_mtok_cost": "1.00",
+            "endpoints_moonshotai_kimi_k3_cached_prompt_mtok_cost": "0.30",
+            "endpoints_moonshotai_kimi_k3_completion_mtok_cost": "15.00",
+            "endpoints_moonshotai_kimi_k3_prompt_mtok_cost": "3.00",
+            "endpoints_moonshotai_kimi_k3_reasoning_mtok_cost": "15.00",
+            "endpoints_nvidia_glm_5.2_nvfp4_cached_prompt_mtok_cost": "1",
+            "endpoints_nvidia_glm_5.2_nvfp4_completion_mtok_cost": "1",
+            "endpoints_nvidia_glm_5.2_nvfp4_prompt_mtok_cost": "1",
+            "endpoints_nvidia_glm_5.2_nvfp4_reasoning_mtok_cost": "1",
+            "endpoints_qwen_qwen3.8_2.4t_a95b_cached_prompt_mtok_cost": "0.25",
+            "endpoints_qwen_qwen3.8_2.4t_a95b_completion_mtok_cost": "6.00",
+            "endpoints_qwen_qwen3.8_2.4t_a95b_prompt_mtok_cost": "2.00",
+            "endpoints_qwen_qwen3.8_2.4t_a95b_reasoning_mtok_cost": "6.00",
+            "endpoints_thinkingmachines_inkling_nvfp4_cached_prompt_mtok_cost": "0.27",
+            "endpoints_thinkingmachines_inkling_nvfp4_completion_mtok_cost": "5",
+            "endpoints_thinkingmachines_inkling_nvfp4_prompt_mtok_cost": "1.20",
+            "endpoints_thinkingmachines_inkling_nvfp4_reasoning_mtok_cost": "5",
+            "endpoints_zai_org_glm_5.3_cached_prompt_mtok_cost": "0.26",
+            "endpoints_zai_org_glm_5.3_completion_mtok_cost": "4.40",
+            "endpoints_zai_org_glm_5.3_flash_cached_prompt_mtok_cost": "0.09",
+            "endpoints_zai_org_glm_5.3_flash_completion_mtok_cost": "1.50",
+            "endpoints_zai_org_glm_5.3_flash_prompt_mtok_cost": "0.45",
+            "endpoints_zai_org_glm_5.3_flash_reasoning_mtok_cost": "1.50",
+            "endpoints_zai_org_glm_5.3_prompt_mtok_cost": "1.40",
+            "endpoints_zai_org_glm_5.3_reasoning_mtok_cost": "4.40",
+            "gpu_hour_cost_a100_40gb": "2.10000",
+            "gpu_hour_cost_a100_80gb": "2.50000",
+            "gpu_hour_cost_a10g": "1.10000",
+            "gpu_hour_cost_b200": "6.25000",
+            "gpu_hour_cost_b300": "7.10000",
+            "gpu_hour_cost_h100": "3.95000",
+            "gpu_hour_cost_h200": "4.54000",
+            "gpu_hour_cost_l4": "0.80000",
+            "gpu_hour_cost_l40s": "1.95000",
+            "gpu_hour_cost_rtx6000": "3.03000",
+            "gpu_hour_cost_t4": "0.59000",
+            "mem_gib_hour_cost": "0.00800",
+            "mem_gib_hour_cost_sandbox": "0.024000",
+            "volume_storage_gib_month_cost": "0.09000"
+          },
+          "containers": [],
+          "apps": [
+            {
+              "app_id": "ap-o4hZ1UCTi3UqVbLwHaXnfB",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:58:35+08:00",
+              "stopped_at": "2026-10-26 16:24:45+08:00"
+            },
+            {
+              "app_id": "ap-hpfuxOspzEThaUWaMbUgfr",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:48:25+08:00",
+              "stopped_at": "2026-10-26 15:55:53+08:00"
+            },
+            {
+              "app_id": "ap-9RgATXofTWGewehMC0XDpF",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:27:55+08:00",
+              "stopped_at": "2026-10-26 15:45:41+08:00"
+            },
+            {
+              "app_id": "ap-4juxrkL75f8Y186a5jeP0v",
+              "description": "remnant-glm-loader-inspection",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:25:03+08:00",
+              "stopped_at": "2026-10-26 15:25:50+08:00"
+            },
+            {
+              "app_id": "ap-k7MlqUbvaGlo7RJUV2iaoc",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:17:46+08:00",
+              "stopped_at": "2026-10-26 15:23:00+08:00"
+            },
+            {
+              "app_id": "ap-uwR5eiNWkHRAiUrKQh959O",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:14:08+08:00",
+              "stopped_at": "2026-10-26 15:14:12+08:00"
+            },
+            {
+              "app_id": "ap-rvhCTskl2BdW3ynEUwyhYR",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:05:01+08:00",
+              "stopped_at": "2026-10-26 15:10:28+08:00"
+            },
+            {
+              "app_id": "ap-qF98qOZwKJ4UrQ3Zd45Vjd",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 14:43:59+08:00",
+              "stopped_at": "2026-10-26 15:01:49+08:00"
+            }
+          ]
+        },
+        "sources": {
+          "parent": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations",
+            "commit": "8aea70ae58a9afc044842abbbdd976c1deafa2d5"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+            "expected_commit": "246ee03c1ad5e0b647383644039c32b8c71bf680",
+            "commit": "246ee03c1ad5e0b647383644039c32b8c71bf680",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22",
+            "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "command": [
+          "/Users/poohthewinnie/.local/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::prepare_kernels",
+          "--model-family",
+          "glm53"
+        ],
+        "environment": {
+          "MODAL_PROFILE": "caiw",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_VALIDATION_TIMEOUT_S": "1620",
+          "REMNANT_COMPILED_IMAGE": "im-DpMzYEmNDA8xq8Z97RrWmM"
+        },
+        "timeout_seconds": 1800,
+        "hourly_conservative_rate_usd": 1.2688000000000001,
+        "output": "data/glm53-packed/glm53-optimized-prepare-20261026T084937Z",
+        "wall_seconds": 322.2029397079896,
+        "conservative_usd": 0.11355863608374922,
+        "app_ids": [
+          "ap-3pOIXi2KLeoCHZNkNZ7vxT"
+        ],
+        "log_sha256": "52466ca6975caccf7488e6bf2c76abfe90f80b5ce927472fedaa6c472aa092c2",
+        "after": {
+          "spend": {
+            "metered_cost": "47.84466805",
+            "billed_cost": "0E-8",
+            "adjustments": {
+              "credits": "-21.30000000",
+              "free_storage": "-26.54329934",
+              "reservation_adjustment": "-0E-8",
+              "plan_cost": "0E-8",
+              "network_egress_allowance": "-0.00136871"
+            },
+            "metered_cost_breakdown": {
+              "deployed_apps": "0.04856797",
+              "volumes": "26.54329934",
+              "ephemeral_apps": "21.24874785",
+              "llm_tokens": "0E-8",
+              "network_egress": "0.00136871"
+            }
+          },
+          "containers": [],
+          "apps": [
+            {
+              "app_id": "ap-3pOIXi2KLeoCHZNkNZ7vxT",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 16:49:41+08:00",
+              "stopped_at": "2026-10-26 16:54:58+08:00"
+            },
+            {
+              "app_id": "ap-o4hZ1UCTi3UqVbLwHaXnfB",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:58:35+08:00",
+              "stopped_at": "2026-10-26 16:24:45+08:00"
+            },
+            {
+              "app_id": "ap-hpfuxOspzEThaUWaMbUgfr",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:48:25+08:00",
+              "stopped_at": "2026-10-26 15:55:53+08:00"
+            },
+            {
+              "app_id": "ap-9RgATXofTWGewehMC0XDpF",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:27:55+08:00",
+              "stopped_at": "2026-10-26 15:45:41+08:00"
+            },
+            {
+              "app_id": "ap-4juxrkL75f8Y186a5jeP0v",
+              "description": "remnant-glm-loader-inspection",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:25:03+08:00",
+              "stopped_at": "2026-10-26 15:25:50+08:00"
+            },
+            {
+              "app_id": "ap-k7MlqUbvaGlo7RJUV2iaoc",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:17:46+08:00",
+              "stopped_at": "2026-10-26 15:23:00+08:00"
+            },
+            {
+              "app_id": "ap-uwR5eiNWkHRAiUrKQh959O",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:14:08+08:00",
+              "stopped_at": "2026-10-26 15:14:12+08:00"
+            },
+            {
+              "app_id": "ap-rvhCTskl2BdW3ynEUwyhYR",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:05:01+08:00",
+              "stopped_at": "2026-10-26 15:10:28+08:00"
+            },
+            {
+              "app_id": "ap-qF98qOZwKJ4UrQ3Zd45Vjd",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 14:43:59+08:00",
+              "stopped_at": "2026-10-26 15:01:49+08:00"
+            }
+          ]
+        }
+      },
+      {
+        "run_id": "glm53-optimized-validation-20261026T085610Z",
+        "action": "validation",
+        "status": "failed",
+        "preflight": {
+          "spend": {
+            "metered_cost": "47.86466805",
+            "billed_cost": "0E-8",
+            "adjustments": {
+              "reservation_adjustment": "-0E-8",
+              "credits": "-21.32000000",
+              "free_storage": "-26.54329934",
+              "plan_cost": "0E-8",
+              "network_egress_allowance": "-0.00136871"
+            },
+            "metered_cost_breakdown": {
+              "ephemeral_apps": "21.26759030",
+              "network_egress": "0.00136871",
+              "deployed_apps": "0.04856797",
+              "volumes": "26.54329934",
+              "llm_tokens": "0E-8"
+            }
+          },
+          "rates": {
+            "cpu_hour_cost": "0.04730",
+            "cpu_hour_cost_sandbox": "0.141900",
+            "egress_gib_cost": "0.04000",
+            "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_cached_prompt_mtok_cost": "0.005",
+            "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_completion_mtok_cost": "1.00",
+            "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_prompt_mtok_cost": "0.25",
+            "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_reasoning_mtok_cost": "1.00",
+            "endpoints_moonshotai_kimi_k3_cached_prompt_mtok_cost": "0.30",
+            "endpoints_moonshotai_kimi_k3_completion_mtok_cost": "15.00",
+            "endpoints_moonshotai_kimi_k3_prompt_mtok_cost": "3.00",
+            "endpoints_moonshotai_kimi_k3_reasoning_mtok_cost": "15.00",
+            "endpoints_nvidia_glm_5.2_nvfp4_cached_prompt_mtok_cost": "1",
+            "endpoints_nvidia_glm_5.2_nvfp4_completion_mtok_cost": "1",
+            "endpoints_nvidia_glm_5.2_nvfp4_prompt_mtok_cost": "1",
+            "endpoints_nvidia_glm_5.2_nvfp4_reasoning_mtok_cost": "1",
+            "endpoints_qwen_qwen3.8_2.4t_a95b_cached_prompt_mtok_cost": "0.25",
+            "endpoints_qwen_qwen3.8_2.4t_a95b_completion_mtok_cost": "6.00",
+            "endpoints_qwen_qwen3.8_2.4t_a95b_prompt_mtok_cost": "2.00",
+            "endpoints_qwen_qwen3.8_2.4t_a95b_reasoning_mtok_cost": "6.00",
+            "endpoints_thinkingmachines_inkling_nvfp4_cached_prompt_mtok_cost": "0.27",
+            "endpoints_thinkingmachines_inkling_nvfp4_completion_mtok_cost": "5",
+            "endpoints_thinkingmachines_inkling_nvfp4_prompt_mtok_cost": "1.20",
+            "endpoints_thinkingmachines_inkling_nvfp4_reasoning_mtok_cost": "5",
+            "endpoints_zai_org_glm_5.3_cached_prompt_mtok_cost": "0.26",
+            "endpoints_zai_org_glm_5.3_completion_mtok_cost": "4.40",
+            "endpoints_zai_org_glm_5.3_flash_cached_prompt_mtok_cost": "0.09",
+            "endpoints_zai_org_glm_5.3_flash_completion_mtok_cost": "1.50",
+            "endpoints_zai_org_glm_5.3_flash_prompt_mtok_cost": "0.45",
+            "endpoints_zai_org_glm_5.3_flash_reasoning_mtok_cost": "1.50",
+            "endpoints_zai_org_glm_5.3_prompt_mtok_cost": "1.40",
+            "endpoints_zai_org_glm_5.3_reasoning_mtok_cost": "4.40",
+            "gpu_hour_cost_a100_40gb": "2.10000",
+            "gpu_hour_cost_a100_80gb": "2.50000",
+            "gpu_hour_cost_a10g": "1.10000",
+            "gpu_hour_cost_b200": "6.25000",
+            "gpu_hour_cost_b300": "7.10000",
+            "gpu_hour_cost_h100": "3.95000",
+            "gpu_hour_cost_h200": "4.54000",
+            "gpu_hour_cost_l4": "0.80000",
+            "gpu_hour_cost_l40s": "1.95000",
+            "gpu_hour_cost_rtx6000": "3.03000",
+            "gpu_hour_cost_t4": "0.59000",
+            "mem_gib_hour_cost": "0.00800",
+            "mem_gib_hour_cost_sandbox": "0.024000",
+            "volume_storage_gib_month_cost": "0.09000"
+          },
+          "containers": [],
+          "apps": [
+            {
+              "app_id": "ap-3pOIXi2KLeoCHZNkNZ7vxT",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 16:49:41+08:00",
+              "stopped_at": "2026-10-26 16:54:58+08:00"
+            },
+            {
+              "app_id": "ap-o4hZ1UCTi3UqVbLwHaXnfB",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:58:35+08:00",
+              "stopped_at": "2026-10-26 16:24:45+08:00"
+            },
+            {
+              "app_id": "ap-hpfuxOspzEThaUWaMbUgfr",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:48:25+08:00",
+              "stopped_at": "2026-10-26 15:55:53+08:00"
+            },
+            {
+              "app_id": "ap-9RgATXofTWGewehMC0XDpF",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:27:55+08:00",
+              "stopped_at": "2026-10-26 15:45:41+08:00"
+            },
+            {
+              "app_id": "ap-4juxrkL75f8Y186a5jeP0v",
+              "description": "remnant-glm-loader-inspection",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:25:03+08:00",
+              "stopped_at": "2026-10-26 15:25:50+08:00"
+            },
+            {
+              "app_id": "ap-k7MlqUbvaGlo7RJUV2iaoc",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:17:46+08:00",
+              "stopped_at": "2026-10-26 15:23:00+08:00"
+            },
+            {
+              "app_id": "ap-uwR5eiNWkHRAiUrKQh959O",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:14:08+08:00",
+              "stopped_at": "2026-10-26 15:14:12+08:00"
+            },
+            {
+              "app_id": "ap-rvhCTskl2BdW3ynEUwyhYR",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:05:01+08:00",
+              "stopped_at": "2026-10-26 15:10:28+08:00"
+            },
+            {
+              "app_id": "ap-qF98qOZwKJ4UrQ3Zd45Vjd",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 14:43:59+08:00",
+              "stopped_at": "2026-10-26 15:01:49+08:00"
+            }
+          ]
+        },
+        "sources": {
+          "parent": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations",
+            "commit": "8aea70ae58a9afc044842abbbdd976c1deafa2d5"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+            "expected_commit": "246ee03c1ad5e0b647383644039c32b8c71bf680",
+            "commit": "246ee03c1ad5e0b647383644039c32b8c71bf680",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22",
+            "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "command": [
+          "/Users/poohthewinnie/.local/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::validate_kernels",
+          "--model-family",
+          "glm53",
+          "--stage",
+          "corrective",
+          "--sanitizer",
+          "--sanitizer-scope",
+          "glm-decode",
+          "--cases",
+          "test/registered/attention/unittests/test_glm5_remnant.py::test_packed_loader_bytes,test/registered/attention/unittests/test_glm5_remnant.py::test_decode_bank_graph",
+          "--run-id",
+          "glm53-optimized-validation-20261026T085610Z",
+          "--max-seconds",
+          "480"
+        ],
+        "environment": {
+          "MODAL_PROFILE": "caiw",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_VALIDATION_TIMEOUT_S": "600",
+          "REMNANT_COMPILED_IMAGE": "im-mOJP6OgY2aRiQ72iNrHoMk"
+        },
+        "timeout_seconds": 600,
+        "hourly_conservative_rate_usd": 4.3952,
+        "output": "data/glm53-packed/glm53-optimized-validation-20261026T085610Z",
+        "error": "TimeoutExpired(['/Users/poohthewinnie/.local/bin/modal', 'run', 'scripts/modal/kernels.py::validate_kernels', '--model-family', 'glm53', '--stage', 'corrective', '--sanitizer', '--sanitizer-scope', 'glm-decode', '--cases', 'test/registered/attention/unittests/test_glm5_remnant.py::test_packed_loader_bytes,test/registered/attention/unittests/test_glm5_remnant.py::test_decode_bank_graph', '--run-id', 'glm53-optimized-validation-20261026T085610Z', '--max-seconds', '480'], 599.9999582919991)",
+        "wall_seconds": 602.278068457992,
+        "conservative_usd": 0.7353146018018241,
+        "app_ids": [
+          "ap-y0Yax4daAbm6YqhQQy5apw"
+        ],
+        "log_sha256": "f4968e79424a4009605194ba3b721fb679fdaa3446f527b04ccc62b2ddece69d",
+        "after": {
+          "spend": {
+            "metered_cost": "48.39466805",
+            "billed_cost": "0E-8",
+            "adjustments": {
+              "reservation_adjustment": "-0E-8",
+              "plan_cost": "0E-8",
+              "network_egress_allowance": "-0.00136871",
+              "free_storage": "-26.54329934",
+              "credits": "-21.85000000"
+            },
+            "metered_cost_breakdown": {
+              "deployed_apps": "0.04856797",
+              "ephemeral_apps": "21.80127345",
+              "network_egress": "0.00136871",
+              "volumes": "26.54329934",
+              "llm_tokens": "0E-8"
+            }
+          },
+          "containers": [
+            {
+              "container_id": "ta-01M5VQ2M6BKB5VXT777MWK5HNR",
+              "app_id": "ap-y0Yax4daAbm6YqhQQy5apw",
+              "app_name": "remnant-kernel-dev",
+              "start_time": "2026-10-26 17:01:28+08:00"
+            }
+          ],
+          "apps": [
+            {
+              "app_id": "ap-y0Yax4daAbm6YqhQQy5apw",
+              "description": "remnant-kernel-dev",
+              "state": "stopping...",
+              "tasks": "1",
+              "created_at": "2026-10-26 16:56:14+08:00",
+              "stopped_at": null
+            },
+            {
+              "app_id": "ap-3pOIXi2KLeoCHZNkNZ7vxT",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 16:49:41+08:00",
+              "stopped_at": "2026-10-26 16:54:58+08:00"
+            },
+            {
+              "app_id": "ap-o4hZ1UCTi3UqVbLwHaXnfB",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:58:35+08:00",
+              "stopped_at": "2026-10-26 16:24:45+08:00"
+            },
+            {
+              "app_id": "ap-hpfuxOspzEThaUWaMbUgfr",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:48:25+08:00",
+              "stopped_at": "2026-10-26 15:55:53+08:00"
+            },
+            {
+              "app_id": "ap-9RgATXofTWGewehMC0XDpF",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:27:55+08:00",
+              "stopped_at": "2026-10-26 15:45:41+08:00"
+            },
+            {
+              "app_id": "ap-4juxrkL75f8Y186a5jeP0v",
+              "description": "remnant-glm-loader-inspection",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:25:03+08:00",
+              "stopped_at": "2026-10-26 15:25:50+08:00"
+            },
+            {
+              "app_id": "ap-k7MlqUbvaGlo7RJUV2iaoc",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:17:46+08:00",
+              "stopped_at": "2026-10-26 15:23:00+08:00"
+            },
+            {
+              "app_id": "ap-uwR5eiNWkHRAiUrKQh959O",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:14:08+08:00",
+              "stopped_at": "2026-10-26 15:14:12+08:00"
+            },
+            {
+              "app_id": "ap-rvhCTskl2BdW3ynEUwyhYR",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:05:01+08:00",
+              "stopped_at": "2026-10-26 15:10:28+08:00"
+            }
+          ]
+        }
+      },
+      {
+        "run_id": "glm53-optimized-validation-20261026T090939Z",
+        "action": "validation",
+        "status": "failed",
+        "preflight": {
+          "spend": {
+            "metered_cost": "48.32466805",
+            "billed_cost": "0E-8",
+            "adjustments": {
+              "reservation_adjustment": "-0E-8",
+              "plan_cost": "0E-8",
+              "free_storage": "-26.54329934",
+              "credits": "-21.78000000",
+              "network_egress_allowance": "-0.00136871"
+            },
+            "metered_cost_breakdown": {
+              "volumes": "26.54329934",
+              "ephemeral_apps": "21.73290509",
+              "network_egress": "0.00136871",
+              "deployed_apps": "0.04856797",
+              "llm_tokens": "0E-8"
+            }
+          },
+          "rates": {
+            "cpu_hour_cost": "0.04730",
+            "cpu_hour_cost_sandbox": "0.141900",
+            "egress_gib_cost": "0.04000",
+            "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_cached_prompt_mtok_cost": "0.005",
+            "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_completion_mtok_cost": "1.00",
+            "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_prompt_mtok_cost": "0.25",
+            "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_reasoning_mtok_cost": "1.00",
+            "endpoints_moonshotai_kimi_k3_cached_prompt_mtok_cost": "0.30",
+            "endpoints_moonshotai_kimi_k3_completion_mtok_cost": "15.00",
+            "endpoints_moonshotai_kimi_k3_prompt_mtok_cost": "3.00",
+            "endpoints_moonshotai_kimi_k3_reasoning_mtok_cost": "15.00",
+            "endpoints_nvidia_glm_5.2_nvfp4_cached_prompt_mtok_cost": "1",
+            "endpoints_nvidia_glm_5.2_nvfp4_completion_mtok_cost": "1",
+            "endpoints_nvidia_glm_5.2_nvfp4_prompt_mtok_cost": "1",
+            "endpoints_nvidia_glm_5.2_nvfp4_reasoning_mtok_cost": "1",
+            "endpoints_qwen_qwen3.8_2.4t_a95b_cached_prompt_mtok_cost": "0.25",
+            "endpoints_qwen_qwen3.8_2.4t_a95b_completion_mtok_cost": "6.00",
+            "endpoints_qwen_qwen3.8_2.4t_a95b_prompt_mtok_cost": "2.00",
+            "endpoints_qwen_qwen3.8_2.4t_a95b_reasoning_mtok_cost": "6.00",
+            "endpoints_thinkingmachines_inkling_nvfp4_cached_prompt_mtok_cost": "0.27",
+            "endpoints_thinkingmachines_inkling_nvfp4_completion_mtok_cost": "5",
+            "endpoints_thinkingmachines_inkling_nvfp4_prompt_mtok_cost": "1.20",
+            "endpoints_thinkingmachines_inkling_nvfp4_reasoning_mtok_cost": "5",
+            "endpoints_zai_org_glm_5.3_cached_prompt_mtok_cost": "0.26",
+            "endpoints_zai_org_glm_5.3_completion_mtok_cost": "4.40",
+            "endpoints_zai_org_glm_5.3_flash_cached_prompt_mtok_cost": "0.09",
+            "endpoints_zai_org_glm_5.3_flash_completion_mtok_cost": "1.50",
+            "endpoints_zai_org_glm_5.3_flash_prompt_mtok_cost": "0.45",
+            "endpoints_zai_org_glm_5.3_flash_reasoning_mtok_cost": "1.50",
+            "endpoints_zai_org_glm_5.3_prompt_mtok_cost": "1.40",
+            "endpoints_zai_org_glm_5.3_reasoning_mtok_cost": "4.40",
+            "gpu_hour_cost_a100_40gb": "2.10000",
+            "gpu_hour_cost_a100_80gb": "2.50000",
+            "gpu_hour_cost_a10g": "1.10000",
+            "gpu_hour_cost_b200": "6.25000",
+            "gpu_hour_cost_b300": "7.10000",
+            "gpu_hour_cost_h100": "3.95000",
+            "gpu_hour_cost_h200": "4.54000",
+            "gpu_hour_cost_l4": "0.80000",
+            "gpu_hour_cost_l40s": "1.95000",
+            "gpu_hour_cost_rtx6000": "3.03000",
+            "gpu_hour_cost_t4": "0.59000",
+            "mem_gib_hour_cost": "0.00800",
+            "mem_gib_hour_cost_sandbox": "0.024000",
+            "volume_storage_gib_month_cost": "0.09000"
+          },
+          "containers": [],
+          "apps": [
+            {
+              "app_id": "ap-y0Yax4daAbm6YqhQQy5apw",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 16:56:14+08:00",
+              "stopped_at": "2026-10-26 17:06:22+08:00"
+            },
+            {
+              "app_id": "ap-3pOIXi2KLeoCHZNkNZ7vxT",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 16:49:41+08:00",
+              "stopped_at": "2026-10-26 16:54:58+08:00"
+            },
+            {
+              "app_id": "ap-o4hZ1UCTi3UqVbLwHaXnfB",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:58:35+08:00",
+              "stopped_at": "2026-10-26 16:24:45+08:00"
+            },
+            {
+              "app_id": "ap-hpfuxOspzEThaUWaMbUgfr",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:48:25+08:00",
+              "stopped_at": "2026-10-26 15:55:53+08:00"
+            },
+            {
+              "app_id": "ap-9RgATXofTWGewehMC0XDpF",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:27:55+08:00",
+              "stopped_at": "2026-10-26 15:45:41+08:00"
+            },
+            {
+              "app_id": "ap-4juxrkL75f8Y186a5jeP0v",
+              "description": "remnant-glm-loader-inspection",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:25:03+08:00",
+              "stopped_at": "2026-10-26 15:25:50+08:00"
+            },
+            {
+              "app_id": "ap-k7MlqUbvaGlo7RJUV2iaoc",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:17:46+08:00",
+              "stopped_at": "2026-10-26 15:23:00+08:00"
+            },
+            {
+              "app_id": "ap-uwR5eiNWkHRAiUrKQh959O",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:14:08+08:00",
+              "stopped_at": "2026-10-26 15:14:12+08:00"
+            },
+            {
+              "app_id": "ap-rvhCTskl2BdW3ynEUwyhYR",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:05:01+08:00",
+              "stopped_at": "2026-10-26 15:10:28+08:00"
+            }
+          ]
+        },
+        "sources": {
+          "parent": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations",
+            "commit": "8aea70ae58a9afc044842abbbdd976c1deafa2d5"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+            "expected_commit": "246ee03c1ad5e0b647383644039c32b8c71bf680",
+            "commit": "246ee03c1ad5e0b647383644039c32b8c71bf680",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22",
+            "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "command": [
+          "/Users/poohthewinnie/.local/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::validate_kernels",
+          "--model-family",
+          "glm53",
+          "--stage",
+          "corrective",
+          "--sanitizer",
+          "--sanitizer-scope",
+          "glm-decode",
+          "--cases",
+          "test/registered/attention/unittests/test_glm5_remnant.py::test_packed_loader_bytes,test/registered/attention/unittests/test_glm5_remnant.py::test_decode_bank_graph",
+          "--run-id",
+          "glm53-optimized-validation-20261026T090939Z",
+          "--max-seconds",
+          "360",
+          "--sanitizer-tools",
+          "memcheck"
+        ],
+        "environment": {
+          "MODAL_PROFILE": "caiw",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_VALIDATION_TIMEOUT_S": "600",
+          "REMNANT_COMPILED_IMAGE": "im-mOJP6OgY2aRiQ72iNrHoMk"
+        },
+        "timeout_seconds": 420,
+        "hourly_conservative_rate_usd": 4.3952,
+        "output": "data/glm53-packed/glm53-optimized-validation-20261026T090939Z",
+        "error": "TimeoutExpired(['/Users/poohthewinnie/.local/bin/modal', 'run', 'scripts/modal/kernels.py::validate_kernels', '--model-family', 'glm53', '--stage', 'corrective', '--sanitizer', '--sanitizer-scope', 'glm-decode', '--cases', 'test/registered/attention/unittests/test_glm5_remnant.py::test_packed_loader_bytes,test/registered/attention/unittests/test_glm5_remnant.py::test_decode_bank_graph', '--run-id', 'glm53-optimized-validation-20261026T090939Z', '--max-seconds', '360', '--sanitizer-tools', 'memcheck'], 419.9999479999824)",
+        "wall_seconds": 421.8001229999936,
+        "conservative_usd": 0.5149710835026589,
+        "app_ids": [
+          "ap-I1tzMjPXHdJqsAUaBRjZEB"
+        ],
+        "log_sha256": "e92248b412655a32e6cab5415e447bcfdf9a8a261a0a105959fc13d861f42fe7",
+        "after": {
+          "spend": {
+            "metered_cost": "48.60466805",
+            "billed_cost": "0E-8",
+            "adjustments": {
+              "free_storage": "-26.54329934",
+              "reservation_adjustment": "-0E-8",
+              "plan_cost": "0E-8",
+              "network_egress_allowance": "-0.00136871",
+              "credits": "-22.06000000"
+            },
+            "metered_cost_breakdown": {
+              "llm_tokens": "0E-8",
+              "deployed_apps": "0.04856797",
+              "ephemeral_apps": "22.01016377",
+              "volumes": "26.54329934",
+              "network_egress": "0.00136871"
+            }
+          },
+          "containers": [],
+          "apps": [
+            {
+              "app_id": "ap-I1tzMjPXHdJqsAUaBRjZEB",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 17:09:42+08:00",
+              "stopped_at": "2026-10-26 17:16:40+08:00"
+            },
+            {
+              "app_id": "ap-y0Yax4daAbm6YqhQQy5apw",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 16:56:14+08:00",
+              "stopped_at": "2026-10-26 17:06:22+08:00"
+            },
+            {
+              "app_id": "ap-3pOIXi2KLeoCHZNkNZ7vxT",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 16:49:41+08:00",
+              "stopped_at": "2026-10-26 16:54:58+08:00"
+            },
+            {
+              "app_id": "ap-o4hZ1UCTi3UqVbLwHaXnfB",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:58:35+08:00",
+              "stopped_at": "2026-10-26 16:24:45+08:00"
+            },
+            {
+              "app_id": "ap-hpfuxOspzEThaUWaMbUgfr",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:48:25+08:00",
+              "stopped_at": "2026-10-26 15:55:53+08:00"
+            },
+            {
+              "app_id": "ap-9RgATXofTWGewehMC0XDpF",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:27:55+08:00",
+              "stopped_at": "2026-10-26 15:45:41+08:00"
+            },
+            {
+              "app_id": "ap-4juxrkL75f8Y186a5jeP0v",
+              "description": "remnant-glm-loader-inspection",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:25:03+08:00",
+              "stopped_at": "2026-10-26 15:25:50+08:00"
+            },
+            {
+              "app_id": "ap-k7MlqUbvaGlo7RJUV2iaoc",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:17:46+08:00",
+              "stopped_at": "2026-10-26 15:23:00+08:00"
+            }
+          ]
+        }
+      },
+      {
+        "run_id": "glm53-optimized-validation-20261026T091954Z",
+        "action": "validation",
+        "status": "completed",
+        "preflight": {
+          "spend": {
+            "metered_cost": "48.60466805",
+            "billed_cost": "0E-8",
+            "adjustments": {
+              "credits": "-22.06000000",
+              "network_egress_allowance": "-0.00136871",
+              "reservation_adjustment": "-0E-8",
+              "free_storage": "-26.54329934",
+              "plan_cost": "0E-8"
+            },
+            "metered_cost_breakdown": {
+              "ephemeral_apps": "22.01016377",
+              "deployed_apps": "0.04856797",
+              "network_egress": "0.00136871",
+              "llm_tokens": "0E-8",
+              "volumes": "26.54329934"
+            }
+          },
+          "rates": {
+            "cpu_hour_cost": "0.04730",
+            "cpu_hour_cost_sandbox": "0.141900",
+            "egress_gib_cost": "0.04000",
+            "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_cached_prompt_mtok_cost": "0.005",
+            "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_completion_mtok_cost": "1.00",
+            "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_prompt_mtok_cost": "0.25",
+            "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_reasoning_mtok_cost": "1.00",
+            "endpoints_moonshotai_kimi_k3_cached_prompt_mtok_cost": "0.30",
+            "endpoints_moonshotai_kimi_k3_completion_mtok_cost": "15.00",
+            "endpoints_moonshotai_kimi_k3_prompt_mtok_cost": "3.00",
+            "endpoints_moonshotai_kimi_k3_reasoning_mtok_cost": "15.00",
+            "endpoints_nvidia_glm_5.2_nvfp4_cached_prompt_mtok_cost": "1",
+            "endpoints_nvidia_glm_5.2_nvfp4_completion_mtok_cost": "1",
+            "endpoints_nvidia_glm_5.2_nvfp4_prompt_mtok_cost": "1",
+            "endpoints_nvidia_glm_5.2_nvfp4_reasoning_mtok_cost": "1",
+            "endpoints_qwen_qwen3.8_2.4t_a95b_cached_prompt_mtok_cost": "0.25",
+            "endpoints_qwen_qwen3.8_2.4t_a95b_completion_mtok_cost": "6.00",
+            "endpoints_qwen_qwen3.8_2.4t_a95b_prompt_mtok_cost": "2.00",
+            "endpoints_qwen_qwen3.8_2.4t_a95b_reasoning_mtok_cost": "6.00",
+            "endpoints_thinkingmachines_inkling_nvfp4_cached_prompt_mtok_cost": "0.27",
+            "endpoints_thinkingmachines_inkling_nvfp4_completion_mtok_cost": "5",
+            "endpoints_thinkingmachines_inkling_nvfp4_prompt_mtok_cost": "1.20",
+            "endpoints_thinkingmachines_inkling_nvfp4_reasoning_mtok_cost": "5",
+            "endpoints_zai_org_glm_5.3_cached_prompt_mtok_cost": "0.26",
+            "endpoints_zai_org_glm_5.3_completion_mtok_cost": "4.40",
+            "endpoints_zai_org_glm_5.3_flash_cached_prompt_mtok_cost": "0.09",
+            "endpoints_zai_org_glm_5.3_flash_completion_mtok_cost": "1.50",
+            "endpoints_zai_org_glm_5.3_flash_prompt_mtok_cost": "0.45",
+            "endpoints_zai_org_glm_5.3_flash_reasoning_mtok_cost": "1.50",
+            "endpoints_zai_org_glm_5.3_prompt_mtok_cost": "1.40",
+            "endpoints_zai_org_glm_5.3_reasoning_mtok_cost": "4.40",
+            "gpu_hour_cost_a100_40gb": "2.10000",
+            "gpu_hour_cost_a100_80gb": "2.50000",
+            "gpu_hour_cost_a10g": "1.10000",
+            "gpu_hour_cost_b200": "6.25000",
+            "gpu_hour_cost_b300": "7.10000",
+            "gpu_hour_cost_h100": "3.95000",
+            "gpu_hour_cost_h200": "4.54000",
+            "gpu_hour_cost_l4": "0.80000",
+            "gpu_hour_cost_l40s": "1.95000",
+            "gpu_hour_cost_rtx6000": "3.03000",
+            "gpu_hour_cost_t4": "0.59000",
+            "mem_gib_hour_cost": "0.00800",
+            "mem_gib_hour_cost_sandbox": "0.024000",
+            "volume_storage_gib_month_cost": "0.09000"
+          },
+          "containers": [],
+          "apps": [
+            {
+              "app_id": "ap-I1tzMjPXHdJqsAUaBRjZEB",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 17:09:42+08:00",
+              "stopped_at": "2026-10-26 17:16:40+08:00"
+            },
+            {
+              "app_id": "ap-y0Yax4daAbm6YqhQQy5apw",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 16:56:14+08:00",
+              "stopped_at": "2026-10-26 17:06:22+08:00"
+            },
+            {
+              "app_id": "ap-3pOIXi2KLeoCHZNkNZ7vxT",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 16:49:41+08:00",
+              "stopped_at": "2026-10-26 16:54:58+08:00"
+            },
+            {
+              "app_id": "ap-o4hZ1UCTi3UqVbLwHaXnfB",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:58:35+08:00",
+              "stopped_at": "2026-10-26 16:24:45+08:00"
+            },
+            {
+              "app_id": "ap-hpfuxOspzEThaUWaMbUgfr",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:48:25+08:00",
+              "stopped_at": "2026-10-26 15:55:53+08:00"
+            },
+            {
+              "app_id": "ap-9RgATXofTWGewehMC0XDpF",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:27:55+08:00",
+              "stopped_at": "2026-10-26 15:45:41+08:00"
+            },
+            {
+              "app_id": "ap-4juxrkL75f8Y186a5jeP0v",
+              "description": "remnant-glm-loader-inspection",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:25:03+08:00",
+              "stopped_at": "2026-10-26 15:25:50+08:00"
+            },
+            {
+              "app_id": "ap-k7MlqUbvaGlo7RJUV2iaoc",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:17:46+08:00",
+              "stopped_at": "2026-10-26 15:23:00+08:00"
+            }
+          ]
+        },
+        "sources": {
+          "parent": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations",
+            "commit": "8aea70ae58a9afc044842abbbdd976c1deafa2d5"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+            "expected_commit": "246ee03c1ad5e0b647383644039c32b8c71bf680",
+            "commit": "246ee03c1ad5e0b647383644039c32b8c71bf680",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22",
+            "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "command": [
+          "/Users/poohthewinnie/.local/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::validate_kernels",
+          "--model-family",
+          "glm53",
+          "--stage",
+          "corrective",
+          "--sanitizer",
+          "--sanitizer-scope",
+          "glm-decode",
+          "--cases",
+          "test/registered/attention/unittests/test_glm5_remnant.py::test_packed_loader_bytes,test/registered/attention/unittests/test_glm5_remnant.py::test_decode_bank_graph",
+          "--run-id",
+          "glm53-optimized-validation-20261026T091954Z",
+          "--max-seconds",
+          "360",
+          "--sanitizer-tools",
+          "memcheck"
+        ],
+        "environment": {
+          "MODAL_PROFILE": "caiw",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_VALIDATION_TIMEOUT_S": "600",
+          "REMNANT_COMPILED_IMAGE": "im-mOJP6OgY2aRiQ72iNrHoMk"
+        },
+        "timeout_seconds": 420,
+        "hourly_conservative_rate_usd": 4.3952,
+        "output": "data/glm53-packed/glm53-optimized-validation-20261026T091954Z",
+        "wall_seconds": 315.44509325001854,
+        "conservative_usd": 0.3851234094034671,
+        "app_ids": [
+          "ap-ycAcBdluQpwrD8ABhf9pK3"
+        ],
+        "log_sha256": "a3f5959a0481ce1587dd2f10a72ee9bc5ae7708ec0016522ee6add133abcad32",
+        "after": {
+          "spend": {
+            "metered_cost": "48.91466805",
+            "billed_cost": "0E-8",
+            "adjustments": {
+              "network_egress_allowance": "-0.00136871",
+              "credits": "-22.37000000",
+              "plan_cost": "0E-8",
+              "reservation_adjustment": "-0E-8",
+              "free_storage": "-26.54329934"
+            },
+            "metered_cost_breakdown": {
+              "volumes": "26.54329934",
+              "network_egress": "0.00136871",
+              "ephemeral_apps": "22.32515333",
+              "deployed_apps": "0.04856797",
+              "llm_tokens": "0E-8"
+            }
+          },
+          "containers": [],
+          "apps": [
+            {
+              "app_id": "ap-ycAcBdluQpwrD8ABhf9pK3",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 17:19:57+08:00",
+              "stopped_at": "2026-10-26 17:25:07+08:00"
+            },
+            {
+              "app_id": "ap-I1tzMjPXHdJqsAUaBRjZEB",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 17:09:42+08:00",
+              "stopped_at": "2026-10-26 17:16:40+08:00"
+            },
+            {
+              "app_id": "ap-y0Yax4daAbm6YqhQQy5apw",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 16:56:14+08:00",
+              "stopped_at": "2026-10-26 17:06:22+08:00"
+            },
+            {
+              "app_id": "ap-3pOIXi2KLeoCHZNkNZ7vxT",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 16:49:41+08:00",
+              "stopped_at": "2026-10-26 16:54:58+08:00"
+            },
+            {
+              "app_id": "ap-o4hZ1UCTi3UqVbLwHaXnfB",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:58:35+08:00",
+              "stopped_at": "2026-10-26 16:24:45+08:00"
+            },
+            {
+              "app_id": "ap-hpfuxOspzEThaUWaMbUgfr",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:48:25+08:00",
+              "stopped_at": "2026-10-26 15:55:53+08:00"
+            },
+            {
+              "app_id": "ap-9RgATXofTWGewehMC0XDpF",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:27:55+08:00",
+              "stopped_at": "2026-10-26 15:45:41+08:00"
+            },
+            {
+              "app_id": "ap-4juxrkL75f8Y186a5jeP0v",
+              "description": "remnant-glm-loader-inspection",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:25:03+08:00",
+              "stopped_at": "2026-10-26 15:25:50+08:00"
+            }
+          ]
+        }
+      },
+      {
+        "run_id": "glm53-optimized-timing-20261026T092628Z",
+        "action": "timing",
+        "status": "completed",
+        "preflight": {
+          "spend": {
+            "metered_cost": "49.07466805",
+            "billed_cost": "0E-8",
+            "adjustments": {
+              "network_egress_allowance": "-0.00136871",
+              "free_storage": "-26.54329934",
+              "plan_cost": "0E-8",
+              "credits": "-22.53000000",
+              "reservation_adjustment": "-0E-8"
+            },
+            "metered_cost_breakdown": {
+              "ephemeral_apps": "22.47883226",
+              "deployed_apps": "0.04856797",
+              "network_egress": "0.00136871",
+              "llm_tokens": "0E-8",
+              "volumes": "26.54329934"
+            }
+          },
+          "rates": {
+            "cpu_hour_cost": "0.04730",
+            "cpu_hour_cost_sandbox": "0.141900",
+            "egress_gib_cost": "0.04000",
+            "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_cached_prompt_mtok_cost": "0.005",
+            "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_completion_mtok_cost": "1.00",
+            "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_prompt_mtok_cost": "0.25",
+            "endpoints_deepseek_ai_deepseek_v4.1_flash_1017_reasoning_mtok_cost": "1.00",
+            "endpoints_moonshotai_kimi_k3_cached_prompt_mtok_cost": "0.30",
+            "endpoints_moonshotai_kimi_k3_completion_mtok_cost": "15.00",
+            "endpoints_moonshotai_kimi_k3_prompt_mtok_cost": "3.00",
+            "endpoints_moonshotai_kimi_k3_reasoning_mtok_cost": "15.00",
+            "endpoints_nvidia_glm_5.2_nvfp4_cached_prompt_mtok_cost": "1",
+            "endpoints_nvidia_glm_5.2_nvfp4_completion_mtok_cost": "1",
+            "endpoints_nvidia_glm_5.2_nvfp4_prompt_mtok_cost": "1",
+            "endpoints_nvidia_glm_5.2_nvfp4_reasoning_mtok_cost": "1",
+            "endpoints_qwen_qwen3.8_2.4t_a95b_cached_prompt_mtok_cost": "0.25",
+            "endpoints_qwen_qwen3.8_2.4t_a95b_completion_mtok_cost": "6.00",
+            "endpoints_qwen_qwen3.8_2.4t_a95b_prompt_mtok_cost": "2.00",
+            "endpoints_qwen_qwen3.8_2.4t_a95b_reasoning_mtok_cost": "6.00",
+            "endpoints_thinkingmachines_inkling_nvfp4_cached_prompt_mtok_cost": "0.27",
+            "endpoints_thinkingmachines_inkling_nvfp4_completion_mtok_cost": "5",
+            "endpoints_thinkingmachines_inkling_nvfp4_prompt_mtok_cost": "1.20",
+            "endpoints_thinkingmachines_inkling_nvfp4_reasoning_mtok_cost": "5",
+            "endpoints_zai_org_glm_5.3_cached_prompt_mtok_cost": "0.26",
+            "endpoints_zai_org_glm_5.3_completion_mtok_cost": "4.40",
+            "endpoints_zai_org_glm_5.3_flash_cached_prompt_mtok_cost": "0.09",
+            "endpoints_zai_org_glm_5.3_flash_completion_mtok_cost": "1.50",
+            "endpoints_zai_org_glm_5.3_flash_prompt_mtok_cost": "0.45",
+            "endpoints_zai_org_glm_5.3_flash_reasoning_mtok_cost": "1.50",
+            "endpoints_zai_org_glm_5.3_prompt_mtok_cost": "1.40",
+            "endpoints_zai_org_glm_5.3_reasoning_mtok_cost": "4.40",
+            "gpu_hour_cost_a100_40gb": "2.10000",
+            "gpu_hour_cost_a100_80gb": "2.50000",
+            "gpu_hour_cost_a10g": "1.10000",
+            "gpu_hour_cost_b200": "6.25000",
+            "gpu_hour_cost_b300": "7.10000",
+            "gpu_hour_cost_h100": "3.95000",
+            "gpu_hour_cost_h200": "4.54000",
+            "gpu_hour_cost_l4": "0.80000",
+            "gpu_hour_cost_l40s": "1.95000",
+            "gpu_hour_cost_rtx6000": "3.03000",
+            "gpu_hour_cost_t4": "0.59000",
+            "mem_gib_hour_cost": "0.00800",
+            "mem_gib_hour_cost_sandbox": "0.024000",
+            "volume_storage_gib_month_cost": "0.09000"
+          },
+          "containers": [],
+          "apps": [
+            {
+              "app_id": "ap-ycAcBdluQpwrD8ABhf9pK3",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 17:19:57+08:00",
+              "stopped_at": "2026-10-26 17:25:07+08:00"
+            },
+            {
+              "app_id": "ap-I1tzMjPXHdJqsAUaBRjZEB",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 17:09:42+08:00",
+              "stopped_at": "2026-10-26 17:16:40+08:00"
+            },
+            {
+              "app_id": "ap-y0Yax4daAbm6YqhQQy5apw",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 16:56:14+08:00",
+              "stopped_at": "2026-10-26 17:06:22+08:00"
+            },
+            {
+              "app_id": "ap-3pOIXi2KLeoCHZNkNZ7vxT",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 16:49:41+08:00",
+              "stopped_at": "2026-10-26 16:54:58+08:00"
+            },
+            {
+              "app_id": "ap-o4hZ1UCTi3UqVbLwHaXnfB",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:58:35+08:00",
+              "stopped_at": "2026-10-26 16:24:45+08:00"
+            },
+            {
+              "app_id": "ap-hpfuxOspzEThaUWaMbUgfr",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:48:25+08:00",
+              "stopped_at": "2026-10-26 15:55:53+08:00"
+            },
+            {
+              "app_id": "ap-9RgATXofTWGewehMC0XDpF",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:27:55+08:00",
+              "stopped_at": "2026-10-26 15:45:41+08:00"
+            }
+          ]
+        },
+        "sources": {
+          "parent": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations",
+            "commit": "8aea70ae58a9afc044842abbbdd976c1deafa2d5"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+            "expected_commit": "246ee03c1ad5e0b647383644039c32b8c71bf680",
+            "commit": "246ee03c1ad5e0b647383644039c32b8c71bf680",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22",
+            "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "command": [
+          "/Users/poohthewinnie/.local/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::benchmark_kernels",
+          "--model-family",
+          "glm53",
+          "--suite",
+          "glm-attention",
+          "--phase",
+          "decode",
+          "--qualification-runs",
+          "glm53-optimized-validation-20261026T085610Z,glm53-optimized-validation-20261026T091954Z",
+          "--run-id",
+          "glm53-optimized-timing-20261026T092628Z",
+          "--max-seconds",
+          "900"
+        ],
+        "environment": {
+          "MODAL_PROFILE": "caiw",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_VALIDATION_TIMEOUT_S": "600",
+          "REMNANT_COMPILED_IMAGE": "im-mOJP6OgY2aRiQ72iNrHoMk"
+        },
+        "timeout_seconds": 960,
+        "hourly_conservative_rate_usd": 4.3952,
+        "output": "data/glm53-packed/glm53-optimized-timing-20261026T092628Z",
+        "wall_seconds": 246.93642604199704,
+        "conservative_usd": 0.30148193881660706,
+        "app_ids": [
+          "ap-4iakouYdpJIFh61fRdjeKp"
+        ],
+        "log_sha256": "5eaa9736b6b60a0623db49376bb7b1c66a9637d5164359f5508e4d5dbffefb4c",
+        "after": {
+          "spend": {
+            "metered_cost": "49.07466805",
+            "billed_cost": "0E-8",
+            "adjustments": {
+              "plan_cost": "0E-8",
+              "network_egress_allowance": "-0.00136871",
+              "free_storage": "-26.54329934",
+              "reservation_adjustment": "-0E-8",
+              "credits": "-22.53000000"
+            },
+            "metered_cost_breakdown": {
+              "ephemeral_apps": "22.48128232",
+              "llm_tokens": "0E-8",
+              "deployed_apps": "0.04856797",
+              "volumes": "26.54329934",
+              "network_egress": "0.00136871"
+            }
+          },
+          "containers": [],
+          "apps": [
+            {
+              "app_id": "ap-4iakouYdpJIFh61fRdjeKp",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 17:26:32+08:00",
+              "stopped_at": "2026-10-26 17:30:31+08:00"
+            },
+            {
+              "app_id": "ap-ycAcBdluQpwrD8ABhf9pK3",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 17:19:57+08:00",
+              "stopped_at": "2026-10-26 17:25:07+08:00"
+            },
+            {
+              "app_id": "ap-I1tzMjPXHdJqsAUaBRjZEB",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 17:09:42+08:00",
+              "stopped_at": "2026-10-26 17:16:40+08:00"
+            },
+            {
+              "app_id": "ap-y0Yax4daAbm6YqhQQy5apw",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 16:56:14+08:00",
+              "stopped_at": "2026-10-26 17:06:22+08:00"
+            },
+            {
+              "app_id": "ap-3pOIXi2KLeoCHZNkNZ7vxT",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 16:49:41+08:00",
+              "stopped_at": "2026-10-26 16:54:58+08:00"
+            },
+            {
+              "app_id": "ap-o4hZ1UCTi3UqVbLwHaXnfB",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:58:35+08:00",
+              "stopped_at": "2026-10-26 16:24:45+08:00"
+            },
+            {
+              "app_id": "ap-hpfuxOspzEThaUWaMbUgfr",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:48:25+08:00",
+              "stopped_at": "2026-10-26 15:55:53+08:00"
+            },
+            {
+              "app_id": "ap-9RgATXofTWGewehMC0XDpF",
+              "description": "remnant-kernel-dev",
+              "state": "stopped",
+              "tasks": "0",
+              "created_at": "2026-10-26 15:27:55+08:00",
+              "stopped_at": "2026-10-26 15:45:41+08:00"
+            }
+          ]
+        }
       }
     ],
     "review": {
@@ -36407,7 +37878,12 @@
       "limitations": "Actual codegen and GPU qualification pending",
       "emitted_code": "Live scratch/KV/index regions, XOR layout, helper pointers and unconditional barriers reviewed; no blocker",
       "binary_binding": "Decode qualification matches runtime, fixture source, toolchain and full cache binary hashes",
-      "scope": "Focused Packed partial/byte instrumentation; Native/combine/framework execute as uninstrumented controls; broad incomplete"
+      "scope": "Focused Packed partial/byte instrumentation; Native/combine/framework execute as uninstrumented controls; broad incomplete",
+      "fresh_context": {
+        "agent": "final_glm_review",
+        "status": "passed",
+        "scope": "Exact-cubin ABI/strides, stream/module ownership, independent partial output/LSE control, CPU cache reuse and JUnit source/artifact binding"
+      }
     },
     "cpu": {
       "status": "passed",
@@ -36430,6 +37906,84 @@
         "glm_packed_bytes_kernel"
       ],
       "rename_recheck": "All32 passed; Native source/cubins unchanged, Direct resources/site counts unchanged"
+    },
+    "allocation_reconciliations": [
+      {
+        "run_id": "glm53-optimized-validation-20261026T085610Z",
+        "container_id": "ta-01M5VQ2M6BKB5VXT777MWK5HNR",
+        "provider_container_start": "2026-10-26 17:01:28+08:00",
+        "provider_app_stop_upper_bound": "2026-10-26 17:06:22+08:00",
+        "original_controller_seconds": 602.278068457992,
+        "gpu_allocation_upper_bound_seconds": 294.0,
+        "excluded_cpu_and_controller_seconds": 308.27806845799205,
+        "gpu_category_reclassified_usd": 0.37637326846849073,
+        "cpu_upper_bound_added_usd": 0.10865089257208341,
+        "conservative_total_financial_charge_unchanged": true,
+        "evidence": "Modal CLI container-list observations; stopped app timestamps in next controller preflight/after apps",
+        "controller_sha256": "cc8eea87be1ab908c2927a661fe31870940dfe927b2b7e5ce61aa8c73c2d1696"
+      },
+      {
+        "run_id": "glm53-optimized-validation-20261026T090939Z",
+        "container_id": "ta-01M5VQMY8EV31D8J68MHMZAVQR",
+        "provider_container_start": "2026-10-26 17:11:23+08:00",
+        "provider_app_stop_upper_bound": "2026-10-26 17:16:40+08:00",
+        "original_controller_seconds": 421.8001229999936,
+        "gpu_allocation_upper_bound_seconds": 317.0,
+        "excluded_cpu_and_controller_seconds": 104.80012299999362,
+        "gpu_category_reclassified_usd": 0.12794930572488109,
+        "cpu_upper_bound_added_usd": 0.03693622112844219,
+        "conservative_total_financial_charge_unchanged": true,
+        "evidence": "Modal CLI container-list observations; stopped app timestamps in next controller preflight/after apps",
+        "controller_sha256": "4f1e18d2ff476471909119a44cda08b6dc378e002fa963581604e21a35e7cc77"
+      }
+    ],
+    "qualified_runs": [
+      "glm53-optimized-validation-20261026T085610Z",
+      "glm53-optimized-validation-20261026T091954Z"
+    ],
+    "essential_validation": {
+      "synccheck": {
+        "status": "passed",
+        "run_id": "glm53-optimized-validation-20261026T085610Z",
+        "tests": 5,
+        "log_sha256": "ba5135499fa70da491acebc0261566d4eeb8a4a178d71c93efc265cf56dc1013",
+        "case_seconds": {
+          "test_packed_loader_bytes": 0.909,
+          "test_decode_partial_graph[8-1]": 7.784,
+          "test_decode_partial_graph[8-2]": 7.771,
+          "test_decode_partial_graph[16-1]": 7.871,
+          "test_decode_partial_graph[16-2]": 7.83
+        },
+        "scope": "exact production one-CTA partials H8/H16 inner1/2 plus large-address byte probe; full-grid/combine uninstrumented"
+      },
+      "racecheck": {
+        "status": "passed",
+        "run_id": "glm53-optimized-validation-20261026T085610Z",
+        "tests": 5,
+        "log_sha256": "b8115659aabe95b1adaa416e846754bf4f41e6b70fd4082cb53a495f6f8f2895",
+        "case_seconds": {
+          "test_packed_loader_bytes": 1.908,
+          "test_decode_partial_graph[8-1]": 7.919,
+          "test_decode_partial_graph[8-2]": 8.044,
+          "test_decode_partial_graph[16-1]": 7.8,
+          "test_decode_partial_graph[16-2]": 8.083
+        },
+        "scope": "exact production one-CTA partials H8/H16 inner1/2 plus large-address byte probe; full-grid/combine uninstrumented"
+      },
+      "memcheck": {
+        "status": "passed",
+        "run_id": "glm53-optimized-validation-20261026T091954Z",
+        "tests": 5,
+        "log_sha256": "8ee2e9efae6d81ae5aca88b124bdad6561b730c197ee841e1023eb777941b427",
+        "case_seconds": {
+          "test_packed_loader_bytes": 38.272,
+          "test_decode_partial_graph[8-1]": 20.066,
+          "test_decode_partial_graph[8-2]": 20.03,
+          "test_decode_partial_graph[16-1]": 20.377,
+          "test_decode_partial_graph[16-2]": 20.098
+        },
+        "scope": "exact production one-CTA partials H8/H16 inner1/2 plus large-address byte probe; full-grid/combine uninstrumented"
+      }
     }
   }
 }
