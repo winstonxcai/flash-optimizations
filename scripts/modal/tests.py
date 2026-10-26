@@ -2145,6 +2145,14 @@ class GLMCPURebuildTests(unittest.TestCase):
 class GLMAttentionProtocolTests(unittest.TestCase):
     """Coverage identities and model-specific dispatch must fail closed."""
 
+    def test_scoped_launches_require_checked_status(self):
+        for text in ("main_kernel", "Launching main_kernel unchecked", "main_kernel not checked",
+                     "main_kernel filtered: yes", "some_other_kernel checked"):
+            with self.assertRaises(RuntimeError):
+                kernels._check_glm_checked_launches(text, "test")
+        self.assertEqual(kernels._check_glm_checked_launches("Checking main_kernel grid=(2,66,1)", "test"),
+                         ["Checking main_kernel grid=(2,66,1)"])
+
     def test_preparation_reports_already_built_image_without_second_build(self):
         source = ast.parse((kernels.REPO_ROOT / "scripts/modal/kernels.py").read_text())
         function = next(n for n in source.body if isinstance(n, ast.FunctionDef) and n.name == "prepare_kernels")

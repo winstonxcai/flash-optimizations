@@ -1490,8 +1490,7 @@ def _glm_timing_qualification(run_ids: str, *, allow_incomplete: bool = False, p
                 _check_glm_interrupted_checkpoint(json.loads(note.read_text()), root, run_id, tool, log)
             _check_sanitizer_report(log, tool)
             if phase == "decode" and result.get("sanitizer_scope") == "glm-decode":
-                if "main_kernel" not in log or not re.search(r"(?i)(checked|checking|filter|launch)", log):
-                    raise RuntimeError(f"Missing checked TileLang launch evidence: {run_id}/{tool}")
+                _check_glm_checked_launches(log, f"{run_id}/{tool}")
             if phase == "decode":
                 tree = ET.parse(root / f"{tool}.xml")
                 tests = list(tree.iter("testcase"))
@@ -1518,6 +1517,21 @@ def _glm_timing_qualification(run_ids: str, *, allow_incomplete: bool = False, p
     return dict(status="incomplete" if incomplete else "passed", missing=missing,
                 tools={tool: dict(cases=sorted(group['cases']), runs=group['runs'])
                                         for tool, group in groups.items()}, runtime_hashes=current)
+
+
+def _check_glm_checked_launches(log: str, identity: str) -> list[str]:
+    """Launch dumps include excluded kernels too: names alone are not evidence."""
+    checked = []
+    for line in log.splitlines():
+        if "main_kernel" not in line:
+            continue
+        if re.search(r"(?i)(unchecked|not checked|filtered\s*[:=]\s*(yes|true)|excluded)", line):
+            continue
+        if re.search(r"(?i)(\bchecking\b|\bchecked\b|not filtered|filtered\s*[:=]\s*(no|false))", line):
+            checked.append(line)
+    if not checked:
+        raise RuntimeError(f"Missing explicitly checked TileLang launch evidence: {identity}")
+    return checked
 
 
 def _check_glm_interrupted_checkpoint(note: dict, root: Path, run_id: str, tool: str, log: str) -> None:
