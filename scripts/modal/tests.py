@@ -2078,29 +2078,6 @@ class GlmLauncherTests(unittest.TestCase):
 class GLMCPURebuildTests(unittest.TestCase):
     """The explicit rebuild excludes exactly two JIT inputs, never AOT sources."""
 
-    def test_essential_fixture_independent_bitmap_reconstruction(self):
-        import numpy as np
-        source = (kernels.REPO_ROOT / "third_party/sglang-v0.5.22/test/registered/attention/unittests/test_glm5_remnant.py").read_text()
-        node = next(n for n in ast.parse(source).body if isinstance(n,ast.FunctionDef) and n.name == "_essential_partial_rows")
-        namespace = {}
-        exec(compile(ast.Module(body=[node],type_ignores=[]),"essential-fixture","exec"),namespace)
-        values,words,dense = namespace["_essential_partial_rows"](np.random.default_rng(20261024))
-        self.assertEqual(values.shape,(513,256))
-        self.assertEqual(words.shape,(513,8))
-        counts = []
-        expected = np.zeros_like(dense)
-        for row in range(513):
-            coords = [j for j in range(512) if int(words[row,j//64]) & (1 << (63-j%64))]
-            if coords:
-                counts.append(len(coords))
-                kept = coords[:256]
-                expected[row,kept] = values[row,:len(kept)]
-        np.testing.assert_array_equal(dense,expected)
-        self.assertEqual(sorted(counts),[17,256,256,256,256,512])
-        again = namespace["_essential_partial_rows"](np.random.default_rng(20261024))
-        for a,b in zip((values,words,dense),again):
-            np.testing.assert_array_equal(a,b)
-
     def test_compile_owner_digest_excludes_only_harness_edits(self):
         from scripts.sources import glm_compile_owner_digest
         with tempfile.TemporaryDirectory() as tmp:

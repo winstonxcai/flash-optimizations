@@ -2,12 +2,12 @@
 
 Author: Winston Cai.
 
-Current attention result: **56/128 cases measured; descriptive comparison is
-incomplete and unqualified**. Direct is slower in every measured case. See
-[the current outcome](#current-descriptive-attention-outcome-2026-10-26),
-[all per-case samples and provenance](qualification.json), and [the flat CSV](attention.csv).
-The current aggregate authorization is $20; earlier budget/outcome sections below
-are historical. Native remains the default.
+Current optimized decode result: **48/48 cases complete, 30 paired rounds each;
+Direct adds 1.60% batch-weighted overhead**. See [the decode outcome](#optimized-decode-outcome-2026-10-26),
+[canonical evidence](qualification.json) and [all cases](decode.csv). The earlier
+unoptimized 56/128 attention comparison below remains historical and incomplete.
+Aggregate authorization is $35 ($20 historical plus the additional $15 phase).
+Native remains the serving default.
 
 Question: can eleven MLA layers use 320-byte rows while retaining Native FP8
 TileLang arithmetic and unchanged KDA/indexer/tail reservations on H100?
@@ -23,7 +23,7 @@ parent 9419d0e, SGLang 7856615, FlashMLA 3eb8594. Only v0.5.22 SGLang changes.
 Acceptance: exact masks/bytes/reconstruction, production pool reconciliation,
 attention atol=0.02/rtol=0.02, changing-input graph replay, and unexplained-error-free
 memcheck/racecheck/synccheck. Native is FP8 TileLang on H100. No full weights,
-serving, model quality or performance claims. Configuration metadata only.
+serving, model quality or serving-performance claims. Configuration metadata only.
 
 Budget: one aggregate $15 ledger, CPU preparation <=$2, H100 worker <=$10,
 $3 reserve; routine scheduling stops at conservative $12. One Function at a time,
@@ -39,6 +39,97 @@ GLM runtime and fixtures belong to the SGLang fork. No replacement harness.
 The analytic ratio is 5995/3883 = 1.5439093484 at unchanged KDA reservation.
 Physical tests must account for pages, indexer, KDA, tails, aliases and workspaces.
 This ratio is not measured serving capacity.
+
+## Optimized decode outcome (2026-10-26)
+
+**Decision: keep the cooperative loader.** All 48 decode cases and all 30 paired
+rounds passed `remnant-glm-decode-v1` with fresh Native controls. The batch-weighted
+paired overhead is **1.6010%**, with **0.6829% for 16 local heads (TP4 geometry)**
+and **2.5192% for eight (TP8 geometry)**. Ten cases favor Direct. Case means range
+from -3.5576% to +8.6594%; none reaches 2×. These are model-free one-H100 complete
+attention calls, including query conversion, partial attention and combine.
+They do not establish multi-GPU serving, model quality or prefill performance.
+
+Measured source: parent `8aea70ae58a9`, SGLang `246ee03c1ad5`, unchanged FlashMLA
+`3eb85944fd7d`; starting/rollback SGLang `889edf56b332`. Native code and all sixteen
+Native cubins remain byte-identical. CPU inspection covers all 32 maintained
+SM90 variants: Direct has 34 POPC sites, vector payload loads/stores, no spills
+or stack/local traffic, dynamic shared memory at most 34,944 bytes, and the same
+two-CTA / 12.5% theoretical occupancy as Native. The arithmetic backend is unchanged.
+The helper expands each latent tile once and reuses it for QK and PV.
+
+Focused source-bound qualification passed: exact bytes including real >2 GiB
+addresses; Direct partial output/LSE versus stock on independently reconstructed
+Packed; H8/H16 × inner1/2; alternating banks/modes, changing-input graphs and owned
+streams. Synccheck: 5 tests in 53.91 s, zero errors. Racecheck: 5 in 55.37 s,
+zero hazards/warnings. Memcheck: 5 in 139.62 s, zero errors. Separate full attention
+numerical/graph smoke: 5 tests in 26.13 s. Instrumentation is deliberately limited
+to the byte probe and one production partial CTA per bank. Full-grid/combine and
+broad sanitizer qualification remain incomplete; unchanged control operations run
+uninstrumented. The timing command enforces this focused scope and all 48 cases.
+
+The timing Function completed in **136.084 s** including its graph preflight;
+controller/image resolution/cleanup totaled **246.936 s**. This measured duration
+is specific to this decode matrix and prepared image. No additional timing runs
+were scheduled to improve the already met soft 15% goal.
+
+Evidence: canonical [JSON ledger](qualification.json), [every flat result](decode.csv),
+and timestamped raw outputs in `data/glm53-packed/glm53-optimized-timing-20261026T092628Z/`
+and `caiw/remnant-stage2a-results/microbench/glm53-optimized-timing-20261026T092628Z/timing/`.
+Raw Native/Direct samples, paired ratios, fixture/source/toolchain/binary hashes,
+commands and failures are preserved. Later test-only fixture changes retain this
+measured source identity; they do not relabel or rerun these samples.
+
+| Local heads | Batch | Tails | Cache | Native µs | Direct µs | Paired change |
+|---:|---:|---:|:---|---:|---:|---:|
+| 16 | 1 | 0 | warm | 20.701 | 21.106 | +1.96% |
+| 16 | 1 | 0 | rotating | 20.163 | 20.281 | +0.58% |
+| 16 | 1 | 3 | warm | 20.650 | 21.021 | +1.79% |
+| 16 | 1 | 3 | rotating | 19.888 | 20.052 | +0.82% |
+| 16 | 8 | 0 | warm | 23.481 | 24.432 | +4.05% |
+| 16 | 8 | 0 | rotating | 23.105 | 23.987 | +3.82% |
+| 16 | 8 | 3 | warm | 23.321 | 24.513 | +5.11% |
+| 16 | 8 | 3 | rotating | 23.114 | 23.983 | +3.76% |
+| 16 | 16 | 0 | warm | 35.136 | 36.156 | +2.90% |
+| 16 | 16 | 0 | rotating | 35.992 | 36.456 | +1.29% |
+| 16 | 16 | 3 | warm | 35.303 | 36.317 | +2.87% |
+| 16 | 16 | 3 | rotating | 35.974 | 36.491 | +1.44% |
+| 16 | 24 | 0 | warm | 50.822 | 49.994 | -1.63% |
+| 16 | 24 | 0 | rotating | 49.815 | 49.218 | -1.20% |
+| 16 | 24 | 3 | warm | 51.134 | 49.315 | -3.56% |
+| 16 | 24 | 3 | rotating | 49.852 | 49.333 | -1.04% |
+| 16 | 32 | 0 | warm | 66.175 | 65.260 | -1.38% |
+| 16 | 32 | 0 | rotating | 64.300 | 63.871 | -0.67% |
+| 16 | 32 | 3 | warm | 66.364 | 65.018 | -2.03% |
+| 16 | 32 | 3 | rotating | 64.388 | 64.036 | -0.55% |
+| 16 | 64 | 0 | warm | 123.770 | 125.643 | +1.51% |
+| 16 | 64 | 0 | rotating | 122.369 | 124.410 | +1.67% |
+| 16 | 64 | 3 | warm | 123.706 | 126.094 | +1.93% |
+| 16 | 64 | 3 | rotating | 122.269 | 124.564 | +1.88% |
+| 8 | 1 | 0 | warm | 21.152 | 22.087 | +4.42% |
+| 8 | 1 | 0 | rotating | 20.622 | 20.931 | +1.50% |
+| 8 | 1 | 3 | warm | 21.013 | 21.924 | +4.33% |
+| 8 | 1 | 3 | rotating | 20.446 | 20.807 | +1.77% |
+| 8 | 8 | 0 | warm | 21.570 | 23.438 | +8.66% |
+| 8 | 8 | 0 | rotating | 22.046 | 23.171 | +5.10% |
+| 8 | 8 | 3 | warm | 21.734 | 23.541 | +8.32% |
+| 8 | 8 | 3 | rotating | 22.302 | 23.443 | +5.12% |
+| 8 | 16 | 0 | warm | 32.413 | 34.743 | +7.19% |
+| 8 | 16 | 0 | rotating | 34.131 | 35.002 | +2.55% |
+| 8 | 16 | 3 | warm | 32.499 | 34.630 | +6.56% |
+| 8 | 16 | 3 | rotating | 34.198 | 35.011 | +2.38% |
+| 8 | 24 | 0 | warm | 45.392 | 46.238 | +1.86% |
+| 8 | 24 | 0 | rotating | 46.257 | 46.891 | +1.37% |
+| 8 | 24 | 3 | warm | 45.826 | 46.109 | +0.62% |
+| 8 | 24 | 3 | rotating | 46.244 | 46.765 | +1.13% |
+| 8 | 32 | 0 | warm | 60.196 | 59.025 | -1.95% |
+| 8 | 32 | 0 | rotating | 59.141 | 59.214 | +0.12% |
+| 8 | 32 | 3 | warm | 60.354 | 59.055 | -2.15% |
+| 8 | 32 | 3 | rotating | 59.179 | 59.288 | +0.18% |
+| 8 | 64 | 0 | warm | 108.765 | 112.569 | +3.50% |
+| 8 | 64 | 0 | rotating | 107.455 | 111.462 | +3.73% |
+| 8 | 64 | 3 | warm | 108.976 | 112.911 | +3.61% |
+| 8 | 64 | 3 | rotating | 107.539 | 111.595 | +3.77% |
 
 ## Original runtime qualification (historical, 2026-10-25)
 
@@ -622,3 +713,37 @@ actual tail columns/full graphs remain covered by the uninstrumented full test.
 Broad sanitizer qualification remains incomplete. This is an iteration gate,
 not a replacement claim for full integration qualification. Each sanitizer is
 bounded and failures are retained; no tolerance or 48×30 timing coverage changes.
+
+### Final iteration decision and costs
+
+Keep the one-CTA suite qualified at SGLang `246ee03`. The final fork commit
+`23e2e08` restores exactly that Git tree (`1c18c7b20208d6f9c10fdabce006dc912fc5501d`).
+An optional seven-row fixture/batched-transfer trial is rejected: synccheck 57.97 s
+and racecheck 60.05 s did not improve 53.91/55.37 s; memcheck remained incomplete
+at its controller deadlines (latest 4 cases passed before interruption, no final
+zero-error summary). Its source is preserved at `dad9c34` and its timestamped
+logs remain in the ledger. The restored fixture's complete 139.62 s memcheck and
+48-case timing retain their original source identities. Smaller CPU data alone
+was not the remaining bottleneck; do not claim an extra speedup from that trial.
+
+Retained fast path: focused production partials and byte reconstruction rather
+than full attention under instrumentation; CPU reference checks; explicit
+`--sanitizer-tools` selection; reuse completed source-bound groups; verified CPU
+binary reuse for test-only edits. Full numerical graphs and the 48-case timing
+matrix remain separate gates. Eleven focused launcher checks and 16 benchmark
+CPU checks pass after restoration. Full-grid/combine sanitizer coverage remains
+unverified, and broad qualification remains incomplete.
+
+Additional-phase conservative spending: **$10.335584 of $15**, including all
+failed attempts and rejected fixtures. Prior spending **$19.410829** is preserved;
+aggregate conservative total **$29.746413 under $35**. CPU category $1.338441,
+H100-worker category $8.638408, retained conservative overcount $0.358735;
+conservative time accounting 117.93/120 new-phase H100 minutes. Two provider-timed
+CPU/controller intervals were reclassified out of H100 time without reducing
+original total dollar charges. No accounts were switched. The $3 reserve remains
+protected; all workers stopped. No further scheduling is needed.
+
+Rollback: Native selection or SGLang `889edf56b332`. Code and evidence are committed
+without pushing. The maintained entry point for reproduction is
+`scripts/modal/kernels.py::benchmark_kernels --model-family glm53 --suite glm-attention --phase decode`;
+exact scoped qualification/run IDs, image recipe, commands and costs are in JSON.

@@ -17,7 +17,7 @@ Folder suffixes identify the SGLang integration pair, not a FlashMLA release.
 |---|---|---|---|
 | `sglang-v0.5.18/` | `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` | `6687a7c` |
 | `flashmla-v0.5.18/` | `05e26647fe840b8baedae486c2d86d5ce4efeb7c` | `remnant/flashmla-v0518` | `97f3faa` |
-| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `codex/glm53-packed` | `889edf5` |
+| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `codex/glm53-packed` | `23e2e08` |
 | `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `remnant/flashmla-v0522` | `3eb8594` |
 
 Both FlashMLA checkouts pin CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`.
@@ -342,9 +342,10 @@ Full weights/serving are outside the current $15 authorization. See
 `benchmarks/microbench/glm53-packed/README.md` and its canonical JSON for exact
 coverage and promotion status. FlashMLA and both v0.5.18 pins are unchanged.
 
-Qualification status: 90 H100 numerical tests and 11 synccheck tests passed.
-Racecheck timed out and memcheck was not run; independent review is outstanding.
-Retain this as an opt-in candidate; see the canonical experiment record.
+Original runtime qualification (historical): 90 H100 numerical and 11 synccheck
+tests passed; racecheck/memcheck and independent review were incomplete then.
+Current optimized-loader focused qualification and decode results are recorded
+below. Broad runtime qualification remains incomplete; Packed stays opt-in.
 
 GLM attention microbenchmark: the maintained entry point now accepts
 `--model-family glm53 --suite glm-attention`, comparing unpruned Native with
@@ -354,13 +355,11 @@ coverage and matching production runtime/compiled-artifact identities before
 timing. This does not change production attention kernels or serving defaults.
 
 
-The attention experiment is incomplete. At parent `d092f85` / SGLang `f71841e`,
-the H100 smoke passed the 8-head, two-bank graph fixture but failed the 16-head,
-four-bank fixture's final memory-accounting assertion before sanitizers. SGLang
-`02cbbd9` counts graph-private pool segments instead of a global allocator delta;
-10 focused CPU contracts and targeted independent review pass, but that repair
-has no GPU validation. No timing cases were accepted. See the GLM README and
-aggregate JSON for the failed run, unchanged historical qualification and cost.
+Early harness failures are historical: the initial four-bank memory-accounting
+assertion was replaced with graph-private segment accounting. That repair and
+the resulting full graph path have since executed on H100. Failed attempts and
+the earlier incomplete128-case comparison remain in the canonical experiment
+record; the completed48-case optimized decode scope is described below.
 
 GLM exploratory timing is explicitly selected with
 `benchmark_kernels --model-family glm53 --suite glm-attention --allow-incomplete-qualification`
@@ -372,3 +371,18 @@ GLM Packed cooperative loader: `sglang-v0.5.22/python/sglang/kernels/jit/include
 is embedded by the Packed TileLang specialization. It owns raw-byte expansion only;
 the 320-byte cache ABI and Native arithmetic remain unchanged. Decode-only
 benchmark scope uses `--model-family glm53 --suite glm-attention --phase decode`.
+
+The optimized GLM decode comparison uses `--phase decode` (48 cases; default
+`all` still requires 128). The helper is embedded through TileLang `import_source`;
+the producer/320-byte ABI and Native arithmetic are unchanged. The maintained
+`test_glm5_remnant.py` owns an exact-cubin Driver launcher for one-CTA sanitizer
+checks; modules outlive graphs and explicit streams own launches. CPU references
+and verified binary reuse avoid instrumenting unchanged reference/framework paths.
+The optional seven-row/batched-transfer fixture trial was rejected and reverted
+because it did not improve tool runtime and its memcheck was incomplete.
+
+All 48 paired cases completed at SGLang `246ee03c1ad5`, with 1.60% batch-weighted
+overhead. Final fork `23e2e08` has the identical Git tree. Focused sync/race/memcheck
+passes; full-grid/combine instrumentation and broad qualification remain incomplete.
+See the experiment README, canonical JSON and decode CSV for identities, every
+case, costs and limits. Native remains default; rollback is Native or `889edf56`.

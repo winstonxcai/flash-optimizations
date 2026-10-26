@@ -13,6 +13,20 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Parent implementation `06f2058` (measured parent `8aea70a`), v0.5.22 SGLang
+  `23e2e08` (tree identical to timed `246ee03`) / FlashMLA `3eb85944fd7d`:
+  cooperative V4-inspired Packed loader with vector loads/stores, register bitmap
+  prefixes, swizzled tile stores and int64 guards. All 32 CPU variants pass SASS/
+  resource gates; Native cubins unchanged, Direct POPC34, no spills, matching two-
+  CTA occupancy. All 48 decode cases/30 paired rounds complete on one H100:
+  batch-weighted overhead 1.6010% (TP4 0.6829%, TP8 2.5192%), no 2× cases.
+  Focused one-CTA numerical/graph/memcheck/racecheck/synccheck passes; full-grid/
+  combine instrumentation and broad qualification remain incomplete. Verified CPU
+  artifact reuse supports harness-only edits. Optional fixture compaction failed
+  its runtime goal and was reverted, preserving its source and incomplete reports.
+  All workers stopped; additional phase $10.335584 under $15, no pushes, Native
+  defaults and other pins unchanged.
+
 - Measured parent `853e4d6`, v0.5.22 SGLang `889edf56b332` / FlashMLA
   `3eb85944fd7d`: saved56 complete Native FP8 TileLang/Packed Direct H100 cases,
   30 paired rounds each; all measured TP4 cases favor Native. Descriptive only:
