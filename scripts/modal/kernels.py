@@ -1499,6 +1499,15 @@ def _glm_timing_qualification(run_ids: str, *, allow_incomplete: bool = False, p
                         or any(not x.get("classname", "").endswith("attention.unittests.test_glm5_remnant") for x in tests)
                         or any(x.find(k) is not None for x in tests for k in ("failure", "error", "skipped"))):
                     raise RuntimeError(f"Incomplete focused cases: {run_id}/{tool}")
+                for node in tests:
+                    name = node.attrib["name"]
+                    if name.startswith("test_decode_bank_graph["):
+                        heads, inner = map(int, name.split("[")[1].rstrip("]").split("-"))
+                        props = {x.get("name"): x.get("value") for x in node.findall("properties/property")}
+                        expected_geometry = dict(heads=heads, inner=inner, banks=4, queries=2,
+                                                 tails=[0,1,2,3], nondefault_stream=True)
+                        if json.loads(props.get("decode_geometry", "{}")) != expected_geometry:
+                            raise RuntimeError(f"Focused decode geometry changed: {run_id}/{name}")
             else:
                 names = _check_glm_sanitizer_cases(ET.parse(root / f"{tool}.xml"), run_id,
                                                  historical=result.get('runtime_hashes') is None,
