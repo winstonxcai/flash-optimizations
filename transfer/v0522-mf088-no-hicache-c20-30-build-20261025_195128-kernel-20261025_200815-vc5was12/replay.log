@@ -1,0 +1,429 @@
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "57e231baf4aabfba9b1a921af8b7f901b79cff8d"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang-v0.5.22",
+    "expected_commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22",
+    "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  }
+}
+[lswb] decode graph preflight OK: c20, captured sizes=[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 15, 16, 18, 20, 24, 28, 32, 34, 40, 48, 56, 64, 68, 80, 96, 112, 120, 136]
+[lswb] waiting for idle server and flushing prefix cache
+Cache flushed.
+Please check backend logs for more details. (When there are running or waiting requests, the operation will not be performed.)
+== lswb replay tag=v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12 port=30382 c20 @ 1200s -> /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c20/repeat-01 ==
+[lswb] request timing: 2497 records, 2497 valid, complete=True
+[lswb] client rc=1
+==== client.log ====
+{"attempted":2497,"completion_tokens":356564,"failed":295,"not_started_due_to_duration":2419,"prompt_tokens":315808747,"selected":4916,"successful":2202,"users_completed":42,"users_selected":92,"users_started":59,"valid":false}
+[lswb] artifacts at /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c20/repeat-01
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "57e231baf4aabfba9b1a921af8b7f901b79cff8d"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang-v0.5.22",
+    "expected_commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22",
+    "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  }
+}
+[lswb] decode graph preflight OK: c21, captured sizes=[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 15, 16, 18, 20, 24, 28, 32, 34, 40, 48, 56, 64, 68, 80, 96, 112, 120, 136]
+[lswb] waiting for idle server and flushing prefix cache
+Cache flushed.
+Please check backend logs for more details. (When there are running or waiting requests, the operation will not be performed.)
+== lswb replay tag=v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12 port=30382 c21 @ 1200s -> /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c21/repeat-01 ==
+[lswb] request timing: 2270 records, 2270 valid, complete=True
+[lswb] client rc=1
+==== client.log ====
+{"attempted":2270,"completion_tokens":323628,"failed":258,"not_started_due_to_duration":2646,"prompt_tokens":288463727,"selected":4916,"successful":2012,"users_completed":35,"users_selected":92,"users_started":54,"valid":false}
+[lswb] artifacts at /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c21/repeat-01
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "57e231baf4aabfba9b1a921af8b7f901b79cff8d"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang-v0.5.22",
+    "expected_commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22",
+    "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  }
+}
+[lswb] decode graph preflight OK: c22, captured sizes=[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 15, 16, 18, 20, 24, 28, 32, 34, 40, 48, 56, 64, 68, 80, 96, 112, 120, 136]
+[lswb] waiting for idle server and flushing prefix cache
+Cache flushed.
+Please check backend logs for more details. (When there are running or waiting requests, the operation will not be performed.)
+== lswb replay tag=v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12 port=30382 c22 @ 1200s -> /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c22/repeat-01 ==
+[lswb] request timing: 2471 records, 2471 valid, complete=True
+[lswb] client rc=1
+==== client.log ====
+{"attempted":2471,"completion_tokens":358454,"failed":291,"not_started_due_to_duration":2445,"prompt_tokens":311885757,"selected":4916,"successful":2180,"users_completed":40,"users_selected":92,"users_started":62,"valid":false}
+[lswb] artifacts at /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c22/repeat-01
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "57e231baf4aabfba9b1a921af8b7f901b79cff8d"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang-v0.5.22",
+    "expected_commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22",
+    "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  }
+}
+[lswb] decode graph preflight OK: c23, captured sizes=[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 15, 16, 18, 20, 24, 28, 32, 34, 40, 48, 56, 64, 68, 80, 96, 112, 120, 136]
+[lswb] waiting for idle server and flushing prefix cache
+Cache flushed.
+Please check backend logs for more details. (When there are running or waiting requests, the operation will not be performed.)
+== lswb replay tag=v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12 port=30382 c23 @ 1200s -> /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c23/repeat-01 ==
+[lswb] request timing: 2508 records, 2508 valid, complete=True
+[lswb] client rc=1
+==== client.log ====
+{"attempted":2508,"completion_tokens":359635,"failed":286,"not_started_due_to_duration":2408,"prompt_tokens":318032622,"selected":4916,"successful":2222,"users_completed":40,"users_selected":92,"users_started":62,"valid":false}
+[lswb] artifacts at /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c23/repeat-01
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "57e231baf4aabfba9b1a921af8b7f901b79cff8d"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang-v0.5.22",
+    "expected_commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22",
+    "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  }
+}
+[lswb] decode graph preflight OK: c24, captured sizes=[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 15, 16, 18, 20, 24, 28, 32, 34, 40, 48, 56, 64, 68, 80, 96, 112, 120, 136]
+[lswb] waiting for idle server and flushing prefix cache
+Cache flushed.
+Please check backend logs for more details. (When there are running or waiting requests, the operation will not be performed.)
+== lswb replay tag=v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12 port=30382 c24 @ 1200s -> /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c24/repeat-01 ==
+[lswb] request timing: 2572 records, 2572 valid, complete=True
+[lswb] client rc=1
+==== client.log ====
+{"attempted":2572,"completion_tokens":367533,"failed":304,"not_started_due_to_duration":2344,"prompt_tokens":324262008,"selected":4916,"successful":2268,"users_completed":41,"users_selected":92,"users_started":63,"valid":false}
+[lswb] artifacts at /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c24/repeat-01
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "57e231baf4aabfba9b1a921af8b7f901b79cff8d"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang-v0.5.22",
+    "expected_commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22",
+    "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  }
+}
+[lswb] decode graph preflight OK: c25, captured sizes=[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 15, 16, 18, 20, 24, 28, 32, 34, 40, 48, 56, 64, 68, 80, 96, 112, 120, 136]
+[lswb] waiting for idle server and flushing prefix cache
+Cache flushed.
+Please check backend logs for more details. (When there are running or waiting requests, the operation will not be performed.)
+== lswb replay tag=v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12 port=30382 c25 @ 1200s -> /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c25/repeat-01 ==
+[lswb] request timing: 2565 records, 2565 valid, complete=True
+[lswb] client rc=1
+==== client.log ====
+{"attempted":2565,"completion_tokens":366656,"failed":296,"not_started_due_to_duration":2351,"prompt_tokens":323624119,"selected":4916,"successful":2269,"users_completed":40,"users_selected":92,"users_started":63,"valid":false}
+[lswb] artifacts at /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c25/repeat-01
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "57e231baf4aabfba9b1a921af8b7f901b79cff8d"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang-v0.5.22",
+    "expected_commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22",
+    "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  }
+}
+[lswb] decode graph preflight OK: c26, captured sizes=[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 15, 16, 18, 20, 24, 28, 32, 34, 40, 48, 56, 64, 68, 80, 96, 112, 120, 136]
+[lswb] waiting for idle server and flushing prefix cache
+Cache flushed.
+Please check backend logs for more details. (When there are running or waiting requests, the operation will not be performed.)
+== lswb replay tag=v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12 port=30382 c26 @ 1200s -> /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c26/repeat-01 ==
+[lswb] request timing: 2568 records, 2568 valid, complete=True
+[lswb] client rc=1
+==== client.log ====
+{"attempted":2568,"completion_tokens":368611,"failed":304,"not_started_due_to_duration":2348,"prompt_tokens":322445397,"selected":4916,"successful":2264,"users_completed":41,"users_selected":92,"users_started":66,"valid":false}
+[lswb] artifacts at /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c26/repeat-01
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "57e231baf4aabfba9b1a921af8b7f901b79cff8d"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang-v0.5.22",
+    "expected_commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22",
+    "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  }
+}
+[lswb] decode graph preflight OK: c27, captured sizes=[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 15, 16, 18, 20, 24, 28, 32, 34, 40, 48, 56, 64, 68, 80, 96, 112, 120, 136]
+[lswb] waiting for idle server and flushing prefix cache
+Cache flushed.
+Please check backend logs for more details. (When there are running or waiting requests, the operation will not be performed.)
+== lswb replay tag=v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12 port=30382 c27 @ 1200s -> /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c27/repeat-01 ==
+[lswb] request timing: 2407 records, 2407 valid, complete=True
+[lswb] client rc=1
+==== client.log ====
+{"attempted":2407,"completion_tokens":337336,"failed":289,"not_started_due_to_duration":2509,"prompt_tokens":299870728,"selected":4916,"successful":2118,"users_completed":35,"users_selected":92,"users_started":61,"valid":false}
+[lswb] artifacts at /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c27/repeat-01
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "57e231baf4aabfba9b1a921af8b7f901b79cff8d"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang-v0.5.22",
+    "expected_commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22",
+    "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  }
+}
+[lswb] decode graph preflight OK: c28, captured sizes=[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 15, 16, 18, 20, 24, 28, 32, 34, 40, 48, 56, 64, 68, 80, 96, 112, 120, 136]
+[lswb] waiting for idle server and flushing prefix cache
+Cache flushed.
+Please check backend logs for more details. (When there are running or waiting requests, the operation will not be performed.)
+== lswb replay tag=v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12 port=30382 c28 @ 1200s -> /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c28/repeat-01 ==
+[lswb] request timing: 2517 records, 2517 valid, complete=True
+[lswb] client rc=1
+==== client.log ====
+{"attempted":2517,"completion_tokens":351201,"failed":303,"not_started_due_to_duration":2399,"prompt_tokens":314379960,"selected":4916,"successful":2214,"users_completed":38,"users_selected":92,"users_started":64,"valid":false}
+[lswb] artifacts at /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c28/repeat-01
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "57e231baf4aabfba9b1a921af8b7f901b79cff8d"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang-v0.5.22",
+    "expected_commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22",
+    "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  }
+}
+[lswb] decode graph preflight OK: c29, captured sizes=[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 15, 16, 18, 20, 24, 28, 32, 34, 40, 48, 56, 64, 68, 80, 96, 112, 120, 136]
+[lswb] waiting for idle server and flushing prefix cache
+Cache flushed.
+Please check backend logs for more details. (When there are running or waiting requests, the operation will not be performed.)
+== lswb replay tag=v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12 port=30382 c29 @ 1200s -> /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c29/repeat-01 ==
+[lswb] request timing: 2583 records, 2583 valid, complete=True
+[lswb] client rc=1
+==== client.log ====
+{"attempted":2583,"completion_tokens":366749,"failed":318,"not_started_due_to_duration":2333,"prompt_tokens":320691051,"selected":4916,"successful":2265,"users_completed":40,"users_selected":92,"users_started":68,"valid":false}
+[lswb] artifacts at /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c29/repeat-01
+{
+  "parent": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations",
+    "commit": "57e231baf4aabfba9b1a921af8b7f901b79cff8d"
+  },
+  "sglang": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/sglang-v0.5.22",
+    "expected_commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "commit": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  },
+  "flashmla/csrc/cutlass": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+    "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "override": false,
+    "dirty": false
+  },
+  "flashmla": {
+    "path": "/home/jovyan/winstonxcai/flash-optimizations/third_party/flashmla-v0.5.22",
+    "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "override": false,
+    "dirty": false,
+    "integration": "v0.5.22"
+  }
+}
+[lswb] decode graph preflight OK: c30, captured sizes=[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 15, 16, 18, 20, 24, 28, 32, 34, 40, 48, 56, 64, 68, 80, 96, 112, 120, 136]
+[lswb] waiting for idle server and flushing prefix cache
+Cache flushed.
+Please check backend logs for more details. (When there are running or waiting requests, the operation will not be performed.)
+== lswb replay tag=v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12 port=30382 c30 @ 1200s -> /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c30/repeat-01 ==
+[lswb] request timing: 2555 records, 2555 valid, complete=True
+[lswb] client rc=1
+==== client.log ====
+{"attempted":2555,"completion_tokens":361380,"failed":327,"not_started_due_to_duration":2361,"prompt_tokens":314530749,"selected":4916,"successful":2228,"users_completed":38,"users_selected":92,"users_started":67,"valid":false}
+[lswb] artifacts at /home/jovyan/winstonxcai/flash-optimizations/results/lswb-replay/v0522-mf088-no-hicache-c20-30-build-20261025_195128-kernel-20261025_200815-vc5was12/c30/repeat-01
