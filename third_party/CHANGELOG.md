@@ -13,6 +13,15 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- SWA page correction from parent `c6c9f0f`: SGLang `f5afebd90750` /
+  FlashMLA `e274b715f49a` (unchanged). The paged H100 factory requires
+  SWA page256 while attention reads a 128-token window; v2 mistakenly used
+  page128. V3 fixes only the fixture/protocol and adds a window-as-page
+  rejection check. The two existing contract/V4 matrix tests passed on Modal
+  CPU (2 passed in 0.14 s), cached image, no GPU run or native rebuild.
+  Allocation measurements/prediction already used page256. Historical receipts
+  remain unchanged; v3 GPU timing is unmeasured. CPU app stopped/zero containers.
+
 - Production-geometry fixture correction from parent `60e5bbe`: SGLang
   `a0f7ff18314c` / FlashMLA `e274b715f49a` (unchanged). V4.1 FP4 timing now
   uses H64/SWA128/page128, Q1/K512, five batches and both C1/page256 and

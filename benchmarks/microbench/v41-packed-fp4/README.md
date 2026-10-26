@@ -3,16 +3,25 @@
 
 ## Current production-geometry matrix
 
-The active `v41-fp4-decode` suite now uses **H64, SWA128/page128, Q1/K512**,
+The active `v41-fp4-decode` suite now uses **H64, SWA128/page256, Q1/K512**,
 batches 8/16/24/28/32, and compressed global pages **C1/256 and C2/128**
 (ten cases). The V4.1 config has 64 query heads, one KV head and a separate
 32-head indexer. The selected H100 runtime pads smaller attention-TP shards to
 64 kernel heads. SWA64 and H128 were supplementary timing coverage and are
 removed from the active timing matrix; their correctness tests remain.
 
+The window and allocation page are distinct: `kv_cache_configurator.py:1769`
+requires 256-token SWA pages in this paged H100 path. The prior v2 fixture used
+page128 by mistake and is superseded; it never had a GPU timing run. The actual
+allocator measurement and the 128K capacity prediction already used page256.
+This correction changes only the benchmark's page geometry and protocol.
+Acceptance adds an explicit window-as-page negative check. Reuse the same
+Modal CPU tests/image with a 120-second cap and at most $0.05 projected work;
+no native rebuild or GPU run is required. Stop on a contract failure.
+
 Question: does the maintained timing matrix match the supported model's H100
 attention geometry? Only case selection and its protocol/judge change. Protocol
-`remnant-v41-fp4-decode-v2` prevents historical receipts from qualifying this
+`remnant-v41-fp4-decode-v3` prevents historical receipts from qualifying this
 matrix. Batches remain a synthetic sweep; this does not model serving traffic,
 TP padding values or the indexer's execution. Source anchors are
 `deepseek_v4_backend.py::SWA_WINDOW`, `MqaAttentionBase::_kernel_num_heads`,
@@ -27,11 +36,11 @@ old protocol, missing cases/modes and bad samples/layouts. No native rebuild or
 GPU timing is necessary to verify selection. Stop on a failed contract check;
 allow at most $0.05 projected CPU work from the existing $20 budget. Existing
 GPU/kernel qualification and raw measurements below retain their original
-source identities; **v2 timing has not been run**. C2/page128 timing is new
+source identities; **v3 timing has not been run**. C2/page128 timing is new
 coverage and has no historical measurement. Rollback restores the prior
 SGLang pin `98991169803f4ec0b1b2c3f369695dc62d0bf3ec`.
 
-Validation: **2 passed in 0.08 s** on Modal CPU (`ap-vTOOo7wo8VWRzuxlSPA0kn`),
+Historical v2 CPU validation: **2 passed in 0.08 s** on Modal CPU (`ap-vTOOo7wo8VWRzuxlSPA0kn`),
 using the two existing test functions above, pytest 8.4.2, one CPU/1 GiB,
 a 120-second worker timeout and no GPU, network or volumes on the test worker.
 The first CLI shell stopped without a usable test report and is not qualified;
@@ -40,6 +49,29 @@ The account compute snapshot changed from $21.42800725 to $21.43512718
 (about $0.00712 reported delta, subject to settlement). Exact arguments, source
 hashes and retry evidence are recorded in `qualification.json` under
 `production_geometry_correction`. SGLang commit: `a0f7ff18314c`; no kernel changes.
+
+Current v3 validation: **2 passed in 0.14 s** on Modal CPU, app
+`ap-c1tXzPaAYr6DRwi2B458Vm`, cached image `im-VqSQJWWMrtpbdbzBgw2Aum`,
+SGLang `f5afebd90750`. One CPU/1 GiB, 120-second cap, no GPU/volumes;
+the matrix test explicitly rejects confusing the 128-token window with a
+128-token allocation page. Both tests passed; the app stopped and zero
+containers remain. Billing snapshot is $21.43365249, unchanged immediately
+after the run; settlement is pending. No new GPU timing is claimed.
+
+The paged SWA pool is allocated once at startup from the configured request
+cap, not resized when the active batch changes. With no speculation, attention
+DP=1, a 128-token window, 256-token pages, eviction interval 128, overlapping
+prefill chunk C, and default radix-prefix headroom 4R:
+
+`SWA slots = align256[R*(128+128+256+256) + 4R*(128+256) + 2C + 256]`
+
+For integer R this is `2304R + 2C + 256`; a further dummy page is included in
+physical storage. At 40 layers and 585 padded bytes per SWA row per layer, the
+request-dependent slope is 51.416 MiB/GPU per additional allowed request.
+Only 17.139 MiB is the active-request/margin allowance; 34.277 MiB is default
+cached-prefix headroom. With radix disabled or `--swa-prefix-tails 0`, that
+headroom is zero. This is an allocator policy, not a requirement that SWA retain
+a full context. The capacity prediction already used this 256-page accounting.
 
 ## Historical v1 qualification and timing
 

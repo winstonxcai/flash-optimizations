@@ -17,7 +17,7 @@ Folder suffixes identify the SGLang integration pair, not a FlashMLA release.
 |---|---|---|---|
 | `sglang-v0.5.18/` | `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` | `6687a7c` |
 | `flashmla-v0.5.18/` | `05e26647fe840b8baedae486c2d86d5ce4efeb7c` | `remnant/flashmla-v0518` | `97f3faa` |
-| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `codex/v41-packed-fp4` | `a0f7ff18314c` |
+| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `codex/v41-packed-fp4` | `f5afebd90750` |
 | `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `codex/v41-packed-fp4` | `e274b715f49a` |
 
 Both FlashMLA checkouts pin CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`.
@@ -377,12 +377,14 @@ this guide and the changelog are its curated index.
 The fragment reconstruction follow-up stages Packed FP4 rows and prefix ranks
 once, reusing V4's fragment selectors with nibble adaptation. Producer geometry
 and persistent formats stay fixed. The maintained microbenchmark now includes
-`v41-fp4-decode`. Its active v2 matrix uses H64/SWA128, batches
+`v41-fp4-decode`. Its active v3 matrix uses H64/SWA128 with 256-token SWA pages, batches
 8/16/24/28/32, and both C1/page256 and C2/page128 (ten cases), with
 actual captured-output checks and fresh dense Native FP4 controls. Timing is
 blocked until identical source/binary/tool receipts pass 34 cases per sanitizer.
 The prior source pins passed scoped model-free correctness and v1 timing.
-Fresh-context source/artifact review passed with no blocking findings. The v2
+Fresh-context source/artifact review passed with no blocking findings. The v3
 fixture correction passed its two existing matrix/contract tests on Modal CPU
-(2 passed in 0.08 s) and changes no runtime/kernel code. Historical v1 measurements
-retain their original source identities. V2 GPU timing has not been run.
+(2 passed in 0.14 s) and changes no runtime/kernel code. Historical v1 measurements
+retain their original source identities. V3 GPU timing has not been run. V2 incorrectly equated the 128-token
+window with page128; the runtime factory requires page256. The measured
+allocator fixture and capacity prediction already used page256.
