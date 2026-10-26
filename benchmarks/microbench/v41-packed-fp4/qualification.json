@@ -2064,5 +2064,89 @@
     "Supported Direct/prefill query-head fixtures are64/128 on SM90; other local head counts and distributed/runtime configurations are unqualified or rejected.",
     "HiCache, distributed cache transfer, CP, speculative/DSpark and incompatible legacy overrides are deferred/rejected.",
     "Added mocked Modal launcher unit tests were not run as a standalone local suite; CPU boundary guards and the live reordered workflow executed on Modal."
-  ]
+  ],
+  "production_geometry_correction": {
+    "status": "passed_modal_cpu_contracts_gpu_timing_not_run",
+    "baseline_parent": "60e5bbe",
+    "baseline_sglang": "98991169803f4ec0b1b2c3f369695dc62d0bf3ec",
+    "unchanged_flashmla": "e274b715f49ab6c300f62e0d42c1cd627b8d1bb5",
+    "protocol": "remnant-v41-fp4-decode-v2",
+    "case_count": 10,
+    "query_heads": 64,
+    "kv_heads": 1,
+    "indexer_heads": 32,
+    "swa_length": 128,
+    "swa_page_size": 128,
+    "global_page_sizes": {
+      "C1": 256,
+      "C2": 128
+    },
+    "batches": [
+      8,
+      16,
+      24,
+      28,
+      32
+    ],
+    "query_length": 1,
+    "topk_length": 512,
+    "historical_v1_results_preserved": true,
+    "gpu_timing_run": false,
+    "limitations": [
+      "Synthetic batches; no serving-traffic or TP padding-value claim.",
+      "Historical v1 timings do not qualify v2; no new C2 timing exists.",
+      "No runtime/kernel change; correctness fixtures retain SWA64/H128 coverage."
+    ],
+    "source_sha256": {
+      "python/sglang/benchmark/remnant/cases.py": "77fd30211cf2b92a09d5139edf9fda4903267659b9d6c51351b61c9da8fb4571",
+      "benchmark/remnant/microbench.py": "1ecb2374668aea5c21e316e2fe6cf89b1dec164a3df4c25037c7ada1c2fdf7f2",
+      "benchmark/remnant/test_microbench.py": "21770732def98b57abc6b88b4a2b74cd8562646b7ef8055d95257c9e38ae1514"
+    },
+    "modal_cpu_test": {
+      "account": "peroace360",
+      "app_id": "ap-vTOOo7wo8VWRzuxlSPA0kn",
+      "base_image": "python:3.12-slim",
+      "image_id": "im-VqSQJWWMrtpbdbzBgw2Aum",
+      "cpu": 1,
+      "memory_mib": 1024,
+      "command_timeout_seconds": 120,
+      "projected_cost_cap_usd": 0.05,
+      "baseline_account_compute_usd": 21.42800725,
+      "tests": [
+        "test_v41_fp4_matrix_and_timing_gate",
+        "test_established_matrix_and_profile_coverage"
+      ],
+      "no_gpu": true,
+      "no_volumes": true,
+      "initial_attempt": {
+        "app_id": "ap-oZk7DOhHytWM0s13lQkWyG",
+        "status": "stopped_without_usable_test_report_not_qualified",
+        "start": "2026-10-26T14:27:06+08:00",
+        "stop": "2026-10-26T14:29:19+08:00",
+        "diagnosis": "CLI wraps --cmd with an additional bash/shlex quoting layer; retry used direct Sandbox argv and captured output. Initial attempt has no passing receipt."
+      },
+      "sandbox_id": "sb-VlwGIna0tur3OdjhBLKqsw",
+      "image_build_seconds": 3.23,
+      "pytest": "8.4.2",
+      "return_code": 0,
+      "stdout": ".. [100%]\n2 passed in 0.08s\n",
+      "stopped_at": "2026-10-26T14:31:16+08:00",
+      "argv": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "/work/benchmark/remnant/test_microbench.py::test_v41_fp4_matrix_and_timing_gate",
+        "/work/benchmark/remnant/test_microbench.py::test_established_matrix_and_profile_coverage"
+      ],
+      "latest_account_compute_usd": 21.43512718,
+      "reported_compute_delta_usd": 0.00711993,
+      "billing_settlement_pending": true,
+      "all_apps_stopped": true,
+      "container_count_after": 0,
+      "local_executable_checks": false,
+      "reproduction": "With MODAL_PROFILE=peroace360, use modal.Image.from_registry(\"python:3.12-slim\").pip_install(\"pytest==8.4.2\"), add_local_file the two existing source/test paths to matching /work/<relative-path>; inside modal.App(\"remnant-v41-production-contract\").run(), call modal.Sandbox.create(*argv, image=image, app=app, cpu=1, memory=1024, timeout=120, block_network=True), read stdout/stderr, wait/check returncode, and terminate(wait=True) in finally. No volumes or GPU."
+    },
+    "sglang": "a0f7ff18314c4349426d54f49a5a54a6a1f716ef"
+  }
 }

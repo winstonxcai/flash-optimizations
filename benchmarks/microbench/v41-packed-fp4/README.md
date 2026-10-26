@@ -1,6 +1,48 @@
 <!-- Author: Winston Cai. -->
 # V4.1 Packed FP4 on H100
 
+## Current production-geometry matrix
+
+The active `v41-fp4-decode` suite now uses **H64, SWA128/page128, Q1/K512**,
+batches 8/16/24/28/32, and compressed global pages **C1/256 and C2/128**
+(ten cases). The V4.1 config has 64 query heads, one KV head and a separate
+32-head indexer. The selected H100 runtime pads smaller attention-TP shards to
+64 kernel heads. SWA64 and H128 were supplementary timing coverage and are
+removed from the active timing matrix; their correctness tests remain.
+
+Question: does the maintained timing matrix match the supported model's H100
+attention geometry? Only case selection and its protocol/judge change. Protocol
+`remnant-v41-fp4-decode-v2` prevents historical receipts from qualifying this
+matrix. Batches remain a synthetic sweep; this does not model serving traffic,
+TP padding values or the indexer's execution. Source anchors are
+`deepseek_v4_backend.py::SWA_WINDOW`, `MqaAttentionBase::_kernel_num_heads`,
+and `deepseek_v4_memory_pool.py::_init_compressed_pools` in the selected SGLang
+fork. [Official model config](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/main/config.json)
+records `num_attention_heads=64`, `num_key_value_heads=1`,
+`index_n_heads=32`, `sliding_window=128` and `index_topk=512`.
+
+Acceptance for this fixture correction: the existing matrix/timing contract
+and V4 matrix regression pass on Modal CPU; verify rejection of SWA64, H128,
+old protocol, missing cases/modes and bad samples/layouts. No native rebuild or
+GPU timing is necessary to verify selection. Stop on a failed contract check;
+allow at most $0.05 projected CPU work from the existing $20 budget. Existing
+GPU/kernel qualification and raw measurements below retain their original
+source identities; **v2 timing has not been run**. C2/page128 timing is new
+coverage and has no historical measurement. Rollback restores the prior
+SGLang pin `98991169803f4ec0b1b2c3f369695dc62d0bf3ec`.
+
+Validation: **2 passed in 0.08 s** on Modal CPU (`ap-vTOOo7wo8VWRzuxlSPA0kn`),
+using the two existing test functions above, pytest 8.4.2, one CPU/1 GiB,
+a 120-second worker timeout and no GPU, network or volumes on the test worker.
+The first CLI shell stopped without a usable test report and is not qualified;
+the explicit-argv Sandbox retry passed. Both apps stopped; zero containers remain.
+The account compute snapshot changed from $21.42800725 to $21.43512718
+(about $0.00712 reported delta, subject to settlement). Exact arguments, source
+hashes and retry evidence are recorded in `qualification.json` under
+`production_geometry_correction`. SGLang commit: `a0f7ff18314c`; no kernel changes.
+
+## Historical v1 qualification and timing
+
 **Outcome: model-free correctness and final paired timing passed; keep experimental and opt-in.**
 All 34 cases passed each strict sanitizer. The final 20-case comparison puts
 Packed Direct **2.69% slower than Native for SWA64** and **2.58% slower for

@@ -13,6 +13,15 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Production-geometry fixture correction from parent `60e5bbe`: SGLang
+  `a0f7ff18314c` / FlashMLA `e274b715f49a` (unchanged). V4.1 FP4 timing now
+  uses H64/SWA128/page128, Q1/K512, five batches and both C1/page256 and
+  C2/page128 (ten cases). Protocol v2 rejects historical v1 timing; SWA64/H128
+  remain correctness coverage. Existing matrix/timing contract and V4 matrix
+  regression passed on Modal CPU (2 passed in 0.08 s). No native rebuild or GPU
+  rerun; v2 GPU timing remains unmeasured. Both CPU apps stopped. Rollback uses
+  the prior SGLang pin `98991169803f`; historical receipts/CSV remain intact.
+
 - Follow-up to parent `cc0f82f`: SGLang `98991169803f` / FlashMLA `e274b715f49a`.
   Packed FP4 now stages survivors/bitmap prefixes once and reconstructs fragments
   with V4-style selectors. Adds two exhaustive-mask Direct fixtures and paired
