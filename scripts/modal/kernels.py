@@ -1449,8 +1449,10 @@ def _glm_timing_qualification(run_ids: str, *, allow_incomplete: bool = False, p
                 raise RuntimeError(f"GLM runtime hashes changed: {run_id}")
         elif old["source_identities"]["sglang"]["commit"] != GLM_BASELINE or current != GLM_BASELINE_RUNTIME_HASHES:
             raise RuntimeError(f"Cannot establish unchanged historical GLM runtime: {run_id}")
-        if phase == "decode" and old.get("sources") != manifest.get("sources"):
-            raise RuntimeError(f"GLM focused fixture/source identity changed: {run_id}")
+        if phase == "decode" and (old.get("sources") != manifest.get("sources")
+                or old['glm_compile'].get('cache_files') != manifest['glm_compile'].get('cache_files')
+                or old.get('nvcc') != manifest.get('nvcc')):
+            raise RuntimeError(f"GLM focused fixture/binary/source identity changed: {run_id}")
         for key in ("torch", "cuda", "cuda_python", "cuda_bindings", "triton", "tilelang", "binaries"):
             if old.get(key) != manifest.get(key):
                 raise RuntimeError(f"GLM qualification dependency changed: {run_id}/{key}")

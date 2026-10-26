@@ -2075,6 +2075,73 @@ class GlmLauncherTests(unittest.TestCase):
 
 
 
+class GLMCPURebuildTests(unittest.TestCase):
+    """The explicit rebuild excludes exactly two JIT inputs, never AOT sources."""
+
+    def test_compiled_source_allowlist(self):
+        from scripts.sources import glm_rebuild_source_digest
+        with tempfile.TemporaryDirectory() as tmp:
+            roots = [Path(tmp) / "kernels", Path(tmp) / "flash"]
+            for root in roots:
+                root.mkdir()
+            loader = roots[0] / "ops/attention/dsa/tilelang_kernel.py"
+            helper = roots[0] / "jit/include/sgl_kernel/glm_packed_decode.cuh"
+            for path in (loader, helper):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("before")
+            native = roots[0] / "aot.cu"
+            native.write_text("native")
+            flash = roots[1] / "kernel.cuh"
+            flash.write_text("flash")
+            expected = glm_rebuild_source_digest(roots)
+            loader.write_text("after")
+            helper.write_text("after")
+            self.assertEqual(glm_rebuild_source_digest(roots), expected)
+            native.write_text("changed")
+            self.assertNotEqual(glm_rebuild_source_digest(roots), expected)
+            native.write_text("native")
+            flash.write_text("changed")
+            self.assertNotEqual(glm_rebuild_source_digest(roots), expected)
+
+    def test_base_identity_and_artifacts(self):
+        import hashlib
+        from scripts import sources
+        real_path = Path
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            roots = [root / "kernels", root / "flash"]
+            for folder in roots:
+                folder.mkdir()
+            binary, cache = root / "aot.so", root / "jit.cubin"
+            binary.write_bytes(b"native")
+            cache.write_bytes(b"cached")
+            manifest = dict(source_identities={"sglang": {"commit": "sg"}, "flashmla": {"commit": "fm"}},
+                            binaries={str(binary): hashlib.sha256(binary.read_bytes()).hexdigest()},
+                            glm_compile={"cache_files": {str(cache): hashlib.sha256(cache.read_bytes()).hexdigest()}})
+            base = root / "manifest.json"
+            base.write_text(json.dumps(manifest))
+            def mapped(path):
+                if str(path) == "/opt/remnant-build.json":
+                    return base
+                if str(path) == "/opt/remnant-cpu-rebuild-base.json":
+                    return root / "verified.json"
+                return real_path(path)
+            with patch.object(sources, "Path", side_effect=mapped), patch.dict(os.environ, REMNANT_BUILT_INTEGRATION="v0.5.22"):
+                digest = sources.glm_rebuild_source_digest(roots)
+                expected = dict(sglang="sg", flashmla="fm")
+                sources.verify_glm_cpu_rebuild(expected, digest, list(map(str, roots)))
+                with self.assertRaises(RuntimeError):
+                    sources.verify_glm_cpu_rebuild({**expected,"sglang":"wrong"}, digest, list(map(str, roots)))
+                for artifact in (binary, cache):
+                    original = artifact.read_bytes()
+                    artifact.write_bytes(b"changed")
+                    with self.assertRaises(RuntimeError):
+                        sources.verify_glm_cpu_rebuild(expected, digest, list(map(str, roots)))
+                    artifact.write_bytes(original)
+                with patch.dict(os.environ, REMNANT_BUILT_INTEGRATION="v0.5.18"), self.assertRaises(RuntimeError):
+                    sources.verify_glm_cpu_rebuild(expected, digest, list(map(str, roots)))
+
+
 class GLMAttentionProtocolTests(unittest.TestCase):
     """Coverage identities and model-specific dispatch must fail closed."""
 
