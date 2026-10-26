@@ -7,6 +7,37 @@ FlashMLA v0.5.22 repositories. It continues the completed local
 validated source commits and historical measurements below remain authoritative.
 The v0.5.22 submodule branch hints follow the new branch; v0.5.18 stays unchanged.
 
+## Review-fix milestone
+
+Question: can the opt-in implementation expose one readable layout/prefill policy
+and fail closed at its startup, Direct and qualification boundaries? Fix the Q8
+prefill override, vector-load alignment, ignored benchmark flags, failed-tool
+aggregation and runtime identity. Add a pure `scripts/modal/qualification.py`
+module because the same receipt checks must run on CPU before H100 allocation
+and be rechecked on GPU; existing `scripts/modal/tests.py` owns its regressions.
+Keep the existing numerical fixtures/runner and full-history prefill behavior.
+Document its scratch scaling rather than claiming serving capacity.
+
+Acceptance: focused CPU contracts and scoped formatting/registry checks on
+Modal; CPU native build/precompile before any H100; numerical, graph/stream,
+allocation and strict sanitizer coverage for the frozen candidate, then the
+production v3 ten-case Native/Packed timing. Reserve $2 inside the existing $20
+cumulative follow-up budget; latest account compute before review fixes was
+$21.43365249 versus the phase baseline $13.73409128 (about $7.70 reported).
+Authorize at most $9.50 projected additional work initially, one H100 at a time,
+no automatic retries, no weights/models/serving or profiling. If preflight fails,
+stop before GPU; if remaining budget cannot cover required gates, record the
+candidate unqualified. Previous evidence remains historical and unchanged.
+The only pre-existing fork dirt is an untracked CUTLASS `.DS_Store`; preserve it
+and record an explicit canonical FlashMLA source override if needed by preflight.
+
+Review-fix source freeze: forks SGLang `c4708870`, FlashMLA `4e72722`;
+parent runner commit is recorded by each build manifest. Independent follow-up
+review checked C++ token-level equivalence, numerical/layout constants, CUDA
+synchronization, runtime prefill policy and receipt identity. It found an odd
+page-stride alignment gap and a child-process import-context issue; both were
+fixed before launch. No local executable validation is used.
+
 ## Current production-geometry matrix
 
 The active `v41-fp4-decode` suite now uses **H64, SWA128/page256, Q1/K512**,

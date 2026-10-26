@@ -17,8 +17,8 @@ Folder suffixes identify the SGLang integration pair, not a FlashMLA release.
 |---|---|---|---|
 | `sglang-v0.5.18/` | `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` | `6687a7c` |
 | `flashmla-v0.5.18/` | `05e26647fe840b8baedae486c2d86d5ce4efeb7c` | `remnant/flashmla-v0518` | `97f3faa` |
-| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `ds41-flash-packed` | `f5afebd90750` |
-| `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `ds41-flash-packed` | `e274b715f49a` |
+| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `ds41-flash-packed` | `c4708870` |
+| `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `ds41-flash-packed` | `4e72722` |
 
 Both FlashMLA checkouts pin CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`.
 The default remains v0.5.18; `REMNANT_INTEGRATION=v0.5.22` selects the other pair.
@@ -50,6 +50,21 @@ Ordinary serving does not accept these overrides. A source check does not prove
 that an existing container's loaded binaries match; source changes need a rebuild.
 
 ## Experimental V4.1 FP4 on SM90
+
+Review-fix candidate: SGLang `c4708870`, FlashMLA `4e72722`, based on parent
+`af12dd9`. The current pins add effective Q8KV8 override rejection, retained
+prefill policy, aligned cache base/page checks, named FP4 layouts and explicit
+fixed-matrix CLI validation. Parent qualification uses
+`scripts/modal/qualification.py` to reject failed tools, compare complete runtime
+identities and check receipts on CPU before GPU timing. GPU qualification for
+these pins is pending; validation statements below describe historical sources.
+
+Prefill still reconstructs the selected requests' full compressed history into
+an inherited BF16 scratch buffer. Its high-watermark allocation scales roughly
+as `1024 * (sum(floor(sequence_length/compression_ratio)) + SWA_union)` bytes
+per GPU. At C1, 32 requests of 128K need about 4 GiB before the SWA union and
+padding. The microbenchmark's small scratch fixture does not establish serving
+memory safety or concurrency capacity. This review does not redesign prefill.
 
 The isolated `ds41-flash-packed` candidate starts from parent
 `9419d0e18e1e7677c0e48b8e40ad54bbc30010ca`; the original integration/worktrees

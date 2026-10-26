@@ -13,6 +13,16 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Review fixes based on parent `af12dd9`: SGLang `c4708870` / FlashMLA
+  `4e72722`. Close Q8KV8 override and misaligned cache boundaries; retain one
+  prefill policy, name layout contracts, reject ignored benchmark geometry,
+  and qualify complete runtime/receipt identity on CPU before H100 timing.
+  Existing tests own regressions; FP4 CI registration stays disabled under
+  Modal-only qualification. Source review passed after fixing page-stride
+  alignment and subprocess import context. CPU/GPU checks remain pending.
+  Full-history prefill scratch scaling is documented; no serving claim.
+
+
 - Publish the completed V4.1 experiment from parent `81c0777` on matching
   `ds41-flash-packed` branches in all three repositories. Fork pins remain
   SGLang `f5afebd90750` / FlashMLA `e274b715f49a`; only v0.5.22 branch hints

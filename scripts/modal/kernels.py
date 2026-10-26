@@ -41,6 +41,8 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import modal
+
+from scripts.modal.qualification import qualify_fp4_runs
 from scripts.sources import check_sources, integration_profile
 
 INTEGRATION = integration_profile()
@@ -500,9 +502,9 @@ for p in (128,256):
     for packed in (False,True):
         stride=p*(224 if packed else 288)
         for rotate in (False,True):
-            src=ASTSource(_store, signature={'X':'*bf16','F':'*fp32' if rotate else '*bf16','LOC':'*i64','C':'*u8'}, constexprs={'XS':512,'FS':64 if rotate else 512,'P':p,'STRIDE':stride,'N':2,'PACKED':packed,'ROTATE':rotate})
+            src=ASTSource(_store, signature={'X':'*bf16','F':'*fp32' if rotate else '*bf16','LOC':'*i64','C':'*u8'}, constexprs={'XS':512,'FS':64 if rotate else 512,'P':p,'STRIDE':stride,'N':2,'PACKED':packed,'DATA_BYTES':192 if packed else 256,'VALUE_BYTES':128 if packed else 256,'ROTATE':rotate})
             triton.compile(src,target=GPUTarget('cuda',90,32),options={'num_warps':4,'enable_fp_fusion':False})
-        src=ASTSource(_read,signature={'C':'*u8','IDS':'*i32','OUT':'*bf16'},constexprs={'OS':512,'P':p,'STRIDE':stride,'N':2,'PACKED':packed})
+        src=ASTSource(_read,signature={'C':'*u8','IDS':'*i32','OUT':'*bf16'},constexprs={'OS':512,'P':p,'STRIDE':stride,'N':2,'PACKED':packed,'DATA_BYTES':192 if packed else 256,'VALUE_BYTES':128 if packed else 256})
         triton.compile(src,target=GPUTarget('cuda',90,32),options={'num_warps':4})
 print('FP4 CPU SM90 precompilation passed')
 """
@@ -560,6 +562,26 @@ print('FP4 CPU SM90 precompilation passed')
         )
     if INTEGRATION["version"] != "v0.5.22":
         _check_profiler_tools(build, deadline)
+    if VALIDATION_SUITE == "v41-fp4":
+        _run_command(
+            [
+                sys.executable,
+                "-c",
+                # Child Python processes do not inherit Modal's execution context.
+                # Mock only that context while importing launcher boundary tests;
+                # real source preflight already ran before the image was built.
+                "import unittest; from unittest.mock import patch; "
+                "context = patch('modal.is_local', return_value=False); context.start(); "
+                "from scripts.modal import tests; "
+                "suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(c) "
+                "for c in (tests.FP4QualificationTests, tests.FP4PreflightTests)); "
+                "result = unittest.TextTestRunner(verbosity=2).run(suite); "
+                "raise SystemExit(not result.wasSuccessful())",
+            ],
+            build / "qualification-tests.log",
+            deadline,
+            environment=cpu_environment,
+        )
     # Profiler tools are not a correctness gate for the serving-image qualification.
     manifest = {
         "validation_suite": VALIDATION_SUITE,
@@ -716,6 +738,24 @@ kernel_image = (
         str(REMOTE_REPO / "scripts/sources.py"),
         copy=True,
     )
+    .add_local_file(
+        REPO_ROOT / ".dockerignore", str(REMOTE_REPO / ".dockerignore"), copy=True
+    )
+    .add_local_file(
+        REPO_ROOT / "scripts/modal/kernels.py",
+        str(REMOTE_REPO / "scripts/modal/kernels.py"),
+        copy=True,
+    )
+    .add_local_file(
+        REPO_ROOT / "scripts/modal/qualification.py",
+        str(REMOTE_REPO / "scripts/modal/qualification.py"),
+        copy=True,
+    )
+    .add_local_file(
+        REPO_ROOT / "scripts/modal/tests.py",
+        str(REMOTE_REPO / "scripts/modal/tests.py"),
+        copy=True,
+    )
     .run_function(_build_image, cpu=16, memory=65536, timeout=CPU_BUILD_TIMEOUT_S)
 )
 _GPU = {
@@ -741,13 +781,6 @@ _GPU = {
 
 def _fp4_timing_qualification(run_ids: str) -> dict:
     """Author: Winston Cai. Aggregate only complete tools with identical inputs."""
-    ids = run_ids.split(",")
-    if (
-        not run_ids
-        or len(set(ids)) != len(ids)
-        or any(not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", i) for i in ids)
-    ):
-        raise ValueError("FP4 timing requires unique qualification run IDs")
     current = json.loads(MANIFEST.read_text())
     if (
         current["sources"] != _source_hashes()
@@ -757,51 +790,81 @@ def _fp4_timing_qualification(run_ids: str) -> dict:
     for path, digest in current["binaries"].items():
         if hashlib.sha256(Path(path).read_bytes()).hexdigest() != digest:
             raise RuntimeError(f"Timing binary changed: {path}")
-    passed, receipts = set(), {}
-    expected_ids = None
-    for run_id in ids:
-        base = RESULTS_ROOT / "microbench" / run_id / "validation"
-        manifest = json.loads((base / "build-manifest.json").read_text())
-        result = json.loads((base / "result.json").read_text())
-        for key in (
-            "sources",
-            "source_identities",
-            "binaries",
-            "sanitizer",
-            "coverage",
-            "fp4_precompile_artifacts",
-        ):
-            if manifest.get(key) != current.get(key):
-                raise RuntimeError(f"Qualification identity changed: {run_id}/{key}")
-        if result.get("allocation", {}).get("status") != "passed":
-            raise RuntimeError(f"Missing allocation qualification: {run_id}")
-        for tool, state in result.get("sanitizer_results", {}).items():
-            if state.get("status") != "passed":
-                continue
-            tests = list(ET.parse(base / f"{tool}.xml").getroot().iter("testcase"))
-            case_ids = {(t.get("classname"), t.get("name")) for t in tests}
-            if (
-                len(tests) != 34
-                or any(list(t) for t in tests)
-                or len(case_ids) != len(tests)
-            ):
-                raise RuntimeError(f"Incomplete qualification XML: {run_id}/{tool}")
-            if expected_ids is not None and case_ids != expected_ids:
-                raise RuntimeError(f"Sanitizer case identities differ: {run_id}/{tool}")
-            expected_ids = case_ids
-            passed.add(tool)
-        receipts[run_id] = hashlib.sha256(
-            (base / "result.json").read_bytes()
-        ).hexdigest()
-    if passed != {"memcheck", "racecheck", "synccheck"}:
-        raise RuntimeError(
-            f"FP4 timing blocked by incomplete sanitizer coverage: {sorted(passed)}"
+    return qualify_fp4_runs(RESULTS_ROOT, run_ids, current)
+
+
+@app.function(
+    image=kernel_image,
+    cpu=2,
+    memory=4096,
+    timeout=180,
+    retries=0,
+    max_containers=1,
+    scaledown_window=2,
+    volumes={str(RESULTS_ROOT): results_volume},
+)
+def _preflight_fp4_timing(run_id: str, qualification_runs: str) -> dict:
+    """Check receipts and the matrix contract on CPU before reserving an H100."""
+    results_volume.reload()
+    with _run_context(run_id, "preflight", 120, resource="cpu") as (
+        root,
+        record,
+        deadline,
+    ):
+        record["qualification"] = _fp4_timing_qualification(qualification_runs)
+        _run_pytest(
+            (
+                "benchmark/remnant/test_microbench.py::test_v41_fp4_matrix_and_timing_gate",
+            ),
+            root,
+            "contract",
+            deadline,
         )
-    return {
-        "receipts": receipts,
-        "tools": sorted(passed),
-        "case_count_per_tool": len(expected_ids),
-    }
+    return record["qualification"]
+
+
+def _dispatch_benchmark(
+    run_id: str,
+    keep_count: int,
+    modes: str,
+    suite: str,
+    prefill_reader: str,
+    qualification_runs: str,
+) -> str:
+    preflight = None
+    if suite == "v41-fp4-decode":
+        if (
+            VALIDATION_SUITE != "v41-fp4"
+            or keep_count != 256
+            or modes not in ("", "native,kernel")
+            or prefill_reader != "split"
+        ):
+            raise ValueError(
+                "FP4 timing requires v41-fp4 qualification and Native/Packed Direct keep256"
+            )
+        preflight = _preflight_fp4_timing.remote(run_id, qualification_runs)
+    elif qualification_runs:
+        raise ValueError("qualification_runs is only supported by v41-fp4-decode")
+    return _benchmark_worker.remote(
+        run_id, keep_count, modes, suite, prefill_reader, qualification_runs, preflight
+    )
+
+
+@app.local_entrypoint()
+def benchmark_kernels(
+    run_id: str,
+    keep_count: int = 256,
+    modes: str = "",
+    suite: str = "all",
+    prefill_reader: str = "split",
+    qualification_runs: str = "",
+) -> None:
+    """Public CLI: finish CPU qualification before scheduling GPU timing."""
+    print(
+        _dispatch_benchmark(
+            run_id, keep_count, modes, suite, prefill_reader, qualification_runs
+        )
+    )
 
 
 @app.function(
@@ -811,13 +874,14 @@ def _fp4_timing_qualification(run_ids: str) -> dict:
         **({"cpu": 2, "memory": 16384} if VALIDATION_SUITE == "v41-fp4" else {}),
     }
 )
-def benchmark_kernels(
+def _benchmark_worker(
     run_id: str,
     keep_count: int = 256,
     modes: str = "",
     suite: str = "all",
     prefill_reader: str = "split",
     qualification_runs: str = "",
+    preflight: dict | None = None,
 ) -> str:
     """Validate and time the complete matrix for the selected survivor budget."""
     contract = _benchmark_cases()
@@ -834,20 +898,20 @@ def benchmark_kernels(
             )
         if prefill_reader != "split":
             raise ValueError("FP4 timing uses the Direct decode paths")
+        results_volume.reload()
         with _run_context(run_id, "timing", RUN_BUDGETS_S["timing"]) as (
             root,
             record,
             deadline,
         ):
-            record["qualification"] = _fp4_timing_qualification(qualification_runs)
-            _run_pytest(
-                (
-                    "benchmark/remnant/test_microbench.py::test_v41_fp4_matrix_and_timing_gate",
-                ),
-                root,
-                "contract",
-                deadline,
-            )
+            # Recheck after allocation to detect receipts changed since CPU preflight.
+            # Missing/failed receipts have already failed without an H100 allocation.
+            if preflight is None:
+                raise RuntimeError("FP4 timing requires the CPU preflight entry point")
+            qualification = _fp4_timing_qualification(qualification_runs)
+            if qualification != preflight:
+                raise RuntimeError("Qualification changed after CPU preflight")
+            record["qualification"] = qualification
             argv = _benchmark_command(
                 "--suite", suite, "--output", str(root / "timing")
             )
@@ -1480,7 +1544,7 @@ def _benchmark_cases():
 
 @contextmanager
 def _run_context(
-    run_id: str, action: str, seconds: int
+    run_id: str, action: str, seconds: int, *, resource: str = "gpu"
 ) -> Iterator[tuple[Path, dict, float]]:
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", run_id):
         raise ValueError("run_id must be a unique simple identifier")
@@ -1496,7 +1560,7 @@ def _run_context(
         record.update(status="failed", error=repr(error))
         raise
     finally:
-        record["gpu_function_seconds"] = time.monotonic() - started
+        record[f"{resource}_function_seconds"] = time.monotonic() - started
         (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
         try:
             results_volume.commit()

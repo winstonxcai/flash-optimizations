@@ -421,7 +421,13 @@ class LauncherTests(unittest.TestCase):
 
     def test_only_three_remote_functions_and_no_model_volumes(self):
         self.assertEqual(
-            set(kernels.app.registered_functions), {"benchmark_kernels", "profile_kernels", "validate_kernels"}
+            set(kernels.app.registered_functions),
+            {
+                "_benchmark_worker",
+                "_preflight_fp4_timing",
+                "profile_kernels",
+                "validate_kernels",
+            },
         )
         for function in kernels.app.registered_functions.values():
             self.assertNotIn("/models", function.spec.volumes)
@@ -1157,7 +1163,7 @@ with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')
     assert Path(recipe.call_args.args[0]).name == expected
     assert recipe.call_args.kwargs['build_args']['REMNANT_INTEGRATION'] == serve.INTEGRATION['version']
     assert 'benchmark_serving' in serve.app.registered_functions
-    assert {'benchmark_kernels', 'profile_kernels', 'validate_kernels'} <= set(kernels.app.registered_functions)
+    assert {'_benchmark_worker', '_preflight_fp4_timing', 'profile_kernels', 'validate_kernels'} <= set(kernels.app.registered_functions)
     expected_order = ('synccheck', 'racecheck', 'memcheck') if serve.INTEGRATION['version'] == 'v0.5.22' else ('memcheck', 'racecheck', 'synccheck')
     assert kernels.SANITIZER_ORDER == expected_order
 """
@@ -1714,7 +1720,7 @@ class SurvivorBudgetLauncherTests(unittest.TestCase):
         self.root = Path(temporary.name)
 
     def test_invalid_budgets_and_kernel_combinations_fail_before_run_context(self):
-        for function in (kernels.benchmark_kernels, kernels.profile_kernels):
+        for function in (kernels._benchmark_worker, kernels.profile_kernels):
             for count, modes in ((0, ""), (63, ""), (512, ""), (192, "kernel")):
                 with (
                     self.subTest(function=function, count=count, modes=modes),
@@ -1736,7 +1742,10 @@ class SurvivorBudgetLauncherTests(unittest.TestCase):
             patch.object(kernels, "_run_command") as command,
             patch.object(contract, "validate_timing") as check,
         ):
-            self.assertEqual(kernels.benchmark_kernels.local("count192", keep_count=192), str(self.root))
+            self.assertEqual(
+                kernels._benchmark_worker.local("count192", keep_count=192),
+                str(self.root),
+            )
         argv = command.call_args.args[0]
         self.assertEqual(argv[argv.index("--keep-count") + 1], "192")
         self.assertEqual(argv[argv.index("--modes") + 1], "native,triton")
@@ -1896,7 +1905,7 @@ class PrefillReadLauncherTests(unittest.TestCase):
             patch.object(kernels, "_run_command") as command,
             patch.object(contract, "validate_timing") as validate,
         ):
-            kernels.benchmark_kernels.local("prefill", suite="prefill-read")
+            kernels._benchmark_worker.local("prefill", suite="prefill-read")
         argv = command.call_args.args[0]
         self.assertEqual(argv[argv.index("--suite") + 1], "prefill-read")
         self.assertNotIn("--modes", argv)
@@ -1904,7 +1913,7 @@ class PrefillReadLauncherTests(unittest.TestCase):
         validate.assert_called_once_with(payload, suite="prefill-read")
 
     def test_prefill_invalid_options_fail_before_context(self):
-        for function in (kernels.benchmark_kernels, kernels.profile_kernels):
+        for function in (kernels._benchmark_worker, kernels.profile_kernels):
             with patch.object(kernels, "_run_context") as allocation:
                 with self.assertRaises(ValueError):
                     function.local("prefill", suite="prefill-read", keep_count=192)
@@ -1926,7 +1935,7 @@ class PrefillReadLauncherTests(unittest.TestCase):
             patch.object(kernels, "_run_command") as command,
             patch.object(contract, "validate_timing") as validate,
         ):
-            kernels.benchmark_kernels.local(
+            kernels._benchmark_worker.local(
                 "fused-reader", suite="prefill-read", prefill_reader="fused"
             )
         argv = command.call_args.args[0]
@@ -1935,7 +1944,7 @@ class PrefillReadLauncherTests(unittest.TestCase):
         validate.assert_called_once_with(
             payload, suite="prefill-read", prefill_reader="fused"
         )
-        for function in (kernels.benchmark_kernels, kernels.profile_kernels):
+        for function in (kernels._benchmark_worker, kernels.profile_kernels):
             for suite, reader in (("all", "fused"), ("prefill-read", "typo")):
                 with patch.object(kernels, "_run_context") as context:
                     with self.assertRaisesRegex(ValueError, "prefill_reader"):
@@ -2088,6 +2097,138 @@ class PrefillReadLauncherTests(unittest.TestCase):
             {(r["case"], r["mode"]) for r in record["runs"]},
             {(name, mode) for name in names for mode in contract.PREFILL_VARIANTS},
         )
+
+
+
+
+class FP4QualificationTests(unittest.TestCase):
+    """Fail-closed receipt aggregation, independent of GPU/native dependencies."""
+
+    def setUp(self):
+        from scripts.modal import qualification as q
+
+        self.q = q
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.manifest = {key: {"fixture": key} for key in q.IDENTITY_FIELDS}
+
+    def receipt(self, name, passed=(), failed=None, manifest=None, count=34):
+        root = self.root / "microbench" / name / "validation"
+        root.mkdir(parents=True)
+        (root / "build-manifest.json").write_text(json.dumps(manifest or self.manifest))
+        states = {
+            tool: {"status": "passed" if tool in passed else "not_run"}
+            for tool in self.q.TOOLS
+        }
+        if failed:
+            states[failed] = {
+                "status": "failed",
+                "error": "sanitizer reported a hazard",
+            }
+        (root / "result.json").write_text(
+            json.dumps(
+                {
+                    "status": "failed",
+                    "error": "KeyboardInterrupt",
+                    "allocation": {"status": "passed"},
+                    "sanitizer_results": states,
+                }
+            )
+        )
+        for tool in passed:
+            cases = "".join(
+                f'<testcase classname="fp4" name="case{i}"/>' for i in range(count)
+            )
+            (root / f"{tool}.xml").write_text(
+                f"<testsuites><testsuite>{cases}</testsuite></testsuites>"
+            )
+
+    def test_complete_tools_from_interrupted_jobs_can_combine(self):
+        self.receipt("a", ("memcheck", "racecheck"))
+        self.receipt("b", ("synccheck",))
+        result = self.q.qualify_fp4_runs(self.root, "a,b", self.manifest)
+        self.assertEqual(set(result["tools"]), self.q.TOOLS)
+        self.assertEqual(result["case_count_per_tool"], 34)
+        self.assertEqual(len(result["identity_sha256"]), 64)
+
+    def test_a_later_pass_does_not_erase_a_sanitizer_failure(self):
+        self.receipt("bad", ("memcheck",), failed="racecheck")
+        self.receipt("good", self.q.TOOLS)
+        for order in ("bad,good", "good,bad"):
+            with (
+                self.subTest(order=order),
+                self.assertRaisesRegex(RuntimeError, "Unresolved sanitizer failure"),
+            ):
+                self.q.qualify_fp4_runs(self.root, order, self.manifest)
+
+    def test_each_identity_field_is_required_and_matches(self):
+        for index, key in enumerate(self.q.IDENTITY_FIELDS):
+            changed = copy.deepcopy(self.manifest)
+            changed[key] = "different runtime/input"
+            name = f"changed{index}"
+            self.receipt(name, self.q.TOOLS, manifest=changed)
+            with (
+                self.subTest(key=key),
+                self.assertRaisesRegex(RuntimeError, "identity changed"),
+            ):
+                self.q.qualify_fp4_runs(self.root, name, self.manifest)
+            missing = dict(self.manifest)
+            del missing[key]
+            with self.assertRaisesRegex(
+                RuntimeError, "Incomplete qualification identity"
+            ):
+                self.q.QualificationIdentity.from_manifest(missing)
+
+    def test_missing_or_skipped_cases_never_qualify(self):
+        self.receipt("short", self.q.TOOLS, count=33)
+        with self.assertRaisesRegex(RuntimeError, "Incomplete qualification XML"):
+            self.q.qualify_fp4_runs(self.root, "short", self.manifest)
+        self.receipt("skipped", self.q.TOOLS)
+        report = self.root / "microbench/skipped/validation/memcheck.xml"
+        report.write_text(
+            report.read_text().replace(
+                'name="case0"/>', 'name="case0"><skipped/></testcase>'
+            )
+        )
+        with self.assertRaisesRegex(RuntimeError, "Incomplete qualification XML"):
+            self.q.qualify_fp4_runs(self.root, "skipped", self.manifest)
+
+
+class FP4PreflightTests(unittest.TestCase):
+    def test_failed_cpu_preflight_never_schedules_an_h100(self):
+        with (
+            patch.object(kernels, "VALIDATION_SUITE", "v41-fp4"),
+            patch.object(
+                kernels._preflight_fp4_timing,
+                "remote",
+                side_effect=RuntimeError("bad receipt"),
+            ),
+            patch.object(kernels._benchmark_worker, "remote") as gpu,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "bad receipt"):
+                kernels._dispatch_benchmark(
+                    "run", 256, "", "v41-fp4-decode", "split", "bad"
+                )
+            gpu.assert_not_called()
+
+    def test_gpu_receives_the_successful_cpu_proof(self):
+        proof = {"identity_sha256": "a" * 64, "receipts": {"clean": "b" * 64}}
+        with (
+            patch.object(kernels, "VALIDATION_SUITE", "v41-fp4"),
+            patch.object(
+                kernels._preflight_fp4_timing, "remote", return_value=proof
+            ) as cpu,
+            patch.object(
+                kernels._benchmark_worker, "remote", return_value="result"
+            ) as gpu,
+        ):
+            actual = kernels._dispatch_benchmark(
+                "run", 256, "", "v41-fp4-decode", "split", "clean"
+            )
+            self.assertEqual(actual, "result")
+            cpu.assert_called_once_with("run", "clean")
+            self.assertEqual(gpu.call_args.args[-1], proof)
 
 
 if __name__ == "__main__":
