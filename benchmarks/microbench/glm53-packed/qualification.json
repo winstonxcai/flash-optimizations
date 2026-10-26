@@ -56609,6 +56609,27 @@
       {
         "command": "REMNANT_INTEGRATION=v0.5.22 python scripts/sources.py .",
         "status": "passed_exact_clean_pins"
+      },
+      {
+        "command": "python -m unittest scripts.modal.tests",
+        "integration": "v0.5.18",
+        "sglang": "fbd8a02269f7fb2ada8a7f49617129a5c5ed45fa",
+        "parent": "4150a42d3969cd8264ebc5d333ef67148bc6b6c7",
+        "passed": 108,
+        "elapsed_seconds": 75.184
+      },
+      {
+        "command": "REMNANT_INTEGRATION=v0.5.22 python -m unittest scripts.modal.tests",
+        "integration": "v0.5.22",
+        "sglang": "fbd8a02269f7fb2ada8a7f49617129a5c5ed45fa",
+        "parent": "4150a42d3969cd8264ebc5d333ef67148bc6b6c7",
+        "passed": 108,
+        "elapsed_seconds": 76.373
+      },
+      {
+        "command": "python scripts/lint/check_registered_tests.py",
+        "status": "GLM registrations accepted; nine inherited non-GLM files still fail",
+        "gpu_jobs_enabled": false
       }
     ],
     "independent_review": [
@@ -56655,7 +56676,8 @@
       ],
       "upstream_ci": "Not green: repository-wide existing lint/registry failures and missing run-ci GPU label",
       "run_url": "https://github.com/winstonxcai/sglang/actions/runs/40325901613"
-    }
+    },
+    "parent_pin_update": "4150a42d3969cd8264ebc5d333ef67148bc6b6c7"
   }
 
 }

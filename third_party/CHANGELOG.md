@@ -13,7 +13,7 @@ records rather than this milestone log.
 
 ## Unreleased
 
-- Parent implementation `6f83b1f` (based on `b010b379`), v0.5.22 SGLang
+- Parent integration `4150a42` (runtime fixes `6f83b1f`), v0.5.22 SGLang
   `fbd8a02269f7` / FlashMLA `3eb85944fd7d`: address review findings in Adapter int64 addressing, effective
   attention dispatch, single-mode timing, named container configuration, TP/EP/
   GPU consistency and the CPU budget regression. Move complete SM90 manifests
