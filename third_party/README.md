@@ -388,7 +388,7 @@ See the experiment README, canonical JSON and decode CSV for identities, every
 case, costs and limits. Native remains default; rollback is Native or `889edf56`.
 
 
-Review follow-up (SGLang `35f9ee90`, based on parent `b010b379`): Adapter now
+Review follow-up (SGLang `fbd8a022`, based on parent `b010b379`): Adapter now
 uses int64 cache offsets, startup rejects effective non-DSA attention dispatch,
 and the shared timing loop preserves single-mode DeepSeek benchmarks. The
 Direct loader, 320-byte ABI, producer and attention arithmetic are unchanged.
@@ -419,3 +419,10 @@ Ownership for new contributors:
 CPU regression entry points: `python -m unittest scripts.modal.tests` in the
 parent, and the fork command in `benchmark/remnant/README.md`. Native remains
 the rollback. Full-model loading, serving and fresh GPU qualification are deferred.
+
+GLM CPU startup tests declare the standard CPU CI registry and a real pytest
+entry point. Artifact-dependent H100 tests declare manual qualification with an
+explicit reason; their maintained Modal pytest runner and required gates are
+unchanged. GLM-owned Python files use the CI-pinned isort 7 / Ruff 0.15.1 tools.
+Repository-wide CI still reports older formatting/registry debt elsewhere and
+the missing `run-ci` GPU gate; this follow-up does not enable broader GPU jobs.

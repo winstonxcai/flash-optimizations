@@ -14,7 +14,7 @@ records rather than this milestone log.
 ## Unreleased
 
 - Parent implementation `6f83b1f` (based on `b010b379`), v0.5.22 SGLang
-  `35f9ee90a40b` / FlashMLA `3eb85944fd7d`: address review findings in Adapter int64 addressing, effective
+  `fbd8a02269f7` / FlashMLA `3eb85944fd7d`: address review findings in Adapter int64 addressing, effective
   attention dispatch, single-mode timing, named container configuration, TP/EP/
   GPU consistency and the CPU budget regression. Move complete SM90 manifests
   to a fork-owned module; separate parent evidence policy from orchestration,

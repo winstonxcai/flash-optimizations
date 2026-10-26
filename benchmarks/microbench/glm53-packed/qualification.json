@@ -56562,7 +56562,7 @@
   "post_review_fixes": {
     "date": "2026-10-26",
     "parent_base": "b010b3790745b1b58a7b7fe0e47f3b663f9b9c1d",
-    "sglang": "35f9ee90a40bcde509ed8f4d8b285a1453fe1c03",
+    "sglang": "fbd8a02269f7fb2ada8a7f49617129a5c5ed45fa",
     "flashmla": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
     "status": "cpu_checks_passed_gpu_requalification_pending",
     "changes": [
@@ -56637,8 +56637,24 @@
       "scripts/local/launch-config.sh": "8fa706b99cf14cb1a953ff614b9cae4b2561382299f054df20b12116fdd6cbbc",
       "scripts/modal/kernel_qualification.py": "d70e201e0952e18ee5e190aff79b7b764991c1eeb68882184ecf02ba8f50ed87",
       "scripts/sources.py": "89adef0dda7694ae529ee172a04d6d045b7b1d94753532de5c9fbeb9d7274d67",
-      "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/glm_artifacts.py": "f7c6c634798838462b5dee836f1b34761c8b8bde7026f20a28c2f08872d039c1",
+      "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/glm_artifacts.py": "0f4adf84093f428bbeb983893c790b9d194fef7099c8eb9d8699b9e03902bcd8",
       "third_party/sglang-v0.5.22/python/sglang/srt/remnant/glm.py": "419a0acfddf17f312f62fea39c7f3a7a5de2fe8825929267d9f32bdab99fbcda"
+    },
+    "reviewed_implementation_sglang": "35f9ee90a40bcde509ed8f4d8b285a1453fe1c03",
+    "scoped_ci_followup": {
+      "source": "fbd8a02269f7fb2ada8a7f49617129a5c5ed45fa",
+      "tools": {
+        "isort": "7.0.0",
+        "ruff": "0.15.1"
+      },
+      "checks": [
+        "GLM-owned Python formatting and imports",
+        "126 CPU checks passed; 103 GPU benchmark skips",
+        "CPU registry + executable entry point",
+        "Artifact-dependent H100 suite explicitly manual; Modal pytest gates unchanged"
+      ],
+      "upstream_ci": "Not green: repository-wide existing lint/registry failures and missing run-ci GPU label",
+      "run_url": "https://github.com/winstonxcai/sglang/actions/runs/40325901613"
     }
   }
 
