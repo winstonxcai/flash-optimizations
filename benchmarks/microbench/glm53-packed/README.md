@@ -572,3 +572,10 @@ filter contract. Default instrumentation
 remains all kernels, and broad qualification remains incomplete. The initial
 unfiltered attempt passed all five numerical/graph cases, then was stopped after
 synccheck stalled in CUDA graph replay; it provides no completed sanitizer gate.
+
+The scoped attempt again stalled at first Native graph replay with no GPU
+activity; filtering/large-buffer cleanup did not resolve it. Focused decode tests
+now capture explicitly on their owned non-default stream, removing Torch's
+implicit cross-stream capture handoff. The timing path retains default capture.
+Full-trace/120-second Python stack diagnostics are enabled only for focused tools.
+This is a harness correction; the loader, arithmetic and cached cubins are unchanged.

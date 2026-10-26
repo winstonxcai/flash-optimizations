@@ -1068,7 +1068,11 @@ def validate_kernels(
                     # execution while excluding unchanged framework kernels.
                     prefix += ("--kernel-name", "kns=main_kernel", "--print-level", "info")
                 try:
-                    _run_pytest(selected_tests if stage == "corrective" else SANITIZER_TESTS, root, tool, deadline, prefix=prefix)
+                    tool_environment = dict(environment)
+                    if sanitizer_scope == "glm-decode":
+                        tool_environment["PYTEST_ADDOPTS"] = "--full-trace -o faulthandler_timeout=120"
+                    _run_pytest(selected_tests if stage == "corrective" else SANITIZER_TESTS, root, tool, deadline, prefix=prefix,
+                                environment=tool_environment)
                 except TimeoutError:
                     # The boundary may expire between this loop and the command
                     # check. No process started; keep this tool marked not_run.
