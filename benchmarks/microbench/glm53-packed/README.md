@@ -365,3 +365,67 @@ the default. Maintained GLM fixtures, shared timing, tests and Modal dispatch st
 active. The task-owned temporary controller and repair helper were retired after
 archiving the controller and hashes. Historical run evidence was preserved. No
 push was performed.
+
+
+## CPU-only cached-cubin resource inspection (2026-10-26)
+
+Question: what are the compiled registers/shared-memory requirements and theoretical
+H100 residency of the exact Native/Direct attention variants? Acceptance requires
+all sixteen H8/H16, inner1/2/33/66 variants, verified source/binary identities and
+launch shared-memory arguments. Existing kernels remain the baseline; stop on
+artifact mismatch, unexpected GPU devices, a failed preflight or controller deadline.
+The proposed cooperative loader is not compiled or qualified by this inspection.
+
+**Complete: all sixteen variants inspected.** Two serial CPU-only metadata exports
+reused immutable image `im-EomZZ0NhII6stVasjzgyo4` on `caiw`, without kernel imports,
+JIT compilation, CUDA contexts or GPU allocation. Each export used one CPU, 1 GiB
+RAM, no retries, one worker maximum, a two-second idle timeout and a 180-second
+controller ceiling. An initial invalid idle-timeout registration allocated no
+worker; its failure is preserved. Both successful apps stopped with zero containers.
+
+Source: SGLang `889edf56b33226c80b17ddf3472c1206df62c3f0`, FlashMLA
+`3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8`, tested source parent `853e4d6`.
+Generated-source hashes and the installed TileLang 0.1.12 cache-key recipe joined
+each variant to its exact cubin. All 421 cached-file hashes were verified.
+`cuobjdump --dump-resource-usage` supplied registers/stack/local bytes; generated
+host launchers supplied dynamic shared bytes. ELF inspection verified 1,024 bytes
+in `.nv.shared.main_kernel` and zero in `.nv.shared.reserved.0`; H100's separate
+1,024-byte driver reservation is counted once in the occupancy calculator.
+
+| Local heads | Inner iterations | Native registers/thread | Direct registers/thread | Dynamic shared, both | Charged shared/block, both |
+|---:|---|---:|---:|---:|---:|
+| 8 | 1 | 176 | 175 | 25,216 B | 27,264 B |
+| 8 | 2 / 33 / 66 | 232 | 236 | 26,240 B | 28,288 B |
+| 16 | 1 | 175 | 175 | 25,216 B | 27,264 B |
+| 16 | 2 / 33 / 66 | 240 | 240 | 26,240 B | 28,288 B |
+
+All report zero stack/local bytes. Loop variants have two additional generated
+512-byte reduction workspaces: the earlier 25,216-byte source-level estimate
+missed their compiler lifetime/layout choices.
+
+The image's exact CUDA 13.0.3 `cuda_occupancy.h` was compiled locally with ordinary
+macOS `clang++`, without CUDA runtime/driver linkage. H100 SM90 inputs use 65,536
+registers/SM, 2,048 threads/SM, 228 KiB shared/SM and 128 threads/block. All sixteen
+variants predict **two blocks/SM, eight warps/SM, 12.5% theoretical warp occupancy,
+limited only by registers**. Default and maximum shared-carveout models agree.
+SM90 allocation rounds by 256 registers/warp and 128 shared-memory bytes. These
+are theoretical capacities, not measured achieved occupancy or runtime carveout.
+
+Adding 11,264 shared bytes while holding each cached register count unchanged
+still predicts two blocks/SM. The hypothetical shared-only ceiling becomes six
+blocks for inner1 and five for inner2/33/66; registers still bind first. This does
+not establish the uncompiled cooperative candidate's resources or speed.
+
+[resource-usage.csv](resource-usage.csv) exports one row per compiled variant.
+`qualification.json` owns compact results, identities, exact commands, artifact
+hashes, independent review and aggregate cost. Raw cubins, generated sources,
+ELF/resource reports, the exact calculator header and offline analysis are outside
+Git under `data/glm53-packed/resource-inspection-20261026T035110Z/`. The recorded local command is
+`python3 /private/tmp/glm53-cubin-inspection/calculate_resources.py`; its sources
+and inputs are archived together. No new maintained runner was added.
+
+Conservative inspection accrual is **$0.01**, including CPU/egress/billing-lag
+margin. Aggregate task accrual is now **$19.40082903 of $20**; GPU seconds are
+unchanged. Attention remains incomplete at 56/128 cases and memcheck remains
+incomplete. No runtime, kernels, fork pins or serving defaults changed. Rollback
+is to revert this evidence-only parent commit; Native remains the default.

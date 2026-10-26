@@ -1,0 +1,17 @@
+heads,inner,mode,registers_per_thread,dynamic_shared_bytes,function_static_shared_bytes,driver_reserved_shared_bytes,allocated_shared_bytes,allocated_registers_per_block,blocks_per_sm,warp_occupancy_pct,limiting_factor
+8,1,native,176,25216,1024,1024,27264,22528,2,12.5,registers
+8,1,direct,175,25216,1024,1024,27264,22528,2,12.5,registers
+8,2,native,232,26240,1024,1024,28288,29696,2,12.5,registers
+8,2,direct,236,26240,1024,1024,28288,30720,2,12.5,registers
+8,33,native,232,26240,1024,1024,28288,29696,2,12.5,registers
+8,33,direct,236,26240,1024,1024,28288,30720,2,12.5,registers
+8,66,native,232,26240,1024,1024,28288,29696,2,12.5,registers
+8,66,direct,236,26240,1024,1024,28288,30720,2,12.5,registers
+16,1,native,175,25216,1024,1024,27264,22528,2,12.5,registers
+16,1,direct,175,25216,1024,1024,27264,22528,2,12.5,registers
+16,2,native,240,26240,1024,1024,28288,30720,2,12.5,registers
+16,2,direct,240,26240,1024,1024,28288,30720,2,12.5,registers
+16,33,native,240,26240,1024,1024,28288,30720,2,12.5,registers
+16,33,direct,240,26240,1024,1024,28288,30720,2,12.5,registers
+16,66,native,240,26240,1024,1024,28288,30720,2,12.5,registers
+16,66,direct,240,26240,1024,1024,28288,30720,2,12.5,registers

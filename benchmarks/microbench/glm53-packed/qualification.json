@@ -9,7 +9,7 @@
   "budget": {
     "authorized_usd": 20,
     "routine_cutoff_usd": 19.75,
-    "conservative_accrued_usd": 19.39082902514378,
+    "conservative_accrued_usd": 19.400829025143782,
     "h100_seconds": 14017.962933706978,
     "accounts": {
       "caiw": {
@@ -96,7 +96,8 @@
       "baseline_volume_meter": 26.54329934,
       "billed_after_credits": 0,
       "note": "Compute sum excludes unrelated baseline storage and credits; billing may lag. Conservative accrued includes full CLI wall time at worker resource caps; $3 reserve remains unused."
-    }
+    },
+    "cpu_inspection_conservative_usd": 0.01
   },
   "commands": [
     {
@@ -25954,5 +25955,2790 @@
       "note": "Both exact pinned integration profiles are clean; parent only evidence/docs edits. Explicit v0.5.22 profile verifies measured GLM sources."
     }
   },
-  "attention_comparison_decision": "descriptive partial;56/128 cases;Native faster in every measured case;memcheck6/13;do not promoteDirect"
+  "attention_comparison_decision": "descriptive partial;56/128 cases;Native faster in every measured case;memcheck6/13;do not promoteDirect",
+  "cpu_resource_inspection": {
+    "status": "complete",
+    "scope": "Theoretical SM90 residency of existing cached partial-attention kernels; no GPU execution",
+    "device": {
+      "compute_major": 9,
+      "compute_minor": 0,
+      "threads_per_sm": 2048,
+      "registers_per_sm": 65536,
+      "warp_size": 32,
+      "sm_count": 132,
+      "shared_bytes_per_sm": 233472,
+      "reserved_shared_bytes_per_block": 1024,
+      "default_user_shared_limit_per_block": 49152
+    },
+    "function": {
+      "threads_per_block": 128,
+      "block_barriers": 1,
+      "shared_limit_config": "FUNC_SHMEM_LIMIT_DEFAULT",
+      "partitioned_global_caching": "PARTITIONED_GC_OFF"
+    },
+    "header_sha256": "163b8f296ef2a33c799e2dc8c525b37166da9217bcc6a3c1d26b1c10aca5e22b",
+    "compile_command": [
+      "clang++",
+      "-std=c++17",
+      "-O2",
+      "/private/tmp/glm53-cubin-inspection/occupancy.cpp",
+      "-o",
+      "/private/tmp/glm53-cubin-inspection/occupancy"
+    ],
+    "compiler_version": "Apple clang version 21.0.0 (clang-2100.3.34.2)\nTarget: arm64-apple-darwin27.0.0\nThread model: posix\nInstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin\n",
+    "key_recipe": {
+      "tilelang_version": "0.1.12",
+      "target_kind": "cuda",
+      "target_arch": "90a",
+      "target_code": [],
+      "compile_format": "cubin",
+      "options": [
+        "-std=c++20",
+        "-I/opt/sglang/lib/python3.12/site-packages/tilelang/3rdparty/../src",
+        "-I/opt/sglang/lib/python3.12/site-packages/tilelang/3rdparty/cutlass/include"
+      ]
+    },
+    "variants": [
+      {
+        "heads": 8,
+        "inner": 1,
+        "packed": false,
+        "source_sha256": "c029325b69f77f88493885419b78b0bea6becdfa4f6311c04a96cd505341539b",
+        "cache_directory": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6de9879dbc2c9fdeb4c407a4ff036f0cf7b6d98b9605f0f6dda87cae56488ebc",
+        "cubin_cache_key": "988972eba7a1954d57a006f87ec476e2d5a635a23b732e905e6b158125ce4fc5",
+        "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/988972eba7a1954d57a006f87ec476e2d5a635a23b732e905e6b158125ce4fc5.cubin",
+        "cubin_sha256": "d38ca3d7b26a6eab14bb4f29c711bd220631236f9da9830741f27787256a7f97",
+        "registers_per_thread": 176,
+        "stack_bytes": 0,
+        "cuobjdump_shared_bytes": 1024,
+        "local_bytes": 0,
+        "dynamic_shared_bytes": 25216,
+        "host_source_sha256": "b6c387c02d148d2b62a27eec6cfec9197c55151e5be5d6cee3d206616871c779",
+        "resource_command": [
+          "/usr/local/cuda/bin/cuobjdump",
+          "--dump-resource-usage",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/988972eba7a1954d57a006f87ec476e2d5a635a23b732e905e6b158125ce4fc5.cubin"
+        ],
+        "elf_shared_sections": [
+          {
+            "name": ".nv.shared.main_kernel",
+            "size_bytes": 1024,
+            "alignment_bytes": 1024
+          },
+          {
+            "name": ".nv.shared.reserved.0",
+            "size_bytes": 0,
+            "alignment_bytes": 1
+          }
+        ],
+        "occupancy": [
+          {
+            "error": 0,
+            "regs_per_thread": 176,
+            "dynamic_shared": 25216,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 22528,
+            "allocated_shared_per_block": 27264,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "176",
+              "25216",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 176,
+            "dynamic_shared": 25216,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 22528,
+            "allocated_shared_per_block": 27264,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "176",
+              "25216",
+              "1024",
+              "1024",
+              "100"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 176,
+            "dynamic_shared": 36480,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 6,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 22528,
+            "allocated_shared_per_block": 38528,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "176",
+              "36480",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 176,
+            "dynamic_shared": 36480,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 6,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 22528,
+            "allocated_shared_per_block": 38528,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "176",
+              "36480",
+              "1024",
+              "1024",
+              "100"
+            ]
+          }
+        ]
+      },
+      {
+        "heads": 8,
+        "inner": 1,
+        "packed": true,
+        "source_sha256": "286c93f3c263440be1903f053223b514202a4603126766e745a33f19b4feb407",
+        "cache_directory": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/d477b4a9707108b1ab2cef54f6b8c313a4b5d246054a04b7bf4e0792a8015713",
+        "cubin_cache_key": "64f61e2444382f58dbe29b295e027a937118af11d385863a6c87605deceb1e8d",
+        "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/64f61e2444382f58dbe29b295e027a937118af11d385863a6c87605deceb1e8d.cubin",
+        "cubin_sha256": "3c97c067d48df8e39467881410175bc56ded35268968adc3dac035ecb67973b8",
+        "registers_per_thread": 175,
+        "stack_bytes": 0,
+        "cuobjdump_shared_bytes": 1024,
+        "local_bytes": 0,
+        "dynamic_shared_bytes": 25216,
+        "host_source_sha256": "2aa4bf12c743655aacf55702deaccb99f7a79dbbf98e10bc441393b90bf26d67",
+        "resource_command": [
+          "/usr/local/cuda/bin/cuobjdump",
+          "--dump-resource-usage",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/64f61e2444382f58dbe29b295e027a937118af11d385863a6c87605deceb1e8d.cubin"
+        ],
+        "elf_shared_sections": [
+          {
+            "name": ".nv.shared.main_kernel",
+            "size_bytes": 1024,
+            "alignment_bytes": 1024
+          },
+          {
+            "name": ".nv.shared.reserved.0",
+            "size_bytes": 0,
+            "alignment_bytes": 1
+          }
+        ],
+        "occupancy": [
+          {
+            "error": 0,
+            "regs_per_thread": 175,
+            "dynamic_shared": 25216,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 22528,
+            "allocated_shared_per_block": 27264,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "175",
+              "25216",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 175,
+            "dynamic_shared": 25216,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 22528,
+            "allocated_shared_per_block": 27264,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "175",
+              "25216",
+              "1024",
+              "1024",
+              "100"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 175,
+            "dynamic_shared": 36480,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 6,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 22528,
+            "allocated_shared_per_block": 38528,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "175",
+              "36480",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 175,
+            "dynamic_shared": 36480,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 6,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 22528,
+            "allocated_shared_per_block": 38528,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "175",
+              "36480",
+              "1024",
+              "1024",
+              "100"
+            ]
+          }
+        ]
+      },
+      {
+        "heads": 8,
+        "inner": 2,
+        "packed": false,
+        "source_sha256": "f82b8db076ee3a4ddc36de2371781c4545c1f9827c21acee348ac771cd4a1fe9",
+        "cache_directory": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/79b145763a3833326d866199b1df6710c9288e77891ff0c8ec6efe7287fd1a15",
+        "cubin_cache_key": "51f4a3ba92a44080f3f5a13e948db5bd54c7f1b7a2b7af9a8fd20c24a8992d28",
+        "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/51f4a3ba92a44080f3f5a13e948db5bd54c7f1b7a2b7af9a8fd20c24a8992d28.cubin",
+        "cubin_sha256": "31c3e2941e23ac5ee97082f63e9e4f7a85a4097c9b176e2f6f4b4137819bcb3d",
+        "registers_per_thread": 232,
+        "stack_bytes": 0,
+        "cuobjdump_shared_bytes": 1024,
+        "local_bytes": 0,
+        "dynamic_shared_bytes": 26240,
+        "host_source_sha256": "cc652fe60b66fda4feb8d4c2b126231adfac5c3a03784b6b2cbd0f681a2f9243",
+        "resource_command": [
+          "/usr/local/cuda/bin/cuobjdump",
+          "--dump-resource-usage",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/51f4a3ba92a44080f3f5a13e948db5bd54c7f1b7a2b7af9a8fd20c24a8992d28.cubin"
+        ],
+        "elf_shared_sections": [
+          {
+            "name": ".nv.shared.main_kernel",
+            "size_bytes": 1024,
+            "alignment_bytes": 1024
+          },
+          {
+            "name": ".nv.shared.reserved.0",
+            "size_bytes": 0,
+            "alignment_bytes": 1
+          }
+        ],
+        "occupancy": [
+          {
+            "error": 0,
+            "regs_per_thread": 232,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 29696,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "232",
+              "26240",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 232,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 29696,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "232",
+              "26240",
+              "1024",
+              "1024",
+              "100"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 232,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 29696,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "232",
+              "37504",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 232,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 29696,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "232",
+              "37504",
+              "1024",
+              "1024",
+              "100"
+            ]
+          }
+        ]
+      },
+      {
+        "heads": 8,
+        "inner": 2,
+        "packed": true,
+        "source_sha256": "f08cd851f95a24fbfb93891716650b45b6c443401bb803bf2ea123c5397d5c0b",
+        "cache_directory": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5cd4473cb21a6c2335f8bc18c12493e26d703538f1125ad89a722043e34600e9",
+        "cubin_cache_key": "663c446d312465b14fef3dd689a4dd04b9d9dd3a2ee7f929ceef6f939e194a5b",
+        "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/663c446d312465b14fef3dd689a4dd04b9d9dd3a2ee7f929ceef6f939e194a5b.cubin",
+        "cubin_sha256": "95f9e2f11ce067b433a1f8fe7e8c7978177974aee557e61a3f701991302b510d",
+        "registers_per_thread": 236,
+        "stack_bytes": 0,
+        "cuobjdump_shared_bytes": 1024,
+        "local_bytes": 0,
+        "dynamic_shared_bytes": 26240,
+        "host_source_sha256": "c0e0f5ac84d9403618adc4c53f8d0acb1f2fd050163bab4e2cfd0de82d99fd56",
+        "resource_command": [
+          "/usr/local/cuda/bin/cuobjdump",
+          "--dump-resource-usage",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/663c446d312465b14fef3dd689a4dd04b9d9dd3a2ee7f929ceef6f939e194a5b.cubin"
+        ],
+        "elf_shared_sections": [
+          {
+            "name": ".nv.shared.main_kernel",
+            "size_bytes": 1024,
+            "alignment_bytes": 1024
+          },
+          {
+            "name": ".nv.shared.reserved.0",
+            "size_bytes": 0,
+            "alignment_bytes": 1
+          }
+        ],
+        "occupancy": [
+          {
+            "error": 0,
+            "regs_per_thread": 236,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "236",
+              "26240",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 236,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "236",
+              "26240",
+              "1024",
+              "1024",
+              "100"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 236,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "236",
+              "37504",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 236,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "236",
+              "37504",
+              "1024",
+              "1024",
+              "100"
+            ]
+          }
+        ]
+      },
+      {
+        "heads": 8,
+        "inner": 33,
+        "packed": false,
+        "source_sha256": "68e646ad802ef9214843bf0b7a6acd967370b8bea0445855e216ae56a3150ec9",
+        "cache_directory": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5cbcd622e3f706384aebae0fcf6e2dbde93518fd7374d49f42673824a8b95519",
+        "cubin_cache_key": "0aca2c1b7cb1395de93417c2f28d5c21c3fef5e27242725e08613fb62062b90b",
+        "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/0aca2c1b7cb1395de93417c2f28d5c21c3fef5e27242725e08613fb62062b90b.cubin",
+        "cubin_sha256": "5f851947834484aeea89314696820fb8e167720717f8cc08f721e5231e46fa96",
+        "registers_per_thread": 232,
+        "stack_bytes": 0,
+        "cuobjdump_shared_bytes": 1024,
+        "local_bytes": 0,
+        "dynamic_shared_bytes": 26240,
+        "host_source_sha256": "e1a83a7c038f870d9621c83485c6fbe5fb6e7431b68a0e9a9d3737c82d7258e1",
+        "resource_command": [
+          "/usr/local/cuda/bin/cuobjdump",
+          "--dump-resource-usage",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/0aca2c1b7cb1395de93417c2f28d5c21c3fef5e27242725e08613fb62062b90b.cubin"
+        ],
+        "elf_shared_sections": [
+          {
+            "name": ".nv.shared.main_kernel",
+            "size_bytes": 1024,
+            "alignment_bytes": 1024
+          },
+          {
+            "name": ".nv.shared.reserved.0",
+            "size_bytes": 0,
+            "alignment_bytes": 1
+          }
+        ],
+        "occupancy": [
+          {
+            "error": 0,
+            "regs_per_thread": 232,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 29696,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "232",
+              "26240",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 232,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 29696,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "232",
+              "26240",
+              "1024",
+              "1024",
+              "100"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 232,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 29696,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "232",
+              "37504",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 232,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 29696,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "232",
+              "37504",
+              "1024",
+              "1024",
+              "100"
+            ]
+          }
+        ]
+      },
+      {
+        "heads": 8,
+        "inner": 33,
+        "packed": true,
+        "source_sha256": "097551773ec65ae580b328121dabf273beda45401cb8eb6d72e2b48536142552",
+        "cache_directory": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/07013aba8a62ae97d8e0cfc6901e14163f5009263a62176275daa5890798fa9d",
+        "cubin_cache_key": "6d503dd0d3b7fcd0897d5bc8512cedce7bcb57baa1a4d07a108662af867a2c43",
+        "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/6d503dd0d3b7fcd0897d5bc8512cedce7bcb57baa1a4d07a108662af867a2c43.cubin",
+        "cubin_sha256": "83bae66d05e12ef1600d10b2a615a9e40a9752e8ab0a8247ec86fde44a2338eb",
+        "registers_per_thread": 236,
+        "stack_bytes": 0,
+        "cuobjdump_shared_bytes": 1024,
+        "local_bytes": 0,
+        "dynamic_shared_bytes": 26240,
+        "host_source_sha256": "872b8e24b573fb89213a09c94fb13c6994df4057f36c120fbc902b470af0dedd",
+        "resource_command": [
+          "/usr/local/cuda/bin/cuobjdump",
+          "--dump-resource-usage",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/6d503dd0d3b7fcd0897d5bc8512cedce7bcb57baa1a4d07a108662af867a2c43.cubin"
+        ],
+        "elf_shared_sections": [
+          {
+            "name": ".nv.shared.main_kernel",
+            "size_bytes": 1024,
+            "alignment_bytes": 1024
+          },
+          {
+            "name": ".nv.shared.reserved.0",
+            "size_bytes": 0,
+            "alignment_bytes": 1
+          }
+        ],
+        "occupancy": [
+          {
+            "error": 0,
+            "regs_per_thread": 236,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "236",
+              "26240",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 236,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "236",
+              "26240",
+              "1024",
+              "1024",
+              "100"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 236,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "236",
+              "37504",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 236,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "236",
+              "37504",
+              "1024",
+              "1024",
+              "100"
+            ]
+          }
+        ]
+      },
+      {
+        "heads": 8,
+        "inner": 66,
+        "packed": false,
+        "source_sha256": "a3826f50fa9afe2f88771450983050eb14543bc4605332b3e46911747ffbf596",
+        "cache_directory": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/aaf3c25c42eaac3ecfb1958ca954a06bb4064b754b5ad3648b0f2cc03339d6fb",
+        "cubin_cache_key": "e6c0540ce5d7e0ccd5982e7804f221b939321843f369cd941c367c8a421f8581",
+        "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/e6c0540ce5d7e0ccd5982e7804f221b939321843f369cd941c367c8a421f8581.cubin",
+        "cubin_sha256": "1ec62d0e314b7cbc0586ddc2912bc16e7229a3b7d067bb568e9329e3ffeb2770",
+        "registers_per_thread": 232,
+        "stack_bytes": 0,
+        "cuobjdump_shared_bytes": 1024,
+        "local_bytes": 0,
+        "dynamic_shared_bytes": 26240,
+        "host_source_sha256": "cd5703e6c9f891b9012a77d06cc24b10cef539e1e0a537ca7e73f55f77058a41",
+        "resource_command": [
+          "/usr/local/cuda/bin/cuobjdump",
+          "--dump-resource-usage",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/e6c0540ce5d7e0ccd5982e7804f221b939321843f369cd941c367c8a421f8581.cubin"
+        ],
+        "elf_shared_sections": [
+          {
+            "name": ".nv.shared.main_kernel",
+            "size_bytes": 1024,
+            "alignment_bytes": 1024
+          },
+          {
+            "name": ".nv.shared.reserved.0",
+            "size_bytes": 0,
+            "alignment_bytes": 1
+          }
+        ],
+        "occupancy": [
+          {
+            "error": 0,
+            "regs_per_thread": 232,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 29696,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "232",
+              "26240",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 232,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 29696,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "232",
+              "26240",
+              "1024",
+              "1024",
+              "100"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 232,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 29696,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "232",
+              "37504",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 232,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 29696,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "232",
+              "37504",
+              "1024",
+              "1024",
+              "100"
+            ]
+          }
+        ]
+      },
+      {
+        "heads": 8,
+        "inner": 66,
+        "packed": true,
+        "source_sha256": "f83cd586554a861f122822c988ccfdf7e87fe00ffdbb62236f4f11e67ae92f0e",
+        "cache_directory": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/00059c4700a4c2e068fbcc4761367eb7fcd654ef7569f5d5e756ded0b58cfbc9",
+        "cubin_cache_key": "71bf305ee4f64a0df310bfd6c053d83ad113fd73618720b2ba5ad9ca4562ac18",
+        "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/71bf305ee4f64a0df310bfd6c053d83ad113fd73618720b2ba5ad9ca4562ac18.cubin",
+        "cubin_sha256": "4583e79b9ac99b61bd16b58a450f978a2bc08918fa85fe8ce84fd0f4a4b9dc5d",
+        "registers_per_thread": 236,
+        "stack_bytes": 0,
+        "cuobjdump_shared_bytes": 1024,
+        "local_bytes": 0,
+        "dynamic_shared_bytes": 26240,
+        "host_source_sha256": "006903560a5dbbef541c9bfff3bfe6236bcf6171509973878479a0f278fdf6ab",
+        "resource_command": [
+          "/usr/local/cuda/bin/cuobjdump",
+          "--dump-resource-usage",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/71bf305ee4f64a0df310bfd6c053d83ad113fd73618720b2ba5ad9ca4562ac18.cubin"
+        ],
+        "elf_shared_sections": [
+          {
+            "name": ".nv.shared.main_kernel",
+            "size_bytes": 1024,
+            "alignment_bytes": 1024
+          },
+          {
+            "name": ".nv.shared.reserved.0",
+            "size_bytes": 0,
+            "alignment_bytes": 1
+          }
+        ],
+        "occupancy": [
+          {
+            "error": 0,
+            "regs_per_thread": 236,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "236",
+              "26240",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 236,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "236",
+              "26240",
+              "1024",
+              "1024",
+              "100"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 236,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "236",
+              "37504",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 236,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "236",
+              "37504",
+              "1024",
+              "1024",
+              "100"
+            ]
+          }
+        ]
+      },
+      {
+        "heads": 16,
+        "inner": 1,
+        "packed": false,
+        "source_sha256": "d3754a265f31521ea79c71a5b8081a0e61f4b83d71f7cad15d6ef568fc2e890b",
+        "cache_directory": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/62957dc9da6c6b076e70eec9cf87750d1e6fbd7f9b0bc00c4aa2b63fe3d01b21",
+        "cubin_cache_key": "50fc811d1e1a322a990e4ee9469f3cb4466743db5036309d21b4be5de300b114",
+        "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/50fc811d1e1a322a990e4ee9469f3cb4466743db5036309d21b4be5de300b114.cubin",
+        "cubin_sha256": "ecb90476ea090a47b0878a52ed28a63d162eb3d4e85e987d1897b69f999b12d9",
+        "registers_per_thread": 175,
+        "stack_bytes": 0,
+        "cuobjdump_shared_bytes": 1024,
+        "local_bytes": 0,
+        "dynamic_shared_bytes": 25216,
+        "host_source_sha256": "5a816038c5b9095371de1a1cc59d14f43a1e31b2de4dd5d698b42cf9ded08231",
+        "resource_command": [
+          "/usr/local/cuda/bin/cuobjdump",
+          "--dump-resource-usage",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/50fc811d1e1a322a990e4ee9469f3cb4466743db5036309d21b4be5de300b114.cubin"
+        ],
+        "elf_shared_sections": [
+          {
+            "name": ".nv.shared.main_kernel",
+            "size_bytes": 1024,
+            "alignment_bytes": 1024
+          },
+          {
+            "name": ".nv.shared.reserved.0",
+            "size_bytes": 0,
+            "alignment_bytes": 1
+          }
+        ],
+        "occupancy": [
+          {
+            "error": 0,
+            "regs_per_thread": 175,
+            "dynamic_shared": 25216,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 22528,
+            "allocated_shared_per_block": 27264,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "175",
+              "25216",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 175,
+            "dynamic_shared": 25216,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 22528,
+            "allocated_shared_per_block": 27264,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "175",
+              "25216",
+              "1024",
+              "1024",
+              "100"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 175,
+            "dynamic_shared": 36480,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 6,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 22528,
+            "allocated_shared_per_block": 38528,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "175",
+              "36480",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 175,
+            "dynamic_shared": 36480,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 6,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 22528,
+            "allocated_shared_per_block": 38528,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "175",
+              "36480",
+              "1024",
+              "1024",
+              "100"
+            ]
+          }
+        ]
+      },
+      {
+        "heads": 16,
+        "inner": 1,
+        "packed": true,
+        "source_sha256": "cc0392c5ede5826ee2a11dcea45ae179d2ae21c3856c6e5a823de38ef6819d28",
+        "cache_directory": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/d3b521023da0909b4498b523b65e62c9cc60401bf0f7cac0c02293856b02eea5",
+        "cubin_cache_key": "ec3c7d1e121d8ad656eede688490e795d2eb9e034ad4ca1eedc2472340676681",
+        "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/ec3c7d1e121d8ad656eede688490e795d2eb9e034ad4ca1eedc2472340676681.cubin",
+        "cubin_sha256": "af3c0fc580be6c734a0737301df767f717c7b85354df4d97673393fc0a12f190",
+        "registers_per_thread": 175,
+        "stack_bytes": 0,
+        "cuobjdump_shared_bytes": 1024,
+        "local_bytes": 0,
+        "dynamic_shared_bytes": 25216,
+        "host_source_sha256": "d5016fa7daf618d1efdee321147d500fb510f2650e17524183d53e41edf9d335",
+        "resource_command": [
+          "/usr/local/cuda/bin/cuobjdump",
+          "--dump-resource-usage",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/ec3c7d1e121d8ad656eede688490e795d2eb9e034ad4ca1eedc2472340676681.cubin"
+        ],
+        "elf_shared_sections": [
+          {
+            "name": ".nv.shared.main_kernel",
+            "size_bytes": 1024,
+            "alignment_bytes": 1024
+          },
+          {
+            "name": ".nv.shared.reserved.0",
+            "size_bytes": 0,
+            "alignment_bytes": 1
+          }
+        ],
+        "occupancy": [
+          {
+            "error": 0,
+            "regs_per_thread": 175,
+            "dynamic_shared": 25216,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 22528,
+            "allocated_shared_per_block": 27264,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "175",
+              "25216",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 175,
+            "dynamic_shared": 25216,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 22528,
+            "allocated_shared_per_block": 27264,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "175",
+              "25216",
+              "1024",
+              "1024",
+              "100"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 175,
+            "dynamic_shared": 36480,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 6,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 22528,
+            "allocated_shared_per_block": 38528,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "175",
+              "36480",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 175,
+            "dynamic_shared": 36480,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 6,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 22528,
+            "allocated_shared_per_block": 38528,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "175",
+              "36480",
+              "1024",
+              "1024",
+              "100"
+            ]
+          }
+        ]
+      },
+      {
+        "heads": 16,
+        "inner": 2,
+        "packed": false,
+        "source_sha256": "f675573f1efce81f410491594ad1be0a9aca1054b3526f22bfca590062d754f9",
+        "cache_directory": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/422b95580f4feb6807382498902a1bab8036251f6361a70559992c20b1cba6d9",
+        "cubin_cache_key": "e8715800212c743bf01031f1eb801f4270cd58ee859bfe34c93b98af86434ace",
+        "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/e8715800212c743bf01031f1eb801f4270cd58ee859bfe34c93b98af86434ace.cubin",
+        "cubin_sha256": "6d14f5edc972ff7c4776a1a90e9e8093983dddf0aed96e67b2f50f53054d3924",
+        "registers_per_thread": 240,
+        "stack_bytes": 0,
+        "cuobjdump_shared_bytes": 1024,
+        "local_bytes": 0,
+        "dynamic_shared_bytes": 26240,
+        "host_source_sha256": "ee7908f08f6def73c8fc75a643be7093c7a26bffec5ea9db728ded35f197e139",
+        "resource_command": [
+          "/usr/local/cuda/bin/cuobjdump",
+          "--dump-resource-usage",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/e8715800212c743bf01031f1eb801f4270cd58ee859bfe34c93b98af86434ace.cubin"
+        ],
+        "elf_shared_sections": [
+          {
+            "name": ".nv.shared.main_kernel",
+            "size_bytes": 1024,
+            "alignment_bytes": 1024
+          },
+          {
+            "name": ".nv.shared.reserved.0",
+            "size_bytes": 0,
+            "alignment_bytes": 1
+          }
+        ],
+        "occupancy": [
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "26240",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "26240",
+              "1024",
+              "1024",
+              "100"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "37504",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "37504",
+              "1024",
+              "1024",
+              "100"
+            ]
+          }
+        ]
+      },
+      {
+        "heads": 16,
+        "inner": 2,
+        "packed": true,
+        "source_sha256": "f3e59b79825d97a7c24385d3e1bb2ddcb02a3e110f6768dc1bfc53c039d3d4bd",
+        "cache_directory": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/eaaa2db273dcdcdc157bdf005bda0bf857092a82da7390cdefe0f276eb9ad751",
+        "cubin_cache_key": "bb698a56b19630372de66519c7271b6562bee4e3e553711e76976e6f726dc021",
+        "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/bb698a56b19630372de66519c7271b6562bee4e3e553711e76976e6f726dc021.cubin",
+        "cubin_sha256": "12538ff9bb126a3ed547b3b4fcd0a6408cb4eedb17a868c4e41d773a40e37499",
+        "registers_per_thread": 240,
+        "stack_bytes": 0,
+        "cuobjdump_shared_bytes": 1024,
+        "local_bytes": 0,
+        "dynamic_shared_bytes": 26240,
+        "host_source_sha256": "3e471390809a0bdf23c5ac7405bc3937f2fef68ba412c974d6abc69a606a0f90",
+        "resource_command": [
+          "/usr/local/cuda/bin/cuobjdump",
+          "--dump-resource-usage",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/bb698a56b19630372de66519c7271b6562bee4e3e553711e76976e6f726dc021.cubin"
+        ],
+        "elf_shared_sections": [
+          {
+            "name": ".nv.shared.main_kernel",
+            "size_bytes": 1024,
+            "alignment_bytes": 1024
+          },
+          {
+            "name": ".nv.shared.reserved.0",
+            "size_bytes": 0,
+            "alignment_bytes": 1
+          }
+        ],
+        "occupancy": [
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "26240",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "26240",
+              "1024",
+              "1024",
+              "100"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "37504",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "37504",
+              "1024",
+              "1024",
+              "100"
+            ]
+          }
+        ]
+      },
+      {
+        "heads": 16,
+        "inner": 33,
+        "packed": false,
+        "source_sha256": "dbe39cd580da951d8341cad1b4b5afabb46813ee450366801aea5cb0240366a6",
+        "cache_directory": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/fa0c046098e24ec03ea961ae16b1b98fd2848a11b17e6deb0ba26e87fd547f0a",
+        "cubin_cache_key": "289d54bb6f8cfde33cdb50e140540bd09aa08c2e61a41899b0fdae6b1a56300a",
+        "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/289d54bb6f8cfde33cdb50e140540bd09aa08c2e61a41899b0fdae6b1a56300a.cubin",
+        "cubin_sha256": "c9dca41b34ca306d6da35c2e14b9609c85608fdc907c5b29eaea4d0ab081e542",
+        "registers_per_thread": 240,
+        "stack_bytes": 0,
+        "cuobjdump_shared_bytes": 1024,
+        "local_bytes": 0,
+        "dynamic_shared_bytes": 26240,
+        "host_source_sha256": "4c8ef3eb724496f8bba9937125d157a0e119bc8e18d4440420dbdcf233299efb",
+        "resource_command": [
+          "/usr/local/cuda/bin/cuobjdump",
+          "--dump-resource-usage",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/289d54bb6f8cfde33cdb50e140540bd09aa08c2e61a41899b0fdae6b1a56300a.cubin"
+        ],
+        "elf_shared_sections": [
+          {
+            "name": ".nv.shared.main_kernel",
+            "size_bytes": 1024,
+            "alignment_bytes": 1024
+          },
+          {
+            "name": ".nv.shared.reserved.0",
+            "size_bytes": 0,
+            "alignment_bytes": 1
+          }
+        ],
+        "occupancy": [
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "26240",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "26240",
+              "1024",
+              "1024",
+              "100"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "37504",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "37504",
+              "1024",
+              "1024",
+              "100"
+            ]
+          }
+        ]
+      },
+      {
+        "heads": 16,
+        "inner": 33,
+        "packed": true,
+        "source_sha256": "caf7aaa40d5d61495e019bbaf097a23459cc431f762aeb9707a56921a2188c85",
+        "cache_directory": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ae010b31b5c6d27ec0880b50ee00a3cd4410e3c91edef141a22dc227ef26a6d9",
+        "cubin_cache_key": "854cd034de922782dcd7eb2a2dc74b7cc7a3f2d2a5035ffbe2c118fd4c321aae",
+        "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/854cd034de922782dcd7eb2a2dc74b7cc7a3f2d2a5035ffbe2c118fd4c321aae.cubin",
+        "cubin_sha256": "015bebf0d4176d68d605cd06fdcf8d836d28c90fbd2dec4c70e12be50cee9307",
+        "registers_per_thread": 240,
+        "stack_bytes": 0,
+        "cuobjdump_shared_bytes": 1024,
+        "local_bytes": 0,
+        "dynamic_shared_bytes": 26240,
+        "host_source_sha256": "05d7414e479720e5ae443071fb9d953380008f30c6308f352d0d47f1f27526ba",
+        "resource_command": [
+          "/usr/local/cuda/bin/cuobjdump",
+          "--dump-resource-usage",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/854cd034de922782dcd7eb2a2dc74b7cc7a3f2d2a5035ffbe2c118fd4c321aae.cubin"
+        ],
+        "elf_shared_sections": [
+          {
+            "name": ".nv.shared.main_kernel",
+            "size_bytes": 1024,
+            "alignment_bytes": 1024
+          },
+          {
+            "name": ".nv.shared.reserved.0",
+            "size_bytes": 0,
+            "alignment_bytes": 1
+          }
+        ],
+        "occupancy": [
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "26240",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "26240",
+              "1024",
+              "1024",
+              "100"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "37504",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "37504",
+              "1024",
+              "1024",
+              "100"
+            ]
+          }
+        ]
+      },
+      {
+        "heads": 16,
+        "inner": 66,
+        "packed": false,
+        "source_sha256": "8058d6e583e115be66ee145350e62ce741bba21f8edec967bfa48c39927e0430",
+        "cache_directory": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/c4d69cbdc89cde18d9a3799aaa838dc4a6b6469b206b57625d8e4e90083074fb",
+        "cubin_cache_key": "c7bfa59c9e84df704fe7fd391aeed0a7d21d29e952f1b2a63247d1f0dd5e2b4f",
+        "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/c7bfa59c9e84df704fe7fd391aeed0a7d21d29e952f1b2a63247d1f0dd5e2b4f.cubin",
+        "cubin_sha256": "e95ccbf5d1cb2a92868eb7eb964c9d4eb861c22fac3140ee2860b726acec7662",
+        "registers_per_thread": 240,
+        "stack_bytes": 0,
+        "cuobjdump_shared_bytes": 1024,
+        "local_bytes": 0,
+        "dynamic_shared_bytes": 26240,
+        "host_source_sha256": "16d4097378bb3bb8d16bceecac9e5a30d03e3510f0a840662815ffc5035ce27a",
+        "resource_command": [
+          "/usr/local/cuda/bin/cuobjdump",
+          "--dump-resource-usage",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/c7bfa59c9e84df704fe7fd391aeed0a7d21d29e952f1b2a63247d1f0dd5e2b4f.cubin"
+        ],
+        "elf_shared_sections": [
+          {
+            "name": ".nv.shared.main_kernel",
+            "size_bytes": 1024,
+            "alignment_bytes": 1024
+          },
+          {
+            "name": ".nv.shared.reserved.0",
+            "size_bytes": 0,
+            "alignment_bytes": 1
+          }
+        ],
+        "occupancy": [
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "26240",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "26240",
+              "1024",
+              "1024",
+              "100"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "37504",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "37504",
+              "1024",
+              "1024",
+              "100"
+            ]
+          }
+        ]
+      },
+      {
+        "heads": 16,
+        "inner": 66,
+        "packed": true,
+        "source_sha256": "8cd18a765f02e0c72d0f9e0b59ce6f6a12a8e6d4e0d4a08aefc8fdfcff5e57f8",
+        "cache_directory": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a9a5dd62fead959485aac12c2c9f88497fbad345d066a277369c923fcb1e8875",
+        "cubin_cache_key": "09425995defbde7d2f6d9b7aeda88a75b2fa70bada934568f8d8eaa072f7dcfd",
+        "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/09425995defbde7d2f6d9b7aeda88a75b2fa70bada934568f8d8eaa072f7dcfd.cubin",
+        "cubin_sha256": "d9b8771dc01dd8c99d9b22ae13d72c2d80f4ab1a74a89ae638c960e3687a1904",
+        "registers_per_thread": 240,
+        "stack_bytes": 0,
+        "cuobjdump_shared_bytes": 1024,
+        "local_bytes": 0,
+        "dynamic_shared_bytes": 26240,
+        "host_source_sha256": "20ccb331a078f3a7f0d9df5b0d1a344a5d5993da92cef8f9895d24e6bdd5fd62",
+        "resource_command": [
+          "/usr/local/cuda/bin/cuobjdump",
+          "--dump-resource-usage",
+          "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/09425995defbde7d2f6d9b7aeda88a75b2fa70bada934568f8d8eaa072f7dcfd.cubin"
+        ],
+        "elf_shared_sections": [
+          {
+            "name": ".nv.shared.main_kernel",
+            "size_bytes": 1024,
+            "alignment_bytes": 1024
+          },
+          {
+            "name": ".nv.shared.reserved.0",
+            "size_bytes": 0,
+            "alignment_bytes": 1
+          }
+        ],
+        "occupancy": [
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "26240",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 26240,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 8,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 28288,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 0,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "26240",
+              "1024",
+              "1024",
+              "100"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": -1,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "37504",
+              "1024",
+              "1024",
+              "-1"
+            ]
+          },
+          {
+            "error": 0,
+            "regs_per_thread": 240,
+            "dynamic_shared": 37504,
+            "static_shared": 1024,
+            "reserved_shared": 1024,
+            "carveout": 100,
+            "preferred_shared": 233472,
+            "blocks": 2,
+            "warps": 8,
+            "occupancy_pct": 12.5,
+            "limiting_factors": 2,
+            "reg_blocks": 2,
+            "shared_blocks": 5,
+            "warp_blocks": 16,
+            "hardware_blocks": 32,
+            "allocated_regs_per_block": 30720,
+            "allocated_shared_per_block": 39552,
+            "register_allocation_unit": 256,
+            "shared_allocation_unit": 128,
+            "extra_shared_bytes": 11264,
+            "command": [
+              "/private/tmp/glm53-cubin-inspection/occupancy",
+              "240",
+              "37504",
+              "1024",
+              "1024",
+              "100"
+            ]
+          }
+        ]
+      }
+    ],
+    "verified_cache_files": 421,
+    "author": "Winston Cai.",
+    "run_id": "resource-inspection-20261026T035110Z",
+    "completed_at_utc": "2026-10-26T04:09:06.397606+00:00",
+    "image_id": "im-EomZZ0NhII6stVasjzgyo4",
+    "manifest_sha256": "afa23d7bf293536449463ffd615a295d424a39346e52ffb11f0ee4a96ad2469b",
+    "source": {
+      "parent": {
+        "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations",
+        "commit": "853e4d6bc85acfb2ae56fcba92af77e1ae29b853"
+      },
+      "sglang": {
+        "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+        "expected_commit": "889edf56b33226c80b17ddf3472c1206df62c3f0",
+        "commit": "889edf56b33226c80b17ddf3472c1206df62c3f0",
+        "override": false,
+        "dirty": false,
+        "integration": "v0.5.22"
+      },
+      "flashmla/csrc/cutlass": {
+        "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+        "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+        "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+        "override": false,
+        "dirty": false
+      },
+      "flashmla": {
+        "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22",
+        "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+        "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+        "override": false,
+        "dirty": false,
+        "integration": "v0.5.22"
+      }
+    },
+    "account": "caiw",
+    "gpu_allocations": 0,
+    "kernel_compilations": 0,
+    "cpu_exports": [
+      {
+        "app_id": "ap-KkGVyulIRwixL9PmClFpLI",
+        "resources": {
+          "gpu": null,
+          "cpu": 1,
+          "memory_mib": 1024,
+          "retries": 0,
+          "function_timeout_s": 90,
+          "startup_timeout_s": 60,
+          "controller_ceiling_s": 180
+        },
+        "controller_seconds": 24.03086674999213
+      },
+      {
+        "app_id": "ap-alVMokJVSnkfWzJmcngSCE",
+        "resources": {
+          "gpu": null,
+          "cpu": 1,
+          "memory_mib": 1024,
+          "retries": 0,
+          "function_timeout_s": 90,
+          "startup_timeout_s": 60,
+          "controller_ceiling_s": 180
+        },
+        "controller_seconds": 105.69269466699916
+      }
+    ],
+    "initial_registration_failure": {
+      "app_id": "ap-Iwvo7oYu3X2sk8m5QA9Ccx",
+      "worker_allocated": false,
+      "reason": "Idle timeout corrected to backend minimum two seconds before successful CPU allocation",
+      "stopped": true
+    },
+    "artifacts": {
+      "cached-resources-raw.json": {
+        "path": "data/glm53-packed/resource-inspection-20261026T035110Z/cached-resources-raw.json",
+        "sha256": "0097a243e6eaa1f7c4489405c0518f07578100cdc74443c6095f75857d41bc94",
+        "bytes": 1518524
+      },
+      "cached-support.zip": {
+        "path": "data/glm53-packed/resource-inspection-20261026T035110Z/cached-support.zip",
+        "sha256": "659a30d5957346ba4498d98a88d00fdcf88e0fe7051a7182e00a3335c6a802b2",
+        "bytes": 28898229
+      },
+      "cached-support-raw.json": {
+        "path": "data/glm53-packed/resource-inspection-20261026T035110Z/cached-support-raw.json",
+        "sha256": "dc9efd816853c1113536adee2da7a41d39c63e20b12c419e5240063b4fbdd092",
+        "bytes": 330151
+      },
+      "inspection-controller.json": {
+        "path": "data/glm53-packed/resource-inspection-20261026T035110Z/inspection-controller.json",
+        "sha256": "84a19e4301044d77aebbb3e707e094b4a11d8ac4156a6b420529aea5617938e4",
+        "bytes": 5285
+      },
+      "inspection-controller-support.json": {
+        "path": "data/glm53-packed/resource-inspection-20261026T035110Z/inspection-controller-support.json",
+        "sha256": "e243d4d8e47db329442377a38ed708b556b748d8c1ebb46ef57e965e0fd6e706",
+        "bytes": 5826
+      },
+      "inspection-controller-failed-scaledown.json": {
+        "path": "data/glm53-packed/resource-inspection-20261026T035110Z/inspection-controller-failed-scaledown.json",
+        "sha256": "7e82be03417d001f53fce5890c37f2264183ce7757be58ea7ef2c1b04d1c1d93",
+        "bytes": 4799
+      },
+      "resource_inspection_probe.py": {
+        "path": "data/glm53-packed/resource-inspection-20261026T035110Z/resource_inspection_probe.py",
+        "sha256": "3979bb1947b3c8c4dd37818e6a285ac14e9bda3a192f569e6334b78a3b127fa8",
+        "bytes": 7181
+      },
+      "inspect_cached_cubins.py": {
+        "path": "data/glm53-packed/resource-inspection-20261026T035110Z/inspect_cached_cubins.py",
+        "sha256": "06e14eaf17c61f2b48d080585a5a14d41bfd320e3a3c10d594ad2ffb23d34f74",
+        "bytes": 9341
+      },
+      "calculate_resources.py": {
+        "path": "data/glm53-packed/resource-inspection-20261026T035110Z/calculate_resources.py",
+        "sha256": "6ebb1aff53bb60d113dcdac1c359c295e5957acf16f993e0ab18ffa5e57677de",
+        "bytes": 6288
+      },
+      "occupancy.cpp": {
+        "path": "data/glm53-packed/resource-inspection-20261026T035110Z/occupancy.cpp",
+        "sha256": "4f0b23ccde9fe598b2f728421588a36726b6cf1f2eb6b09d41a28f2313a5142e",
+        "bytes": 2300
+      },
+      "cuda_occupancy.h": {
+        "path": "data/glm53-packed/resource-inspection-20261026T035110Z/cuda_occupancy.h",
+        "sha256": "163b8f296ef2a33c799e2dc8c525b37166da9217bcc6a3c1d26b1c10aca5e22b",
+        "bytes": 74222
+      },
+      "joined-variants.json": {
+        "path": "data/glm53-packed/resource-inspection-20261026T035110Z/joined-variants.json",
+        "sha256": "84a36aed8c473443a2b0a603ce8e96c7855e107a565bf463ea0322390406829d",
+        "bytes": 18826
+      },
+      "occupancy.json": {
+        "path": "data/glm53-packed/resource-inspection-20261026T035110Z/occupancy.json",
+        "sha256": "c02c79fcd2661f519787fd8172bf25abde1ccb830516fa8790ccd0cba830fb41",
+        "bytes": 81055
+      },
+      "resources.csv": {
+        "path": "data/glm53-packed/resource-inspection-20261026T035110Z/resources.csv",
+        "sha256": "a244b8fe00484a77021dd9f344625d6a84737fe5113990f7bceed5daed7edef2",
+        "bytes": 1212
+      },
+      "elf-shared-validation.json": {
+        "path": "data/glm53-packed/resource-inspection-20261026T035110Z/elf-shared-validation.json",
+        "sha256": "a5e6970d3219c0d5d2850ffd6f83bb583d99009643e188f35f465f62c6c9ed39",
+        "bytes": 6651
+      },
+      "final-state.json": {
+        "path": "data/glm53-packed/resource-inspection-20261026T035110Z/final-state.json",
+        "sha256": "412a2639980eaadd236bdf58de5dbc4638954cf19161394d0de533d79a6543d2",
+        "bytes": 1309
+      },
+      "review/occupancy_review.cpp": {
+        "path": "data/glm53-packed/resource-inspection-20261026T035110Z/review/occupancy_review.cpp",
+        "sha256": "86a7e583407b57d4b32a337a7499456bf75149ff5aaa06e5e636426c2fe341f1",
+        "bytes": 2302
+      },
+      "review/joined-occupancy-review.json": {
+        "path": "data/glm53-packed/resource-inspection-20261026T035110Z/review/joined-occupancy-review.json",
+        "sha256": "6e1671844c15396e4bc6aa866a5bd748e0ebb633b65b58ea8d0c64aaa177af30",
+        "bytes": 90681
+      },
+      "rejected_registration_probe.py": {
+        "path": "data/glm53-packed/resource-inspection-20261026T035110Z/rejected_registration_probe.py",
+        "sha256": "1a9f4638f0ccedcb079eaef91dbb493af12b0c7f631d25e4a9e7d1e0b19c3b19",
+        "bytes": 7049
+      }
+    },
+    "commands": [
+      "MODAL_PROFILE=caiw PYTHONPYCACHEPREFIX=/private/tmp/glm53-cubin-inspection/pycache /Users/poohthewinnie/.local/share/uv/tools/modal/bin/python /private/tmp/glm53-cubin-inspection/inspect_cached_cubins.py",
+      "GLM_INSPECTION_STAGE=support MODAL_PROFILE=caiw PYTHONPYCACHEPREFIX=/private/tmp/glm53-cubin-inspection/pycache /Users/poohthewinnie/.local/share/uv/tools/modal/bin/python /private/tmp/glm53-cubin-inspection/inspect_cached_cubins.py",
+      "python3 /private/tmp/glm53-cubin-inspection/calculate_resources.py"
+    ],
+    "validation": {
+      "verified_cached_files": 421,
+      "source_to_cubin_joins": 16,
+      "verified_elf_shared_sections": 16,
+      "offline_calculations": 64,
+      "independent_review": "All sixteen ELF/shared inputs and current/default/max-carveout/+11KiB predictions independently verified using the exported CUDA header"
+    },
+    "result": {
+      "blocks_per_sm_all_actual_variants": 2,
+      "warps_per_sm": 8,
+      "theoretical_warp_occupancy_percent": 12.5,
+      "limiting_resource": "registers",
+      "current_shared_memory_limit_blocks": 8,
+      "function_static_shared_bytes": 1024,
+      "driver_reserved_shared_bytes_per_block": 1024,
+      "allocated_shared_bytes_inner1": 27264,
+      "allocated_shared_bytes_inner2_33_66": 28288,
+      "hypothetical_extra_shared_bytes": 11264,
+      "hypothetical_unchanged_registers_blocks_per_sm": 2,
+      "proposed_cooperative_kernel_compiled": false
+    },
+    "cost": {
+      "conservative_increment_usd": 0.01,
+      "prior_conservative_usd": 19.39082902514378,
+      "aggregate_conservative_usd": 19.400829025143782,
+      "account_compute_delta_usd": 0.0014786099999994917,
+      "note": "Includes CPU/egress/billing-lag margin. Historical compute high-water and task accrual are not reduced by lower fresh readings."
+    },
+    "cleanup": {
+      "billing": {
+        "metered_cost": "42.67442841",
+        "billed_cost": "0E-8",
+        "adjustments": {
+          "credits": "-16.13000000",
+          "reservation_adjustment": "-0E-8",
+          "plan_cost": "0E-8",
+          "free_storage": "-26.54329934",
+          "network_egress_allowance": "-0.00112907"
+        },
+        "metered_cost_breakdown": {
+          "volumes": "26.54329934",
+          "deployed_apps": "0.04856797",
+          "llm_tokens": "0E-8",
+          "ephemeral_apps": "16.08431731",
+          "network_egress": "0.00112907"
+        }
+      },
+      "containers": [],
+      "apps": [
+        {
+          "app_id": "ap-alVMokJVSnkfWzJmcngSCE",
+          "description": "remnant-glm-cubin-inspection",
+          "state": "stopped",
+          "tasks": "0",
+          "created_at": "2026-10-26 11:57:26+08:00",
+          "stopped_at": "2026-10-26 11:59:10+08:00"
+        },
+        {
+          "app_id": "ap-KkGVyulIRwixL9PmClFpLI",
+          "description": "remnant-glm-cubin-inspection",
+          "state": "stopped",
+          "tasks": "0",
+          "created_at": "2026-10-26 11:50:55+08:00",
+          "stopped_at": "2026-10-26 11:51:17+08:00"
+        },
+        {
+          "app_id": "ap-Iwvo7oYu3X2sk8m5QA9Ccx",
+          "description": "remnant-glm-cubin-inspection",
+          "state": "stopped",
+          "tasks": "0",
+          "created_at": "2026-10-26 11:49:32+08:00",
+          "stopped_at": "2026-10-26 11:49:35+08:00"
+        }
+      ]
+    },
+    "limitations": [
+      "Offline theoretical residency, not measured achieved occupancy or runtime carveout.",
+      "No H100 or kernel execution; missing timing and sanitizer gates remain incomplete.",
+      "Proposed cooperative Packed loader is uncompiled; its registers can differ."
+    ],
+    "risk": "Evidence-only parent changes; no runtime, kernel, pin or serving default changes.",
+    "rollback": "Revert this evidence-only parent commit; Native runtime and benchmark selection are unchanged.",
+    "flat_csv": {
+      "path": "benchmarks/microbench/glm53-packed/resource-usage.csv",
+      "sha256": "914c38eb5c59bd1662b09146fadef2427a8965d1003897d76558948025a9683c"
+    }
+  }
 }
