@@ -475,7 +475,7 @@ def _build_image() -> None:
             if not path.endswith("/device_kernel.cu"):
                 continue
             text = Path(path).read_text()
-            names = re.findall(r"__global__\s+void\s+(?:__launch_bounds__\([^)]*\)\s+)?(\w+)\s*\(", text)
+            names = sorted(set(re.findall(r"__global__\s+void\s+(?:__launch_bounds__\([^)]*\)\s+)?(\w+)\s*\(", text)))
             if digest in current:
                 expected = "glm_packed_partial" if current[digest]["packed"] else "main"
                 if len(names) != 1 or not names[0].startswith(expected):
