@@ -2673,21 +2673,27 @@
         "app_id": "ap-zNfyKaNmp952L6ePGqCavZ",
         "status": "cpu_preflight_failed",
         "reason": "Child vendor Python cannot import injected Modal SDK",
-        "gpu_allocated": false
+        "gpu_allocated": false,
+        "source_parent": "cc1b9a8552004bf5bcb2091a24ed011e62f18e2d",
+        "command": "modal run scripts/modal/kernels.py::validate_kernels --run-id v41-reviewfix-20261026-a --sanitizer --sanitizer-order memcheck,racecheck,synccheck --max-seconds 5340"
       },
       {
         "run_id": "v41-reviewfix-20261026-b",
         "app_id": "ap-nIywTHLvoWIX0d6iUR5Ik3",
         "status": "stopped_during_preparation",
         "reason": "Review found helper would overwrite proposed PYTHONPATH correction",
-        "gpu_allocated": false
+        "gpu_allocated": false,
+        "source_parent": "984e888d8839b25c42be520abcdecf109e29ae7f",
+        "command": "modal run scripts/modal/kernels.py::validate_kernels --run-id v41-reviewfix-20261026-b --sanitizer --sanitizer-order memcheck,racecheck,synccheck --max-seconds 5340"
       },
       {
         "run_id": "v41-reviewfix-20261026-c",
         "app_id": "ap-YFMJVzknontjROL0JtON0I",
         "status": "cpu_preflight_failed",
         "reason": "Injected SDK dependencies absent in child vendor Python",
-        "gpu_allocated": false
+        "gpu_allocated": false,
+        "source_parent": "b6ea22f65f0d42584e8626665f6cfa2e5e741729",
+        "command": "modal run scripts/modal/kernels.py::validate_kernels --run-id v41-reviewfix-20261026-c --sanitizer --sanitizer-order memcheck,racecheck,synccheck --max-seconds 5340"
       },
       {
         "run_id": "v41-reviewfix-20261026-d",
@@ -2982,7 +2988,9 @@
         },
         "ordinary_tests": 39,
         "ordinary_seconds": 47.35,
-        "qualifies_sanitizers": false
+        "qualifies_sanitizers": false,
+        "source_parent": "2707db9afb073e92046dbda60b18e36f98d11acb",
+        "command": "modal run scripts/modal/kernels.py::validate_kernels --run-id v41-reviewfix-20261026-d --sanitizer --sanitizer-order memcheck,racecheck,synccheck --max-seconds 5340"
       },
       {
         "run_id": "v41-reviewfix-20261026-e",
@@ -3293,7 +3301,9 @@
           "status": "interrupted_not_qualified",
           "completed_cases": 20,
           "seconds": 298.16
-        }
+        },
+        "source_parent": "2707db9afb073e92046dbda60b18e36f98d11acb",
+        "command": "modal run --detach scripts/modal/kernels.py::validate_kernels --run-id v41-reviewfix-20261026-e --sanitizer --sanitizer-order memcheck,racecheck,synccheck --max-seconds 5340"
       },
       {
         "run_id": "v41-reviewfix-20261026-f",
@@ -3600,7 +3610,9 @@
             "errors": 0
           }
         },
-        "unused_racecheck": "Interrupted; no passing coverage claimed"
+        "unused_racecheck": "Interrupted; no passing coverage claimed",
+        "source_parent": "2707db9afb073e92046dbda60b18e36f98d11acb",
+        "command": "modal run --detach scripts/modal/kernels.py::validate_kernels --run-id v41-reviewfix-20261026-f --sanitizer --sanitizer-order synccheck,racecheck,memcheck --max-seconds 2640"
       },
       {
         "run_id": "v41-reviewfix-20261026-timing",
@@ -3654,7 +3666,9 @@
           ],
           "suite": "v41-fp4-decode",
           "gpu_function_seconds": 64.093782749
-        }
+        },
+        "source_parent": "2707db9afb073e92046dbda60b18e36f98d11acb",
+        "command": "modal run --detach scripts/modal/kernels.py::benchmark_kernels --run-id v41-reviewfix-20261026-timing --suite v41-fp4-decode --qualification-runs v41-reviewfix-20261026-e,v41-reviewfix-20261026-f"
       }
     ],
     "allocation": {
