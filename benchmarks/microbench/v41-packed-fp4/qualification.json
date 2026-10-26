@@ -2194,5 +2194,1978 @@
     "allocator_prediction_changed": false,
     "historical_results_preserved": true,
     "scope": "benchmark fixture/protocol correction only; runtime/kernel code unchanged; no native rebuild or GPU timing"
-  }
+  },
+  "review_fixes": {
+    "status": "passed_scoped_model_free_gates_and_production_geometry_timing",
+    "purpose": [
+      "Reject effective Q8KV8 prefill with explicit FP4 and retain one startup policy",
+      "Reject misaligned cache bases and page strides",
+      "Centralize FP4 layout contracts and reject ignored benchmark geometry",
+      "Reject failed sanitizer states and bind complete recorded runtime identity",
+      "Check timing receipts on Modal CPU before H100 scheduling"
+    ],
+    "sources": {
+      "parent_runner": "2707db9afb073e92046dbda60b18e36f98d11acb",
+      "sglang": "c4708870008528ea68ed783c68add708687d71fd",
+      "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159",
+      "baseline_parent": "af12dd9d068b4f87eedd88506da657787fd6c6d9"
+    },
+    "build_manifest": {
+      "validation_suite": "v41-fp4",
+      "coverage": {
+        "validation": [
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py",
+          "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+          "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]"
+        ],
+        "cpu": [
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_startup_contract",
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_backend_dispatch",
+          "test/registered/unit/test_dsv4_c4_cache_format.py",
+          "benchmark/remnant/test_microbench.py::test_v41_fp4_matrix_and_timing_gate"
+        ],
+        "sanitizer": [
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader",
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct",
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream",
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary",
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks"
+        ]
+      },
+      "integration": "v0.5.22",
+      "base_image": "lmsysorg/sglang:v0.5.22",
+      "sources": {
+        "sglang": "fc0ba855a2904e050fda3a1318e008e6bb114b2549cb06e15d69425e7670dde1",
+        "flashmla": "205ce698b75d7bc1e0ebc4472a8ca9dff27b428e6e25c7cea877eb2ff5b083ea"
+      },
+      "source_identities": {
+        "parent": {
+          "path": "/Users/poohthewinnie/.codex/worktrees/v41-packed-fp4/flash-optimizations",
+          "commit": "2707db9afb073e92046dbda60b18e36f98d11acb"
+        },
+        "sglang": {
+          "path": "/Users/poohthewinnie/.codex/worktrees/v41-packed-fp4/flash-optimizations/third_party/sglang-v0.5.22",
+          "expected_commit": "c4708870008528ea68ed783c68add708687d71fd",
+          "commit": "c4708870008528ea68ed783c68add708687d71fd",
+          "override": false,
+          "dirty": false,
+          "integration": "v0.5.22"
+        },
+        "flashmla/csrc/cutlass": {
+          "path": "/Users/poohthewinnie/.codex/worktrees/v41-packed-fp4/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+          "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "override": true,
+          "dirty": true,
+          "sha256": "2a0a58a442fff4a1d604d440e26845ab20bc5650739347e45f95abc7cbc6bd5d"
+        },
+        "flashmla": {
+          "path": "/Users/poohthewinnie/.codex/worktrees/v41-packed-fp4/flash-optimizations/third_party/flashmla-v0.5.22",
+          "expected_commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+          "commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+          "override": true,
+          "dirty": true,
+          "sha256": "6c00e7d3081743e75cf8ba34f6d7587d87916dcc7021de8ae2025b818238e857",
+          "integration": "v0.5.22"
+        }
+      },
+      "model_config": {
+        "revision": "7872f01b1d1fe23eabc4c98b48bffcef5a386062",
+        "sha256": "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023",
+        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731/resolve/7872f01b1d1fe23eabc4c98b48bffcef5a386062/config.json"
+      },
+      "torch": "2.14.1+cu130",
+      "cuda": "13.0",
+      "cuda_python": "13.0.3",
+      "cuda_bindings": "13.0.3",
+      "cuda_binding_requirements": [
+        {
+          "consumer": "cuda-bindings",
+          "requirement": "cuda-pathfinder~=1.1",
+          "installed": "1.8.3"
+        },
+        {
+          "consumer": "cuda-python",
+          "requirement": "cuda-bindings~=13.0.3",
+          "installed": "13.0.3"
+        },
+        {
+          "consumer": "cuda-python",
+          "requirement": "cuda-pathfinder~=1.1",
+          "installed": "1.8.3"
+        },
+        {
+          "consumer": "flashinfer-python",
+          "requirement": "cuda-python>=12.0",
+          "installed": "13.0.3"
+        },
+        {
+          "consumer": "humming-kernels",
+          "requirement": "cuda-bindings",
+          "installed": "13.0.3"
+        },
+        {
+          "consumer": "nvidia-cutlass-dsl-libs-base",
+          "requirement": "cuda-bindings>=12.8",
+          "installed": "13.0.3"
+        },
+        {
+          "consumer": "nvidia-cutlass-dsl-libs-core",
+          "requirement": "cuda-bindings>=12.8",
+          "installed": "13.0.3"
+        },
+        {
+          "consumer": "nvidia-cutlass-dsl-libs-cu12",
+          "requirement": "cuda-bindings>=12.8",
+          "installed": "13.0.3"
+        },
+        {
+          "consumer": "nvidia-cutlass-dsl-libs-cu13",
+          "requirement": "cuda-bindings>=12.8",
+          "installed": "13.0.3"
+        },
+        {
+          "consumer": "nvshmem4py-cu13",
+          "requirement": "cuda-python<14.0,>=13.0",
+          "installed": "13.0.3"
+        },
+        {
+          "consumer": "sglang",
+          "requirement": "cuda-python>=13.0",
+          "installed": "13.0.3"
+        },
+        {
+          "consumer": "torch",
+          "requirement": "cuda-bindings<14,>=13.0.3; platform_system == \"Linux\" and python_version < \"3.15\"",
+          "installed": "13.0.3"
+        }
+      ],
+      "sanitizer": {
+        "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+        "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+        "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+        "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+        "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+      },
+      "arch": "sm_90a",
+      "binary_architectures": {
+        "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so": [
+          "sm_90"
+        ],
+        "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so": [
+          "sm_90a"
+        ],
+        "/opt/remnant-native-store.so": [
+          "sm_90a"
+        ]
+      },
+      "fp4_precompile_artifacts": {
+        "/triton-cache/GN7IZJFWJDZPR6J7QZ7SQHCVS247VFU5RIMSVI667L63M3DGU3MQ/_store.source": "da2ee3eb1350b6896139d095e66a41c8c6f676231eea34223483887af566fd61",
+        "/triton-cache/GN7IZJFWJDZPR6J7QZ7SQHCVS247VFU5RIMSVI667L63M3DGU3MQ/_store.ttir": "198619171fe096953e0d3e730b3b48eb23ef10cceff2afa2048c383c5315498e",
+        "/triton-cache/GN7IZJFWJDZPR6J7QZ7SQHCVS247VFU5RIMSVI667L63M3DGU3MQ/_store.ttgir": "bd54fcea4b0460352f9f074f958bcfdf7a33328bdef88943f4fd502a14cd6f5b",
+        "/triton-cache/GN7IZJFWJDZPR6J7QZ7SQHCVS247VFU5RIMSVI667L63M3DGU3MQ/_store.llir": "b9fe35cd91b2618da24eaeaf11cce06d0210315d5ff5c42c40f15541d3b85abf",
+        "/triton-cache/GN7IZJFWJDZPR6J7QZ7SQHCVS247VFU5RIMSVI667L63M3DGU3MQ/_store.ptx": "14ec3429dc9f9e0dacd148914af063b64850950ff95399338b7a625e0d565187",
+        "/triton-cache/GN7IZJFWJDZPR6J7QZ7SQHCVS247VFU5RIMSVI667L63M3DGU3MQ/_store.cubin": "cbb097d8a37731c66da3d9ae9498982a346405568f882ccb1bab417546a5424e",
+        "/triton-cache/GN7IZJFWJDZPR6J7QZ7SQHCVS247VFU5RIMSVI667L63M3DGU3MQ/_store.json": "f340d4aaa2a55d12b7a6f0b7b5292ba23aba602e3c83e0f394eb6bdda30218eb",
+        "/triton-cache/GN7IZJFWJDZPR6J7QZ7SQHCVS247VFU5RIMSVI667L63M3DGU3MQ/__grp___store.json": "acd0632cdeed240b331e43b9a2ce8ce7478bda6937850ad2d3214993c873de19",
+        "/triton-cache/6E4SUWPYKPN6KAHEYAERYFNUQOABTUL7LSLDYWKTVB7OV7RRQPXQ/_store.source": "6c1ab148ec71c50613ad7f0b6648e2f4648fa2fe70a8a3c5afd464278baa2576",
+        "/triton-cache/6E4SUWPYKPN6KAHEYAERYFNUQOABTUL7LSLDYWKTVB7OV7RRQPXQ/_store.ttir": "af796ec179709d0e13ed1a694e82c5b5cf8210c265e45fb053ca1f913bcfa0d4",
+        "/triton-cache/6E4SUWPYKPN6KAHEYAERYFNUQOABTUL7LSLDYWKTVB7OV7RRQPXQ/_store.ttgir": "5da24adf7daac6f5a9181177fb643da0c4bb56d65df5b99d6aa5eae5b8269b15",
+        "/triton-cache/6E4SUWPYKPN6KAHEYAERYFNUQOABTUL7LSLDYWKTVB7OV7RRQPXQ/_store.llir": "7e305280b0c856bf38d51f75fcd3eefcb739099c739f505d7de432a0acf2b891",
+        "/triton-cache/6E4SUWPYKPN6KAHEYAERYFNUQOABTUL7LSLDYWKTVB7OV7RRQPXQ/_store.ptx": "57b876dad25aa97a064475b505dc64e6d36130140d9ff55a995e2406252ae7ea",
+        "/triton-cache/6E4SUWPYKPN6KAHEYAERYFNUQOABTUL7LSLDYWKTVB7OV7RRQPXQ/_store.cubin": "804b5a65d3e59d55a9fb30ec44004fc0cda8476089bac54dfda8922ae08e68ef",
+        "/triton-cache/6E4SUWPYKPN6KAHEYAERYFNUQOABTUL7LSLDYWKTVB7OV7RRQPXQ/_store.json": "a1f1b02523b9147840dad9a6bc096e00935957db46ad6fe1c31e0ad439d32fcc",
+        "/triton-cache/6E4SUWPYKPN6KAHEYAERYFNUQOABTUL7LSLDYWKTVB7OV7RRQPXQ/__grp___store.json": "38559f766789ec2166a9d9a2cc9c356792fce3d674b27c37cb5e64fe6c86ded7",
+        "/triton-cache/Y4HARMS7ZU2T7AVJ6CBVGQIVB7F2QMTQIJTACJRAOPGIWLGFYQIQ/_read.source": "37ee665b2b19ff015f827e3789f991a06e7555df093d6dea62772b36d05832f6",
+        "/triton-cache/Y4HARMS7ZU2T7AVJ6CBVGQIVB7F2QMTQIJTACJRAOPGIWLGFYQIQ/_read.ttir": "9887d4635e719d113df00bc11133e3fb699728eada1353fba35ebf3fc2bb1231",
+        "/triton-cache/Y4HARMS7ZU2T7AVJ6CBVGQIVB7F2QMTQIJTACJRAOPGIWLGFYQIQ/_read.ttgir": "c91e83298d9b25cd6010e204d70beb5b3eb438f6a3e0b339e7b46d8120cf2855",
+        "/triton-cache/Y4HARMS7ZU2T7AVJ6CBVGQIVB7F2QMTQIJTACJRAOPGIWLGFYQIQ/_read.llir": "ac52ea5d19b55d90952785a3adbe605136bb21d5a022cb6f8b8f74064b3ebd72",
+        "/triton-cache/Y4HARMS7ZU2T7AVJ6CBVGQIVB7F2QMTQIJTACJRAOPGIWLGFYQIQ/_read.ptx": "52b94460aa29288c69970ef7d9424ff17d09d7af1d6bac975fe8c81b6a3a0227",
+        "/triton-cache/Y4HARMS7ZU2T7AVJ6CBVGQIVB7F2QMTQIJTACJRAOPGIWLGFYQIQ/_read.cubin": "da1477efc4320402e67b0cd865c2f593222c962afbed3d356f3455dcab49e64d",
+        "/triton-cache/Y4HARMS7ZU2T7AVJ6CBVGQIVB7F2QMTQIJTACJRAOPGIWLGFYQIQ/_read.json": "79a4715dd4bb32089731cbc8dc1f30aec729e880407279393650efa3328c9732",
+        "/triton-cache/Y4HARMS7ZU2T7AVJ6CBVGQIVB7F2QMTQIJTACJRAOPGIWLGFYQIQ/__grp___read.json": "77a798a6f2fa867d18a775acffaece21d3b851ae844eed8635a2b721905d4a73",
+        "/triton-cache/WZJWPHBQ5LCFG7S5FWSMTXHUTPXDYHNISJXYCK64NLBRW3D7VLUA/_store.source": "3223d63d676b2ec935d6d2105a5af542ec005d70d2313fcb5ae773c256b1116e",
+        "/triton-cache/WZJWPHBQ5LCFG7S5FWSMTXHUTPXDYHNISJXYCK64NLBRW3D7VLUA/_store.ttir": "f2675484c3ccc99e406cc5bcfa2f805e6648d6cda48448b0dba8e08143161770",
+        "/triton-cache/WZJWPHBQ5LCFG7S5FWSMTXHUTPXDYHNISJXYCK64NLBRW3D7VLUA/_store.ttgir": "61f0a40aa875b6f44f0b6800ad3f2d93ab4d0a7304db2fa1adee4e45a7e51e08",
+        "/triton-cache/WZJWPHBQ5LCFG7S5FWSMTXHUTPXDYHNISJXYCK64NLBRW3D7VLUA/_store.llir": "077004103b166cbd948e68a7d4fe72580d80822b8c48f8ef0826657199642328",
+        "/triton-cache/WZJWPHBQ5LCFG7S5FWSMTXHUTPXDYHNISJXYCK64NLBRW3D7VLUA/_store.ptx": "508f462e8109d6495bf70a9500f7b15eb696178cc06e3d21fbdfadadcd971d02",
+        "/triton-cache/WZJWPHBQ5LCFG7S5FWSMTXHUTPXDYHNISJXYCK64NLBRW3D7VLUA/_store.cubin": "6de660274a7e6e195d2ddfd3ebc0f3eb70d64081d4c50b8ba3d479428e19465f",
+        "/triton-cache/WZJWPHBQ5LCFG7S5FWSMTXHUTPXDYHNISJXYCK64NLBRW3D7VLUA/_store.json": "1101db7f4b5b10f226db286d2be800db4a54d2862c9c01f86f0e01d708fb64b1",
+        "/triton-cache/WZJWPHBQ5LCFG7S5FWSMTXHUTPXDYHNISJXYCK64NLBRW3D7VLUA/__grp___store.json": "852e88e82cba8ae86de39601a7f955f18ced72718cfffa7ccf20fcc66c7f24fa",
+        "/triton-cache/2ZLWZODJ4HDXKAWTQ6SRPTT2BDNH2GCLD3P5QINS7KL7CTQBPJ4A/_store.source": "b3b9c94333f477d62f3c194a2c6ba81b3966a0e4ad2530bc7fc95e4edc79e139",
+        "/triton-cache/2ZLWZODJ4HDXKAWTQ6SRPTT2BDNH2GCLD3P5QINS7KL7CTQBPJ4A/_store.ttir": "629a1cb52b8c9c977feb45ac8e8f40cb0ab5a3c21174b4bb3f83d9957fff77df",
+        "/triton-cache/2ZLWZODJ4HDXKAWTQ6SRPTT2BDNH2GCLD3P5QINS7KL7CTQBPJ4A/_store.ttgir": "def89af564de5c632a289bddfdfb5386ec96e0ae28ade36ae22b326460a77750",
+        "/triton-cache/2ZLWZODJ4HDXKAWTQ6SRPTT2BDNH2GCLD3P5QINS7KL7CTQBPJ4A/_store.llir": "820a89ff929d3338c32530b7c511ca4bfee08fc266c759c06323627136dabacd",
+        "/triton-cache/2ZLWZODJ4HDXKAWTQ6SRPTT2BDNH2GCLD3P5QINS7KL7CTQBPJ4A/_store.ptx": "f034308d798adda2fb09492336771d27e249ab751211e33d92569ea9d9131683",
+        "/triton-cache/2ZLWZODJ4HDXKAWTQ6SRPTT2BDNH2GCLD3P5QINS7KL7CTQBPJ4A/_store.cubin": "d428489a672832e072efa88e1df8f633991e2c8d8a86538cd070419303d7c6dd",
+        "/triton-cache/2ZLWZODJ4HDXKAWTQ6SRPTT2BDNH2GCLD3P5QINS7KL7CTQBPJ4A/_store.json": "069375def4aa455896c1a7d7b0726aad301eafa0a30db1a02e1a142156e7bfd8",
+        "/triton-cache/2ZLWZODJ4HDXKAWTQ6SRPTT2BDNH2GCLD3P5QINS7KL7CTQBPJ4A/__grp___store.json": "da13840f9cb9e173c659312832ffd834053600e85f55bc0581378912aaf291c3",
+        "/triton-cache/SF2AVQRIUTHRDSPTFWERLWXNG6RPF72XANDD7VHHSW5PN7NAGUAA/_read.source": "4d487e953eaae951d8177b588a78964a338b806fb105922ba7051619480e83dc",
+        "/triton-cache/SF2AVQRIUTHRDSPTFWERLWXNG6RPF72XANDD7VHHSW5PN7NAGUAA/_read.ttir": "1dca85a5cf7dbd1b36ed2b918776b8239a0e29970df70b10730366582192a23e",
+        "/triton-cache/SF2AVQRIUTHRDSPTFWERLWXNG6RPF72XANDD7VHHSW5PN7NAGUAA/_read.ttgir": "c198987efcdedd1b8e10a3374aac4dbeede6ea45e7dfc5e33aab60a8667f3f2c",
+        "/triton-cache/SF2AVQRIUTHRDSPTFWERLWXNG6RPF72XANDD7VHHSW5PN7NAGUAA/_read.llir": "043e6e9f6cd4ae59f8e1b2b51c61031a1256148823ee77ca98c4ae36af066fcb",
+        "/triton-cache/SF2AVQRIUTHRDSPTFWERLWXNG6RPF72XANDD7VHHSW5PN7NAGUAA/_read.ptx": "d888300a19b5ffee0359e142e403f98b4f17ca51dd4d1fd843587b3384cb76c0",
+        "/triton-cache/SF2AVQRIUTHRDSPTFWERLWXNG6RPF72XANDD7VHHSW5PN7NAGUAA/_read.cubin": "9a91044f40e99ff47f7108831ba3d703707576fd7e5c70eba154715e7d86aead",
+        "/triton-cache/SF2AVQRIUTHRDSPTFWERLWXNG6RPF72XANDD7VHHSW5PN7NAGUAA/_read.json": "9e91ca8342cd5f1c89384b6017ff6930db25a75c7139a9c263fdfbd4af101c06",
+        "/triton-cache/SF2AVQRIUTHRDSPTFWERLWXNG6RPF72XANDD7VHHSW5PN7NAGUAA/__grp___read.json": "245fcfc5264932197324cead08d243202db29a7d7ed702a56a5305020418b1a8",
+        "/triton-cache/T4FNM6M2L6MFUHWCYHDV4VUNRPDULMXYTX5BJJAVFD76VTROXI7Q/_store.source": "65021c6905e52ad1fcb866635420fb09b410557a848f5db0a0f14232283679de",
+        "/triton-cache/T4FNM6M2L6MFUHWCYHDV4VUNRPDULMXYTX5BJJAVFD76VTROXI7Q/_store.ttir": "d6f58772d9ee8a818f3d00e77b9db0d6e8bd92355467b6111920ee93bf8b3449",
+        "/triton-cache/T4FNM6M2L6MFUHWCYHDV4VUNRPDULMXYTX5BJJAVFD76VTROXI7Q/_store.ttgir": "d2f1f3f909014b37cba8c5452027cf5ba0362596ef0a2d641ef504a5a1af106d",
+        "/triton-cache/T4FNM6M2L6MFUHWCYHDV4VUNRPDULMXYTX5BJJAVFD76VTROXI7Q/_store.llir": "71b7fd9d18f0ac72397b14aa1e27ed98eb999146701d431664eddc3b83c6638c",
+        "/triton-cache/T4FNM6M2L6MFUHWCYHDV4VUNRPDULMXYTX5BJJAVFD76VTROXI7Q/_store.ptx": "84464c45ef7bb9deb46b91552d505bd3a738158ec4f3a7d676680a2a64296a1c",
+        "/triton-cache/T4FNM6M2L6MFUHWCYHDV4VUNRPDULMXYTX5BJJAVFD76VTROXI7Q/_store.cubin": "918374d044fa4a6111c9c0ca0e7880c81082c0cde22c8157050696334af31ee5",
+        "/triton-cache/T4FNM6M2L6MFUHWCYHDV4VUNRPDULMXYTX5BJJAVFD76VTROXI7Q/_store.json": "8d83036f192f48bbb5e1729a82506969ab6023e7ad41062650b5dd387cdb894d",
+        "/triton-cache/T4FNM6M2L6MFUHWCYHDV4VUNRPDULMXYTX5BJJAVFD76VTROXI7Q/__grp___store.json": "eba7bf0f463809deff448d6de591e53eab5ed4b6bbff90d07071156f7a134f3b",
+        "/triton-cache/I7KXKQVT3YOUFZEM3MERKX66WIKSIHUYUNFXPITOTBBL2KQSDNWQ/_store.source": "c57c8d7d0ed4a696fa1ca4ea7ab3464af4e94c1d3d2f55b29b5aad7f8d99864a",
+        "/triton-cache/I7KXKQVT3YOUFZEM3MERKX66WIKSIHUYUNFXPITOTBBL2KQSDNWQ/_store.ttir": "75c4b1fc1179fe0021d463d1893da3789287792d548934ef670692cb0e6e8758",
+        "/triton-cache/I7KXKQVT3YOUFZEM3MERKX66WIKSIHUYUNFXPITOTBBL2KQSDNWQ/_store.ttgir": "ccfbe41a50a6d5adb35570f286638fc658b282530ee5b6713d371f46467126f0",
+        "/triton-cache/I7KXKQVT3YOUFZEM3MERKX66WIKSIHUYUNFXPITOTBBL2KQSDNWQ/_store.llir": "325b3ed8547cfd9029bda211be5bc848d1f7e5594ae315e20905473f43d85340",
+        "/triton-cache/I7KXKQVT3YOUFZEM3MERKX66WIKSIHUYUNFXPITOTBBL2KQSDNWQ/_store.ptx": "26b772f13846e68ac383358d989288e1785b9392af8f326259aa00102404c45a",
+        "/triton-cache/I7KXKQVT3YOUFZEM3MERKX66WIKSIHUYUNFXPITOTBBL2KQSDNWQ/_store.cubin": "359ad68f57f765fd3c96c49a0fb3a793c14eb73fdbcb47bf159bd6a84147f4dd",
+        "/triton-cache/I7KXKQVT3YOUFZEM3MERKX66WIKSIHUYUNFXPITOTBBL2KQSDNWQ/_store.json": "b5e34d549a5ccafdcd786e868b5869c74f1584b8c4a6d6fb74e9b3800f11b91c",
+        "/triton-cache/I7KXKQVT3YOUFZEM3MERKX66WIKSIHUYUNFXPITOTBBL2KQSDNWQ/__grp___store.json": "6a9fcf2759b465b4e044f9f5158f39477384ae4aa9585ce30cd6aae1eef6a0c5",
+        "/triton-cache/6QAJJG77ZGIWMUDXT6XCWVQV6ZLJIB3LN375ZEIRFPHRQCSMSW5A/_read.source": "852fddb18e974bbde0f7bcc5628a83d5d91a15dc94fdd5c04dab7dae31a4c880",
+        "/triton-cache/6QAJJG77ZGIWMUDXT6XCWVQV6ZLJIB3LN375ZEIRFPHRQCSMSW5A/_read.ttir": "9ccf9a8e0b0d05b9ef5462a4caf2f2222e157241cec1596d6ba49463c6018cc0",
+        "/triton-cache/6QAJJG77ZGIWMUDXT6XCWVQV6ZLJIB3LN375ZEIRFPHRQCSMSW5A/_read.ttgir": "3eef62705534cc4096530fbeb4fdef93deeddb2475b32d82fe1d0e1156a8b33d",
+        "/triton-cache/6QAJJG77ZGIWMUDXT6XCWVQV6ZLJIB3LN375ZEIRFPHRQCSMSW5A/_read.llir": "3d817af920b78b23e0ddf224eb7edd6339e447a438609316eb8b5fe3941edb5b",
+        "/triton-cache/6QAJJG77ZGIWMUDXT6XCWVQV6ZLJIB3LN375ZEIRFPHRQCSMSW5A/_read.ptx": "e752463e748c2b60fdab416091a1559677c0d971c148397f5077b783f633ab3d",
+        "/triton-cache/6QAJJG77ZGIWMUDXT6XCWVQV6ZLJIB3LN375ZEIRFPHRQCSMSW5A/_read.cubin": "0096f842fcce6910ed14333f8d138710a884c5fc804dee3df5d4cdb088473e35",
+        "/triton-cache/6QAJJG77ZGIWMUDXT6XCWVQV6ZLJIB3LN375ZEIRFPHRQCSMSW5A/_read.json": "776eaebc48427029eaf960643d9cc8085e2f231934c3055f1e023214bf00f546",
+        "/triton-cache/6QAJJG77ZGIWMUDXT6XCWVQV6ZLJIB3LN375ZEIRFPHRQCSMSW5A/__grp___read.json": "41bb493c89afb04310c5ad712014c6a8bd5bd4bfa1f9a60ac1d4cf5856b10ed1",
+        "/triton-cache/7XFXEZ6UMOLBSIZMWUKS3GVMMP5I2DSSYIUW7NIHXACLFJXWMPXQ/_store.source": "e0d0e25188539c3bb2be539f6f13549d0630ea292d9e4ba97814a759f005620b",
+        "/triton-cache/7XFXEZ6UMOLBSIZMWUKS3GVMMP5I2DSSYIUW7NIHXACLFJXWMPXQ/_store.ttir": "7bcc406964931720e59007b56e868f3445cf64199d7c8a386c03fae3487f58a7",
+        "/triton-cache/7XFXEZ6UMOLBSIZMWUKS3GVMMP5I2DSSYIUW7NIHXACLFJXWMPXQ/_store.ttgir": "84da8a8100fd270482ebdf7932220b46885bce9144906883f7febbf3d1920035",
+        "/triton-cache/7XFXEZ6UMOLBSIZMWUKS3GVMMP5I2DSSYIUW7NIHXACLFJXWMPXQ/_store.llir": "a2d15298842448c5f5f3cc80e2c8ad2c9881398ede9c6180f295c03b704c0116",
+        "/triton-cache/7XFXEZ6UMOLBSIZMWUKS3GVMMP5I2DSSYIUW7NIHXACLFJXWMPXQ/_store.ptx": "54ac008e542b908c904274a38d66705d7c5dc51b63123a28d5cc7164b53622f2",
+        "/triton-cache/7XFXEZ6UMOLBSIZMWUKS3GVMMP5I2DSSYIUW7NIHXACLFJXWMPXQ/_store.cubin": "a4aaf234d8f0296ca5f720fc3522085b72a83054f8a7ab0f178e241c9f6fe74f",
+        "/triton-cache/7XFXEZ6UMOLBSIZMWUKS3GVMMP5I2DSSYIUW7NIHXACLFJXWMPXQ/_store.json": "d3404c3df024582c703fd6a817ff96bcbfdf4468eeb6f43b2981c3c680b4e539",
+        "/triton-cache/7XFXEZ6UMOLBSIZMWUKS3GVMMP5I2DSSYIUW7NIHXACLFJXWMPXQ/__grp___store.json": "2a50152e909b5d73ab5661c394b982988c9a23f37f13ddc64415e411338f1f95",
+        "/triton-cache/V7FOHJCFLECY5JWDSIPUBPTYGJKDHCJ3NP3JLOXKVOV23MTKJ6PA/_store.source": "82e930a5a1da6357ee5d861419d71987162eb23c47134780514cd398f80a6c77",
+        "/triton-cache/V7FOHJCFLECY5JWDSIPUBPTYGJKDHCJ3NP3JLOXKVOV23MTKJ6PA/_store.ttir": "c2be8082b7c8409be4ad5a6bd387f199a0bb02b3942bf2cd092cd1a691506e13",
+        "/triton-cache/V7FOHJCFLECY5JWDSIPUBPTYGJKDHCJ3NP3JLOXKVOV23MTKJ6PA/_store.ttgir": "13e0dd39ef2aa78d68b6ae08a760c3ffcc93bd206a04194af054d7ca9ded3807",
+        "/triton-cache/V7FOHJCFLECY5JWDSIPUBPTYGJKDHCJ3NP3JLOXKVOV23MTKJ6PA/_store.llir": "2edb0509595e6ced5d4a1a9b9a16be95917ec4a4fea7061df4226af5947c6c58",
+        "/triton-cache/V7FOHJCFLECY5JWDSIPUBPTYGJKDHCJ3NP3JLOXKVOV23MTKJ6PA/_store.ptx": "7db362f8fdad72fd52ffd14722b3c1c75b34d2d6579c2ba10be2756de6854425",
+        "/triton-cache/V7FOHJCFLECY5JWDSIPUBPTYGJKDHCJ3NP3JLOXKVOV23MTKJ6PA/_store.cubin": "a1e31c8400a0907ffaf1efadf6e4cbe184bbcfb082db0582ff7d403e84884efc",
+        "/triton-cache/V7FOHJCFLECY5JWDSIPUBPTYGJKDHCJ3NP3JLOXKVOV23MTKJ6PA/_store.json": "54d8f2a260e333e083b36224b0e6e3c2ee1fa71d1b0fd16301583173b098fc01",
+        "/triton-cache/V7FOHJCFLECY5JWDSIPUBPTYGJKDHCJ3NP3JLOXKVOV23MTKJ6PA/__grp___store.json": "64987e5a6924699cf4239ef06fe805d30bcbe7bd5bd90835cf7d11de19d501eb",
+        "/triton-cache/4OKIDEB26CELXAJBDHN3TMJJMBDRIX732O55M7FYHU7H2CMSRQMA/_read.source": "4b845b2c5bde929150eef2e88f6fa9e7ec1dcd48b324dbc2afef6ab8425ce4e3",
+        "/triton-cache/4OKIDEB26CELXAJBDHN3TMJJMBDRIX732O55M7FYHU7H2CMSRQMA/_read.ttir": "2db2fecb61f0dd9ed8af95d8dccacfd574edfb10696e114d22c886c083b4636d",
+        "/triton-cache/4OKIDEB26CELXAJBDHN3TMJJMBDRIX732O55M7FYHU7H2CMSRQMA/_read.ttgir": "119e14d57d3114cee2335f56fbd22f33e35caae149e5f656fbc6a13f4fb9d461",
+        "/triton-cache/4OKIDEB26CELXAJBDHN3TMJJMBDRIX732O55M7FYHU7H2CMSRQMA/_read.llir": "d1a4ed2055bfcefca0b1e7d7e4fc5351e36f837ee6e905f2af788478713634c8",
+        "/triton-cache/4OKIDEB26CELXAJBDHN3TMJJMBDRIX732O55M7FYHU7H2CMSRQMA/_read.ptx": "eef6ac834ff3651263ea4a8e6bc1e8ef83eb91c482f772c3c6b436477b80ebbb",
+        "/triton-cache/4OKIDEB26CELXAJBDHN3TMJJMBDRIX732O55M7FYHU7H2CMSRQMA/_read.cubin": "9ca15ac2acf68b8739f1ceeaa90252ff7528c1f49da92646ab29d78184275ce5",
+        "/triton-cache/4OKIDEB26CELXAJBDHN3TMJJMBDRIX732O55M7FYHU7H2CMSRQMA/_read.json": "6273c969296efc4438121680faa0399f7c01711b2c213f4d97fff3a7ca454272",
+        "/triton-cache/4OKIDEB26CELXAJBDHN3TMJJMBDRIX732O55M7FYHU7H2CMSRQMA/__grp___read.json": "2fdcb3e8bbf867716bbf5cc2f3ede0adacd2f8c926d68715bfcaea457eb6d6aa"
+      },
+      "native_dtype": "float32",
+      "cpu_import_driver_stub_sha256": "67f959d1ab945005774464fcbf5a10722f97d0781b5800dd8636dc56747c2735",
+      "binaries": {
+        "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so": "dd32f856f845495e4f6940a89f386ad050126dd62f132a0af144a60658123d56",
+        "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so": "1b90f89c1f935a971a7a5b4ab29c44df01c5d13831b7e7c92ab14eef95de7e0f",
+        "/opt/remnant-native-store.so": "509edf30ceba9039b384e936758f4dd5b23ba4339fddb570320151400a868f3c"
+      },
+      "nvcc": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:58:59_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0\n",
+      "ncu": null
+    },
+    "native_compiled_image": "im-RktGCcyR8NG0ZMsXcxRWvY",
+    "qualified_cpu_image": "im-MZqnw8UUhUxovTFl16mxln",
+    "cpu": {
+      "preflight": {
+        "tests": 24,
+        "subtests": 15,
+        "seconds": 171.12
+      },
+      "qualification_and_dispatch": {
+        "tests": 6,
+        "seconds": 0.058
+      },
+      "style_and_launcher": {
+        "source_identities": {
+          "parent": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/v41-packed-fp4/flash-optimizations",
+            "commit": "2707db9afb073e92046dbda60b18e36f98d11acb"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/v41-packed-fp4/flash-optimizations/third_party/sglang-v0.5.22",
+            "expected_commit": "c4708870008528ea68ed783c68add708687d71fd",
+            "commit": "c4708870008528ea68ed783c68add708687d71fd",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/v41-packed-fp4/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": true,
+            "dirty": true,
+            "sha256": "2a0a58a442fff4a1d604d440e26845ab20bc5650739347e45f95abc7cbc6bd5d"
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/v41-packed-fp4/flash-optimizations/third_party/flashmla-v0.5.22",
+            "expected_commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "override": true,
+            "dirty": true,
+            "sha256": "6c00e7d3081743e75cf8ba34f6d7587d87916dcc7021de8ae2025b818238e857",
+            "integration": "v0.5.22"
+          }
+        },
+        "commands": [
+          {
+            "argv": [
+              "ruff",
+              "check",
+              "--select",
+              "F401,F821,F823,UP037",
+              "/sgl-workspace/sglang-remnant/python/sglang/kernels/ops/attention/dsv4/fp4_cache.py",
+              "/sgl-workspace/sglang-remnant/python/sglang/kernels/ops/attention/dsv4/kv_layout.py",
+              "/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py",
+              "/opt/flash-optimizations/scripts/modal/qualification.py"
+            ],
+            "cwd": "/sgl-workspace/sglang-remnant",
+            "returncode": 0,
+            "stdout": "All checks passed!\n",
+            "stderr": ""
+          },
+          {
+            "argv": [
+              "isort",
+              "--check-only",
+              "/sgl-workspace/sglang-remnant/python/sglang/kernels/ops/attention/dsv4/fp4_cache.py",
+              "/sgl-workspace/sglang-remnant/python/sglang/kernels/ops/attention/dsv4/kv_layout.py",
+              "/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py",
+              "/opt/flash-optimizations/scripts/modal/qualification.py"
+            ],
+            "cwd": "/sgl-workspace/sglang-remnant",
+            "returncode": 0,
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "argv": [
+              "ruff",
+              "format",
+              "--check",
+              "/sgl-workspace/sglang-remnant/python/sglang/kernels/ops/attention/dsv4/fp4_cache.py",
+              "/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py",
+              "/opt/flash-optimizations/scripts/modal/qualification.py"
+            ],
+            "cwd": "/sgl-workspace/sglang-remnant",
+            "returncode": 0,
+            "stdout": "3 files already formatted\n",
+            "stderr": ""
+          },
+          {
+            "argv": [
+              "clang-format",
+              "--dry-run",
+              "--Werror",
+              "--style=file",
+              "/opt/flashmla-remnant/csrc/kernels/sm90/decode/sparse/instantiations/v41_fp4_native_h64.cu"
+            ],
+            "cwd": "/opt/flashmla-remnant",
+            "returncode": 0,
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "argv": [
+              "clang-format",
+              "--dry-run",
+              "--Werror",
+              "--style=file",
+              "/opt/flashmla-remnant/csrc/kernels/sm90/decode/sparse/instantiations/v41_fp4_native_h128.cu"
+            ],
+            "cwd": "/opt/flashmla-remnant",
+            "returncode": 0,
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "argv": [
+              "clang-format",
+              "--dry-run",
+              "--Werror",
+              "--style=file",
+              "/opt/flashmla-remnant/csrc/kernels/sm90/decode/sparse/instantiations/v41_fp4_packed_h64.cu"
+            ],
+            "cwd": "/opt/flashmla-remnant",
+            "returncode": 0,
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "argv": [
+              "clang-format",
+              "--dry-run",
+              "--Werror",
+              "--style=file",
+              "/opt/flashmla-remnant/csrc/kernels/sm90/decode/sparse/instantiations/v41_fp4_packed_h128.cu"
+            ],
+            "cwd": "/opt/flashmla-remnant",
+            "returncode": 0,
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "argv": [
+              "clang-format",
+              "--dry-run",
+              "--Werror",
+              "--style=file",
+              "/opt/flashmla-remnant/csrc/kernels/sm90/prefill/sparse/instantiations/fp4_prefill_k512.cu"
+            ],
+            "cwd": "/opt/flashmla-remnant",
+            "returncode": 0,
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "argv": [
+              "clang-format",
+              "--dry-run",
+              "--Werror",
+              "--style=file",
+              "/opt/flashmla-remnant/csrc/kernels/sm90/prefill/sparse/instantiations/fp4_prefill_k512_topklen.cu"
+            ],
+            "cwd": "/opt/flashmla-remnant",
+            "returncode": 0,
+            "stdout": "",
+            "stderr": ""
+          }
+        ],
+        "status": "passed",
+        "launcher_regressions": {
+          "tests": 17,
+          "status": "passed",
+          "output": "test_profile_coverage_and_metric_failures (scripts.modal.tests.ContractTests.test_profile_coverage_and_metric_failures) ... ok\ntest_profile_matrix_is_complete (scripts.modal.tests.ContractTests.test_profile_matrix_is_complete) ... ok\ntest_representative_profile_matrix (scripts.modal.tests.ContractTests.test_representative_profile_matrix) ... ok\ntest_timing_rejects_missing_duplicate_and_invalid_cases (scripts.modal.tests.ContractTests.test_timing_rejects_missing_duplicate_and_invalid_cases) ... ok\ntest_wide_profile_export (scripts.modal.tests.ContractTests.test_wide_profile_export) ... ok\ntest_invalid_budgets_and_kernel_combinations_fail_before_run_context (scripts.modal.tests.SurvivorBudgetLauncherTests.test_invalid_budgets_and_kernel_combinations_fail_before_run_context) ... ok\ntest_profile_rejects_another_survivor_budget_or_implementation (scripts.modal.tests.SurvivorBudgetLauncherTests.test_profile_rejects_another_survivor_budget_or_implementation) ... ok\ntest_profiles_cover_only_supported_requested_modes_and_match_inputs (scripts.modal.tests.SurvivorBudgetLauncherTests.test_profiles_cover_only_supported_requested_modes_and_match_inputs) ... ok\ntest_timing_passes_budget_modes_and_validates_the_requested_contract (scripts.modal.tests.SurvivorBudgetLauncherTests.test_timing_passes_budget_modes_and_validates_the_requested_contract) ... ok\ntest_cpu_driver_stub_is_scoped_to_child_import_environment (scripts.modal.tests.PrefillReadLauncherTests.test_cpu_driver_stub_is_scoped_to_child_import_environment) ... ok\ntest_fused_prefill_profile_rejects_a_split_capture (scripts.modal.tests.PrefillReadLauncherTests.test_fused_prefill_profile_rejects_a_split_capture) ... ok\ntest_fused_prefill_timing_is_forwarded_and_validated_explicitly (scripts.modal.tests.PrefillReadLauncherTests.test_fused_prefill_timing_is_forwarded_and_validated_explicitly) ... ok\ntest_missing_cpu_driver_stub_fails_before_import (scripts.modal.tests.PrefillReadLauncherTests.test_missing_cpu_driver_stub_fails_before_import) ... ok\ntest_prefill_invalid_options_fail_before_context (scripts.modal.tests.PrefillReadLauncherTests.test_prefill_invalid_options_fail_before_context) ... ok\ntest_prefill_profile_application_replay_and_three_variant_coverage (scripts.modal.tests.PrefillReadLauncherTests.test_prefill_profile_application_replay_and_three_variant_coverage) ... ok\ntest_prefill_timing_uses_fixed_variants_and_coverage_judge (scripts.modal.tests.PrefillReadLauncherTests.test_prefill_timing_uses_fixed_variants_and_coverage_judge) ... ok\ntest_worker_pythonpath_excludes_serialized_launcher_shadow (scripts.modal.tests.PrefillReadLauncherTests.test_worker_pythonpath_excludes_serialized_launcher_shadow) ... ok\n\n----------------------------------------------------------------------\nRan 17 tests in 0.485s\n\nOK\n"
+        },
+        "registration": {
+          "backend": "CUDA",
+          "disabled": "Modal-only H100 qualification",
+          "suite": "stage-b-test-1-gpu-small"
+        }
+      },
+      "v4_runtime_regressions": {
+        "receipt": {
+          "status": "passed",
+          "action": "cpu",
+          "model_load": false,
+          "tests": [
+            "test/registered/unit/test_dsv4_c4_cache_format.py",
+            "test/registered/attention/unittests/dsv4/test_remnant_pack.py",
+            "test/registered/attention/unittests/dsv4/test_remnant_backend.py",
+            "test/registered/attention/unittests/dsv4/test_remnant_compressor_store.py",
+            "test/registered/attention/unittests/dsv4/test_remnant_pool.py::TestRemnantPool"
+          ],
+          "cpu_function_seconds": 175.872096836
+        },
+        "tests": 103,
+        "subtests": 45,
+        "seconds": 171.52
+      },
+      "reproduction_invocation": "\"\"\"Temporary Modal CPU invocation of existing style/CI checks. Author: Winston Cai.\"\"\"\nimport modal\n\napp = modal.App('remnant-v41-review-style')\nimage = modal.Image.from_id('im-MZqnw8UUhUxovTFl16mxln').pip_install(\n    'ruff==0.15.1', 'isort==7.0.0', 'clang-format==20.1.7'\n)\nvolume = modal.Volume.from_name('remnant-stage2a-results')\n\n@app.function(image=image, cpu=1, memory=2048, timeout=180, retries=0,\n              max_containers=1, scaledown_window=2, volumes={'/results': volume})\ndef check():\n    import hashlib\n    import json\n    import subprocess\n    import time\n    from pathlib import Path\n    from scripts.modal import kernels\n    from sglang.test.ci.ci_register import collect_tests, HWBackend\n\n    volume.reload()\n    root = Path('/results/microbench/v41-reviewfix-20261026-style/cpu')\n    root.mkdir(parents=True, exist_ok=False)\n    manifest = json.loads(kernels.MANIFEST.read_text())\n    assert manifest['sources'] == kernels._source_hashes()\n    assert manifest['source_identities'] == kernels.SOURCE_IDENTITIES\n    for path, expected in manifest['binaries'].items():\n        assert hashlib.sha256(Path(path).read_bytes()).hexdigest() == expected\n    sg = Path('/sgl-workspace/sglang-remnant')\n    mla = Path('/opt/flashmla-remnant')\n    fp4 = sg/'python/sglang/kernels/ops/attention/dsv4/fp4_cache.py'\n    layout = fp4.with_name('kv_layout.py')\n    test = sg/'test/registered/attention/unittests/dsv4/test_remnant_fp4.py'\n    qualification = Path('/opt/flash-optimizations/scripts/modal/qualification.py')\n    paths = [str(p) for p in (fp4, layout, test, qualification)]\n    commands = [\n        (['ruff', 'check', '--select', 'F401,F821,F823,UP037', *paths], sg),\n        (['isort', '--check-only', *paths], sg),\n        (['ruff', 'format', '--check', str(fp4), str(test), str(qualification)], sg),\n    ]\n    for name in ('native_h64', 'native_h128', 'packed_h64', 'packed_h128'):\n        p = mla/f'csrc/kernels/sm90/decode/sparse/instantiations/v41_fp4_{name}.cu'\n        commands.append((['clang-format', '--dry-run', '--Werror', '--style=file', str(p)], mla))\n    for name in ('fp4_prefill_k512', 'fp4_prefill_k512_topklen'):\n        p = mla/f'csrc/kernels/sm90/prefill/sparse/instantiations/{name}.cu'\n        commands.append((['clang-format', '--dry-run', '--Werror', '--style=file', str(p)], mla))\n    record = {'source_identities': manifest['source_identities'], 'commands': [], 'status': 'running'}\n    deadline = time.monotonic()+150\n    try:\n        for argv, cwd in commands:\n            result = subprocess.run(argv, cwd=cwd, text=True, capture_output=True,\n                                    timeout=max(1, int(deadline-time.monotonic())))\n            record['commands'].append({'argv': argv, 'cwd': str(cwd), 'returncode': result.returncode,\n                                       'stdout': result.stdout, 'stderr': result.stderr})\n        import io\n        import unittest\n        from scripts.modal import tests as launcher_tests\n        suite = unittest.TestSuite(\n            unittest.defaultTestLoader.loadTestsFromTestCase(case)\n            for case in (launcher_tests.ContractTests,\n                         launcher_tests.SurvivorBudgetLauncherTests,\n                         launcher_tests.PrefillReadLauncherTests)\n        )\n        stream = io.StringIO()\n        outcome = unittest.TextTestRunner(stream=stream, verbosity=2).run(suite)\n        record['launcher_regressions'] = {'tests': outcome.testsRun,\n            'status': 'passed' if outcome.wasSuccessful() else 'failed',\n            'output': stream.getvalue()}\n        registries = collect_tests([str(test)], sanity_check=True)\n        assert len(registries) == 1\n        registration = registries[0]\n        assert registration.backend == HWBackend.CUDA\n        assert registration.disabled == 'Modal-only H100 qualification'\n        record['registration'] = {'backend': registration.backend.name, 'disabled': registration.disabled,\n                                  'suite': registration.effective_suite}\n        record['status'] = 'passed' if outcome.wasSuccessful() and all(c['returncode']==0 for c in record['commands']) else 'failed'\n    finally:\n        (root/'result.json').write_text(json.dumps(record, indent=2)+'\\n')\n        volume.commit()\n    return record\n\n@app.function(image=modal.Image.from_id('im-MZqnw8UUhUxovTFl16mxln'),\n              cpu=4, memory=16384, timeout=420, retries=0, max_containers=1,\n              scaledown_window=2, volumes={'/results': volume})\ndef legacy_cpu():\n    import json\n    from scripts.modal import kernels\n    volume.reload()\n    manifest = json.loads(kernels.MANIFEST.read_text())\n    assert manifest['sources'] == kernels._source_hashes()\n    assert manifest['source_identities'] == kernels.SOURCE_IDENTITIES\n    with kernels._run_context('v41-reviewfix-20261026-legacycpu', 'cpu', 360, resource='cpu') as (root, record, deadline):\n        tests = tuple(kernels.TEST_MODULES[name] for name in ('cache_format','pack','backend','compressor_store')) + (kernels.TEST_MODULES['pool']+'::TestRemnantPool',)\n        record['tests'] = tests\n        environment = kernels._cpu_preflight_environment(root)\n        kernels._run_pytest(tests, root, 'legacy', deadline, environment=environment)\n    return record\n\n@app.local_entrypoint()\ndef main(runtime_only: bool = False):\n    import json\n    result=legacy_cpu.remote() if runtime_only else check.remote()\n    print(json.dumps(result, indent=2))\n    if result['status'] != 'passed':\n        raise RuntimeError('Scoped CPU style/registry checks failed')\n"
+    },
+    "attempts": [
+      {
+        "run_id": "v41-reviewfix-20261026-a",
+        "app_id": "ap-zNfyKaNmp952L6ePGqCavZ",
+        "status": "cpu_preflight_failed",
+        "reason": "Child vendor Python cannot import injected Modal SDK",
+        "gpu_allocated": false
+      },
+      {
+        "run_id": "v41-reviewfix-20261026-b",
+        "app_id": "ap-nIywTHLvoWIX0d6iUR5Ik3",
+        "status": "stopped_during_preparation",
+        "reason": "Review found helper would overwrite proposed PYTHONPATH correction",
+        "gpu_allocated": false
+      },
+      {
+        "run_id": "v41-reviewfix-20261026-c",
+        "app_id": "ap-YFMJVzknontjROL0JtON0I",
+        "status": "cpu_preflight_failed",
+        "reason": "Injected SDK dependencies absent in child vendor Python",
+        "gpu_allocated": false
+      },
+      {
+        "run_id": "v41-reviewfix-20261026-d",
+        "app_id": "ap-vJfGNxJr1BdMxIjfxXCoDd",
+        "status": "cancelled_on_local_client_disconnect",
+        "receipt": {
+          "status": "failed",
+          "action": "validation",
+          "model_load": false,
+          "validation_suite": "v41-fp4",
+          "coverage": {
+            "validation": [
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]"
+            ],
+            "sanitizer": [
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks"
+            ]
+          },
+          "sanitizer": true,
+          "sanitizer_order": [
+            "memcheck",
+            "racecheck",
+            "synccheck"
+          ],
+          "sanitizer_results": {
+            "synccheck": {
+              "status": "not_run"
+            },
+            "racecheck": {
+              "status": "not_run"
+            },
+            "memcheck": {
+              "status": "not_run"
+            }
+          },
+          "sanitizer_tool": {
+            "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+            "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+            "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+            "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+            "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+          },
+          "gpu": "NVIDIA H100 80GB HBM3",
+          "loaded_extensions": [
+            "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so",
+            "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so"
+          ],
+          "platform_timeout_seconds": 5400,
+          "allocation": {
+            "direct_workspace_peak_bytes": 20492288,
+            "direct_workspace_case": "B8/S1/H128/K512 plus K64 SWA, page128",
+            "status": "passed",
+            "modes": [
+              {
+                "mode": "Native",
+                "groups": {
+                  "swa": 467251200,
+                  "global_kv": 472891392,
+                  "indexer": 111646208,
+                  "compressor_state": 270336
+                },
+                "prefill_workspace_bytes": 1048576,
+                "direct_workspace_bytes": 20492288,
+                "total_bytes": 1073600000,
+                "byte_budget": 1073741824,
+                "full_tokens": 656384,
+                "swa_tokens": 19712,
+                "reserved_page_bytes": 6346240
+              },
+              {
+                "mode": "Packed",
+                "groups": {
+                  "swa": 467251200,
+                  "global_kv": 448516096,
+                  "indexer": 136147968,
+                  "compressor_state": 270336
+                },
+                "prefill_workspace_bytes": 1048576,
+                "direct_workspace_bytes": 20492288,
+                "total_bytes": 1073726464,
+                "byte_budget": 1073741824,
+                "full_tokens": 800512,
+                "swa_tokens": 19712,
+                "reserved_page_bytes": 6280704
+              }
+            ],
+            "edges": [
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 0,
+                "storage_bytes": 73728
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 1,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 127,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 128,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 129,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 255,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 256,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 257,
+                "storage_bytes": 184320
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 0,
+                "storage_bytes": 73728
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 1,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 127,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 128,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 129,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 255,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 256,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 257,
+                "storage_bytes": 221184
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 0,
+                "storage_bytes": 57344
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 1,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 127,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 128,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 129,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 255,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 256,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 257,
+                "storage_bytes": 143360
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 0,
+                "storage_bytes": 57344
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 1,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 127,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 128,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 129,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 255,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 256,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 257,
+                "storage_bytes": 172032
+              }
+            ],
+            "scope": "model-free actual pool storage; no serving capacity claim",
+            "capacity_gain_percent": 21.957878315132607
+          },
+          "error": "InputCancellation('Input was cancelled by user')",
+          "gpu_function_seconds": 615.6325977729999
+        },
+        "ordinary_tests": 39,
+        "ordinary_seconds": 47.35,
+        "qualifies_sanitizers": false
+      },
+      {
+        "run_id": "v41-reviewfix-20261026-e",
+        "app_id": "ap-SWDZ8OmOYrp7mPgenL0lLf",
+        "status": "stopped_after_complete_memcheck_and_racecheck",
+        "ordinary_tests": 39,
+        "ordinary_seconds": 50.6,
+        "receipt": {
+          "status": "failed",
+          "action": "validation",
+          "model_load": false,
+          "validation_suite": "v41-fp4",
+          "coverage": {
+            "validation": [
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]"
+            ],
+            "sanitizer": [
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks"
+            ]
+          },
+          "sanitizer": true,
+          "sanitizer_order": [
+            "memcheck",
+            "racecheck",
+            "synccheck"
+          ],
+          "sanitizer_results": {
+            "synccheck": {
+              "status": "not_run"
+            },
+            "racecheck": {
+              "status": "passed"
+            },
+            "memcheck": {
+              "status": "passed"
+            }
+          },
+          "sanitizer_tool": {
+            "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+            "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+            "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+            "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+            "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+          },
+          "gpu": "NVIDIA H100 80GB HBM3",
+          "loaded_extensions": [
+            "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so",
+            "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so"
+          ],
+          "platform_timeout_seconds": 5400,
+          "allocation": {
+            "direct_workspace_peak_bytes": 20492288,
+            "direct_workspace_case": "B8/S1/H128/K512 plus K64 SWA, page128",
+            "status": "passed",
+            "modes": [
+              {
+                "mode": "Native",
+                "groups": {
+                  "swa": 467251200,
+                  "global_kv": 472891392,
+                  "indexer": 111646208,
+                  "compressor_state": 270336
+                },
+                "prefill_workspace_bytes": 1048576,
+                "direct_workspace_bytes": 20492288,
+                "total_bytes": 1073600000,
+                "byte_budget": 1073741824,
+                "full_tokens": 656384,
+                "swa_tokens": 19712,
+                "reserved_page_bytes": 6346240
+              },
+              {
+                "mode": "Packed",
+                "groups": {
+                  "swa": 467251200,
+                  "global_kv": 448516096,
+                  "indexer": 136147968,
+                  "compressor_state": 270336
+                },
+                "prefill_workspace_bytes": 1048576,
+                "direct_workspace_bytes": 20492288,
+                "total_bytes": 1073726464,
+                "byte_budget": 1073741824,
+                "full_tokens": 800512,
+                "swa_tokens": 19712,
+                "reserved_page_bytes": 6280704
+              }
+            ],
+            "edges": [
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 0,
+                "storage_bytes": 73728
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 1,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 127,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 128,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 129,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 255,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 256,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 257,
+                "storage_bytes": 184320
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 0,
+                "storage_bytes": 73728
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 1,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 127,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 128,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 129,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 255,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 256,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 257,
+                "storage_bytes": 221184
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 0,
+                "storage_bytes": 57344
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 1,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 127,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 128,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 129,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 255,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 256,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 257,
+                "storage_bytes": 143360
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 0,
+                "storage_bytes": 57344
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 1,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 127,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 128,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 129,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 255,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 256,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 257,
+                "storage_bytes": 172032
+              }
+            ],
+            "scope": "model-free actual pool storage; no serving capacity claim",
+            "capacity_gain_percent": 21.957878315132607
+          },
+          "error": "KeyboardInterrupt()",
+          "gpu_function_seconds": 3266.914626212
+        },
+        "tools": {
+          "memcheck": {
+            "tests": 34,
+            "seconds": 1994.706,
+            "errors": 0
+          },
+          "racecheck": {
+            "tests": 34,
+            "seconds": 886.702,
+            "hazards": 0
+          }
+        },
+        "partial_synccheck": {
+          "status": "interrupted_not_qualified",
+          "completed_cases": 20,
+          "seconds": 298.16
+        }
+      },
+      {
+        "run_id": "v41-reviewfix-20261026-f",
+        "app_id": "ap-oxN2IKdf3r5kmydKmb9tuQ",
+        "status": "stopped_after_complete_synccheck",
+        "inner_timeout_seconds": 2640,
+        "platform_timeout_seconds": 5400,
+        "order": [
+          "synccheck",
+          "racecheck",
+          "memcheck"
+        ],
+        "receipt": {
+          "status": "failed",
+          "action": "validation",
+          "model_load": false,
+          "validation_suite": "v41-fp4",
+          "coverage": {
+            "validation": [
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]"
+            ],
+            "sanitizer": [
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks"
+            ]
+          },
+          "sanitizer": true,
+          "sanitizer_order": [
+            "synccheck",
+            "racecheck",
+            "memcheck"
+          ],
+          "sanitizer_results": {
+            "synccheck": {
+              "status": "passed"
+            },
+            "racecheck": {
+              "status": "not_run"
+            },
+            "memcheck": {
+              "status": "not_run"
+            }
+          },
+          "sanitizer_tool": {
+            "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+            "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+            "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+            "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+            "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+          },
+          "gpu": "NVIDIA H100 80GB HBM3",
+          "loaded_extensions": [
+            "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so",
+            "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so"
+          ],
+          "platform_timeout_seconds": 5400,
+          "allocation": {
+            "direct_workspace_peak_bytes": 20492288,
+            "direct_workspace_case": "B8/S1/H128/K512 plus K64 SWA, page128",
+            "status": "passed",
+            "modes": [
+              {
+                "mode": "Native",
+                "groups": {
+                  "swa": 467251200,
+                  "global_kv": 472891392,
+                  "indexer": 111646208,
+                  "compressor_state": 270336
+                },
+                "prefill_workspace_bytes": 1048576,
+                "direct_workspace_bytes": 20492288,
+                "total_bytes": 1073600000,
+                "byte_budget": 1073741824,
+                "full_tokens": 656384,
+                "swa_tokens": 19712,
+                "reserved_page_bytes": 6346240
+              },
+              {
+                "mode": "Packed",
+                "groups": {
+                  "swa": 467251200,
+                  "global_kv": 448516096,
+                  "indexer": 136147968,
+                  "compressor_state": 270336
+                },
+                "prefill_workspace_bytes": 1048576,
+                "direct_workspace_bytes": 20492288,
+                "total_bytes": 1073726464,
+                "byte_budget": 1073741824,
+                "full_tokens": 800512,
+                "swa_tokens": 19712,
+                "reserved_page_bytes": 6280704
+              }
+            ],
+            "edges": [
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 0,
+                "storage_bytes": 73728
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 1,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 127,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 128,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 129,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 255,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 256,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 257,
+                "storage_bytes": 184320
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 0,
+                "storage_bytes": 73728
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 1,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 127,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 128,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 129,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 255,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 256,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 257,
+                "storage_bytes": 221184
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 0,
+                "storage_bytes": 57344
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 1,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 127,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 128,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 129,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 255,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 256,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 257,
+                "storage_bytes": 143360
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 0,
+                "storage_bytes": 57344
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 1,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 127,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 128,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 129,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 255,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 256,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 257,
+                "storage_bytes": 172032
+              }
+            ],
+            "scope": "model-free actual pool storage; no serving capacity claim",
+            "capacity_gain_percent": 21.957878315132607
+          },
+          "error": "KeyboardInterrupt()",
+          "gpu_function_seconds": 1380.599831495
+        },
+        "tools": {
+          "synccheck": {
+            "tests": 34,
+            "seconds": 1083.71,
+            "errors": 0
+          }
+        },
+        "unused_racecheck": "Interrupted; no passing coverage claimed"
+      },
+      {
+        "run_id": "v41-reviewfix-20261026-timing",
+        "app_id": "ap-j8qjMRA3bsaspYqaEVU7UT",
+        "status": "passed",
+        "cpu_preflight": {
+          "status": "passed",
+          "action": "preflight",
+          "model_load": false,
+          "qualification": {
+            "receipts": {
+              "v41-reviewfix-20261026-e": "da6b516cfb31cb46b6d0a2fd9c9297f6235e04fb5fe443aa84e8840828f02145",
+              "v41-reviewfix-20261026-f": "c870df6c3f31c9626985b385ca9b0d7b24892d5450bfa5511a5b1491e8f50c77"
+            },
+            "tools": [
+              "memcheck",
+              "racecheck",
+              "synccheck"
+            ],
+            "case_count_per_tool": 34,
+            "identity_sha256": "04f867999d8b3b307e864c0526272890e358591d835091f0cceb9fb550f944de"
+          },
+          "cpu_function_seconds": 16.205013953
+        },
+        "gpu_record": {
+          "status": "passed",
+          "action": "timing",
+          "model_load": false,
+          "qualification": {
+            "receipts": {
+              "v41-reviewfix-20261026-e": "da6b516cfb31cb46b6d0a2fd9c9297f6235e04fb5fe443aa84e8840828f02145",
+              "v41-reviewfix-20261026-f": "c870df6c3f31c9626985b385ca9b0d7b24892d5450bfa5511a5b1491e8f50c77"
+            },
+            "tools": [
+              "memcheck",
+              "racecheck",
+              "synccheck"
+            ],
+            "case_count_per_tool": 34,
+            "identity_sha256": "04f867999d8b3b307e864c0526272890e358591d835091f0cceb9fb550f944de"
+          },
+          "command": [
+            "/opt/sglang/bin/python",
+            "/sgl-workspace/sglang-remnant/benchmark/remnant/microbench.py",
+            "--native-library",
+            "/opt/remnant-native-store.so",
+            "--suite",
+            "v41-fp4-decode",
+            "--output",
+            "/results/microbench/v41-reviewfix-20261026-timing/timing/timing"
+          ],
+          "suite": "v41-fp4-decode",
+          "gpu_function_seconds": 64.093782749
+        }
+      }
+    ],
+    "allocation": {
+      "direct_workspace_peak_bytes": 20492288,
+      "direct_workspace_case": "B8/S1/H128/K512 plus K64 SWA, page128",
+      "status": "passed",
+      "modes": [
+        {
+          "mode": "Native",
+          "groups": {
+            "swa": 467251200,
+            "global_kv": 472891392,
+            "indexer": 111646208,
+            "compressor_state": 270336
+          },
+          "prefill_workspace_bytes": 1048576,
+          "direct_workspace_bytes": 20492288,
+          "total_bytes": 1073600000,
+          "byte_budget": 1073741824,
+          "full_tokens": 656384,
+          "swa_tokens": 19712,
+          "reserved_page_bytes": 6346240
+        },
+        {
+          "mode": "Packed",
+          "groups": {
+            "swa": 467251200,
+            "global_kv": 448516096,
+            "indexer": 136147968,
+            "compressor_state": 270336
+          },
+          "prefill_workspace_bytes": 1048576,
+          "direct_workspace_bytes": 20492288,
+          "total_bytes": 1073726464,
+          "byte_budget": 1073741824,
+          "full_tokens": 800512,
+          "swa_tokens": 19712,
+          "reserved_page_bytes": 6280704
+        }
+      ],
+      "edges": [
+        {
+          "layout": "v41_fp4",
+          "page": 128,
+          "rows": 0,
+          "storage_bytes": 73728
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 128,
+          "rows": 1,
+          "storage_bytes": 110592
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 128,
+          "rows": 127,
+          "storage_bytes": 110592
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 128,
+          "rows": 128,
+          "storage_bytes": 110592
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 128,
+          "rows": 129,
+          "storage_bytes": 147456
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 128,
+          "rows": 255,
+          "storage_bytes": 147456
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 128,
+          "rows": 256,
+          "storage_bytes": 147456
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 128,
+          "rows": 257,
+          "storage_bytes": 184320
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 256,
+          "rows": 0,
+          "storage_bytes": 73728
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 256,
+          "rows": 1,
+          "storage_bytes": 147456
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 256,
+          "rows": 127,
+          "storage_bytes": 147456
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 256,
+          "rows": 128,
+          "storage_bytes": 147456
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 256,
+          "rows": 129,
+          "storage_bytes": 147456
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 256,
+          "rows": 255,
+          "storage_bytes": 147456
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 256,
+          "rows": 256,
+          "storage_bytes": 147456
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 256,
+          "rows": 257,
+          "storage_bytes": 221184
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 128,
+          "rows": 0,
+          "storage_bytes": 57344
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 128,
+          "rows": 1,
+          "storage_bytes": 86016
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 128,
+          "rows": 127,
+          "storage_bytes": 86016
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 128,
+          "rows": 128,
+          "storage_bytes": 86016
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 128,
+          "rows": 129,
+          "storage_bytes": 114688
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 128,
+          "rows": 255,
+          "storage_bytes": 114688
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 128,
+          "rows": 256,
+          "storage_bytes": 114688
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 128,
+          "rows": 257,
+          "storage_bytes": 143360
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 256,
+          "rows": 0,
+          "storage_bytes": 57344
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 256,
+          "rows": 1,
+          "storage_bytes": 114688
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 256,
+          "rows": 127,
+          "storage_bytes": 114688
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 256,
+          "rows": 128,
+          "storage_bytes": 114688
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 256,
+          "rows": 129,
+          "storage_bytes": 114688
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 256,
+          "rows": 255,
+          "storage_bytes": 114688
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 256,
+          "rows": 256,
+          "storage_bytes": 114688
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 256,
+          "rows": 257,
+          "storage_bytes": 172032
+        }
+      ],
+      "scope": "model-free actual pool storage; no serving capacity claim",
+      "capacity_gain_percent": 21.957878315132607
+    },
+    "budget": {
+      "authorized_followup_usd": 20,
+      "reserve_usd": 2,
+      "work_ceiling_usd": 18,
+      "account": "peroace360",
+      "phase_baseline_compute_usd": 13.73409128,
+      "review_fix_start_compute_usd": 21.43365249,
+      "latest_observed_compute_usd": 28.38463023,
+      "latest_observed_phase_cost_usd": 14.65053895,
+      "billing_lag": true,
+      "failed_cpu_report": [
+        {
+          "objectId": "ap-YFMJVzknontjROL0JtON0I",
+          "description": "remnant-kernel-dev",
+          "environmentName": "main",
+          "interval": "2026-10-26T13:00:00Z",
+          "cost": "0.18543472",
+          "costByResource": {
+            "Network Egress": "0.00000074",
+            "Memory": "0.07478346",
+            "CPU": "0.11065052"
+          }
+        },
+        {
+          "objectId": "ap-zNfyKaNmp952L6ePGqCavZ",
+          "description": "remnant-kernel-dev",
+          "environmentName": "main",
+          "interval": "2026-10-26T13:00:00Z",
+          "cost": "0.17949331",
+          "costByResource": {
+            "Network Egress": "0.00001066",
+            "Memory": "0.06020435",
+            "CPU": "0.11927829"
+          }
+        }
+      ],
+      "latest_snapshot": {
+        "startTimestamp": "2026-10-01T00:00:00Z",
+        "endTimestamp": "2026-11-01T00:00:00Z",
+        "meteredCost": "38.11208061",
+        "billedCost": "0.00000000",
+        "meteredCostBreakdown": {
+          "Ephemeral Apps": "28.38463023",
+          "LLM Tokens": "0.00000000",
+          "Volumes": "9.73193627",
+          "Network Egress": "0.00014434"
+        },
+        "adjustments": {
+          "Free Storage": "-9.73193627",
+          "Plan Cost": "0.00000000",
+          "Credits": "-28.38000000",
+          "Reservation Adjustment": "-0.00000000",
+          "Network Egress Allowance": "-0.00014434"
+        }
+      },
+      "conservative_peak_observed_compute_usd": 28.601401,
+      "conservative_peak_phase_cost_usd": 14.86730972,
+      "all_task_allocations_stopped": true,
+      "initial_review_fix_projected_work_cap_usd": 9.5
+    },
+    "review": {
+      "status": "no_remaining_source_findings",
+      "scope": [
+        "numerical constants and token-level formatting equivalence",
+        "persistent alignment and page geometry",
+        "prefill policy and unsupported combinations",
+        "receipt failure and identity boundaries",
+        "CPU build-context orchestration"
+      ],
+      "execution": "Read-only independent source review; Modal owns executable checks",
+      "artifact_review": "Complete e memcheck/racecheck XML: 34 unique child-free matching IDs, zero errors/failures/skips; expected final sanitizer summaries. d/e/legacy manifests byte-identical SHA256 6766ad1e588d94970814d566cbdd8cd7ff7701ae0151df7bcf313db50618ebb5. Partial sync correctly excluded.",
+      "final_artifact_review": "No unresolved finding. All ten unique v3 cases, 20 paths, 600 samples and all three complete 34-case tools; manifests, case IDs, CPU/GPU qualification proofs and receipt SHA256 values match. Paired randomized timing uses the same producer/query/SWA/selections/sink and an unpruned dense Native baseline. Independent descriptive aggregate recomputation agrees."
+    },
+    "limitations": [
+      "Model-free only; no weights/full-model/serving/quality qualification",
+      "Inherited BF16 prefill scratch scales with full compressed history; fixed fixture does not establish serving capacity",
+      "H20/SM100/distributed extensions remain unqualified",
+      "GitHub accelerator CI skipped without run-ci; broader whole-file lint remains red, focused Modal checks passed"
+    ],
+    "rollback": "Select --dsv41-main-kv-cache-format auto or restore recorded baseline pins",
+    "decision": "Keep experimental opt-in candidate: allocator benefit confirmed; no uniform latency benefit or production promotion.",
+    "qualification": {
+      "receipts": {
+        "v41-reviewfix-20261026-e": "da6b516cfb31cb46b6d0a2fd9c9297f6235e04fb5fe443aa84e8840828f02145",
+        "v41-reviewfix-20261026-f": "c870df6c3f31c9626985b385ca9b0d7b24892d5450bfa5511a5b1491e8f50c77"
+      },
+      "tools": [
+        "memcheck",
+        "racecheck",
+        "synccheck"
+      ],
+      "case_count_per_tool": 34,
+      "identity_sha256": "04f867999d8b3b307e864c0526272890e358591d835091f0cceb9fb550f944de"
+    },
+    "timing": {
+      "record": "runs/v41-reviewfix-20261026-timing/timing.json",
+      "summary_csv": "runs/v41-reviewfix-20261026-timing/summary.csv",
+      "raw_csv_volume_path": "microbench/v41-reviewfix-20261026-timing/timing/timing.csv",
+      "matrix_cases": 10,
+      "paths": 20,
+      "samples": 600,
+      "summary": {
+        "cases": [
+          {
+            "name": "v41_h64_b8_k512_swa128_p256_g256",
+            "page": 256,
+            "batch": 8,
+            "native_us": 71.83399486541748,
+            "packed_us": 71.2871675491333,
+            "native_p95_us": 72.51550626754761,
+            "packed_p95_us": 71.91065645217896,
+            "delta_percent": -0.761237513392754,
+            "samples_native": 30,
+            "samples_packed": 30
+          },
+          {
+            "name": "v41_h64_b16_k512_swa128_p256_g256",
+            "page": 256,
+            "batch": 16,
+            "native_us": 100.20900313059488,
+            "packed_us": 102.5210771560669,
+            "native_p95_us": 101.50572776794434,
+            "packed_p95_us": 103.80971097946167,
+            "delta_percent": 2.30725179698561,
+            "samples_native": 30,
+            "samples_packed": 30
+          },
+          {
+            "name": "v41_h64_b24_k512_swa128_p256_g256",
+            "page": 256,
+            "batch": 24,
+            "native_us": 129.87757905324298,
+            "packed_us": 132.18177032470703,
+            "native_p95_us": 131.45759630203247,
+            "packed_p95_us": 133.53051424026492,
+            "delta_percent": 1.7741255174763104,
+            "samples_native": 30,
+            "samples_packed": 30
+          },
+          {
+            "name": "v41_h64_b28_k512_swa128_p256_g256",
+            "page": 256,
+            "batch": 28,
+            "native_us": 157.9859094619751,
+            "packed_us": 162.2092800140381,
+            "native_p95_us": 159.88073682785034,
+            "packed_p95_us": 164.05896472930908,
+            "delta_percent": 2.673257739532442,
+            "samples_native": 30,
+            "samples_packed": 30
+          },
+          {
+            "name": "v41_h64_b32_k512_swa128_p256_g256",
+            "page": 256,
+            "batch": 32,
+            "native_us": 158.9468584060669,
+            "packed_us": 163.1723950703939,
+            "native_p95_us": 161.76851081848145,
+            "packed_p95_us": 165.5887842178345,
+            "delta_percent": 2.6584587494846046,
+            "samples_native": 30,
+            "samples_packed": 30
+          },
+          {
+            "name": "v41_h64_b8_k512_swa128_p256_g128",
+            "page": 128,
+            "batch": 8,
+            "native_us": 71.7676477432251,
+            "packed_us": 71.35020796457927,
+            "native_p95_us": 72.45684909820557,
+            "packed_p95_us": 72.00284671783447,
+            "delta_percent": -0.581654536232501,
+            "samples_native": 30,
+            "samples_packed": 30
+          },
+          {
+            "name": "v41_h64_b16_k512_swa128_p256_g128",
+            "page": 128,
+            "batch": 16,
+            "native_us": 100.11817614237467,
+            "packed_us": 101.5330769220988,
+            "native_p95_us": 101.3184185028076,
+            "packed_p95_us": 102.67792081832886,
+            "delta_percent": 1.4132306782257409,
+            "samples_native": 30,
+            "samples_packed": 30
+          },
+          {
+            "name": "v41_h64_b24_k512_swa128_p256_g128",
+            "page": 128,
+            "batch": 24,
+            "native_us": 129.88932291666666,
+            "packed_us": 132.33496570587158,
+            "native_p95_us": 132.11908769607544,
+            "packed_p95_us": 134.4210114479065,
+            "delta_percent": 1.8828666854888265,
+            "samples_native": 30,
+            "samples_packed": 30
+          },
+          {
+            "name": "v41_h64_b28_k512_swa128_p256_g128",
+            "page": 128,
+            "batch": 28,
+            "native_us": 157.8527037302653,
+            "packed_us": 162.12750879923502,
+            "native_p95_us": 159.83734798431396,
+            "packed_p95_us": 163.998646736145,
+            "delta_percent": 2.708097465517212,
+            "samples_native": 30,
+            "samples_packed": 30
+          },
+          {
+            "name": "v41_h64_b32_k512_swa128_p256_g128",
+            "page": 128,
+            "batch": 32,
+            "native_us": 167.1301867167155,
+            "packed_us": 165.42256037394208,
+            "native_p95_us": 168.14648056030273,
+            "packed_p95_us": 166.4408655166626,
+            "delta_percent": -1.021734239828176,
+            "samples_native": 30,
+            "samples_packed": 30
+          }
+        ],
+        "summary": {
+          "256": 1.722129652220472,
+          "128": 0.8698479183199215,
+          "overall": 1.2950924178812384,
+          "best_delta_percent": -1.021734239828176,
+          "worst_delta_percent": 2.708097465517212
+        }
+      },
+      "protocol": "remnant-v41-fp4-decode-v3",
+      "matrix_sha256": "a7f99082dff46dbb26e996b1410c86cb189428b0ab6364ac26f9d812df76fd5d",
+      "interpretation": "Descriptive warm synthetic CUDA graph timings; p95 is across 30 samples, each averaging 100 replays. No repeatability or serving speedup claim."
+    },
+    "reproduction": {
+      "working_tree": "Use a clean checkout of parent 2707db9afb073e92046dbda60b18e36f98d11acb with its recorded fork pins; later parent changes only record evidence and clarify a comment. Modal execution requires its own authorization/budget.",
+      "environment": {
+        "MODAL_PROFILE": "peroace360",
+        "REMNANT_INTEGRATION": "v0.5.22",
+        "REMNANT_VALIDATION_SUITE": "v41-fp4",
+        "REMNANT_VALIDATION_TIMEOUT_S": "5400",
+        "REMNANT_FLASHMLA_SOURCE_OVERRIDE": "<canonical-worktree>/third_party/flashmla-v0.5.22"
+      },
+      "commands": [
+        "modal run --detach scripts/modal/kernels.py::validate_kernels --run-id v41-reviewfix-20261026-e --sanitizer --sanitizer-order memcheck,racecheck,synccheck --max-seconds 5340",
+        "modal app stop --yes ap-SWDZ8OmOYrp7mPgenL0lLf  # after complete clean memcheck/racecheck receipts are committed",
+        "modal run --detach scripts/modal/kernels.py::validate_kernels --run-id v41-reviewfix-20261026-f --sanitizer --sanitizer-order synccheck,racecheck,memcheck --max-seconds 2640",
+        "modal app stop --yes ap-oxN2IKdf3r5kmydKmb9tuQ  # after complete clean synccheck receipt is committed",
+        "modal run --detach scripts/modal/kernels.py::benchmark_kernels --run-id v41-reviewfix-20261026-timing --suite v41-fp4-decode --qualification-runs v41-reviewfix-20261026-e,v41-reviewfix-20261026-f"
+      ],
+      "note": "These are the actual historical IDs. A new run must choose new unique IDs and its returned app IDs; never overwrite receipts. CPU-only invocation source and exact commands are archived under cpu."
+    },
+    "checksums": {
+      "validation-e/result.json": "da6b516cfb31cb46b6d0a2fd9c9297f6235e04fb5fe443aa84e8840828f02145",
+      "validation-e/memcheck.xml": "8c5613c7a9f5426a7da4412ed21f1264111e57024525e7d9811073ee508eaf48",
+      "validation-e/memcheck.log": "e4ad30766fa9d49313bef6227801372cd5ab1b749d11cb7ca4bc95b0071b63e3",
+      "validation-e/racecheck.xml": "e0e1c399b9dbe726858701828db65eb3e215f930bd613a77eaed60ccdc070a67",
+      "validation-e/racecheck.log": "7184e4c295d8c4be2eaf5cc21f565cca66175378b93b7a2a50ba8c4d72f1d6f4",
+      "validation-f/result.json": "c870df6c3f31c9626985b385ca9b0d7b24892d5450bfa5511a5b1491e8f50c77",
+      "validation-f/synccheck.xml": "c975c80457385c83d0012f8c50128ee06a30f77eeb1346f644d772a84f03cb73",
+      "validation-f/synccheck.log": "ee1d8b998b47a03bc579d4dcb90ea471145523cfd2b9c07acaa7d4e51b738e35",
+      "timing/preflight/result.json": "662f4c74f2fcc047bc780ce7e3909c906e2e09172890635c4f080e1b1ddcf4ca",
+      "timing/timing/result.json": "efd0fb5687348eadd3932aa9c44ce40bb86caf2ecb6e66651bf310bcf0ccb554",
+      "timing/timing/timing.json": "c09c2c091eb4d8595869ec68388d669b74da3c427c7f43b73048e9e857b01296",
+      "timing/timing/timing.csv": "03983774a87ea45c25303c8f278fbe080f3f7e14d543f9cf2114fa05a167c7f6"
+    },
+    "cleanup": {
+      "active": "Canonical fork implementations, maintained kernels.py runner, single experiment README and canonical qualification JSON",
+      "retired": "Task-local formatter/LFS/publication tools and the temporary CPU invocation are removed after publication; invocation source is archived in this JSON",
+      "raw_artifacts": "Modal remnant-stage2a-results volume; no model volumes mounted",
+      "baseline_dirty_files": "Preserved parent third_party/.DS_Store, CUTLASS .DS_Store and original worktree changes"
+    }
+  },
+  "current_milestone": "review_fixes"
 }

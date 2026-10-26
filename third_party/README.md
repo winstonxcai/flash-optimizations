@@ -51,13 +51,14 @@ that an existing container's loaded binaries match; source changes need a rebuil
 
 ## Experimental V4.1 FP4 on SM90
 
-Review-fix candidate: SGLang `c4708870`, FlashMLA `4e72722`, based on parent
+Review-fix integration: SGLang `c4708870`, FlashMLA `4e72722`, based on parent
 `af12dd9`. The current pins add effective Q8KV8 override rejection, retained
 prefill policy, aligned cache base/page checks, named FP4 layouts and explicit
 fixed-matrix CLI validation. Parent qualification uses
 `scripts/modal/qualification.py` to reject failed tools, compare complete runtime
-identities and check receipts on CPU before GPU timing. GPU qualification for
-these pins is pending; validation statements below describe historical sources.
+identities and check receipts on CPU before GPU timing. These pins passed the fresh model-free numerical, graph/stream, allocator,
+34-case/tool sanitizer and review gates using parent runner `2707db9`. The final
+v3 ten-case timing is complete; historical evidence is kept separate below.
 
 Prefill still reconstructs the selected requests' full compressed history into
 an inherited BF16 scratch buffer. Its high-watermark allocation scales roughly
@@ -95,27 +96,30 @@ transfer, speculation/DSpark, replay and legacy layout overrides are rejected.
   Scale lookup uses original coordinate groups. Global records already have
   RoPE applied. SGLang's AOT CMake, extension registration and Python binding
   expose the same contract without importing experiment code.
-- **Validation:** model-free fixtures extend the existing attention unit tests
-  and Modal kernel runner. Set `REMNANT_INTEGRATION=v0.5.22` and
-  `REMNANT_VALIDATION_SUITE=v41-fp4`. CPU builds/preflight precede one H100;
-  no weights, model volumes, serving, GPUQ or SM100 work. Independent source
-  review is complete. Current fragment reconstruction passed 39 ordinary cases,
-  all 34 cases under each strict sanitizer, and all 20 paired timing cases.
-  Packed Direct is 2.69% slower than Native for SWA64 and 2.58% for SWA128
-  (geometric-mean case ratios); no speedup or serving claim. The prior scalar
-  candidate's interrupted memcheck remains historical. Follow-up compute is
-  approximately $7.81 before billing settlement; all allocations are stopped.
-  Completed sanitizer tools may be combined only with identical runtime,
-  fixture, binary and sanitizer hashes and the full 34-case matrix per tool.
-  The runner supports tool permutations and checkpoints; no missing tool can
-  pass its per-run gate.
-  See the [single experiment record](../benchmarks/microbench/v41-packed-fp4/README.md)
-  for source identities, commands, gates, budget and actual outcomes.
+- **Validation:** model-free fixtures extend the existing tests and Modal runner.
+  CPU native build/precompile passed before H100, along with 24 CPU tests +
+  15 subtests, six receipt/dispatch tests, 17 launcher regressions and 103 V4
+  CPU regressions + 45 subtests. Scoped style/registry checks passed. H100
+  validation passed 39 ordinary cases and 34/34 under each strict memcheck,
+  racecheck and synccheck tool, with zero errors/hazards. Independent source
+  and artifact review found no unresolved finding. Complete e/f tool receipts
+  match one runtime/source/binary identity; overall interruptions remain failed.
+- **Timing/allocation:** the fresh v3 H64/window128/SWA-page256 matrix has ten
+  cases across C1/page256 and C2/page128. Packed/Native geometric-mean latency
+  changes are +1.30% overall, +1.72% C1 and +0.87% C2 (range −1.02%..+2.71%).
+  These warm synthetic graph results establish no serving or repeatable speedup.
+  The fixed-cap 1 GiB allocator fixture again gains 21.96% token capacity;
+  global records shrink 22.22%. Historical v1 timing is separately retained.
+- **Scope/rollback:** experimental and opt-in; no weights, full-model loads,
+  serving, quality, H20, SM100 execution, GPUQ or profiling qualification.
+  Follow-up compute is conservatively about $14.87 before settlement, under
+  the $20 ceiling with its reserve intact. All task allocations are stopped.
+  Full-history prefill scratch scaling above remains a serving limitation.
+  Select `auto` or restore recorded baseline pins to roll back.
 
-This candidate passed scoped model-free numerical, graph, stream, allocation,
-all-three-sanitizer and review gates. It remains experimental and opt-in; measured
-Direct latency is slightly slower than Native. Quality and serving capacity remain
-unverified. Roll back with `auto` or the recorded baseline pins.
+See the [single experiment record](../benchmarks/microbench/v41-packed-fp4/README.md)
+for exact sources, commands, all cases, costs, failed attempts and limitations.
+Broader GitHub lint/gating statuses are separate from these focused Modal gates.
 
 ## Parallel v0.5.22 integration
 
@@ -400,6 +404,8 @@ The prior source pins passed scoped model-free correctness and v1 timing.
 Fresh-context source/artifact review passed with no blocking findings. The v3
 fixture correction passed its two existing matrix/contract tests on Modal CPU
 (2 passed in 0.14 s) and changes no runtime/kernel code. Historical v1 measurements
-retain their original source identities. V3 GPU timing has not been run. V2 incorrectly equated the 128-token
+retain their original source identities. Fresh v3 GPU timing is recorded in the
+review-fix milestone; historical timing remains unchanged. V2 incorrectly equated
+the 128-token
 window with page128; the runtime factory requires page256. The measured
 allocator fixture and capacity prediction already used page256.

@@ -13,15 +13,21 @@ records rather than this milestone log.
 
 ## Unreleased
 
-- Review fixes based on parent `af12dd9`: SGLang `c4708870` / FlashMLA
-  `4e72722`. Close Q8KV8 override and misaligned cache boundaries; retain one
-  prefill policy, name layout contracts, reject ignored benchmark geometry,
-  and qualify complete runtime/receipt identity on CPU before H100 timing.
-  Existing tests own regressions; FP4 CI registration stays disabled under
-  Modal-only qualification. Source review passed after fixing page-stride
-  alignment and subprocess import context. CPU/GPU checks remain pending.
-  Full-history prefill scratch scaling is documented; no serving claim.
-
+- Review-fix integration parent `cc1b9a8`, CPU runner follow-up `2707db9`:
+  SGLang `c47088700085` / FlashMLA `4e72722671d8`. Reject effective Q8KV8
+  overrides and misaligned cache bases/page strides; retain startup prefill
+  policy, name layouts and reject ignored geometry flags. Pure receipt checks
+  reject failed tools and compare recorded runtime/toolchain identities on CPU
+  before H100 timing, with a GPU recheck. Existing fixtures own regressions.
+  CPU build/precompile, scoped style/registry, 24 + 15-subtest preflight, six
+  new guards, 17 launcher and 103 + 45-subtest V4 CPU checks passed. H100 passed
+  39 ordinary cases and 34/tool under all three strict sanitizers; independent
+  source/artifact review passed. Final v3 timing: ten cases/600 samples, Packed
+  latency +1.30% geomean overall (+1.72% C1, +0.87% C2), range −1.02%..+2.71%.
+  Fixed-cap allocator gain remains 21.96%; full-history prefill scratch and
+  serving/quality limits are explicit. Follow-up compute conservatively $14.87
+  before settlement, all allocations stopped. Historical evidence is preserved.
+  Rollback uses `auto` or baseline pins; no production promotion.
 
 - Publish the completed V4.1 experiment from parent `81c0777` on matching
   `ds41-flash-packed` branches in all three repositories. Fork pins remain

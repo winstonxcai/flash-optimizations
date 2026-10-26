@@ -7,62 +7,130 @@ FlashMLA v0.5.22 repositories. It continues the completed local
 validated source commits and historical measurements below remain authoritative.
 The v0.5.22 submodule branch hints follow the new branch; v0.5.18 stays unchanged.
 
-## Review-fix milestone
+## Review-fix milestone — completed
 
 Question: can the opt-in implementation expose one readable layout/prefill policy
-and fail closed at its startup, Direct and qualification boundaries? Fix the Q8
-prefill override, vector-load alignment, ignored benchmark flags, failed-tool
-aggregation and runtime identity. Add a pure `scripts/modal/qualification.py`
-module because the same receipt checks must run on CPU before H100 allocation
-and be rechecked on GPU; existing `scripts/modal/tests.py` owns its regressions.
-Keep the existing numerical fixtures/runner and full-history prefill behavior.
-Document its scratch scaling rather than claiming serving capacity.
+and fail closed at startup, Direct and qualification boundaries? The candidate
+now rejects effective Q8KV8 overrides and misaligned cache bases/page strides,
+retains one startup prefill policy, names FP4 layout contracts, and rejects
+geometry flags incompatible with the production matrix. The pure
+`scripts/modal/qualification.py` owns shared receipt checks: failed sanitizer
+states block qualification and recorded runtime/toolchain identities must match.
+CPU qualification precedes H100 timing, followed by an allocation-time recheck.
+Existing fixtures and the maintained runner own numerical checks.
 
-Acceptance: focused CPU contracts and scoped formatting/registry checks on
-Modal; CPU native build/precompile before any H100; numerical, graph/stream,
-allocation and strict sanitizer coverage for the frozen candidate, then the
-production v3 ten-case Native/Packed timing. Reserve $2 inside the existing $20
-cumulative follow-up budget; latest account compute before review fixes was
-$21.43365249 versus the phase baseline $13.73409128 (about $7.70 reported).
-Authorize at most $9.50 projected additional work initially, one H100 at a time,
-no automatic retries, no weights/models/serving or profiling. If preflight fails,
-stop before GPU; if remaining budget cannot cover required gates, record the
-candidate unqualified. Previous evidence remains historical and unchanged.
-The only pre-existing fork dirt is an untracked CUTLASS `.DS_Store`; preserve it
-and record an explicit canonical FlashMLA source override if needed by preflight.
+**Outcome:** all scoped model-free gates passed. Keep the candidate experimental
+and opt-in. Packed has confirmed storage/allocator benefits, but no uniform
+latency benefit. Full-model quality and serving capacity remain unverified.
 
-Review-fix source freeze: forks SGLang `c4708870`, FlashMLA `4e72722`;
-parent runner commit is recorded by each build manifest. Independent follow-up
-review checked C++ token-level equivalence, numerical/layout constants, CUDA
-synchronization, runtime prefill policy and receipt identity. It found an odd
-page-stride alignment gap and a child-process import-context issue; both were
-fixed before launch. No local executable validation is used.
+Frozen sources: parent runner **`2707db9afb073e92046dbda60b18e36f98d11acb`**,
+SGLang **`c4708870008528ea68ed783c68add708687d71fd`**, FlashMLA
+**`4e72722671d8860e9939df8b85f22dbea600d159`**. The final parent report changes
+only evidence/documentation and a comment; it does not alter the validated
+runtime, kernels or measured paths. Manifest SHA256:
+`6766ad1e588d94970814d566cbdd8cd7ff7701ae0151df7bcf313db50618ebb5`.
+The canonical FlashMLA source override records the preserved, untracked CUTLASS
+`.DS_Store`; no unrelated dirty work was removed or committed.
 
-CPU attempt `v41-reviewfix-20261026-a` / app `ap-zNfyKaNmp952L6ePGqCavZ`
-stopped before H100 allocation. CPU native compilation, core precompilation,
-imports and preceding fixture tests completed; the last launcher-contract
-subprocess could not import Modal because the SDK is injected into the builder's
-`sys.path`, not the vendor Python environment. The retry passes that path only
-to the mocked test subprocess. Native compiled base `im-RktGCcyR8NG0ZMsXcxRWvY`
-is reusable for the unchanged fork inputs; no failed preflight qualifies timing.
-Reported account compute after compilation was $21.53509255 before settlement.
+| Gate | Evidence |
+|---|---|
+| CPU build/precompile | Native extensions built on CPU; binary hashes/SM90 targets and core FP4 precompilation verified before H100 |
+| CPU contracts | 24 tests + 15 subtests; six new receipt/dispatch tests |
+| Shared V4 CPU regression | 103 tests + 45 subtests across startup, pack, backend, compressor and pool contracts |
+| Scoped style/registry/launcher | Ruff/isort and six CUDA instantiation format checks passed; Modal-only CI marker verified; 17 launcher tests passed |
+| Ordinary H100 | 39 cases passed, including focused V4 regressions |
+| Strict sanitizers | 34/34 each: memcheck 1994.71 s, racecheck 886.70 s, synccheck 1083.71 s; zero errors/hazards, no skips |
+| Review | Independent source and artifact review found no unresolved finding |
+| Final timing | Ten v3 cases, 20 paths, 600 samples; CPU receipt gate 16.21 s, GPU function 64.09 s |
 
-CPU retry `v41-reviewfix-20261026-b` / app `ap-nIywTHLvoWIX0d6iUR5Ik3`
-was stopped during preparation after source review found `_run_command` replaces
-`PYTHONPATH`; no H100 was allocated. The corrected bootstrap appends only the
-injected Modal SDK directory inside the test subprocess, preserving the helper's
-protection against `/root/kernels.py` shadowing Hugging Face's optional package.
-Both stopped attempts count toward the existing cumulative budget.
+Runs e/f were deliberately stopped after the required complete tool receipts;
+their overall cancellation statuses and unused partial tools remain recorded.
+The CPU preflight accepted only the complete matching clean tools. Its proof
+matched the GPU recheck, identity SHA256
+`04f867999d8b3b307e864c0526272890e358591d835091f0cceb9fb550f944de`.
+The earlier CPU import failures, stopped preparation and disconnected H100 run
+are retained under `review_fixes.attempts` in the canonical JSON. The failed
+subprocess approach was replaced by six pure/mock tests in the existing CPU
+builder process. No local executable tests, GPUQ, weights, model volumes,
+full-model loads, serving or profiling were used.
 
-CPU attempt `v41-reviewfix-20261026-c` / app `ap-YFMJVzknontjROL0JtON0I`
-also stopped before H100 allocation: exposing the SDK directory did not expose
-its injected dependencies (`grpclib` missing). Reassess after these import fixes:
-remove the subprocess bootstrap entirely. The six pure/mock launcher tests now
-run in the existing CPU builder process, before precompilation, with its already
-loaded Modal SDK/context. Numerical fixtures retain their existing subprocess
-isolation. This removes the special import-path handling instead of extending it.
+### Final production-geometry timing
 
-## Current production-geometry matrix
+Native is dense, unpruned FP4. Packed uses the independently pruned reference;
+outputs are checked separately. Both paths include their Direct call and combine
+work. Cases share the producer, query, SWA, selections and sink, with randomized
+paired timing. H64, Q1/K512, SWA window128/page256; batches 8/16/24/28/32 and
+C1/page256 plus C2/page128. Positive Δ means Packed is slower.
+
+| Global page | Batch | Native mean µs | Packed mean µs | Δ latency | Native graph p95 µs | Packed graph p95 µs |
+|---|---:|---:|---:|---:|---:|---:|
+| C1 / 256 | 8 | 71.83 | 71.29 | -0.76% | 72.52 | 71.91 |
+| C1 / 256 | 16 | 100.21 | 102.52 | +2.31% | 101.51 | 103.81 |
+| C1 / 256 | 24 | 129.88 | 132.18 | +1.77% | 131.46 | 133.53 |
+| C1 / 256 | 28 | 157.99 | 162.21 | +2.67% | 159.88 | 164.06 |
+| C1 / 256 | 32 | 158.95 | 163.17 | +2.66% | 161.77 | 165.59 |
+| C2 / 128 | 8 | 71.77 | 71.35 | -0.58% | 72.46 | 72.00 |
+| C2 / 128 | 16 | 100.12 | 101.53 | +1.41% | 101.32 | 102.68 |
+| C2 / 128 | 24 | 129.89 | 132.33 | +1.88% | 132.12 | 134.42 |
+| C2 / 128 | 28 | 157.85 | 162.13 | +2.71% | 159.84 | 164.00 |
+| C2 / 128 | 32 | 167.13 | 165.42 | -1.02% | 168.15 | 166.44 |
+
+Geometric mean of per-case mean latency ratios: **+1.30% overall**, **+1.72%
+C1/page256**, **+0.87% C2/page128**. Range: **−1.02% to +2.71%**. These are
+warm synthetic CUDA graph results; p95 is across 30 timing samples, each averaging
+100 replays. They do not establish a repeatable speedup or serving TPOT/TTFT.
+[Canonical raw JSON](runs/v41-reviewfix-20261026-timing/timing.json) retains all
+samples and source metadata; [compact CSV](runs/v41-reviewfix-20261026-timing/summary.csv)
+is the flat summary. The runner's larger raw CSV remains in the results volume.
+Historical v1 measurements below are unchanged and are not relabeled as v3.
+
+The allocator fixture again measured **656,384 Native / 800,512 Packed tokens
+(+21.96%)** under the same 1 GiB budget, request cap and SWA policy. Native/Packed
+global records are **288/224 bytes (22.22% smaller)**. The fixture reserves 1 MiB
+prefill scratch and 20,492,288 bytes of measured Direct workspace; it does not
+establish large-context serving memory safety. Inherited BF16 prefill scratch
+scales with full compressed history: C1 at 32 × 128K is about **4 GiB/GPU** before
+SWA/padding, and the high-watermark allocation is retained.
+
+### Reproduction, budget and handoff
+
+Use the frozen parent commit above and its exact pins. Set
+`REMNANT_INTEGRATION=v0.5.22`, `REMNANT_VALIDATION_SUITE=v41-fp4`,
+`REMNANT_VALIDATION_TIMEOUT_S=5400`, `MODAL_PROFILE=peroace360`, and the explicit
+canonical `REMNANT_FLASHMLA_SOURCE_OVERRIDE` recorded in the JSON. Actual commands:
+
+```bash
+modal run --detach scripts/modal/kernels.py::validate_kernels --run-id v41-reviewfix-20261026-e --sanitizer --sanitizer-order memcheck,racecheck,synccheck --max-seconds 5340
+modal run --detach scripts/modal/kernels.py::validate_kernels --run-id v41-reviewfix-20261026-f --sanitizer --sanitizer-order synccheck,racecheck,memcheck --max-seconds 2640
+modal run --detach scripts/modal/kernels.py::benchmark_kernels --run-id v41-reviewfix-20261026-timing --suite v41-fp4-decode --qualification-runs v41-reviewfix-20261026-e,v41-reviewfix-20261026-f
+```
+
+Historical IDs cannot be reused. A new run needs new IDs, its own authorization,
+and complete matching receipts. The JSON records the stop commands/app IDs,
+source/binary hashes, all failures and the temporary CPU invocation source.
+The maintained `kernels.py::benchmark_kernels` entry is the single timing path;
+it fails on CPU before GPU allocation when qualification is missing or invalid.
+
+The follow-up ceiling remains **$20 cumulative across accounts**, with **$2
+reserved** and at most $18 projected work. Only peroace360 incurred this phase's
+compute: baseline $13.73409128, conservative peak observed $28.60140100, giving
+**$14.87 cumulative follow-up compute** before billing settlement. The latest
+snapshot was $28.38463023; estimates can revise. CPU builds, failures, retries,
+the disconnected H100 and final timing are included. **All task apps are stopped
+and no containers remain.** No performance profiling is deferred into a live job.
+
+GitHub accelerator jobs remain skipped without `run-ci`; broader repository lint
+still reports existing whole-file formatting issues (including unchanged base
+blobs in calibration, serving and request-time tests). Focused Modal checks above
+passed. No non-Modal accelerator validation was launched. Do not interpret the
+scoped qualification as an all-repository CI pass.
+
+Active code remains in the two selected forks and the maintained runner. The
+one-off CPU invocation and task-local formatter/LFS/publication tools are retired
+after recording their evidence; no additional maintained harness is introduced.
+Rollback selects `--dsv41-main-kv-cache-format auto` or the recorded baseline pins.
+
+## Production-geometry matrix and fixture-correction history
 
 The active `v41-fp4-decode` suite now uses **H64, SWA128/page256, Q1/K512**,
 batches 8/16/24/28/32, and compressed global pages **C1/256 and C2/128**
@@ -97,8 +165,9 @@ old protocol, missing cases/modes and bad samples/layouts. No native rebuild or
 GPU timing is necessary to verify selection. Stop on a failed contract check;
 allow at most $0.05 projected CPU work from the existing $20 budget. Existing
 GPU/kernel qualification and raw measurements below retain their original
-source identities; **v3 timing has not been run**. C2/page128 timing is new
-coverage and has no historical measurement. Rollback restores the prior
+source identities. At that CPU-only correction stage, v3 had not been GPU-timed;
+the fresh v3 results are now recorded in the completed review milestone above.
+Rollback for that historical fixture stage restores the prior
 SGLang pin `98991169803f4ec0b1b2c3f369695dc62d0bf3ec`.
 
 Historical v2 CPU validation: **2 passed in 0.08 s** on Modal CPU (`ap-vTOOo7wo8VWRzuxlSPA0kn`),
@@ -111,13 +180,14 @@ The account compute snapshot changed from $21.42800725 to $21.43512718
 hashes and retry evidence are recorded in `qualification.json` under
 `production_geometry_correction`. SGLang commit: `a0f7ff18314c`; no kernel changes.
 
-Current v3 validation: **2 passed in 0.14 s** on Modal CPU, app
+Fixture-correction CPU evidence: **2 passed in 0.14 s** on Modal CPU, app
 `ap-c1tXzPaAYr6DRwi2B458Vm`, cached image `im-VqSQJWWMrtpbdbzBgw2Aum`,
 SGLang `f5afebd90750`. One CPU/1 GiB, 120-second cap, no GPU/volumes;
 the matrix test explicitly rejects confusing the 128-token window with a
 128-token allocation page. Both tests passed; the app stopped and zero
 containers remain. Billing snapshot is $21.43365249, unchanged immediately
-after the run; settlement is pending. No new GPU timing is claimed.
+after that CPU-only run; settlement was pending. Its evidence remains separate
+from the fresh v3 GPU timing above.
 
 The paged SWA pool is allocated once at startup from the configured request
 cap, not resized when the active batch changes. With no speculation, attention

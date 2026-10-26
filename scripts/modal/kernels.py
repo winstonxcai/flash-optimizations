@@ -344,7 +344,7 @@ def _build_image() -> None:
     if VALIDATION_SUITE == "v41-fp4":
         # Run pure receipt and mocked dispatch tests in the existing CPU builder.
         # Child vendor Python lacks Modal's injected SDK/dependencies/context.
-        # Keep these tests before compilation/precompilation and GPU allocation.
+        # Keep these tests before core precompilation and GPU allocation.
         import unittest
 
         from scripts.modal import tests as launcher_tests
