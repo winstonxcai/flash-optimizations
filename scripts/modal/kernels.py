@@ -1050,8 +1050,12 @@ def validate_kernels(
                 for tool in selected_tools
                 if record["sanitizer_results"][tool]["status"] != "passed"
             ]
-            record["sanitizer_qualification_complete"] = all(
-                result["status"] == "passed" for result in record["sanitizer_results"].values())
+            all_tools_passed = all(result["status"] == "passed" for result in record["sanitizer_results"].values())
+            focused = stage == "corrective" and set(selected_tests) == {
+                GLM_TEST + "::test_packed_loader_bytes", GLM_DECODE_GRAPH}
+            record["qualification_scope"] = "focused_decode" if focused else stage
+            record["focused_decode_qualification_complete"] = focused and all_tools_passed
+            record["sanitizer_qualification_complete"] = all_tools_passed and stage != "corrective"
             if incomplete:
                 raise RuntimeError(
                     f"Sanitizer qualification incomplete: {incomplete}; see tool logs"
@@ -1445,6 +1449,8 @@ def _glm_timing_qualification(run_ids: str, *, allow_incomplete: bool = False, p
                 raise RuntimeError(f"GLM runtime hashes changed: {run_id}")
         elif old["source_identities"]["sglang"]["commit"] != GLM_BASELINE or current != GLM_BASELINE_RUNTIME_HASHES:
             raise RuntimeError(f"Cannot establish unchanged historical GLM runtime: {run_id}")
+        if phase == "decode" and old.get("sources") != manifest.get("sources"):
+            raise RuntimeError(f"GLM focused fixture/source identity changed: {run_id}")
         for key in ("torch", "cuda", "cuda_python", "cuda_bindings", "triton", "tilelang", "binaries"):
             if old.get(key) != manifest.get(key):
                 raise RuntimeError(f"GLM qualification dependency changed: {run_id}/{key}")
