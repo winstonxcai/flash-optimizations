@@ -341,6 +341,28 @@ def _build_image() -> None:
     deadline = time.monotonic() + CPU_BUILD_BUDGET_S
     build = BUILD_ROOT
     build.mkdir()
+    if VALIDATION_SUITE == "v41-fp4":
+        # Run pure receipt and mocked dispatch tests in the existing CPU builder.
+        # Child vendor Python lacks Modal's injected SDK/dependencies/context.
+        # Keep these tests before compilation/precompilation and GPU allocation.
+        import unittest
+
+        from scripts.modal import tests as launcher_tests
+
+        suite = unittest.TestSuite(
+            unittest.defaultTestLoader.loadTestsFromTestCase(case)
+            for case in (
+                launcher_tests.FP4QualificationTests,
+                launcher_tests.FP4PreflightTests,
+            )
+        )
+        report = build / "qualification-tests.log"
+        with report.open("w") as stream:
+            result = unittest.TextTestRunner(stream=stream, verbosity=2).run(suite)
+        if not result.wasSuccessful():
+            raise RuntimeError(
+                f"CPU launcher contract tests failed: {report.read_text()}"
+            )
     binding_requirements = (
         _check_cuda_binding_requirements()
         if INTEGRATION["version"] == "v0.5.22"
@@ -562,30 +584,6 @@ print('FP4 CPU SM90 precompilation passed')
         )
     if INTEGRATION["version"] != "v0.5.22":
         _check_profiler_tools(build, deadline)
-    if VALIDATION_SUITE == "v41-fp4":
-        _run_command(
-            [
-                sys.executable,
-                "-c",
-                # Child Python processes do not inherit Modal's execution context.
-                # Mock only that context while importing launcher boundary tests;
-                # real source preflight already ran before the image was built.
-                # _run_command deliberately replaces PYTHONPATH to avoid the
-                # serialized launcher's /root/kernels.py shadowing HF kernels.
-                # Bootstrap only Modal's injected SDK directory for this test.
-                f"import sys; sys.path.append({str(Path(modal.__file__).resolve().parents[1])!r}); "
-                "import unittest; from unittest.mock import patch; "
-                "context = patch('modal.is_local', return_value=False); context.start(); "
-                "from scripts.modal import tests; "
-                "suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(c) "
-                "for c in (tests.FP4QualificationTests, tests.FP4PreflightTests)); "
-                "result = unittest.TextTestRunner(verbosity=2).run(suite); "
-                "raise SystemExit(not result.wasSuccessful())",
-            ],
-            build / "qualification-tests.log",
-            deadline,
-            environment=cpu_environment,
-        )
     # Profiler tools are not a correctness gate for the serving-image qualification.
     manifest = {
         "validation_suite": VALIDATION_SUITE,

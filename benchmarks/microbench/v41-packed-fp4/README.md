@@ -54,6 +54,14 @@ injected Modal SDK directory inside the test subprocess, preserving the helper's
 protection against `/root/kernels.py` shadowing Hugging Face's optional package.
 Both stopped attempts count toward the existing cumulative budget.
 
+CPU attempt `v41-reviewfix-20261026-c` / app `ap-YFMJVzknontjROL0JtON0I`
+also stopped before H100 allocation: exposing the SDK directory did not expose
+its injected dependencies (`grpclib` missing). Reassess after these import fixes:
+remove the subprocess bootstrap entirely. The six pure/mock launcher tests now
+run in the existing CPU builder process, before precompilation, with its already
+loaded Modal SDK/context. Numerical fixtures retain their existing subprocess
+isolation. This removes the special import-path handling instead of extending it.
+
 ## Current production-geometry matrix
 
 The active `v41-fp4-decode` suite now uses **H64, SWA128/page256, Q1/K512**,
