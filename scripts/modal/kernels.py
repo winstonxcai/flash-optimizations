@@ -56,6 +56,9 @@ GLM_TEST = "test/registered/attention/unittests/test_glm5_remnant.py"
 GLM_CPU_TEST = "test/registered/unit/test_glm5_mla_cache_format.py"
 GLM_BENCHMARK_CPU = "benchmark/remnant/test_microbench.py"
 GLM_BENCHMARK_GRAPH = GLM_TEST + "::test_benchmark_bank_graph_ownership"
+GLM_DECODE_GRAPH = GLM_TEST + "::test_decode_bank_graph"
+GLM_DECODE_REQUIRED = {"test_packed_loader_bytes", "test_decode_bank_graph[8-1]", "test_decode_bank_graph[8-2]",
+                       "test_decode_bank_graph[16-1]", "test_decode_bank_graph[16-2]"}
 GLM_SANITIZER_GRAPH = GLM_TEST + "::test_benchmark_sanitizer_bank_graph"
 GLM_BASELINE = "9e42a0d8886dd93944dc6b47ef3bffef4e033b5a"
 GLM_SMOKE = (GLM_TEST + "::test_producer_reconstruction", GLM_TEST + "::test_native_fp8_conversion", GLM_TEST + "::test_allocator_accounting", GLM_TEST + "::test_invalid_attention", GLM_TEST + "::test_partial_outputs",
@@ -305,7 +308,7 @@ def _build_image() -> None:
     build = BUILD_ROOT
     # This directory belongs solely to CPU preparation. A verified reused image
     # may contain prior reports; compiler caches live outside it and are retained.
-    if build.exists() and MODEL_FAMILY == "glm53" and os.environ.get("REMNANT_COMPILED_IMAGE"):
+    if build.exists() and MODEL_FAMILY == "glm53" and (os.environ.get("REMNANT_COMPILED_IMAGE") or os.environ.get("REMNANT_GLM_CPU_REBUILD_FROM")):
         shutil.rmtree(build)
     build.mkdir()
     binding_requirements = (
@@ -524,6 +527,7 @@ def _build_image() -> None:
         "integration": INTEGRATION["version"],
         "base_image": INTEGRATION["base_image"],
         "compiled_base_image": os.environ.get("REMNANT_COMPILED_IMAGE"),
+        "cpu_rebuild_from": os.environ.get("REMNANT_GLM_CPU_REBUILD_FROM"),
         "launcher_sha256": hashlib.sha256(Path("/opt/remnant-launcher.py").read_bytes()).hexdigest(),
         "sources": sources,
         "source_identities": SOURCE_IDENTITIES,
@@ -615,6 +619,21 @@ if compiled_image_id:
         .add_local_dir(SGLANG_SOURCE, str(SGLANG_ROOT), copy=True, ignore=_ignore)
         .dockerfile_commands(f"LABEL remnant.integration={INTEGRATION['version']} remnant.sglang={SOURCE_IDENTITIES['sglang']['commit']} remnant.flashmla={SOURCE_IDENTITIES['flashmla']['commit']}")
     )
+elif MODEL_FAMILY == "glm53" and os.environ.get("REMNANT_GLM_CPU_REBUILD_FROM"):
+    # Explicit CPU rebuild, never a relaxed ordinary source-reuse check.
+    candidate = {}
+    for i, root in enumerate((SGLANG_SOURCE / "python/sglang/kernels", FLASHMLA_SOURCE / "csrc")):
+        for path in sorted(root.rglob("*")):
+            if path.is_file() and path.suffix in {".cu", ".cuh", ".cc", ".cpp", ".h", ".hpp", ".cmake", ".txt", ".py"}:
+                candidate[f"{i}/{path.relative_to(root)}"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    base = dict(sglang="889edf56b33226c80b17ddf3472c1206df62c3f0", flashmla="3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8")
+    code = ("from scripts.sources import verify_glm_cpu_rebuild; "
+            f"verify_glm_cpu_rebuild({base!r}, {candidate!r}, {[str(SGLANG_ROOT / 'python/sglang/kernels'), str(FLASHMLA_ROOT / 'csrc')]!r})")
+    kernel_base = (modal.Image.from_id(os.environ["REMNANT_GLM_CPU_REBUILD_FROM"])
+        .env({"PYTHONPATH": f"{REMOTE_REPO}:{SGLANG_ROOT / 'python'}"})
+        .add_local_file(REPO_ROOT / "scripts/sources.py", str(REMOTE_REPO / "scripts/sources.py"), copy=True)
+        .run_commands("python3 -c " + shlex.quote(code))
+        .add_local_dir(SGLANG_SOURCE, str(SGLANG_ROOT), copy=True, ignore=_ignore))
 elif INTEGRATION["version"] == "v0.5.22":
     kernel_base = modal.Image.from_dockerfile(
         str(REPO_ROOT / INTEGRATION["dockerfile"]),
@@ -671,6 +690,7 @@ kernel_image = (
             "TRITON_CACHE_DIR": "/opt/remnant-triton-glm" if MODEL_FAMILY == "glm53" else "/triton-cache",
             "REMNANT_MODEL_FAMILY": MODEL_FAMILY,
             **({"REMNANT_COMPILED_IMAGE": compiled_image_id} if compiled_image_id else {}),
+            **({"REMNANT_GLM_CPU_REBUILD_FROM": os.environ["REMNANT_GLM_CPU_REBUILD_FROM"]} if os.environ.get("REMNANT_GLM_CPU_REBUILD_FROM") else {}),
             "REMNANT_GLM_MODEL_CONFIG": "/opt/remnant-glm-config.json",
             "REMNANT_GLM_COMPILE_MANIFEST": "/opt/remnant-glm-compile.json",
             **({"TILELANG_DEFAULT_TARGET": json.dumps({"kind": "cuda", "arch": "sm_90a"}), "TILELANG_CACHE_DIR": "/opt/remnant-tilelang-glm"} if MODEL_FAMILY == "glm53" else {}),
@@ -724,12 +744,16 @@ def benchmark_kernels(
     prefill_reader: str = "split",
     model_family: str = "dsv4", max_seconds: int = RUN_BUDGETS_S["timing"],
     qualification_runs: str = "", resume_run: str = "",
-    allow_incomplete_qualification: bool = False,
+    allow_incomplete_qualification: bool = False, phase: str = "all",
 ) -> str:
     """Validate and time the complete matrix for the selected survivor budget."""
     if model_family != MODEL_FAMILY:
         raise ValueError("--model-family must match REMNANT_MODEL_FAMILY")
     if model_family == "glm53":
+        if phase not in ("all", "decode"):
+            raise ValueError("GLM phase must be all or decode")
+        if phase == "decode" and allow_incomplete_qualification:
+            raise ValueError("Decode timing requires all focused gates")
         if suite != "glm-attention" or keep_count != 256 or modes not in ("", "native,direct") or prefill_reader != "split":
             raise ValueError("GLM timing requires --suite glm-attention and exactly native,direct")
         if not 60 <= max_seconds <= 1140:
@@ -737,15 +761,15 @@ def benchmark_kernels(
         with _run_context(run_id, "timing", max_seconds) as (root, record, deadline):
             _verify_glm_image()
             record["qualification"] = _glm_timing_qualification(
-                qualification_runs, allow_incomplete=allow_incomplete_qualification
+                qualification_runs, allow_incomplete=allow_incomplete_qualification, phase=phase
             )
             record["experiment_status"] = (
                 "unqualified" if record["qualification"]["status"] != "passed"
                 else "qualified"
             )
-            _run_pytest((GLM_BENCHMARK_GRAPH,), root, "benchmark-graphs", deadline)
+            _run_pytest((GLM_DECODE_GRAPH if phase == "decode" else GLM_BENCHMARK_GRAPH,), root, "benchmark-graphs", deadline)
             argv = _benchmark_command("--model-family", "glm53", "--suite", suite,
-                                      "--output", str(root / "timing"),
+                                      "--phase", phase, "--output", str(root / "timing"),
                                       "--max-seconds", str(max(60, int(deadline-time.monotonic())-10)))
             if resume_run:
                 checkpoint = _glm_timing_checkpoint(resume_run)
@@ -755,7 +779,7 @@ def benchmark_kernels(
             _run_command(argv, root / "timing.log", deadline)
             _glm_benchmark_contract().validate_timing(json.loads((root / "timing.json").read_text()))
         return str(root)
-    if qualification_runs or resume_run or allow_incomplete_qualification:
+    if qualification_runs or resume_run or allow_incomplete_qualification or phase != "all":
         raise ValueError("qualification_runs/resume_run/allow_incomplete_qualification are GLM-only")
     contract = _benchmark_cases()
     is_prefill = suite == "prefill-read"
@@ -1400,7 +1424,7 @@ def _glm_timing_checkpoint(run_id: str) -> Path:
     return checkpoint
 
 
-def _glm_timing_qualification(run_ids: str, *, allow_incomplete: bool = False) -> dict:
+def _glm_timing_qualification(run_ids: str, *, allow_incomplete: bool = False, phase: str = "all") -> dict:
     """Accept per-tool evidence only with unchanged production code/toolchains.
 
     A prior overall failed run may supply a completed synccheck group; its
@@ -1444,16 +1468,25 @@ def _glm_timing_qualification(run_ids: str, *, allow_incomplete: bool = False) -
                     continue
                 _check_glm_interrupted_checkpoint(json.loads(note.read_text()), root, run_id, tool, log)
             _check_sanitizer_report(log, tool)
-            names = _check_glm_sanitizer_cases(ET.parse(root / f"{tool}.xml"), run_id,
-                                             historical=result.get('runtime_hashes') is None,
-                                             allow_partial=True)
+            if phase == "decode":
+                tree = ET.parse(root / f"{tool}.xml")
+                tests = list(tree.iter("testcase"))
+                names = {x.attrib["name"] for x in tests}
+                if (not names or not names <= GLM_DECODE_REQUIRED or len(names) != len(tests)
+                        or any(not x.get("classname", "").endswith("attention.unittests.test_glm5_remnant") for x in tests)
+                        or any(x.find(k) is not None for x in tests for k in ("failure", "error", "skipped"))):
+                    raise RuntimeError(f"Incomplete focused cases: {run_id}/{tool}")
+            else:
+                names = _check_glm_sanitizer_cases(ET.parse(root / f"{tool}.xml"), run_id,
+                                                 historical=result.get('runtime_hashes') is None,
+                                                 allow_partial=True)
             group = groups.setdefault(tool, dict(cases=set(), runs=[]))
             group['cases'].update(names)
             group['runs'].append(dict(run_id=run_id, cases=sorted(names),
                                       overall_run_status=result.get('status'),
                                       tool_status=status.get('status'),
                                       result_sha256=hashlib.sha256((root / 'result.json').read_bytes()).hexdigest()))
-    required = _glm_required_sanitizer_cases(historical=False)
+    required = GLM_DECODE_REQUIRED if phase == "decode" else _glm_required_sanitizer_cases(historical=False)
     missing = {tool: sorted(required - groups.get(tool, {}).get('cases', set())) for tool in SANITIZER_ORDER}
     incomplete = any(missing.values())
     if incomplete and not allow_incomplete:

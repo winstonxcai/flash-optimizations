@@ -543,3 +543,20 @@ Conservative CPU/egress/billing-lag accrual is $0.01; aggregate task accrual is 
 **$19.41082903 of $20**, with GPU seconds unchanged. Attention remains 56/128 and
 memcheck incomplete. No runtime, kernels, pins or serving defaults changed;
 rollback is to revert this evidence-only parent commit. Native remains default.
+
+## Cooperative loader and decode comparison
+
+Question: can vector staging and register-owned bitmap prefixes remove the scalar
+loader overhead while preserving Native arithmetic? The candidate changes only
+Packed tile expansion, adding a device helper consumed by TileLang (source text
+is embedded in the compilation key). Acceptance requires CPU codegen/resource
+gates, fresh independent review, exact bytes and focused numerical/graph/three-tool
+sanitizer checks before all 48 decode cases paired with fresh Native controls.
+`--phase decode` uses `remnant-glm-decode-v1`; default all retains 128-case coverage.
+The soft target is 15% mean paired overhead weighted by batch size, with every
+case reported. New phase budget: $15 additional ($3 CPU, $9 GPU, $3 reserve),
+routine cutoff $12, at most 120 new H100 minutes; preserve historical $19.41082903.
+Stop on correctness, source, codegen, resource or budget failures. No prefill
+timing, weights, serving, WGMMA or asynchronous staging changes. Rollback: Native
+or SGLang 889edf56. Raw outputs live in timestamped data/glm53-packed directories;
+qualification.json remains the aggregate ledger.

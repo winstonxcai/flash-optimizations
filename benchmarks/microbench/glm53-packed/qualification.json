@@ -7,7 +7,7 @@
     "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/resolve/46a050bec13002ad29ee795c16e61cf4fa3c4a9c/config.json"
   },
   "budget": {
-    "authorized_usd": 20,
+    "authorized_usd": 35,
     "routine_cutoff_usd": 19.75,
     "conservative_accrued_usd": 19.410829025143784,
     "h100_seconds": 14017.962933706978,
@@ -29687,5 +29687,29 @@
     "risk": "Evidence-only parent changes; runtime, kernels, fork pins and serving defaults unchanged.",
     "rollback": "Revert this evidence-only parent commit.",
     "parent_before": "4d8f92af4524a99dd252bcb6802f15d5e765e731"
+  },
+  "optimized_decode_phase": {
+    "status": "implementation",
+    "protocol": "remnant-glm-decode-v1",
+    "budget": {
+      "authorized_usd": 15,
+      "routine_cutoff_usd": 12,
+      "cpu_cap_usd": 3,
+      "gpu_cap_usd": 9,
+      "reserve_usd": 3,
+      "h100_seconds_cap": 7200,
+      "conservative_usd": 0,
+      "cpu_usd": 0,
+      "gpu_usd": 0,
+      "h100_seconds": 0
+    },
+    "historical_conservative_usd": 19.410829025143784,
+    "attempts": [],
+    "review": {
+      "agent": "optimized_loader_review",
+      "status": "passed_after_fix",
+      "fixed": "Explicit int64 global access_ptr extents; 131328 independently emulated rank/mask combinations passed",
+      "limitations": "Actual codegen and GPU qualification pending"
+    }
   }
 }

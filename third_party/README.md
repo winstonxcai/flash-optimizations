@@ -367,3 +367,8 @@ GLM exploratory timing is explicitly selected with
 plus source-bound `--qualification-runs`. Missing sanitizer coverage remains
 recorded and the experiment is unqualified; this does not promote Packed or
 change the default gate. See the canonical GLM experiment README/ledger.
+
+GLM Packed cooperative loader: `sglang-v0.5.22/python/sglang/kernels/jit/include/sgl_kernel/glm_packed_decode.cuh`
+is embedded by the Packed TileLang specialization. It owns raw-byte expansion only;
+the 320-byte cache ABI and Native arithmetic remain unchanged. Decode-only
+benchmark scope uses `--model-family glm53 --suite glm-attention --phase decode`.

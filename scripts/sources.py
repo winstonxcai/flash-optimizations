@@ -46,6 +46,29 @@ def verify_compiled_image_sources(expected: str, roots: list[str], integration: 
     if compiled_source_digest([Path(root) for root in roots]) != expected:
         raise RuntimeError("Compiled source changed; rebuild the selected Dockerfile")
 
+def verify_glm_cpu_rebuild(expected_base: dict, candidate: dict, roots: list[str]) -> None:
+    """Verify a CPU JIT-only overlay; ordinary compiled-image reuse stays strict."""
+    if os.environ.get("REMNANT_BUILT_INTEGRATION") != "v0.5.22":
+        raise RuntimeError("GLM CPU rebuild requires the verified v0.5.22 image")
+    manifest_path = Path("/opt/remnant-build.json")
+    manifest = json.loads(manifest_path.read_text())
+    if manifest["source_identities"]["sglang"]["commit"] != expected_base["sglang"] or manifest["source_identities"]["flashmla"]["commit"] != expected_base["flashmla"]:
+        raise RuntimeError("CPU rebuild base source identity mismatch")
+    for name, digest in {**manifest["binaries"], **manifest["glm_compile"]["cache_files"]}.items():
+        if hashlib.sha256(Path(name).read_bytes()).hexdigest() != digest:
+            raise RuntimeError(f"CPU rebuild base artifact changed: {name}")
+    allowed = {"0/ops/attention/dsa/tilelang_kernel.py", "0/jit/include/sgl_kernel/glm_packed_decode.cuh"}
+    actual = {}
+    for i, root in enumerate(map(Path, roots)):
+        for path in sorted(root.rglob("*")):
+            if path.is_file() and path.suffix in {".cu", ".cuh", ".cc", ".cpp", ".h", ".hpp", ".cmake", ".txt", ".py"}:
+                actual[f"{i}/{path.relative_to(root)}"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    changed = {p for p in actual.keys() | candidate.keys() if actual.get(p) != candidate.get(p)}
+    if not changed or changed - allowed:
+        raise RuntimeError(f"CPU rebuild accepts only GLM loader/header changes: {sorted(changed)}")
+    Path("/opt/remnant-cpu-rebuild-base.json").write_text(json.dumps(manifest))
+
+
 def integration_profile(value: str | None = None) -> dict[str, str]:
     """One explicit source/image pair; Native defaults remain v0.5.18."""
     version = (
