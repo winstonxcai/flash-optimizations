@@ -14,6 +14,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from contextlib import nullcontext
 from dataclasses import dataclass, field
@@ -21,6 +22,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
 
+from scripts import build_lock
 from scripts.modal import kernels
 from scripts.sources import check_sources, integration_profile
 
@@ -2440,6 +2442,111 @@ class LswbSweepTests(unittest.TestCase):
         self.assertIn("prefix cache flush failed", result.stderr)
         self.assertFalse((failed_root / "client/args.json").exists())
 
+
+
+class BuildLockTests(unittest.TestCase):
+    """Real lock files in a temporary repository; no Modal process is started."""
+
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix="remnant-lock-")
+        self.addCleanup(temporary.cleanup)
+        self.repo = Path(temporary.name)
+
+    def test_live_owner_blocks_second_acquire_and_dead_owner_is_stale(self):
+        parent = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+        self.addCleanup(parent.wait)
+        self.addCleanup(parent.kill)
+        (self.repo / build_lock.LOCK_NAME).write_text(json.dumps({"pid": parent.pid}))
+        self.assertEqual(build_lock.lock_owner(self.repo), parent.pid)
+        with self.assertRaisesRegex(RuntimeError, "already running"):
+            build_lock.acquire(self.repo)
+        parent.kill()
+        parent.wait()
+        self.assertIsNone(build_lock.lock_owner(self.repo))
+        with patch("atexit.register"):
+            build_lock.acquire(self.repo)
+        self.assertEqual(build_lock.lock_owner(self.repo), os.getpid())
+        build_lock.release(self.repo)
+        self.assertFalse((self.repo / build_lock.LOCK_NAME).exists())
+
+    def test_only_the_modal_cli_takes_the_lock(self):
+        self.assertIsNone(build_lock.acquire_for_modal_cli(self.repo, "/usr/bin/pytest"))
+        self.assertFalse((self.repo / build_lock.LOCK_NAME).exists())
+        with patch("atexit.register"):
+            build_lock.acquire_for_modal_cli(self.repo, "/opt/venv/bin/modal")
+        self.assertEqual(json.loads((self.repo / build_lock.LOCK_NAME).read_text())["pid"], os.getpid())
+        build_lock.release(self.repo)
+        with patch("atexit.register"):
+            self.assertIsNotNone(build_lock.acquire_for_modal_cli(self.repo, "/site/modal/__main__.py"))
+        self.assertIsNone(build_lock.acquire_for_modal_cli(self.repo, "/site/other/__main__.py"))
+
+    def test_stale_locks_are_ignored_and_replaced(self):
+        lock = self.repo / build_lock.LOCK_NAME
+        for content in ("", "{not json", json.dumps({"pid": 0}), json.dumps({"pid": -1}), json.dumps({"x": 1})):
+            lock.write_text(content)
+            self.assertIsNone(build_lock.lock_owner(self.repo), content)
+            with patch("atexit.register"):
+                build_lock.acquire(self.repo)
+            self.assertEqual(build_lock.lock_owner(self.repo), os.getpid())
+            build_lock.release(self.repo)
+
+    def test_reused_pid_with_different_start_time_is_stale(self):
+        lock = self.repo / build_lock.LOCK_NAME
+        lock.write_text(json.dumps({"pid": os.getpid(), "start": "Mon Jan  1 00:00:00 1990"}))
+        self.assertIsNone(build_lock.lock_owner(self.repo))
+        lock.write_text(json.dumps({"pid": os.getpid(), "start": build_lock._start_time(os.getpid())}))
+        self.assertEqual(build_lock.lock_owner(self.repo), os.getpid())
+
+    def test_simultaneous_launchers_admit_exactly_one(self):
+        code = (
+            "import sys, time\nfrom pathlib import Path\nfrom scripts import build_lock\n"
+            "time.sleep(max(0.0, float(sys.argv[2]) - time.time()))  # release all racers together\n"
+            "try:\n    build_lock.acquire(Path(sys.argv[1]))\nexcept RuntimeError:\n    print('REFUSED')\n"
+            "else:\n    print('HELD'); sys.stdout.flush(); time.sleep(6)\n"
+        )
+        start = str(time.time() + 3)
+        procs = [
+            subprocess.Popen(
+                [sys.executable, "-c", code, str(self.repo), start],
+                cwd=kernels.REPO_ROOT, stdout=subprocess.PIPE, text=True,
+            )
+            for _ in range(6)
+        ]
+        results = [p.communicate(timeout=30)[0].strip() for p in procs]
+        self.assertEqual(sorted(results), ["HELD"] + ["REFUSED"] * 5)
+        self.assertFalse((self.repo / build_lock.LOCK_NAME).exists(), "owner exit must release")
+
+    def test_settings_register_the_hook_for_edit_tools(self):
+        settings = json.loads((kernels.REPO_ROOT / ".claude/settings.json").read_text())
+        (entry,) = settings["hooks"]["PreToolUse"]
+        self.assertTrue({"Edit", "Write"} <= set(entry["matcher"].split("|")))
+        (hook,) = entry["hooks"]
+        self.assertEqual(hook["type"], "command")
+        self.assertIn(".claude/hooks/deny-edit-during-build.py", hook["command"])
+        self.assertTrue((kernels.REPO_ROOT / ".claude/hooks/deny-edit-during-build.py").is_file())
+
+    def test_hook_denies_image_inputs_only_while_locked(self):
+        hook = kernels.REPO_ROOT / ".claude/hooks/deny-edit-during-build.py"
+        env = {**os.environ, "CLAUDE_PROJECT_DIR": str(self.repo)}
+        (self.repo / ".claude/hooks").mkdir(parents=True)
+        (self.repo / "scripts").mkdir()
+        (self.repo / "scripts/build_lock.py").write_text((kernels.REPO_ROOT / "scripts/build_lock.py").read_text())
+
+        def run(name):
+            call = json.dumps({"tool_input": {"file_path": str(self.repo / name)}})
+            return subprocess.run(
+                [sys.executable, str(hook)], input=call, env=env, text=True, capture_output=True, timeout=15
+            )
+
+        self.assertEqual(run("scripts/modal/kernels.py").returncode, 0)
+        (self.repo / build_lock.LOCK_NAME).write_text(json.dumps({"pid": os.getpid()}))
+        blocked = run("scripts/modal/kernels.py")
+        self.assertEqual(blocked.returncode, 2)
+        self.assertIn("build is running", blocked.stderr)
+        self.assertEqual(run("third_party/sglang/x.py").returncode, 2)
+        for image_input in ("scripts/local/serve.sh", "Dockerfile.v0.5.22", ".dockerignore", "scripts/sources.py"):
+            self.assertEqual(run(image_input).returncode, 2, image_input)
+        self.assertEqual(run("docs/report.md").returncode, 0)
 
 
 if __name__ == "__main__":

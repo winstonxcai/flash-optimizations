@@ -59,8 +59,11 @@ FLASHMLA_SOURCE = Path(
 if not modal.is_local():
     SGLANG_SOURCE, FLASHMLA_SOURCE = SGLANG_ROOT, FLASHMLA_ROOT
 if modal.is_local():
+    from scripts.build_lock import acquire_for_modal_cli
     from scripts.sources import check_sources
 
+    # Hold the lock until this `modal run` exits so image inputs are not edited mid-build.
+    acquire_for_modal_cli(REPO_ROOT)
     if INTEGRATION["version"] == "v0.5.22" and any(
         actual.resolve() != (REPO_ROOT / INTEGRATION[name]).resolve()
         for name, actual in (("sglang", SGLANG_SOURCE), ("flashmla", FLASHMLA_SOURCE))
