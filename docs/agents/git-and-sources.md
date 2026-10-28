@@ -74,9 +74,14 @@ and variant, for example `glm53-flash`.
 
 ## Image inputs during builds
 
-- Do not edit any file copied into a Modal image (`scripts/modal/*.py`,
-  fork sources, fixtures) while a build or prepare step is running; Modal
-  rejects the build with "modified during build process". The launcher writes
-  `.modal-build.lock` at the repository root for the duration of a build, and a
-  project hook denies edits to image inputs while it exists. Wait for the build
-  to finish or cancel it first.
+- Do not edit any file copied into a Modal image while a build or prepare step
+  is running; Modal rejects the build with "modified during build process".
+  Image inputs are `scripts/modal/`, `scripts/local/`, `scripts/sources.py`,
+  `scripts/build_lock.py`, `third_party/`, `Dockerfile*` and `.dockerignore`.
+- The launcher writes `.modal-build.lock` at the repository root for the whole
+  lifetime of the `modal run`/`modal deploy` process (the image builds lazily,
+  after import), so the lock also spans the GPU run and refuses a second Modal
+  launch from the same checkout. A project hook denies edits to image inputs
+  while a live owner holds it. A lock whose owner is gone is ignored; if one
+  looks stuck, confirm the owner pid is not running and delete the file.
+- Shell commands that write files are not covered by the hook.

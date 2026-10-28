@@ -77,7 +77,7 @@ it still finds them.
 
 | Incident | Where | Class |
 |---|---|---|
-| Misaligned base address in Direct decode | `splitkv_mla.cuh:123` (fix rejects non-16-byte-aligned bases) | kernel |
+| Misaligned 128-bit survivor load: 328 B records alternate 16-byte and 8-byte row alignment | reported at `splitkv_mla.cuh:123` in the V4.1 review; current handling (aligned `uint4` path, else two 64-bit loads) at `third_party/flashmla-v0.5.22/csrc/kernels/sm90/decode/sparse/splitkv_mla.cuh:130-140` | kernel |
 | FP4 fixture used page128; production uses 256-token SWA pages | V4.1 attempt ledger | benchmark |
 | Tile stride used ceil-to-multiple instead of `ceil_div` (576 vs 18 tiles) | direct-rope-ablation diagnostic | benchmark |
 | GPU torch/cuBLAS oracle work instrumented by compute-sanitizer | V4.1 attempt010, then GLM again | validation |
