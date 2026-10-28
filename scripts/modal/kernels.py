@@ -15,9 +15,10 @@ Default profile captures: 30 for v0.5.18, 36 for v0.5.22; three modes per case.
 --suite prefill-read compares Native/Packed192/Packed256 on identical fixtures,
 with separate reconstruction/attention/complete stages and warm/rotating caches.
 --prefill-reader fused selects the opt-in unpack/RoPE candidate for that suite.
-validate_kernels --sanitizer runs memcheck, racecheck and synccheck in turn. --sanitizer-tools
-a,b selects a subset in that order (one tool per budgeted job); the record then has
-sanitizer_complete=false, so a subset is never the all-three qualification.
+validate_kernels --sanitizer runs memcheck, racecheck and synccheck (v0.5.22 order: synccheck,
+racecheck, memcheck). --sanitizer-tools a,b selects a subset, run in the order given (one tool
+per budgeted job). result.json then has sanitizer_qualification="partial" even when status is
+"passed"; only a passing run of all three tools records "complete".
 python3 scripts/validation_tier.py [--base origin/main] says which validation a diff needs.
 CPU build/preflight precedes H100; Modal caches source/binaries. Authorization required.
 Limits are caps, not ETAs; no weights/retries. Results: remnant-stage2a-results/microbench/<run-id>/<action>.
@@ -730,8 +731,9 @@ def validate_kernels(
 
     `sanitizer_tools` (comma-separated, in run order) restricts `sanitizer` to a
     subset of memcheck/racecheck/synccheck, for example one tool per budgeted
-    job. The record then has `sanitizer_complete: false`: a subset is evidence
-    for those tools only, never the all-three qualification.
+    job. `status: "passed"` then means only that the selected tools passed:
+    `sanitizer_qualification` is "partial", and is "complete" solely when every
+    tool was selected and passed. Consumers must read that field, not `status`.
     """
     maximum = min(2640, VALIDATION_TIMEOUT_S - 60)
     if not 60 <= max_seconds <= maximum:
@@ -748,7 +750,7 @@ def validate_kernels(
         record["sanitizer"] = sanitizer
         if sanitizer:
             record["sanitizer_tools"] = list(selected)
-            record["sanitizer_complete"] = set(selected) == set(SANITIZER_ORDER)
+            record["sanitizer_qualification"] = "incomplete"
             record["sanitizer_results"] = {
                 tool: {"status": "not_run" if tool in selected else "not_selected"}
                 for tool in SANITIZER_ORDER
@@ -890,6 +892,9 @@ def validate_kernels(
                 raise RuntimeError(
                     f"Sanitizer qualification incomplete: {incomplete}; see tool logs"
                 )
+            record["sanitizer_qualification"] = (
+                "complete" if set(selected) == set(SANITIZER_ORDER) else "partial"
+            )
     return str(root)
 
 

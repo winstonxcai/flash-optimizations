@@ -576,7 +576,7 @@ class LauncherTests(unittest.TestCase):
                 function("fixture", sanitizer=True, sanitizer_tools=spec)
             self.assertEqual([c.args[2] for c in run.call_args_list], ["validation", *ran])
             self.assertEqual(record["sanitizer_tools"], list(ran))
-            self.assertEqual(record["sanitizer_complete"], complete)
+            self.assertEqual(record["sanitizer_qualification"], "complete" if complete else "partial")
             self.assertEqual(
                 record["sanitizer_results"],
                 {t: {"status": "passed" if t in ran else "not_selected"} for t in order},
@@ -602,6 +602,23 @@ class LauncherTests(unittest.TestCase):
                 function("fixture", sanitizer=True, sanitizer_tools="racecheck")
         self.assertEqual(record["sanitizer_results"]["racecheck"]["status"], "failed")
         self.assertEqual(record["sanitizer_results"]["memcheck"], {"status": "not_selected"})
+        self.assertEqual(record["sanitizer_qualification"], "incomplete")
+
+    def test_sanitizer_subset_deadline_leaves_selected_tool_not_run_and_fails(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        record = {}
+        with (
+            patch.object(kernels, "INTEGRATION", {"version": "v0.5.18"}),
+            patch.object(kernels, "SANITIZER_ORDER", ("synccheck", "racecheck", "memcheck")),
+            patch.object(kernels, "_run_context", return_value=nullcontext((self.root, record, 100))),
+            patch.object(kernels.time, "monotonic", return_value=100),
+            patch.object(kernels, "_run_pytest") as run,
+        ):
+            with self.assertRaisesRegex(RuntimeError, r"incomplete: \['memcheck'\]"):
+                function("fixture", sanitizer=True, sanitizer_tools="memcheck")
+        self.assertEqual([c.args[2] for c in run.call_args_list], ["validation"])
+        self.assertEqual(record["sanitizer_results"]["memcheck"], {"status": "not_run"})
+        self.assertEqual(record["sanitizer_qualification"], "incomplete")
 
     def test_sanitizer_tools_require_sanitizer_and_are_checked_before_execution(self):
         function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
