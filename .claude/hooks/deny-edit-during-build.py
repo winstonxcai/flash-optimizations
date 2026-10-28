@@ -18,8 +18,17 @@ sys.path.insert(0, str(REPO))
 
 from scripts.build_lock import LOCK_NAME, lock_owner  # noqa: E402
 
-# Files and trees copied into the Modal images; see scripts/modal/kernels.py.
-IMAGE_INPUTS = ("scripts/modal/", "scripts/sources.py", "scripts/build_lock.py", "third_party/")
+# Files and trees copied into the Modal images by scripts/modal/kernels.py and
+# serve.py (add_local_*, from_dockerfile with the repository as build context).
+IMAGE_INPUTS = (
+    "scripts/modal/",
+    "scripts/local/",
+    "scripts/sources.py",
+    "scripts/build_lock.py",
+    "third_party/",
+    "Dockerfile",
+    ".dockerignore",
+)
 
 
 def is_image_input(path: str) -> bool:
