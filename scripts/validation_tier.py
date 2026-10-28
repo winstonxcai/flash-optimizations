@@ -6,7 +6,12 @@ Prints JSON with the tier (low, medium or high), the tier of each changed path
 and the checks that tier requires. The tier is guidance for authors and
 reviewers, not a gate: it exists so a docs or launcher change does not default
 to the multi-hour kernel qualification, and a kernel change is not waved through
-with CPU tests. Paths that match no rule are `medium`, never `low`.
+with CPU tests.
+
+`low` is an allowlist of pure documentation and run-record data. Anything else
+that is not recognized is `medium`, never `low`. The diff covers commits since
+the merge base with --base, plus staged, unstaged and untracked files; renames
+are reported as a delete plus an add so a moved executable keeps its old path.
 
 `parent` classifies this repository's diff, where a fork shows up only as a
 changed gitlink (a pin bump). `fork` classifies a fork repository's own diff.
@@ -18,6 +23,7 @@ import argparse
 import json
 import re
 import subprocess
+import sys
 from pathlib import PurePosixPath
 from typing import Literal
 
@@ -36,34 +42,43 @@ REQUIRED_CHECKS: dict[Tier, list[str]] = {
         "Focused CPU tests for the changed contract (docs/agents/numerical-and-validation.md).",
         "python3 -m unittest scripts.modal.tests",
         "validate_kernels --sanitizer on H100 before promotion. Tools may run as separate "
-        "jobs via --sanitizer-tools; each run is partial evidence (sanitizer_complete is "
-        "false) and qualification needs all three tools passing on identical source identities.",
+        "jobs via --sanitizer-tools; a subset run records sanitizer_qualification=partial, "
+        "and qualification needs all three tools passing on identical source identities.",
         "Fresh-context review against REVIEW.md.",
     ],
 }
 
-# Documentation, run records and CI metadata: no executable behavior.
-_LOW_PREFIXES = ("docs/", "transfer/", "raw/", ".github/")
-_LOW_SUFFIXES = (".md", ".txt", "SHA256SUMS")
+# Text and run-record data. Nothing here is executed or consumed as configuration.
+_DOC_SUFFIXES = (".md",)
+_RECORD_SUFFIXES = (".json", ".csv", ".txt", ".log", ".xml", ".png", ".svg", ".pdf", ".md")
+_RECORD_DIRS = ("transfer/", "raw/", "docs/")
 _FORK_GITLINK = re.compile(r"third_party/(sglang|flashmla)[^/]*")
-# Launchers, preflights, experiment harnesses, training and agent configuration.
-_PARENT_MEDIUM_PREFIXES = (
-    "scripts/", "benchmarks/", "training/", ".claude/", "Dockerfile", ".dockerignore", ".gitignore",
-)
+# Image recipes and submodule sources decide which code a validation run builds and tests.
+_PARENT_HIGH = (".gitmodules", "Dockerfile")
 _FORK_MEDIUM_PREFIXES = (
     "test/", "tests/", "benchmark/", "python/sglang/test/", "python/sglang/benchmark/", "examples/",
 )
 
 
+def _is_low(posix: str) -> bool:
+    name = PurePosixPath(posix).name
+    if posix.startswith(".claude/") or posix.startswith(".github/workflows/"):
+        return False  # agent configuration and executable CI
+    if name == "SHA256SUMS" or posix.endswith(_DOC_SUFFIXES):
+        return True
+    in_records = posix.startswith(_RECORD_DIRS) or "/runs/" in f"/{posix}"
+    return in_records and posix.endswith(_RECORD_SUFFIXES)
+
+
 def classify_path(path: str, profile: Literal["parent", "fork"] = "parent") -> Tier:
     """Tier of one repository-relative path."""
     posix = PurePosixPath(path).as_posix()
-    if profile == "parent" and _FORK_GITLINK.fullmatch(posix):
-        return "high"  # a fork gitlink: the pin moved, so production source changed
-    if posix.startswith(_LOW_PREFIXES) or posix.endswith(_LOW_SUFFIXES) or "/runs/" in f"/{posix}":
-        return "low"
     if profile == "parent":
-        return "medium"  # launchers, harnesses, training and anything unrecognized
+        if _FORK_GITLINK.fullmatch(posix) or posix.startswith(_PARENT_HIGH):
+            return "high"  # the pin or the build recipe changed: the code under test moved
+        return "low" if _is_low(posix) else "medium"
+    if _is_low(posix):
+        return "low"
     return "medium" if posix.startswith(_FORK_MEDIUM_PREFIXES) else "high"
 
 
@@ -71,19 +86,28 @@ def classify(paths: list[str], profile: Literal["parent", "fork"] = "parent") ->
     """Overall tier (the highest of any path) plus per-path tiers and required checks."""
     by_path = {path: classify_path(path, profile) for path in paths}
     tier: Tier = max(by_path.values(), key=TIER_ORDER.index, default="low")
-    return {"tier": tier, "paths": by_path, "required_checks": REQUIRED_CHECKS[tier]}
+    result = {"tier": tier, "paths": by_path, "required_checks": REQUIRED_CHECKS[tier]}
+    if not paths:
+        result["note"] = "No changes found against the base; check --base before trusting 'low'."
+    return result
+
+
+def _git_z(*arguments: str) -> list[str]:
+    try:
+        out = subprocess.run(
+            ["git", *arguments, "-z"], capture_output=True, text=True, check=True, timeout=60
+        ).stdout
+    except (OSError, subprocess.SubprocessError) as error:
+        raise RuntimeError(f"git {' '.join(arguments)} failed: {error}") from error
+    return [path for path in out.split("\0") if path]
 
 
 def changed_paths(base: str) -> list[str]:
-    """Paths changed on HEAD since its merge base with `base` (committed work only)."""
-    try:
-        out = subprocess.run(
-            ["git", "diff", "--name-only", f"{base}...HEAD"],
-            capture_output=True, text=True, check=True, timeout=60,
-        ).stdout
-    except (OSError, subprocess.SubprocessError) as error:
-        raise RuntimeError(f"Cannot list changes against {base}: {error}") from error
-    return [line for line in out.splitlines() if line]
+    """Paths changed since the merge base with `base`, including uncommitted and untracked files."""
+    committed = _git_z("diff", "--name-only", "--no-renames", f"{base}...HEAD")
+    working = _git_z("diff", "--name-only", "--no-renames", "HEAD")
+    untracked = _git_z("ls-files", "--others", "--exclude-standard")
+    return sorted({*committed, *working, *untracked})
 
 
 if __name__ == "__main__":
@@ -91,4 +115,8 @@ if __name__ == "__main__":
     parser.add_argument("--base", default="origin/main")
     parser.add_argument("--profile", choices=("parent", "fork"), default="parent")
     arguments = parser.parse_args()
-    print(json.dumps(classify(changed_paths(arguments.base), arguments.profile), indent=2))
+    try:
+        paths = changed_paths(arguments.base)
+    except RuntimeError as error:
+        sys.exit(f"validation_tier: {error}")
+    print(json.dumps(classify(paths, arguments.profile), indent=2))

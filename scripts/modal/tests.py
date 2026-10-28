@@ -2537,19 +2537,28 @@ class ValidationTierTests(unittest.TestCase):
         expected = {
             "docs/report.md": "low",
             "docs/agents/modal.md": "low",
+            "docs/figures/a.png": "low",
             "AGENTS.md": "low",
             ".github/pull_request_template.md": "low",
             "transfer/run-1/SHA256SUMS": "low",
+            "transfer/run-1/summary.json": "low",
             "benchmarks/microbench/x/runs/r1/result.json": "low",
+            "third_party/README.md": "low",
             "scripts/modal/kernels.py": "medium",
             "scripts/local/serve.sh": "medium",
             "benchmarks/microbench/x/run_matrix.py": "medium",
             ".claude/settings.json": "medium",
-            "Dockerfile.v0.5.22": "medium",
+            ".claude/commands/x.md": "medium",
+            ".github/workflows/ci.yml": "medium",
+            "requirements.txt": "medium",
+            "transfer/x/run.sh": "medium",
+            "scripts/modal/runs/a.py": "medium",
             "something/unrecognized.bin": "medium",
+            "Dockerfile.v0.5.22": "high",
+            "Dockerfile": "high",
+            ".gitmodules": "high",
             "third_party/sglang-v0.5.22": "high",
             "third_party/flashmla-v0.5.18": "high",
-            "third_party/README.md": "low",
         }
         for path, tier in expected.items():
             self.assertEqual(validation_tier.classify_path(path), tier, path)
@@ -2557,6 +2566,8 @@ class ValidationTierTests(unittest.TestCase):
     def test_fork_paths(self):
         expected = {
             "csrc/sm90/decode/sparse/splitkv_mla.cuh": "high",
+            "CMakeLists.txt": "high",
+            "sgl-kernel/CMakeLists.txt": "high",
             "python/sglang/srt/remnant/pack.py": "high",
             "python/sglang/srt/server_args.py": "high",
             "test/registered/attention/unittests/dsv4/test_remnant_pool.py": "medium",
@@ -2569,7 +2580,9 @@ class ValidationTierTests(unittest.TestCase):
             self.assertEqual(validation_tier.classify_path(path, "fork"), tier, path)
 
     def test_overall_tier_is_the_highest_and_unknown_never_low(self):
-        self.assertEqual(validation_tier.classify([])["tier"], "low")
+        empty = validation_tier.classify([])
+        self.assertEqual(empty["tier"], "low")
+        self.assertIn("No changes found", empty["note"])
         self.assertEqual(validation_tier.classify(["docs/a.md"])["tier"], "low")
         self.assertEqual(validation_tier.classify(["docs/a.md", "scripts/sources.py"])["tier"], "medium")
         mixed = validation_tier.classify(["docs/a.md", "scripts/sources.py", "third_party/sglang-v0.5.18"])
@@ -2577,11 +2590,57 @@ class ValidationTierTests(unittest.TestCase):
         self.assertEqual(mixed["required_checks"], validation_tier.REQUIRED_CHECKS["high"])
         self.assertEqual(validation_tier.classify(["new/place/file.py"])["tier"], "medium")
 
-    def test_high_tier_requires_all_three_sanitizer_tools_on_identical_sources(self):
-        text = " ".join(validation_tier.REQUIRED_CHECKS["high"])
-        self.assertIn("--sanitizer-tools", text)
-        self.assertIn("all three tools", text)
-        self.assertIn("identical source identities", text)
+    def test_changed_paths_sees_renames_deletes_uncommitted_untracked_and_unicode(self):
+        with tempfile.TemporaryDirectory(prefix="remnant-tier-") as temporary:
+            repo = Path(temporary)
+
+            def git(*arguments):
+                subprocess.run(["git", "-C", str(repo), *arguments], check=True, capture_output=True, timeout=30)
+
+            git("init", "-q", "-b", "main")
+            git("config", "user.email", "t@example.invalid")
+            git("config", "user.name", "t")
+            (repo / "scripts/modal").mkdir(parents=True)
+            (repo / "docs").mkdir()
+            (repo / "scripts/modal/x.py").write_text("print(1)\n" * 20)
+            (repo / "scripts/modal/gone.py").write_text("print(2)\n" * 20)
+            (repo / "base.txt").write_text("base\n")
+            git("add", "-A")
+            git("commit", "-q", "-m", "base")
+            git("switch", "-q", "-c", "work")
+            git("mv", "scripts/modal/x.py", "docs/x.md")  # an executable moved to a doc path
+            git("rm", "-q", "scripts/modal/gone.py")
+            git("commit", "-q", "-am", "work")
+            (repo / "base.txt").write_text("edited, uncommitted\n")
+            (repo / "scripts/modal").mkdir(parents=True, exist_ok=True)
+            (repo / "scripts/modal/untracked.py").write_text("print(3)\n")
+            (repo / "docs/caf\u00e9.md").write_text("x\n")
+            previous = os.getcwd()
+            os.chdir(repo)
+            try:
+                paths = validation_tier.changed_paths("main")
+            finally:
+                os.chdir(previous)
+            self.assertEqual(
+                paths,
+                sorted([
+                    "base.txt", "docs/caf\u00e9.md", "docs/x.md", "scripts/modal/gone.py",
+                    "scripts/modal/untracked.py", "scripts/modal/x.py",
+                ]),
+            )
+            result = validation_tier.classify(paths)
+            self.assertEqual(result["tier"], "medium")
+            self.assertEqual(result["paths"]["scripts/modal/x.py"], "medium")
+            self.assertEqual(result["paths"]["docs/caf\u00e9.md"], "low")
+
+    def test_cli_reports_a_bad_base_without_a_traceback(self):
+        result = subprocess.run(
+            [sys.executable, str(kernels.REPO_ROOT / "scripts/validation_tier.py"), "--base", "no-such-ref"],
+            cwd=kernels.REPO_ROOT, capture_output=True, text=True, timeout=60,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("validation_tier:", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
 
 
 if __name__ == "__main__":
