@@ -22,7 +22,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
 
-from scripts import build_lock
+from scripts import build_lock, validation_tier
 from scripts.modal import kernels
 from scripts.sources import check_sources, integration_profile
 
@@ -455,7 +455,7 @@ class LauncherTests(unittest.TestCase):
 
     def test_validation_budget_is_bounded_before_execution(self):
         function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
-        self.assertEqual(function.__defaults__, (False, 1100))
+        self.assertEqual(function.__defaults__, (False, 1100, ""))
         with patch.object(kernels, "_run_context") as run:
             for seconds in (0, 59, 2641, 2700):
                 with self.assertRaisesRegex(ValueError, "max_seconds"):
@@ -542,6 +542,93 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual(record["sanitizer_results"], {
             tool: {"status": "not_run"} for tool in ("synccheck", "racecheck", "memcheck")
         })
+
+    def test_sanitizer_tool_selection_parsing(self):
+        available = ("synccheck", "racecheck", "memcheck")
+        self.assertEqual(kernels._select_sanitizer_tools("", available), available)
+        self.assertEqual(kernels._select_sanitizer_tools("  ", available), available)
+        self.assertEqual(kernels._select_sanitizer_tools("memcheck", available), ("memcheck",))
+        self.assertEqual(
+            kernels._select_sanitizer_tools("memcheck, synccheck", available), ("memcheck", "synccheck")
+        )
+        for bad in ("initcheck", "memcheck,memcheck", "memcheck,", ",", "memcheck,racecheck,bogus"):
+            with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, "sanitizer_tools"):
+                kernels._select_sanitizer_tools(bad, available)
+
+    def test_sanitizer_tool_subset_runs_only_those_tools_and_is_marked_incomplete(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        order = ("synccheck", "racecheck", "memcheck")
+        cases = (
+            ("", order, True),
+            ("memcheck,synccheck,racecheck", ("memcheck", "synccheck", "racecheck"), True),
+            ("racecheck", ("racecheck",), False),
+            ("memcheck,synccheck", ("memcheck", "synccheck"), False),
+        )
+        for spec, ran, complete in cases:
+            record = {}
+            with (
+                self.subTest(spec=spec),
+                patch.object(kernels, "INTEGRATION", {"version": "v0.5.18"}),
+                patch.object(kernels, "SANITIZER_ORDER", order),
+                patch.object(kernels, "_run_context", return_value=nullcontext((self.root, record, 100))),
+                patch.object(kernels.time, "monotonic", return_value=0),
+                patch.object(kernels, "_run_pytest") as run,
+            ):
+                function("fixture", sanitizer=True, sanitizer_tools=spec)
+            self.assertEqual([c.args[2] for c in run.call_args_list], ["validation", *ran])
+            self.assertEqual(record["sanitizer_tools"], list(ran))
+            self.assertEqual(record["sanitizer_qualification"], "complete" if complete else "partial")
+            self.assertEqual(
+                record["sanitizer_results"],
+                {t: {"status": "passed" if t in ran else "not_selected"} for t in order},
+            )
+
+    def test_sanitizer_subset_failure_still_fails_the_run_and_names_only_selected_tools(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        order = ("synccheck", "racecheck", "memcheck")
+        record = {}
+
+        def run_pytest(tests, root, name, deadline, **kwargs):
+            if name == "racecheck":
+                raise RuntimeError("racecheck: hazard")
+
+        with (
+            patch.object(kernels, "INTEGRATION", {"version": "v0.5.18"}),
+            patch.object(kernels, "SANITIZER_ORDER", order),
+            patch.object(kernels, "_run_context", return_value=nullcontext((self.root, record, 100))),
+            patch.object(kernels.time, "monotonic", return_value=0),
+            patch.object(kernels, "_run_pytest", side_effect=run_pytest),
+        ):
+            with self.assertRaisesRegex(RuntimeError, r"incomplete: \['racecheck'\]"):
+                function("fixture", sanitizer=True, sanitizer_tools="racecheck")
+        self.assertEqual(record["sanitizer_results"]["racecheck"]["status"], "failed")
+        self.assertEqual(record["sanitizer_results"]["memcheck"], {"status": "not_selected"})
+        self.assertEqual(record["sanitizer_qualification"], "incomplete")
+
+    def test_sanitizer_subset_deadline_leaves_selected_tool_not_run_and_fails(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        record = {}
+        with (
+            patch.object(kernels, "INTEGRATION", {"version": "v0.5.18"}),
+            patch.object(kernels, "SANITIZER_ORDER", ("synccheck", "racecheck", "memcheck")),
+            patch.object(kernels, "_run_context", return_value=nullcontext((self.root, record, 100))),
+            patch.object(kernels.time, "monotonic", return_value=100),
+            patch.object(kernels, "_run_pytest") as run,
+        ):
+            with self.assertRaisesRegex(RuntimeError, r"incomplete: \['memcheck'\]"):
+                function("fixture", sanitizer=True, sanitizer_tools="memcheck")
+        self.assertEqual([c.args[2] for c in run.call_args_list], ["validation"])
+        self.assertEqual(record["sanitizer_results"]["memcheck"], {"status": "not_run"})
+        self.assertEqual(record["sanitizer_qualification"], "incomplete")
+
+    def test_sanitizer_tools_require_sanitizer_and_are_checked_before_execution(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        with patch.object(kernels, "_run_context") as run:
+            with self.assertRaisesRegex(ValueError, "requires sanitizer"):
+                function("fixture", sanitizer=False, sanitizer_tools="memcheck")
+            with self.assertRaisesRegex(ValueError, "sanitizer_tools must be"):
+                function("fixture", sanitizer=True, sanitizer_tools="initcheck")
+            run.assert_not_called()
 
     def test_binding_check_validates_both_directions_without_unrelated_repairs(self):
         versions = {"cuda-python": "13.0.3", "cuda-bindings": "13.0.3", "cuda-pathfinder": "1.8.3"}
@@ -2547,6 +2634,153 @@ class BuildLockTests(unittest.TestCase):
         for image_input in ("scripts/local/serve.sh", "Dockerfile.v0.5.22", ".dockerignore", "scripts/sources.py"):
             self.assertEqual(run(image_input).returncode, 2, image_input)
         self.assertEqual(run("docs/report.md").returncode, 0)
+
+
+class ValidationTierTests(unittest.TestCase):
+    """Pure path classification; the tier is guidance, so these pin the rules."""
+
+    def test_parent_paths(self):
+        expected = {
+            "docs/report.md": "low",
+            "docs/agents/modal.md": "low",
+            "docs/figures/a.png": "low",
+            "AGENTS.md": "low",
+            ".github/pull_request_template.md": "low",
+            "transfer/run-1/SHA256SUMS": "low",
+            "transfer/run-1/summary.json": "low",
+            "benchmarks/microbench/x/runs/r1/result.json": "low",
+            "third_party/README.md": "low",
+            "scripts/modal/kernels.py": "medium",
+            "scripts/local/serve.sh": "medium",
+            "benchmarks/microbench/x/run_matrix.py": "medium",
+            ".claude/settings.json": "medium",
+            ".claude/commands/x.md": "medium",
+            ".github/workflows/ci.yml": "medium",
+            "requirements.txt": "medium",
+            "transfer/x/run.sh": "medium",
+            "scripts/modal/runs/a.py": "medium",
+            "something/unrecognized.bin": "medium",
+            "Dockerfile.v0.5.22": "high",
+            "Dockerfile": "high",
+            ".dockerignore": "high",
+            ".gitmodules": "high",
+            "docs/NOTES.MD": "low",
+            "third_party/sglang-v0.5.22": "high",
+            "third_party/flashmla-v0.5.18": "high",
+        }
+        for path, tier in expected.items():
+            self.assertEqual(validation_tier.classify_path(path), tier, path)
+
+    def test_fork_paths(self):
+        expected = {
+            "csrc/sm90/decode/sparse/splitkv_mla.cuh": "high",
+            "CMakeLists.txt": "high",
+            "sgl-kernel/CMakeLists.txt": "high",
+            "python/sglang/srt/remnant/pack.py": "high",
+            "python/sglang/srt/server_args.py": "high",
+            "test/registered/attention/unittests/dsv4/test_remnant_pool.py": "medium",
+            "python/sglang/benchmark/remnant/calibrate.py": "medium",
+            "benchmark/remnant/microbench.py": "medium",
+            "README.md": "low",
+            "docs/notes.md": "low",
+        }
+        for path, tier in expected.items():
+            self.assertEqual(validation_tier.classify_path(path, "fork"), tier, path)
+
+    def test_overall_tier_is_the_highest_and_unknown_never_low(self):
+        empty = validation_tier.classify([])
+        self.assertEqual(empty["tier"], "low")
+        self.assertIn("No changes found", empty["note"])
+        self.assertEqual(validation_tier.classify(["docs/a.md"])["tier"], "low")
+        self.assertEqual(validation_tier.classify(["docs/a.md", "scripts/sources.py"])["tier"], "medium")
+        mixed = validation_tier.classify(["docs/a.md", "scripts/sources.py", "third_party/sglang-v0.5.18"])
+        self.assertEqual(mixed["tier"], "high")
+        self.assertEqual(mixed["required_checks"], validation_tier.REQUIRED_CHECKS["high"])
+        self.assertEqual(validation_tier.classify(["new/place/file.py"])["tier"], "medium")
+
+    def test_changed_paths_sees_renames_deletes_uncommitted_untracked_and_unicode(self):
+        with tempfile.TemporaryDirectory(prefix="remnant-tier-") as temporary:
+            repo = Path(temporary)
+
+            def git(*arguments):
+                subprocess.run(["git", "-C", str(repo), *arguments], check=True, capture_output=True, timeout=30)
+
+            git("init", "-q", "-b", "main")
+            git("config", "user.email", "t@example.invalid")
+            git("config", "user.name", "t")
+            (repo / "scripts/modal").mkdir(parents=True)
+            (repo / "docs").mkdir()
+            (repo / "scripts/modal/x.py").write_text("print(1)\n" * 20)
+            (repo / "scripts/modal/gone.py").write_text("print(2)\n" * 20)
+            (repo / "base.txt").write_text("base\n")
+            git("add", "-A")
+            git("commit", "-q", "-m", "base")
+            git("switch", "-q", "-c", "work")
+            git("mv", "scripts/modal/x.py", "docs/x.md")  # an executable moved to a doc path
+            git("rm", "-q", "scripts/modal/gone.py")
+            git("commit", "-q", "-am", "work")
+            (repo / "base.txt").write_text("edited, uncommitted\n")
+            (repo / "scripts/modal").mkdir(parents=True, exist_ok=True)
+            (repo / "scripts/modal/untracked.py").write_text("print(3)\n")
+            (repo / "docs/caf\u00e9.md").write_text("x\n")
+            previous = os.getcwd()
+            os.chdir(repo)
+            try:
+                paths = validation_tier.changed_paths("main")
+            finally:
+                os.chdir(previous)
+            self.assertEqual(
+                paths,
+                sorted([
+                    "base.txt", "docs/caf\u00e9.md", "docs/x.md", "scripts/modal/gone.py",
+                    "scripts/modal/untracked.py", "scripts/modal/x.py",
+                ]),
+            )
+            result = validation_tier.classify(paths)
+            self.assertEqual(result["tier"], "medium")
+            self.assertEqual(result["paths"]["scripts/modal/x.py"], "medium")
+            self.assertEqual(result["paths"]["docs/caf\u00e9.md"], "low")
+
+    def test_changed_paths_is_root_relative_from_any_subdirectory(self):
+        with tempfile.TemporaryDirectory(prefix="remnant-tier-sub-") as temporary:
+            repo = Path(temporary).resolve()
+
+            def git(*arguments):
+                subprocess.run(["git", "-C", str(repo), *arguments], check=True, capture_output=True, timeout=30)
+
+            git("init", "-q", "-b", "main")
+            git("config", "user.email", "t@example.invalid")
+            git("config", "user.name", "t")
+            (repo / "docs").mkdir()
+            (repo / "scripts").mkdir()
+            (repo / "docs/a.md").write_text("a\n")
+            git("add", "-A")
+            git("commit", "-q", "-m", "base")
+            (repo / ".gitmodules").write_text("[submodule]\n")  # untracked, outside both subdirectories
+            (repo / "scripts/new.py").write_text("print(1)\n")
+            (repo / "docs/a.md").write_text("edited\n")
+            expected = [".gitmodules", "docs/a.md", "scripts/new.py"]
+            previous = os.getcwd()
+            try:
+                for subdirectory in (".", "docs", "scripts"):
+                    os.chdir(repo / subdirectory)
+                    with self.subTest(cwd=subdirectory):
+                        paths = validation_tier.changed_paths("main")
+                        self.assertEqual(paths, expected)
+                        self.assertEqual(validation_tier.classify(paths)["tier"], "high")
+            finally:
+                os.chdir(previous)
+
+    def test_cli_reports_a_bad_base_without_a_traceback(self):
+        result = subprocess.run(
+            [sys.executable, str(kernels.REPO_ROOT / "scripts/validation_tier.py"), "--base", "no-such-ref"],
+            cwd=kernels.REPO_ROOT, capture_output=True, text=True, timeout=60,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("validation_tier:", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+
+
 
 
 if __name__ == "__main__":
