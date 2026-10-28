@@ -54,7 +54,7 @@ _RECORD_SUFFIXES = (".json", ".csv", ".txt", ".log", ".xml", ".png", ".svg", ".p
 _RECORD_DIRS = ("transfer/", "raw/", "docs/")
 _FORK_GITLINK = re.compile(r"third_party/(sglang|flashmla)[^/]*")
 # Image recipes and submodule sources decide which code a validation run builds and tests.
-_PARENT_HIGH = (".gitmodules", "Dockerfile")
+_PARENT_HIGH = (".gitmodules", "Dockerfile", ".dockerignore")
 _FORK_MEDIUM_PREFIXES = (
     "test/", "tests/", "benchmark/", "python/sglang/test/", "python/sglang/benchmark/", "examples/",
 )
@@ -64,10 +64,11 @@ def _is_low(posix: str) -> bool:
     name = PurePosixPath(posix).name
     if posix.startswith(".claude/") or posix.startswith(".github/workflows/"):
         return False  # agent configuration and executable CI
-    if name == "SHA256SUMS" or posix.endswith(_DOC_SUFFIXES):
+    lowered = posix.lower()
+    if name == "SHA256SUMS" or lowered.endswith(_DOC_SUFFIXES):
         return True
     in_records = posix.startswith(_RECORD_DIRS) or "/runs/" in f"/{posix}"
-    return in_records and posix.endswith(_RECORD_SUFFIXES)
+    return in_records and lowered.endswith(_RECORD_SUFFIXES)
 
 
 def classify_path(path: str, profile: Literal["parent", "fork"] = "parent") -> Tier:
@@ -92,22 +93,33 @@ def classify(paths: list[str], profile: Literal["parent", "fork"] = "parent") ->
     return result
 
 
-def _git_z(*arguments: str) -> list[str]:
+def _git(*arguments: str, cwd: str | None = None) -> str:
     try:
-        out = subprocess.run(
-            ["git", *arguments, "-z"], capture_output=True, text=True, check=True, timeout=60
+        return subprocess.run(
+            ["git", *arguments], capture_output=True, text=True, check=True, timeout=60, cwd=cwd
         ).stdout
     except (OSError, subprocess.SubprocessError) as error:
         raise RuntimeError(f"git {' '.join(arguments)} failed: {error}") from error
-    return [path for path in out.split("\0") if path]
 
 
 def changed_paths(base: str) -> list[str]:
-    """Paths changed since the merge base with `base`, including uncommitted and untracked files."""
-    committed = _git_z("diff", "--name-only", "--no-renames", f"{base}...HEAD")
-    working = _git_z("diff", "--name-only", "--no-renames", "HEAD")
-    untracked = _git_z("ls-files", "--others", "--exclude-standard")
-    return sorted({*committed, *working, *untracked})
+    """Repository-root-relative paths changed since the merge base with `base`.
+
+    Includes staged, unstaged and untracked files. Every command runs from the
+    repository root: `ls-files --others` and a `diff.relative` config would
+    otherwise report paths relative to the caller's subdirectory, and changes
+    outside it (for example `.gitmodules`) would be missed.
+    """
+    root = _git("rev-parse", "--show-toplevel").strip()
+    commands = (
+        ("diff", "--name-only", "--no-renames", "--no-relative", f"{base}...HEAD"),
+        ("diff", "--name-only", "--no-renames", "--no-relative", "HEAD"),
+        ("ls-files", "--others", "--exclude-standard"),
+    )
+    paths: set[str] = set()
+    for command in commands:
+        paths.update(path for path in _git(*command, "-z", cwd=root).split("\0") if path)
+    return sorted(paths)
 
 
 if __name__ == "__main__":

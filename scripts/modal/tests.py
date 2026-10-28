@@ -2662,7 +2662,9 @@ class ValidationTierTests(unittest.TestCase):
             "something/unrecognized.bin": "medium",
             "Dockerfile.v0.5.22": "high",
             "Dockerfile": "high",
+            ".dockerignore": "high",
             ".gitmodules": "high",
+            "docs/NOTES.MD": "low",
             "third_party/sglang-v0.5.22": "high",
             "third_party/flashmla-v0.5.18": "high",
         }
@@ -2738,6 +2740,36 @@ class ValidationTierTests(unittest.TestCase):
             self.assertEqual(result["tier"], "medium")
             self.assertEqual(result["paths"]["scripts/modal/x.py"], "medium")
             self.assertEqual(result["paths"]["docs/caf\u00e9.md"], "low")
+
+    def test_changed_paths_is_root_relative_from_any_subdirectory(self):
+        with tempfile.TemporaryDirectory(prefix="remnant-tier-sub-") as temporary:
+            repo = Path(temporary).resolve()
+
+            def git(*arguments):
+                subprocess.run(["git", "-C", str(repo), *arguments], check=True, capture_output=True, timeout=30)
+
+            git("init", "-q", "-b", "main")
+            git("config", "user.email", "t@example.invalid")
+            git("config", "user.name", "t")
+            (repo / "docs").mkdir()
+            (repo / "scripts").mkdir()
+            (repo / "docs/a.md").write_text("a\n")
+            git("add", "-A")
+            git("commit", "-q", "-m", "base")
+            (repo / ".gitmodules").write_text("[submodule]\n")  # untracked, outside both subdirectories
+            (repo / "scripts/new.py").write_text("print(1)\n")
+            (repo / "docs/a.md").write_text("edited\n")
+            expected = [".gitmodules", "docs/a.md", "scripts/new.py"]
+            previous = os.getcwd()
+            try:
+                for subdirectory in (".", "docs", "scripts"):
+                    os.chdir(repo / subdirectory)
+                    with self.subTest(cwd=subdirectory):
+                        paths = validation_tier.changed_paths("main")
+                        self.assertEqual(paths, expected)
+                        self.assertEqual(validation_tier.classify(paths)["tier"], "high")
+            finally:
+                os.chdir(previous)
 
     def test_cli_reports_a_bad_base_without_a_traceback(self):
         result = subprocess.run(
