@@ -453,7 +453,7 @@ class LauncherTests(unittest.TestCase):
 
     def test_validation_budget_is_bounded_before_execution(self):
         function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
-        self.assertEqual(function.__defaults__, (False, 1100))
+        self.assertEqual(function.__defaults__, (False, 1100, ""))
         with patch.object(kernels, "_run_context") as run:
             for seconds in (0, 59, 2641, 2700):
                 with self.assertRaisesRegex(ValueError, "max_seconds"):
@@ -540,6 +540,76 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual(record["sanitizer_results"], {
             tool: {"status": "not_run"} for tool in ("synccheck", "racecheck", "memcheck")
         })
+
+    def test_sanitizer_tool_selection_parsing(self):
+        available = ("synccheck", "racecheck", "memcheck")
+        self.assertEqual(kernels._select_sanitizer_tools("", available), available)
+        self.assertEqual(kernels._select_sanitizer_tools("  ", available), available)
+        self.assertEqual(kernels._select_sanitizer_tools("memcheck", available), ("memcheck",))
+        self.assertEqual(
+            kernels._select_sanitizer_tools("memcheck, synccheck", available), ("memcheck", "synccheck")
+        )
+        for bad in ("initcheck", "memcheck,memcheck", "memcheck,", ",", "memcheck,racecheck,bogus"):
+            with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, "sanitizer_tools"):
+                kernels._select_sanitizer_tools(bad, available)
+
+    def test_sanitizer_tool_subset_runs_only_those_tools_and_is_marked_incomplete(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        order = ("synccheck", "racecheck", "memcheck")
+        cases = (
+            ("", order, True),
+            ("memcheck,synccheck,racecheck", ("memcheck", "synccheck", "racecheck"), True),
+            ("racecheck", ("racecheck",), False),
+            ("memcheck,synccheck", ("memcheck", "synccheck"), False),
+        )
+        for spec, ran, complete in cases:
+            record = {}
+            with (
+                self.subTest(spec=spec),
+                patch.object(kernels, "INTEGRATION", {"version": "v0.5.18"}),
+                patch.object(kernels, "SANITIZER_ORDER", order),
+                patch.object(kernels, "_run_context", return_value=nullcontext((self.root, record, 100))),
+                patch.object(kernels.time, "monotonic", return_value=0),
+                patch.object(kernels, "_run_pytest") as run,
+            ):
+                function("fixture", sanitizer=True, sanitizer_tools=spec)
+            self.assertEqual([c.args[2] for c in run.call_args_list], ["validation", *ran])
+            self.assertEqual(record["sanitizer_tools"], list(ran))
+            self.assertEqual(record["sanitizer_complete"], complete)
+            self.assertEqual(
+                record["sanitizer_results"],
+                {t: {"status": "passed" if t in ran else "not_selected"} for t in order},
+            )
+
+    def test_sanitizer_subset_failure_still_fails_the_run_and_names_only_selected_tools(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        order = ("synccheck", "racecheck", "memcheck")
+        record = {}
+
+        def run_pytest(tests, root, name, deadline, **kwargs):
+            if name == "racecheck":
+                raise RuntimeError("racecheck: hazard")
+
+        with (
+            patch.object(kernels, "INTEGRATION", {"version": "v0.5.18"}),
+            patch.object(kernels, "SANITIZER_ORDER", order),
+            patch.object(kernels, "_run_context", return_value=nullcontext((self.root, record, 100))),
+            patch.object(kernels.time, "monotonic", return_value=0),
+            patch.object(kernels, "_run_pytest", side_effect=run_pytest),
+        ):
+            with self.assertRaisesRegex(RuntimeError, r"incomplete: \['racecheck'\]"):
+                function("fixture", sanitizer=True, sanitizer_tools="racecheck")
+        self.assertEqual(record["sanitizer_results"]["racecheck"]["status"], "failed")
+        self.assertEqual(record["sanitizer_results"]["memcheck"], {"status": "not_selected"})
+
+    def test_sanitizer_tools_require_sanitizer_and_are_checked_before_execution(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        with patch.object(kernels, "_run_context") as run:
+            with self.assertRaisesRegex(ValueError, "requires sanitizer"):
+                function("fixture", sanitizer=False, sanitizer_tools="memcheck")
+            with self.assertRaisesRegex(ValueError, "sanitizer_tools must be"):
+                function("fixture", sanitizer=True, sanitizer_tools="initcheck")
+            run.assert_not_called()
 
     def test_binding_check_validates_both_directions_without_unrelated_repairs(self):
         versions = {"cuda-python": "13.0.3", "cuda-bindings": "13.0.3", "cuda-pathfinder": "1.8.3"}

@@ -15,6 +15,9 @@ Default profile captures: 30 for v0.5.18, 36 for v0.5.22; three modes per case.
 --suite prefill-read compares Native/Packed192/Packed256 on identical fixtures,
 with separate reconstruction/attention/complete stages and warm/rotating caches.
 --prefill-reader fused selects the opt-in unpack/RoPE candidate for that suite.
+validate_kernels --sanitizer runs memcheck, racecheck and synccheck in turn. --sanitizer-tools
+a,b selects a subset in that order (one tool per budgeted job); the record then has
+sanitizer_complete=false, so a subset is never the all-three qualification.
 CPU build/preflight precedes H100; Modal caches source/binaries. Authorization required.
 Limits are caps, not ETAs; no weights/retries. Results: remnant-stage2a-results/microbench/<run-id>/<action>.
 Download: modal volume get remnant-stage2a-results microbench/<run-id> <local-dir>
@@ -166,6 +169,26 @@ SANITIZER_ORDER = (
     if INTEGRATION["version"] == "v0.5.22"
     else ("memcheck", "racecheck", "synccheck")
 )
+
+
+def _select_sanitizer_tools(spec: str, available: Sequence[str]) -> tuple[str, ...]:
+    """Resolve a comma-separated `--sanitizer-tools` value; empty selects every tool in order.
+
+    Each tool is a separate compute-sanitizer pass over the same case set, so a run
+    may cover a subset (for example one tool per budgeted job). The caller records
+    whether the selection was complete; a subset is never a full qualification.
+    """
+    if not spec.strip():
+        return tuple(available)
+    chosen = [name.strip() for name in spec.split(",")]
+    unknown = sorted(set(chosen) - set(available))
+    if unknown or "" in chosen or len(set(chosen)) != len(chosen):
+        raise ValueError(
+            f"sanitizer_tools must be distinct names from {', '.join(available)}; got {spec!r}"
+        )
+    return tuple(chosen)
+
+
 NCU_SECTIONS = [
     "SpeedOfLight",
     "MemoryWorkloadAnalysis",
@@ -697,12 +720,24 @@ def benchmark_kernels(
     }
 )
 def validate_kernels(
-    run_id: str, sanitizer: bool = False, max_seconds: int = RUN_BUDGETS_S["validation"]
+    run_id: str,
+    sanitizer: bool = False,
+    max_seconds: int = RUN_BUDGETS_S["validation"],
+    sanitizer_tools: str = "",
 ) -> str:
-    """Run existing GPU tests; skipped tests fail coverage. Optional three sanitizers."""
+    """Run existing GPU tests; skipped tests fail coverage. Optional sanitizers.
+
+    `sanitizer_tools` (comma-separated, in run order) restricts `sanitizer` to a
+    subset of memcheck/racecheck/synccheck, for example one tool per budgeted
+    job. The record then has `sanitizer_complete: false`: a subset is evidence
+    for those tools only, never the all-three qualification.
+    """
     maximum = min(2640, VALIDATION_TIMEOUT_S - 60)
     if not 60 <= max_seconds <= maximum:
         raise ValueError(f"max_seconds must be between 60 and {maximum}")
+    if sanitizer_tools and not sanitizer:
+        raise ValueError("sanitizer_tools requires sanitizer=True")
+    selected = _select_sanitizer_tools(sanitizer_tools, SANITIZER_ORDER)
     with _run_context(run_id, "validation", max_seconds) as (
         root,
         record,
@@ -711,8 +746,11 @@ def validate_kernels(
         environment = dict(os.environ)
         record["sanitizer"] = sanitizer
         if sanitizer:
+            record["sanitizer_tools"] = list(selected)
+            record["sanitizer_complete"] = set(selected) == set(SANITIZER_ORDER)
             record["sanitizer_results"] = {
-                tool: {"status": "not_run"} for tool in SANITIZER_ORDER
+                tool: {"status": "not_run" if tool in selected else "not_selected"}
+                for tool in SANITIZER_ORDER
             }
         if INTEGRATION["version"] == "v0.5.22":
             import torch
@@ -821,7 +859,7 @@ def validate_kernels(
                 raise RuntimeError("Incomplete real-allocation coverage")
             record["allocation"] = allocation
         if sanitizer:
-            for tool in SANITIZER_ORDER:
+            for tool in selected:
                 # Commands use whole-second timeouts. Preserve the incomplete
                 # tool matrix instead of attempting a launch with zero seconds.
                 if int(deadline - time.monotonic()) <= 0:
@@ -844,8 +882,8 @@ def validate_kernels(
                     record["sanitizer_results"][tool] = {"status": "passed"}
             incomplete = [
                 tool
-                for tool, result in record["sanitizer_results"].items()
-                if result["status"] != "passed"
+                for tool in selected
+                if record["sanitizer_results"][tool]["status"] != "passed"
             ]
             if incomplete:
                 raise RuntimeError(
