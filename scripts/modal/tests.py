@@ -21,6 +21,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
 
+from scripts import build_lock
 from scripts.modal import kernels
 from scripts.sources import check_sources, integration_profile
 
@@ -2440,6 +2441,60 @@ class LswbSweepTests(unittest.TestCase):
         self.assertIn("prefix cache flush failed", result.stderr)
         self.assertFalse((failed_root / "client/args.json").exists())
 
+
+
+class BuildLockTests(unittest.TestCase):
+    """Real lock files in a temporary repository; no Modal process is started."""
+
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix="remnant-lock-")
+        self.addCleanup(temporary.cleanup)
+        self.repo = Path(temporary.name)
+
+    def test_live_owner_blocks_second_acquire_and_dead_owner_is_stale(self):
+        parent = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+        self.addCleanup(parent.wait)
+        self.addCleanup(parent.kill)
+        (self.repo / build_lock.LOCK_NAME).write_text(json.dumps({"pid": parent.pid}))
+        self.assertEqual(build_lock.lock_owner(self.repo), parent.pid)
+        with self.assertRaisesRegex(RuntimeError, "already running"):
+            build_lock.acquire(self.repo)
+        parent.kill()
+        parent.wait()
+        self.assertIsNone(build_lock.lock_owner(self.repo))
+        with patch("atexit.register"):
+            build_lock.acquire(self.repo)
+        self.assertEqual(build_lock.lock_owner(self.repo), os.getpid())
+        build_lock.release(self.repo)
+        self.assertFalse((self.repo / build_lock.LOCK_NAME).exists())
+
+    def test_only_the_modal_cli_takes_the_lock(self):
+        self.assertIsNone(build_lock.acquire_for_modal_cli(self.repo, "/usr/bin/pytest"))
+        self.assertFalse((self.repo / build_lock.LOCK_NAME).exists())
+        with patch("atexit.register"):
+            build_lock.acquire_for_modal_cli(self.repo, "/opt/venv/bin/modal")
+        self.assertTrue((self.repo / build_lock.LOCK_NAME).exists())
+
+    def test_hook_denies_image_inputs_only_while_locked(self):
+        hook = kernels.REPO_ROOT / ".claude/hooks/deny-edit-during-build.py"
+        env = {**os.environ, "CLAUDE_PROJECT_DIR": str(self.repo)}
+        (self.repo / ".claude/hooks").mkdir(parents=True)
+        (self.repo / "scripts").mkdir()
+        (self.repo / "scripts/build_lock.py").write_text((kernels.REPO_ROOT / "scripts/build_lock.py").read_text())
+
+        def run(name):
+            call = json.dumps({"tool_input": {"file_path": str(self.repo / name)}})
+            return subprocess.run(
+                [sys.executable, str(hook)], input=call, env=env, text=True, capture_output=True, timeout=15
+            )
+
+        self.assertEqual(run("scripts/modal/kernels.py").returncode, 0)
+        (self.repo / build_lock.LOCK_NAME).write_text(json.dumps({"pid": os.getpid()}))
+        blocked = run("scripts/modal/kernels.py")
+        self.assertEqual(blocked.returncode, 2)
+        self.assertIn("build is running", blocked.stderr)
+        self.assertEqual(run("third_party/sglang/x.py").returncode, 2)
+        self.assertEqual(run("docs/report.md").returncode, 0)
 
 
 if __name__ == "__main__":
