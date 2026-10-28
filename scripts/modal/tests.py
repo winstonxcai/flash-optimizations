@@ -22,6 +22,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
 
 from scripts.modal import kernels
+from scripts import validation_tier
 from scripts.sources import check_sources, integration_profile
 
 
@@ -2510,6 +2511,60 @@ class LswbSweepTests(unittest.TestCase):
         self.assertIn("prefix cache flush failed", result.stderr)
         self.assertFalse((failed_root / "client/args.json").exists())
 
+
+
+class ValidationTierTests(unittest.TestCase):
+    """Pure path classification; the tier is guidance, so these pin the rules."""
+
+    def test_parent_paths(self):
+        expected = {
+            "docs/report.md": "low",
+            "docs/agents/modal.md": "low",
+            "AGENTS.md": "low",
+            ".github/pull_request_template.md": "low",
+            "transfer/run-1/SHA256SUMS": "low",
+            "benchmarks/microbench/x/runs/r1/result.json": "low",
+            "scripts/modal/kernels.py": "medium",
+            "scripts/local/serve.sh": "medium",
+            "benchmarks/microbench/x/run_matrix.py": "medium",
+            ".claude/settings.json": "medium",
+            "Dockerfile.v0.5.22": "medium",
+            "something/unrecognized.bin": "medium",
+            "third_party/sglang-v0.5.22": "high",
+            "third_party/flashmla-v0.5.18": "high",
+            "third_party/README.md": "low",
+        }
+        for path, tier in expected.items():
+            self.assertEqual(validation_tier.classify_path(path), tier, path)
+
+    def test_fork_paths(self):
+        expected = {
+            "csrc/sm90/decode/sparse/splitkv_mla.cuh": "high",
+            "python/sglang/srt/remnant/pack.py": "high",
+            "python/sglang/srt/server_args.py": "high",
+            "test/registered/attention/unittests/dsv4/test_remnant_pool.py": "medium",
+            "python/sglang/benchmark/remnant/calibrate.py": "medium",
+            "benchmark/remnant/microbench.py": "medium",
+            "README.md": "low",
+            "docs/notes.md": "low",
+        }
+        for path, tier in expected.items():
+            self.assertEqual(validation_tier.classify_path(path, "fork"), tier, path)
+
+    def test_overall_tier_is_the_highest_and_unknown_never_low(self):
+        self.assertEqual(validation_tier.classify([])["tier"], "low")
+        self.assertEqual(validation_tier.classify(["docs/a.md"])["tier"], "low")
+        self.assertEqual(validation_tier.classify(["docs/a.md", "scripts/sources.py"])["tier"], "medium")
+        mixed = validation_tier.classify(["docs/a.md", "scripts/sources.py", "third_party/sglang-v0.5.18"])
+        self.assertEqual(mixed["tier"], "high")
+        self.assertEqual(mixed["required_checks"], validation_tier.REQUIRED_CHECKS["high"])
+        self.assertEqual(validation_tier.classify(["new/place/file.py"])["tier"], "medium")
+
+    def test_high_tier_requires_all_three_sanitizer_tools_on_identical_sources(self):
+        text = " ".join(validation_tier.REQUIRED_CHECKS["high"])
+        self.assertIn("--sanitizer-tools", text)
+        self.assertIn("all three tools", text)
+        self.assertIn("identical source identities", text)
 
 
 if __name__ == "__main__":

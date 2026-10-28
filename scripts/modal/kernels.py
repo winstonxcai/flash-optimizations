@@ -18,6 +18,7 @@ with separate reconstruction/attention/complete stages and warm/rotating caches.
 validate_kernels --sanitizer runs memcheck, racecheck and synccheck in turn. --sanitizer-tools
 a,b selects a subset in that order (one tool per budgeted job); the record then has
 sanitizer_complete=false, so a subset is never the all-three qualification.
+python3 scripts/validation_tier.py [--base origin/main] says which validation a diff needs.
 CPU build/preflight precedes H100; Modal caches source/binaries. Authorization required.
 Limits are caps, not ETAs; no weights/retries. Results: remnant-stage2a-results/microbench/<run-id>/<action>.
 Download: modal volume get remnant-stage2a-results microbench/<run-id> <local-dir>
