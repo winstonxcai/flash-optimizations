@@ -148,7 +148,13 @@ download_image = (
     .pip_install(
         "huggingface-hub[hf-xet]==0.34.4",
     )
-    .env(SOURCE_ENV)
+    .env({**SOURCE_ENV, "PYTHONPATH": str(REMOTE_REPO)})
+    # The module imports scripts.sources at load time, also in this CPU container.
+    .add_local_file(
+        REPO_ROOT / "scripts/sources.py",
+        str(REMOTE_REPO / "scripts/sources.py"),
+        copy=True,
+    )
 )
 
 
