@@ -83,7 +83,9 @@ args=(
 )
 
 if [ -n "$V41_FORMAT" ]; then
-  args+=(--dsv41-main-kv-cache-format "$V41_FORMAT"
+  # The explicit FP4 layouts check for the literal "flashmla" and do not
+  # resolve "auto", so name the backend.
+  args+=(--dsv41-main-kv-cache-format "$V41_FORMAT" --dsv4-attn-backend flashmla
     --reasoning-parser deepseek-v41 --tool-call-parser deepseekv41)
 else
   args+=(--dsv4-c4-cache-format "$CACHE_FORMAT"

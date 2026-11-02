@@ -2814,6 +2814,7 @@ class LswbSweepTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 words = result.stdout.split()
                 self.assertEqual(words[words.index("--dsv41-main-kv-cache-format") + 1], mode)
+                self.assertEqual(words[words.index("--dsv4-attn-backend") + 1], "flashmla")
                 self.assertEqual(words[words.index("--reasoning-parser") + 1], "deepseek-v41")
                 self.assertEqual(words[words.index("--tool-call-parser") + 1], "deepseekv41")
                 self.assertFalse([w for w in words if w.startswith("--dsv4-c4-")])
