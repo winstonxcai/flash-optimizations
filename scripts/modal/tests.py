@@ -2884,6 +2884,145 @@ class LswbSweepTests(unittest.TestCase):
         self.assertEqual(config["mode"], "native")
 
 
+class LswbReplayPlanTests(unittest.TestCase):
+    """CPU contracts for the Modal paired-LSWB launcher and its concurrency plan."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = Path(self._tmp.name)
+
+    @staticmethod
+    def _manifest(sizes: list[list[int]]) -> dict:
+        records = []
+        for user, session in enumerate(sizes):
+            for turn, tokens in enumerate(session):
+                records.append({
+                    "request_id": f"u{user:03d}-{turn:03d}", "user_id": f"user{user:03d}",
+                    "created": float(user * 1000 + turn), "expected_prompt_tokens": tokens - 1,
+                    "expected_completion_tokens": 1,
+                })
+        return {"records": records}
+
+    def test_working_set_matches_a_hand_computed_schedule(self):
+        from scripts.local.business_replay import capacity_plan as plan
+
+        sizes = [[10, 20], [5, 5, 5], [100]]
+        sessions = plan.session_sizes(self._manifest(sizes))
+        self.assertEqual(sessions, sizes)
+        # C=2: tick0 10+5, tick1 20+5, then session 0 ends and [100] joins: 100+5.
+        self.assertEqual(plan.peak_working_set(sessions, 2, ticks=3), 105)
+        self.assertEqual(plan.peak_working_set(sessions, 2, ticks=2), 25)
+        self.assertEqual(plan.peak_working_set(sessions, 1, ticks=3), 20)
+        with self.assertRaises(ValueError):
+            plan.peak_working_set(sessions, 0)
+
+    def test_plan_picks_largest_fitting_c_and_rejects_tiny_pools(self):
+        from scripts.local.business_replay import capacity_plan as plan
+
+        sessions = [[1000] * 5 for _ in range(30)]  # Each live session holds 1000 tokens.
+        chosen = plan.plan_concurrency(sessions, pool_tokens=20000, max_running=48, ticks=5)
+        self.assertEqual((chosen["c_high"], chosen["c_low"]), (18, 14))  # 18_000 <= 0.9 * 20_000
+        self.assertEqual(plan.plan_concurrency(sessions, 10**9, 12, ticks=5)["c_high"], 12)
+        with self.assertRaisesRegex(ValueError, "minimum 8"):
+            plan.plan_concurrency(sessions, 5000, 48, ticks=5)
+
+    def test_server_info_must_describe_the_requested_arm(self):
+        from scripts.modal import serve
+
+        good = {
+            "tp_size": 4, "dsv41_main_kv_cache_format": "fp4", "random_seed": serve.LSWB_SEED,
+            "max_running_requests": serve.LSWB_MAX_RUN, "mem_fraction_static": 0.92,
+            "cuda_graph_config": {"decode": {"bs": [1, 48, 136]}},
+        }
+        serve._check_server_info(good, "fp4")
+        for key, value in (("dsv41_main_kv_cache_format", "remnant"), ("tp_size", 8),
+                           ("random_seed", 1), ("max_running_requests", 256)):
+            with self.subTest(key=key), self.assertRaisesRegex(RuntimeError, key):
+                serve._check_server_info({**good, key: value}, "fp4")
+        with self.assertRaisesRegex(RuntimeError, "decode graphs"):
+            serve._check_server_info({**good, "cuda_graph_config": {"decode": {"bs": [1, 8]}}}, "fp4")
+
+    def test_replay_stall_detection(self):
+        from scripts.modal import serve
+
+        responses = self.root / "responses.jsonl"
+        self.assertIsNone(serve._replay_stalled(responses, 299))
+        self.assertIn("first 300 s", serve._replay_stalled(responses, 301))
+        rows = [{"valid": index >= 3} for index in range(60)]  # 3/60 = 5% fails: allowed.
+        responses.write_text("".join(json.dumps(row) + "\n" for row in rows))
+        self.assertIsNone(serve._replay_stalled(responses, 600))
+        rows[3]["valid"] = False  # 4/60 > 5%.
+        responses.write_text("".join(json.dumps(row) + "\n" for row in rows))
+        self.assertIn("4/60", serve._replay_stalled(responses, 600))
+
+    def test_lswb_arguments_are_validated_before_any_allocation(self):
+        from scripts.modal import serve
+
+        with patch.object(serve, "_check_devices") as devices:
+            with patch.object(serve, "MODEL_KEY", "0731"), self.assertRaisesRegex(ValueError, "REMNANT_MODEL"):
+                serve.benchmark_lswb.local("v41-fp4")
+            with patch.object(serve, "MODEL_KEY", "v41-1017"):
+                with self.assertRaisesRegex(ValueError, "mode must be"):
+                    serve.benchmark_lswb.local("native")
+                for low, high in ((10, 0), (0, 10), (20, 10), (10, 49)):
+                    with self.subTest(low=low, high=high), self.assertRaisesRegex(ValueError, "c_low"):
+                        serve.benchmark_lswb.local("v41-fp4", c_low=low, c_high=high)
+            devices.assert_not_called()
+
+    def _run_lswb(self, mode: str, pool: int = 5_000_000, **kwargs):
+        from scripts.modal import serve
+        from scripts.local.business_replay import capacity_plan
+
+        lswb = self.root / "lswb"
+        (lswb / "replay").mkdir(parents=True, exist_ok=True)
+        (lswb / "replay/manifest.json").write_text(json.dumps(self._manifest([[100_000] * 6 for _ in range(60)])))
+        (lswb / "prepare-receipt.json").write_text("{}")
+        info = {
+            "tp_size": 4, "dsv41_main_kv_cache_format": serve.LSWB_SERVER_MODES[mode],
+            "random_seed": serve.LSWB_SEED, "max_running_requests": serve.LSWB_MAX_RUN,
+            "mem_fraction_static": 0.92, "cuda_graph_config": {"decode": {"bs": [136]}},
+            "max_total_num_tokens": pool,
+        }
+        points = []
+        with (
+            patch.object(serve, "MODEL_KEY", "v41-1017"), patch.object(serve, "LSWB_ROOT", lswb),
+            patch.object(serve, "RESULTS_ROOT", self.root / "results"),
+            patch.object(serve, "REMOTE_REPO", kernels.REPO_ROOT),
+            patch.object(serve, "_kernel_extensions_ready", return_value=True),
+            patch.object(serve, "_check_devices", return_value=["H200"] * 4),
+            patch.object(serve, "_running_serving_server", return_value=nullcontext()) as boot,
+            patch.object(serve, "_http_json", return_value=info),
+            patch.object(serve, "_sanity_check", return_value=["ok"]),
+            patch.object(serve, "_run_replay_point", side_effect=lambda *a: points.append(a[2:])),
+            patch.object(serve.results_volume, "commit"),
+        ):
+            run = Path(serve.benchmark_lswb.local(mode, **kwargs))
+        return run, points, boot
+
+    def test_lswb_boots_once_and_replays_matched_points_low_then_high(self):
+        run, points, boot = self._run_lswb("v41-fp4")
+        plan = json.loads((run / "c-plan.json").read_text())
+        # Each live session holds 100K..600K tokens; the plan comes from the 5M-token pool.
+        self.assertEqual([p[0] for p in points], [f"v41-fp4-c{plan['c_low']}", f"v41-fp4-c{plan['c_high']}"])
+        self.assertEqual([p[1] for p in points], [plan["c_low"], plan["c_high"]])
+        self.assertLess(plan["c_low"], plan["c_high"])
+        self.assertLessEqual(plan["peak_high"], 0.9 * 5_000_000)
+        boot.assert_called_once()
+        env = boot.call_args.args[0]
+        self.assertEqual((env["SERVING_MODE"], env["LSWB_EXECUTION"], env["MAX_RUN"], env["MEM_FRAC"]),
+                         ("v41-fp4", "direct", "48", "0.92"))
+        self.assertEqual(boot.call_args.args[3], serve_markers := boot.call_args.args[3])
+        self.assertIn("CUDA out of memory", serve_markers)
+
+    def test_second_arm_reuses_given_c_and_fails_if_it_cannot_fit(self):
+        run, points, _ = self._run_lswb("v41-remnant", c_low=2, c_high=3)
+        self.assertEqual([p[1] for p in points], [2, 3])
+        self.assertTrue(json.loads((run / "c-plan.json").read_text())["given"])
+        with self.assertRaisesRegex(RuntimeError, "above the 3000000-token pool"):
+            self._run_lswb("v41-remnant", pool=3_000_000, c_low=30, c_high=48)
+
+
 
 if __name__ == "__main__":
     unittest.main()
