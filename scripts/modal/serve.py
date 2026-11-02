@@ -214,7 +214,16 @@ else:
         ignore=modal.FilePatternMatcher.from_file(REPO_ROOT / ".dockerignore"),
     )
 server_image = (
-    fork_image.env(SOURCE_ENV)
+    # The sglang base image carries no Modal client dependencies (grpclib), so
+    # the runtime fails at startup without this, as in the compiled-image path.
+    fork_image.pip_install(f"modal=={modal.__version__}")
+    .env(
+        {
+            **SOURCE_ENV,
+            # Keep the Dockerfile's import path and add the mounted launcher scripts.
+            "PYTHONPATH": f"/opt/sglang-runtime-fixes:{SGLANG_ROOT / 'python'}:{REMOTE_REPO}",
+        }
+    )
     .add_local_file(
         REPO_ROOT / "scripts/sources.py",
         str(REMOTE_REPO / "scripts/sources.py"),
