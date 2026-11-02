@@ -2822,6 +2822,10 @@ class LswbSweepTests(unittest.TestCase):
                 result = argv("v41-fp4", **{name: "1"})
                 self.assertEqual(result.returncode, 2)
                 self.assertIn(f"{name} is incompatible", result.stderr)
+        words = argv("v41-fp4", EP_SIZE="4").stdout.split()
+        self.assertEqual(words[words.index("--ep-size") + 1], "4")
+        self.assertNotIn("--ep-size", argv("v41-fp4").stdout.split())
+        self.assertEqual(argv("v41-fp4", EP_SIZE="0").returncode, 2)
         native = argv("native").stdout.split()
         self.assertEqual(native[native.index("--dsv4-c4-cache-format") + 1], "native")
         self.assertEqual(native[native.index("--reasoning-parser") + 1], "deepseek-v4")
@@ -2931,13 +2935,13 @@ class LswbReplayPlanTests(unittest.TestCase):
         from scripts.modal import serve
 
         good = {
-            "tp_size": 4, "dsv41_main_kv_cache_format": "fp4", "random_seed": serve.LSWB_SEED,
+            "tp_size": 4, "ep_size": 4, "dsv41_main_kv_cache_format": "fp4", "random_seed": serve.LSWB_SEED,
             "max_running_requests": serve.LSWB_MAX_RUN, "mem_fraction_static": 0.92,
             "cuda_graph_config": {"decode": {"bs": [1, 48, 136]}},
         }
         serve._check_server_info(good, "fp4")
         for key, value in (("dsv41_main_kv_cache_format", "remnant"), ("tp_size", 8),
-                           ("random_seed", 1), ("max_running_requests", 256)):
+                           ("random_seed", 1), ("max_running_requests", 256), ("ep_size", 1)):
             with self.subTest(key=key), self.assertRaisesRegex(RuntimeError, key):
                 serve._check_server_info({**good, key: value}, "fp4")
         with self.assertRaisesRegex(RuntimeError, "decode graphs"):
@@ -2979,7 +2983,7 @@ class LswbReplayPlanTests(unittest.TestCase):
         (lswb / "replay/manifest.json").write_text(json.dumps(self._manifest([[100_000] * 6 for _ in range(60)])))
         (lswb / "prepare-receipt.json").write_text("{}")
         info = {
-            "tp_size": 4, "dsv41_main_kv_cache_format": serve.LSWB_SERVER_MODES[mode],
+            "tp_size": 4, "ep_size": 4, "dsv41_main_kv_cache_format": serve.LSWB_SERVER_MODES[mode],
             "random_seed": serve.LSWB_SEED, "max_running_requests": serve.LSWB_MAX_RUN,
             "mem_fraction_static": 0.92, "cuda_graph_config": {"decode": {"bs": [136]}},
             "max_total_num_tokens": pool,

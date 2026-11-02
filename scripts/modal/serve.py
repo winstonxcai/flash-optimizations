@@ -482,6 +482,7 @@ LSWB_SEED = 20260919
 LSWB_FATAL_MARKERS = ("CUDA out of memory", "NCCL error", "CUDA error", "Segmentation fault")
 LSWB_GPU = os.environ.get("REMNANT_LSWB_GPU", "H200:4")
 LSWB_TP = 4
+LSWB_EP = 4  # TP4 alone gives 576-wide MoE shards, which the MXFP4 kernels reject.
 LSWB_MEM_FRAC = "0.92"
 LSWB_MAX_RUN = 48
 LSWB_MODEL_NAME = "deepseek-v4-1-flash"
@@ -566,6 +567,7 @@ def _check_server_info(info: dict, fmt: str) -> None:
     """Fail before the replay if the booted server is not the requested arm."""
     expected = {
         "tp_size": LSWB_TP,
+        "ep_size": LSWB_EP,
         "dsv41_main_kv_cache_format": fmt,
         "random_seed": LSWB_SEED,
         "max_running_requests": LSWB_MAX_RUN,
@@ -715,6 +717,7 @@ def benchmark_lswb(
         "SERVING_MODE": mode,
         "PORT": os.environ.get("PORT", "30211"),
         "TP": str(LSWB_TP),
+        "EP_SIZE": str(LSWB_EP),
         "MEM_FRAC": LSWB_MEM_FRAC,
         "MAX_RUN": str(LSWB_MAX_RUN),
         "MODEL_NAME": LSWB_MODEL_NAME,
