@@ -1,8 +1,7 @@
 <!-- Authored by Winston Cai. -->
 # V4.1-Flash-1017 FP4 vs Remnant, paired LSWB on 4xH200 (Modal)
 
-Status: **prepared, not launched.** No Modal compute is authorized until the
-CPU preflight (T1) passes and the user approves the final C values and budget.
+Status: **fp4 arm not yet running to completion** (launch approved; see attempts).
 
 ## Question
 
@@ -66,3 +65,20 @@ not sent; the first replay point covers long-context prefill. Request-timing
 export is off. The replay corpus identity is compared across the two profiles
 (`prepare-receipt.json` `dataset_sha256`), not to the historical `1e97f17d`, since
 reconverting changes record filenames.
+
+## Attempts on profile poohthewinnie (fp4 arm), 2026-11-02
+
+| # | Failure | Cost |
+|---|---|---|
+| 1 | `H200!` is not a valid GPU type (exact-match suffix is H100-only) | $0 |
+| 2 | Modal client dependency (`grpclib`) missing from the serving image | ~$0 |
+| 3 | `Mxfp4FlashinferCutlassMoEMethod` needs 128-aligned MoE width; TP4 gives 576 of 2304 | ~$0.2 |
+| 4 | Added EP4. "Explicit V4.1 FP4 requires SM90 FlashMLA": `auto` attention backend is never resolved to `flashmla` | ~$3 |
+| 5 | Added `--dsv4-attn-backend flashmla`. Rust radix-tree extension absent from the image after CUDA graph capture | ~$5.6 |
+
+Measured at boot (attempts 4-5): weights 120.06 GB per GPU (load 392-429 s),
+available pool memory 6.62 GB, 890 B per full token, `max_total_num_tokens`
+4,628,480 at `MAX_RUN=48`, graph capture 115 s. The planner on that pool gives
+C_high 28 / C_low 21 (the 7.87M estimate above was too high). Account spend after
+attempt 5: $9.99 of the $27 cap; a full run is estimated at $13-18 more.
+Fix for attempt 5: `SGLANG_UNIFIED_RADIX_TREE_CORE_BACKEND=python` (Python TreeCore).

@@ -718,6 +718,9 @@ def benchmark_lswb(
         "PORT": os.environ.get("PORT", "30211"),
         "TP": str(LSWB_TP),
         "EP_SIZE": str(LSWB_EP),
+        # The installed fork has neither the Rust radix-tree extension nor its
+        # sources, so the default Rust TreeCore fails after CUDA graph capture.
+        "SGLANG_UNIFIED_RADIX_TREE_CORE_BACKEND": "python",
         "MEM_FRAC": LSWB_MEM_FRAC,
         "MAX_RUN": str(LSWB_MAX_RUN),
         "MODEL_NAME": LSWB_MODEL_NAME,
