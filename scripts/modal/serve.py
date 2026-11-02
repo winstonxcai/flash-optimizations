@@ -10,8 +10,9 @@ Commands (each remote run requires budget authorization):
     modal run scripts/modal/serve.py::benchmark_lswb --mode v41-fp4
 
 V4.1-Flash-1017 LSWB: REMNANT_MODEL=v41-1017 REMNANT_INTEGRATION=v0.5.22 selects
-the checkpoint volume; upload data/longswebench.jsonl to the lswb-replay volume
-first (modal volume put lswb-replay data/longswebench.jsonl /longswebench.jsonl).
+the checkpoint volume; upload transfer/longswebench.jsonl.gz to the lswb-replay
+volume first (modal volume put lswb-replay transfer/longswebench.jsonl.gz
+/longswebench.jsonl.gz).
 
 Default benchmark: TP4/4xH100, Native, 32k input, 2048 output, concurrency 8;
 60-minute work limit (not an ETA). Uses the same Bash launcher as local H100s.
@@ -23,11 +24,13 @@ Model-free work: kernels.py. Capture: scripts/local/capture-latent.sh.
 
 from __future__ import annotations
 
+import gzip
 import hashlib
 import importlib.util
 import json
 import os
 import re
+import shutil
 import signal
 import socket
 import subprocess
@@ -489,28 +492,33 @@ LSWB_MODEL_NAME = "deepseek-v4-1-flash"
 )
 def prepare_lswb() -> dict:
     """CPU-only: convert the uploaded raw LSWB JSONL once and record its identity."""
-    raw = LSWB_ROOT / "longswebench.jsonl"
+    packed = LSWB_ROOT / "longswebench.jsonl.gz"
     prepared = LSWB_ROOT / "replay"
-    if not raw.is_file():
+    if not packed.is_file():
         raise FileNotFoundError(
-            f"{raw} is missing; upload it with: modal volume put lswb-replay "
-            "data/longswebench.jsonl /longswebench.jsonl"
+            f"{packed} is missing; upload it with: modal volume put lswb-replay "
+            "transfer/longswebench.jsonl.gz /longswebench.jsonl.gz"
         )
     if not prepared.exists():
-        subprocess.run(
-            [
-                sys.executable,
-                str(REMOTE_REPO / "scripts/local/convert_lswb.py"),
-                "--format",
-                "replay",
-                "--input",
-                str(raw),
-                "--output-dir",
-                str(prepared),
-            ],
-            check=True,
-            timeout=1500,
-        )
+        # The converter reads a plain file; keep the expansion off the volume.
+        with tempfile.TemporaryDirectory() as scratch:
+            raw = Path(scratch) / "longswebench.jsonl"
+            with gzip.open(packed, "rb") as source, raw.open("wb") as target:
+                shutil.copyfileobj(source, target, 1 << 20)
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(REMOTE_REPO / "scripts/local/convert_lswb.py"),
+                    "--format",
+                    "replay",
+                    "--input",
+                    str(raw),
+                    "--output-dir",
+                    str(prepared),
+                ],
+                check=True,
+                timeout=1500,
+            )
     manifest = json.loads((prepared / "manifest.json").read_text())
     if (manifest["selected_requests"], manifest["selected_users"]) != (
         LSWB_REQUESTS,
