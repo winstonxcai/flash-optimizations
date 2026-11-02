@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Start one production-fork SGLang server in the foreground.
 #
-# Usage: run-server.sh <native|triton|kernel> <model> <host> <port>
+# Usage: run-server.sh <native|triton|kernel|v41-fp4|v41-remnant> <model> <host> <port>
 # Author: Winston Cai.
 # The caller owns process groups, logging, and cleanup. Shared server flags
 # live here so local-container and Modal launches cannot silently diverge.
@@ -16,8 +16,17 @@ case "$MODE" in
   native) CACHE_FORMAT=native; CACHE_IMPLEMENTATION=kernel ;;
   triton|kernel) CACHE_FORMAT=remnant; CACHE_IMPLEMENTATION=$MODE ;;
   packed) CACHE_FORMAT=remnant; CACHE_IMPLEMENTATION=kernel ;;
-  *) echo "usage: $0 <native|triton|kernel> <model> <host> <port> (packed aliases kernel)" >&2; exit 2 ;;
+  # V4.1 picks its main KV layout with one flag. The V4 C4 arguments must stay
+  # at their defaults (remnant/config.py::validate_v41_cache_args rejects others).
+  v41-fp4|v41-remnant) V41_FORMAT=${MODE#v41-} ;;
+  *) echo "usage: $0 <native|triton|kernel|v41-fp4|v41-remnant> <model> <host> <port> (packed aliases kernel)" >&2; exit 2 ;;
 esac
+V41_FORMAT=${V41_FORMAT:-}
+if [ -n "$V41_FORMAT" ]; then
+  for name in STORE_IMPLEMENTATION C4_KEEP_COUNT C4_LAYER_KEEP_COUNTS HICACHE_RATIO REMNANT_CAPTURE_DIR; do
+    [ -z "${!name:-}" ] || { echo "$name is incompatible with mode $MODE" >&2; exit 2; }
+  done
+fi
 case "${STORE_IMPLEMENTATION:-}" in
   ""|triton|kernel) ;;
   *) echo "STORE_IMPLEMENTATION must be triton or kernel" >&2; exit 2 ;;
@@ -64,12 +73,8 @@ args=(
   --context-length "${CTX_LEN:-1048576}"
   --max-running-requests "${MAX_RUN:-256}"
   --chunked-prefill-size "${CHUNK:-8192}"
-  --dsv4-c4-cache-format "$CACHE_FORMAT"
-  --dsv4-c4-cache-implementation "$CACHE_IMPLEMENTATION"
   --kv-cache-dtype fp8_e4m3
   --moe-runner-backend flashinfer_mxfp4
-  --reasoning-parser deepseek-v4
-  --tool-call-parser deepseekv4
   --host "$HOST"
   --port "$PORT_VALUE"
   --cuda-graph-config "${DECODE_CFG:?DECODE_CFG is required}"
@@ -77,6 +82,14 @@ args=(
   --watchdog-timeout 1800
 )
 
+if [ -n "$V41_FORMAT" ]; then
+  args+=(--dsv41-main-kv-cache-format "$V41_FORMAT"
+    --reasoning-parser deepseek-v41 --tool-call-parser deepseekv41)
+else
+  args+=(--dsv4-c4-cache-format "$CACHE_FORMAT"
+    --dsv4-c4-cache-implementation "$CACHE_IMPLEMENTATION"
+    --reasoning-parser deepseek-v4 --tool-call-parser deepseekv4)
+fi
 if [ -n "${STORE_IMPLEMENTATION:-}" ]; then
   args+=(--dsv4-c4-cache-store-implementation "$STORE_IMPLEMENTATION")
 fi

@@ -2791,6 +2791,98 @@ class LswbSweepTests(unittest.TestCase):
         self.assertIn("prefix cache flush failed", result.stderr)
         self.assertFalse((failed_root / "client/args.json").exists())
 
+    def _fake_sglang(self) -> dict[str, str]:
+        tools = self.root / "fake-sglang"
+        tools.mkdir(exist_ok=True)
+        fake = tools / "sglang"
+        fake.write_text('#!/bin/sh\nprintf "%s\\n" "$@"\n')
+        fake.chmod(0o755)
+        return {"PATH": str(tools) + os.pathsep + os.environ["PATH"], "DECODE_CFG": "{}"}
+
+    def test_run_server_v41_modes_select_only_the_v41_layout(self):
+        """V4.1 modes pass one layout flag, V4.1 parsers and no V4 C4 arguments."""
+        script = kernels.REPO_ROOT / "scripts/local/run-server.sh"
+        environment = self._fake_sglang()
+
+        def argv(mode: str, **extra: str) -> subprocess.CompletedProcess:
+            return subprocess.run(["bash", str(script), mode, "/model", "127.0.0.1", "1"],
+                                  env={**environment, **extra}, capture_output=True, text=True, timeout=10)
+
+        for mode in ("fp4", "remnant"):
+            with self.subTest(mode=mode):
+                result = argv(f"v41-{mode}")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                words = result.stdout.split()
+                self.assertEqual(words[words.index("--dsv41-main-kv-cache-format") + 1], mode)
+                self.assertEqual(words[words.index("--reasoning-parser") + 1], "deepseek-v41")
+                self.assertEqual(words[words.index("--tool-call-parser") + 1], "deepseekv41")
+                self.assertFalse([w for w in words if w.startswith("--dsv4-c4-")])
+        for name in ("STORE_IMPLEMENTATION", "C4_KEEP_COUNT", "C4_LAYER_KEEP_COUNTS", "HICACHE_RATIO"):
+            with self.subTest(conflict=name):
+                result = argv("v41-fp4", **{name: "1"})
+                self.assertEqual(result.returncode, 2)
+                self.assertIn(f"{name} is incompatible", result.stderr)
+        native = argv("native").stdout.split()
+        self.assertEqual(native[native.index("--dsv4-c4-cache-format") + 1], "native")
+        self.assertEqual(native[native.index("--reasoning-parser") + 1], "deepseek-v4")
+        self.assertNotIn("--dsv41-main-kv-cache-format", native)
+
+    def test_replay_direct_execution_skips_git_check_and_names_v41_modes(self):
+        """LSWB_EXECUTION=direct needs no git checkout and reports the V4.1 layout."""
+        repo = self.root / "direct"
+        local = repo / "scripts/local"
+        local.mkdir(parents=True)
+        (local / "bench-lswb.sh").write_text((kernels.REPO_ROOT / "scripts/local/bench-lswb.sh").read_text())
+        fake_runner = repo / "client.py"
+        fake_runner.write_text(
+            "import pathlib, sys\n"
+            "args=sys.argv[1:]; root=pathlib.Path(args[args.index('--result-root')+1])\n"
+            "(root/'summary.json').write_text('{}')\n"
+        )
+        tools = repo / "tools"
+        tools.mkdir()
+        curl = tools / "curl"
+        curl.write_text("#!/bin/sh\ncase \"$*\" in\n*server_info*) cat \"$INFO\";;\n*flush_cache*) echo ok;;\nesac\n")
+        curl.chmod(0o755)
+        (local / "env.sh").write_text(
+            f"HOST_REPO={shlex.quote(str(repo))}\nRESULTS_HOST=$HOST_REPO/results\n"
+            "REPO_CT=/not/the/host\nLOG_HOST=$HOST_REPO/logs\nPORT=30381\nMODEL_NAME=fixture\n"
+            "check_sources() { echo git checkout required >&2; return 1; }\nts() { echo 20260101_000000; }\n"
+        )
+        (local / "eval-env.sh").write_text(
+            f"REPLAY_RUNNER={shlex.quote(str(fake_runner))}\nREPLAY_ADAPTER=$REPLAY_RUNNER\n"
+            "REPLAY_DATASET=$HOST_REPO\nREPLAY_MANIFEST=$REPLAY_RUNNER\nrequire_replay_config() { return 0; }\n"
+        )
+        graphs = {"cuda_graph_config": {"decode": {"backend": "full", "bs": [48]}}, "export_metrics_to_file": False}
+        environment = {"PATH": str(tools) + os.pathsep + os.environ["PATH"], "PYTHON": sys.executable}
+
+        def run(info: dict, execution: str | None, run_root: str) -> subprocess.CompletedProcess:
+            info_path = repo / "info.json"
+            info_path.write_text(json.dumps(info))
+            env = {**environment, "INFO": str(info_path), "LSWB_RUN_ROOT": str(repo / "results/lswb-replay" / run_root)}
+            if execution:
+                env["LSWB_EXECUTION"] = execution
+            return subprocess.run(["bash", str(local / "bench-lswb.sh"), "tag", "30381", "2", "1"],
+                                  env=env, capture_output=True, text=True, timeout=15)
+
+        result = run({**graphs, "dsv4_c4_cache_format": "native"}, None, "docker-default")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("git checkout required", result.stderr)
+        result = run({**graphs, "dsv4_c4_cache_format": "native"}, "bogus", "bogus")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("LSWB_EXECUTION must be docker or direct", result.stderr)
+        for fmt in ("fp4", "remnant"):
+            with self.subTest(v41=fmt):
+                info = {**graphs, "dsv4_c4_cache_format": "native", "dsv41_main_kv_cache_format": fmt}
+                result = run(info, "direct", f"direct-{fmt}")
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                config = json.loads((repo / f"results/lswb-replay/direct-{fmt}/collection-config.json").read_text())
+                self.assertEqual(config["mode"], f"v41-{fmt}")
+        result = run({**graphs, "dsv4_c4_cache_format": "native", "dsv41_main_kv_cache_format": "auto"}, "direct", "direct-v4")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        config = json.loads((repo / "results/lswb-replay/direct-v4/collection-config.json").read_text())
+        self.assertEqual(config["mode"], "native")
+
 
 
 if __name__ == "__main__":
