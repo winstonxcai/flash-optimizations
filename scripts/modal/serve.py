@@ -226,6 +226,7 @@ server_image = (
     memory=32768,
     timeout=6 * 3600,
     volumes={str(MODEL_ROOT): model_volume},
+    secrets=[modal.Secret.from_name("huggingface-token")],
 )
 def download_model() -> str:
     """CPU-only pinned checkpoint download; existing shards are reused."""
@@ -235,7 +236,7 @@ def download_model() -> str:
         repo_id=MODEL_REPO,
         revision=MODEL_REVISION,
         local_dir=str(MODEL_DIR),
-        max_workers=4,
+        max_workers=16,
     )
     model_volume.commit()
     return path
