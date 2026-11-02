@@ -81,4 +81,11 @@ available pool memory 6.62 GB, 890 B per full token, `max_total_num_tokens`
 4,628,480 at `MAX_RUN=48`, graph capture 115 s. The planner on that pool gives
 C_high 28 / C_low 21 (the 7.87M estimate above was too high). Account spend after
 attempt 5: $9.99 of the $27 cap; a full run is estimated at $13-18 more.
+| 6 | Booted, `server_info` and 3 sanity prompts passed (pool 4,765,184 tokens), cache flushed, replay C21 started. CUDA OOM on all ranks at the first long prefill (1 GiB scratch allocation with 0.2-0.7 GiB free of 139.8 GiB; 132 GiB held by PyTorch). 97/97 requests failed, run stopped by the early-stop rule | ~$6.4 |
+
 Fix for attempt 5: `SGLANG_UNIFIED_RADIX_TREE_CORE_BACKEND=python` (Python TreeCore).
+
+After attempt 6, `poohthewinnie` is at $16.39 of the $27 cap. Conclusion: 4xH200
+at TP4/EP4 with Engram tables on the GPUs leaves no headroom at MF0.92 (weights
+111.8 GiB/GPU), and lowering MF to make room shrinks the pool to about 1M tokens.
+Needs a memory-layout change (Engram host table, or 8 GPUs) before another launch.
