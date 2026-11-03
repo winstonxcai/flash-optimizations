@@ -13,6 +13,17 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Parent implementation `0e3f94b`, v0.5.22 SGLang `5174462` / FlashMLA
+  `3eb8594`: reject conflicting GLM image modes and resolved non-BF16 Packed
+  activations; bind benchmark resume to complete verified source/artifact
+  identity and raw-sample statistics; terminate owned compiler process groups
+  on failure. Centralize host geometry and document byte expansion. Expand the
+  model-free producer/pool/public-dispatch GPU test. CPU startup/benchmark,
+  targeted orchestration, formatting and independent reviews passed; the new GPU
+  test was not run and historical H100 evidence remains source-bound. Compact
+  the experiment ledger while preserving its immutable Git history and a verified
+  local archive. Native default and other pins remain unchanged.
+
 - Parent preparation `0639722`, v0.5.22 SGLang `979839b` (runtime-tested
   `9185c6d25115`) / FlashMLA
   `3eb85944fd7d`: resolve fork lint debt, preserve immutable historical fixtures,
