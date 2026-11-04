@@ -76,6 +76,10 @@ args=(
   --watchdog-timeout 1800
 )
 
+if [ -n "${MAX_TOTAL_TOKENS:-}" ]; then
+  args+=(--max-total-tokens "$MAX_TOTAL_TOKENS")
+fi
+
 case "${MODEL_FAMILY:-dsv4}" in
   dsv4)
     args+=(--dsv4-c4-cache-format "$CACHE_FORMAT"
@@ -91,10 +95,13 @@ case "${MODEL_FAMILY:-dsv4}" in
       triton) GLM_IMPLEMENTATION=adapter ;;
       *) GLM_IMPLEMENTATION=direct ;;
     esac
-    args+=(--glm5-mla-cache-format "$CACHE_FORMAT"
+    args+=(--model-type llm --glm5-mla-cache-format "$CACHE_FORMAT"
       --glm5-mla-cache-implementation "$GLM_IMPLEMENTATION"
       --dsa-prefill-backend tilelang --dsa-decode-backend tilelang
       --moe-runner-backend deep_gemm --ep "$EP" --language-model-only)
+    if [ -n "${GLM_REASONING_PARSER:-}" ]; then
+      args+=(--reasoning-parser "$GLM_REASONING_PARSER")
+    fi
     ;;
   *) echo "MODEL_FAMILY must be dsv4 or glm53" >&2; exit 2 ;;
 esac

@@ -6,6 +6,8 @@ Commands (each remote run requires budget authorization):
     modal run scripts/modal/serve.py::inspect_model_cache
     modal run scripts/modal/serve.py::download_model
     modal run scripts/modal/serve.py::benchmark_serving --mode native
+    modal run scripts/modal/serve.py::prepare_glm_serving
+    modal run scripts/modal/serve.py::smoke_glm_serving --run-id <unique-id>
 
 Default benchmark: TP4/4xH100, Native, 32k input, 2048 output, concurrency 8;
 60-minute work limit (not an ETA). Uses the same Bash launcher as local H100s.
@@ -44,6 +46,8 @@ if MODEL_FAMILY not in ("dsv4", "glm53") or (MODEL_FAMILY == "glm53" and INTEGRA
     raise ValueError("GLM launchers require REMNANT_INTEGRATION=v0.5.22")
 MODEL_REPO = "zai-org/GLM-5.3-Flash" if MODEL_FAMILY == "glm53" else "deepseek-ai/DeepSeek-V4-Flash-0731"
 MODEL_REVISION = "46a050bec13002ad29ee795c16e61cf4fa3c4a9c" if MODEL_FAMILY == "glm53" else "7872f01b1d1fe23eabc4c98b48bffcef5a386062"
+GLM_CHECKPOINT_SHARDS = 62
+GLM_CHECKPOINT_BYTES = 328_337_455_672
 MODEL_ROOT = Path("/models")
 MODEL_DIR = MODEL_ROOT / ("GLM-5.3-Flash" if MODEL_FAMILY == "glm53" else "DeepSeek-V4-Flash-0731")
 RESULTS_ROOT = Path("/results")
@@ -55,7 +59,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2] if modal.is_local() else REMOTE_
 if modal.is_local():
     from scripts.sources import check_sources
 
-    SOURCE_IDENTITIES = check_sources(REPO_ROOT)
+    source_override = os.environ.get("REMNANT_SGLANG_SOURCE_OVERRIDE")
+    SOURCE_IDENTITIES = check_sources(
+        REPO_ROOT, {"sglang": Path(source_override)} if source_override else None
+    )
 else:
     SOURCE_IDENTITIES = json.loads(os.environ["REMNANT_SOURCE_IDENTITIES"])
 
@@ -98,7 +105,10 @@ SOURCE_ENV = {
 SOURCE_ENV["REMNANT_SOURCE_IDENTITIES"] = json.dumps(SOURCE_IDENTITIES)
 SOURCE_ENV["REMNANT_INTEGRATION"] = INTEGRATION["version"]
 SOURCE_ENV["REMNANT_MODEL_FAMILY"] = MODEL_FAMILY
+SOURCE_ENV["REMNANT_COMPILED_IMAGE"] = os.environ.get("REMNANT_COMPILED_IMAGE", "")
 app = modal.App("remnant")
+checkpoint_app = modal.App("remnant-checkpoint")
+SGLANG_SOURCE = Path(SOURCE_IDENTITIES["sglang"]["path"])
 model_volume = modal.Volume.from_name("glm53-flash" if MODEL_FAMILY == "glm53" else "deepseek-v4-flash-0731", create_if_missing=True)
 # Keep the existing volume name: renaming the public modes must not orphan results.
 results_volume = modal.Volume.from_name(
@@ -109,83 +119,94 @@ download_image = (
     .pip_install(
         "huggingface-hub[hf-xet]==0.34.4",
     )
-    .env(SOURCE_ENV)
-)
-
-
-compiled_image_id = os.environ.get("REMNANT_COMPILED_IMAGE")
-if compiled_image_id:
-    # Explicit CPU-checked reuse for Python-only iteration. Never refresh CUDA
-    # source over old binaries: reject mismatches before mounting Python files.
-    expected = _compiled_source_digest(
-        [
-            REPO_ROOT / INTEGRATION["sglang"] / "python/sglang/kernels",
-            REPO_ROOT / INTEGRATION["flashmla"] / "csrc",
-        ]
-    )
-    fork_image = (
-        modal.Image.from_id(compiled_image_id)
-        .pip_install(f"modal=={modal.__version__}")
-        .env(SOURCE_ENV)
-        # Bake the verifier's helpers into the cache key; execute ordinary Python.
-        .add_local_file(
-            REPO_ROOT / "scripts/modal/serve.py", "/opt/remnant-serve.py", copy=True
-        )
-        .add_local_file(
-            REPO_ROOT / "scripts/sources.py",
-            str(REMOTE_REPO / "scripts/sources.py"),
-            copy=True,
-        )
-        .run_function(
-            _verify_compiled_sources, kwargs={"expected": expected}, timeout=180
-        )
-        .add_local_dir(
-            REPO_ROOT / INTEGRATION["sglang"],
-            str(SGLANG_ROOT),
-            copy=True,
-            ignore=(
-                "python/sglang/kernels/**",
-                ".git",
-                "**/__pycache__/**",
-                "**/*.pyc",
-            ),
-        )
-    )
-else:
-    fork_image = modal.Image.from_dockerfile(
-        str(REPO_ROOT / INTEGRATION["dockerfile"]),
-        context_dir=str(REPO_ROOT),
-        build_args={
-            "REMNANT_BASE_IMAGE": INTEGRATION["base_image"],
-            "REMNANT_INTEGRATION": INTEGRATION["version"],
-            "REMNANT_SGLANG_SOURCE": INTEGRATION["sglang"],
-            "REMNANT_FLASHMLA_SOURCE": INTEGRATION["flashmla"],
-            "REMNANT_SGLANG_SHA": SOURCE_REVISIONS["sglang"],
-            "REMNANT_FLASHMLA_SHA": SOURCE_REVISIONS["flashmla"],
-        },
-        ignore=modal.FilePatternMatcher.from_file(REPO_ROOT / ".dockerignore"),
-    )
-server_image = (
-    fork_image.env(SOURCE_ENV)
+    .env({**SOURCE_ENV, "PYTHONPATH": str(REMOTE_REPO)})
     .add_local_file(
         REPO_ROOT / "scripts/sources.py",
         str(REMOTE_REPO / "scripts/sources.py"),
         copy=True,
     )
-    .apt_install("curl", "jq", "util-linux", "coreutils")
-    .add_local_dir(
-        REPO_ROOT / "scripts/local",
-        REMOTE_REPO / "scripts/local",
-        ignore=("**/__pycache__/**", "**/*.pyc"),
-    )
 )
 
 
-@app.function(
+compiled_image_id = os.environ.get("REMNANT_COMPILED_IMAGE")
+if modal.is_local() and SOURCE_IDENTITIES["sglang"]["override"] and not compiled_image_id:
+    raise ValueError("Serving from a source override requires a verified compiled image")
+if modal.is_local():
+    if compiled_image_id:
+        # Explicit CPU-checked reuse for Python-only iteration. Never refresh CUDA
+        # source over old binaries: reject mismatches before mounting Python files.
+        expected = _compiled_source_digest(
+            [
+                SGLANG_SOURCE / "python/sglang/kernels",
+                REPO_ROOT / INTEGRATION["flashmla"] / "csrc",
+            ]
+        )
+        fork_image = (
+            modal.Image.from_id(compiled_image_id)
+            .pip_install(f"modal=={modal.__version__}")
+            .env(SOURCE_ENV)
+            # Bake the verifier's helpers into the cache key; execute ordinary Python.
+            .add_local_file(
+                REPO_ROOT / "scripts/modal/serve.py", "/opt/remnant-serve.py", copy=True
+            )
+            .add_local_file(
+                REPO_ROOT / "scripts/sources.py",
+                str(REMOTE_REPO / "scripts/sources.py"),
+                copy=True,
+            )
+            .run_function(
+                _verify_compiled_sources, kwargs={"expected": expected}, timeout=180
+            )
+            .add_local_dir(
+                SGLANG_SOURCE,
+                str(SGLANG_ROOT),
+                copy=True,
+                ignore=(
+                    "python/sglang/kernels/**",
+                    ".git",
+                    "**/__pycache__/**",
+                    "**/*.pyc",
+                ),
+            )
+        )
+    else:
+        fork_image = modal.Image.from_dockerfile(
+            str(REPO_ROOT / INTEGRATION["dockerfile"]),
+            context_dir=str(REPO_ROOT),
+            build_args={
+                "REMNANT_BASE_IMAGE": INTEGRATION["base_image"],
+                "REMNANT_INTEGRATION": INTEGRATION["version"],
+                "REMNANT_SGLANG_SOURCE": INTEGRATION["sglang"],
+                "REMNANT_FLASHMLA_SOURCE": INTEGRATION["flashmla"],
+                "REMNANT_SGLANG_SHA": SOURCE_REVISIONS["sglang"],
+                "REMNANT_FLASHMLA_SHA": SOURCE_REVISIONS["flashmla"],
+            },
+            ignore=modal.FilePatternMatcher.from_file(REPO_ROOT / ".dockerignore"),
+        )
+    server_image = (
+        fork_image.env(SOURCE_ENV)
+        .add_local_file(
+            REPO_ROOT / "scripts/sources.py",
+            str(REMOTE_REPO / "scripts/sources.py"),
+            copy=True,
+        )
+        .apt_install("curl", "jq", "util-linux", "coreutils")
+        .add_local_dir(
+            REPO_ROOT / "scripts/local",
+            REMOTE_REPO / "scripts/local",
+            ignore=("**/__pycache__/**", "**/*.pyc"),
+        )
+    )
+else:
+    server_image = download_image
+
+
+@checkpoint_app.function(
     image=download_image,
     cpu=8,
     memory=32768,
-    timeout=6 * 3600,
+    timeout=3600 if MODEL_FAMILY == "glm53" else 6 * 3600,
+    retries=0,
     volumes={str(MODEL_ROOT): model_volume},
 )
 def download_model() -> str:
@@ -196,13 +217,14 @@ def download_model() -> str:
         repo_id=MODEL_REPO,
         revision=MODEL_REVISION,
         local_dir=str(MODEL_DIR),
-        max_workers=4,
+        max_workers=8 if MODEL_FAMILY == "glm53" else 4,
     )
     model_volume.commit()
+    _check_model_cache()
     return path
 
 
-@app.function(
+@checkpoint_app.function(
     image=download_image,
     cpu=1,
     memory=1024,
@@ -212,12 +234,20 @@ def download_model() -> str:
 )
 def inspect_model_cache() -> dict:
     """CPU-only revision/size gate; no downloads or GPU allocation."""
+    return _check_model_cache()
+
+
+def _check_model_cache() -> dict:
     config = json.loads((MODEL_DIR / "config.json").read_text())
     index = json.loads((MODEL_DIR / "model.safetensors.index.json").read_text())
     names = sorted(set(index["weight_map"].values()))
-    if not names or (MODEL_FAMILY == "dsv4" and len(names) != 48):
-        raise RuntimeError("expected 48 pinned checkpoint shards")
-    for name in names + ["config.json", "model.safetensors.index.json"]:
+    expected_shards = GLM_CHECKPOINT_SHARDS if MODEL_FAMILY == "glm53" else 48
+    if len(names) != expected_shards:
+        raise RuntimeError(f"Expected {expected_shards} pinned checkpoint shards, got {len(names)}")
+    metadata_files = ["config.json", "model.safetensors.index.json"]
+    if MODEL_FAMILY == "glm53":
+        metadata_files += ["tokenizer.json", "tokenizer_config.json", "chat_template.jinja"]
+    for name in names + metadata_files:
         path = MODEL_DIR / name
         receipt = MODEL_DIR / ".cache/huggingface/download" / (name + ".metadata")
         if (
@@ -227,10 +257,13 @@ def inspect_model_cache() -> dict:
             or receipt.read_text().splitlines()[:1] != [MODEL_REVISION]
         ):
             raise RuntimeError(f"missing or unpinned checkpoint file: {name}")
+    size = sum((MODEL_DIR / name).stat().st_size for name in names)
+    if MODEL_FAMILY == "glm53" and size != GLM_CHECKPOINT_BYTES:
+        raise RuntimeError(f"Expected {GLM_CHECKPOINT_BYTES} checkpoint bytes, got {size}")
     result = {
         "revision": MODEL_REVISION,
         "shards": len(names),
-        "bytes": sum((MODEL_DIR / n).stat().st_size for n in names),
+        "bytes": size,
         "heads": config.get("text_config", config)["num_attention_heads"],
         "layers": config["text_config"]["num_hidden_layers"] if MODEL_FAMILY == "glm53" else len(config["compress_ratios"]),
     }
@@ -401,6 +434,182 @@ def benchmark_serving(
     finally:
         results_volume.commit()
     return str(run)
+
+
+GLM_SMOKE_MODE_SECONDS = 960
+GLM_SMOKE_TIMEOUT_SECONDS = 2 * GLM_SMOKE_MODE_SECONDS + 120
+GLM_SMOKE_PYTHON = "/opt/sglang/bin/python"
+
+
+def _check_glm_serving_image() -> dict:
+    if MODEL_FAMILY != "glm53" or not compiled_image_id:
+        raise ValueError("GLM serving smoke requires glm53 and a verified REMNANT_COMPILED_IMAGE")
+    build = Path("/opt/remnant-build.json")
+    if not build.is_file() or not Path(GLM_SMOKE_PYTHON).is_file():
+        raise RuntimeError("The verified GLM runtime or its build manifest is missing")
+    config = json.loads(build.read_text())["model_config"]
+    if config["revision"] != MODEL_REVISION:
+        raise RuntimeError("The compiled image and serving checkpoint revisions differ")
+    return config
+
+
+def _check_glm_serving_checkpoint(compiled_config: dict) -> dict:
+    checkpoint = _check_model_cache()
+    digest = hashlib.sha256((MODEL_DIR / "config.json").read_bytes()).hexdigest()
+    if digest != compiled_config["sha256"]:
+        raise RuntimeError("Mounted GLM config does not match the verified image")
+    return {**checkpoint, "config_sha256": digest}
+
+
+@app.function(
+    image=server_image,
+    cpu=2,
+    memory=4096,
+    timeout=180,
+    retries=0,
+    volumes={str(MODEL_ROOT): model_volume.read_only()},
+)
+def prepare_glm_serving(check_checkpoint: bool = True) -> dict:
+    """Check the serving imports and optionally verify the pinned weights on CPU."""
+    compiled_config = _check_glm_serving_image()
+    checkpoint = _check_glm_serving_checkpoint(compiled_config) if check_checkpoint else None
+    subprocess.run(
+        [GLM_SMOKE_PYTHON, str(Path(GLM_SMOKE_PYTHON).with_name("sglang")),
+         "serve", "--model-type", "llm", "--help"],
+        check=True,
+        timeout=90,
+        stdout=subprocess.DEVNULL,
+    )
+    return {"checkpoint": checkpoint, "compiled_image": compiled_image_id}
+
+
+def _glm_chat_request(port: str, deadline: float) -> dict:
+    payload = {
+        "model": "glm53-flash",
+        "messages": [{"role": "user", "content": "Write the numbers one to five in order."}],
+        "chat_template_kwargs": {"reasoning_effort": "low"},
+        "temperature": 0,
+        "max_tokens": 256,
+    }
+    request = urllib.request.Request(
+        f"http://127.0.0.1:{port}/v1/chat/completions",
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json"},
+    )
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise TimeoutError("No time remaining for GLM chat completion")
+    with urllib.request.urlopen(request, timeout=min(120, remaining)) as response:
+        status = response.status
+        body = json.load(response)
+    choices = body.get("choices") or []
+    choice = choices[0] if choices else {}
+    content = choice.get("message", {}).get("content")
+    if (
+        status != 200
+        or body.get("model") != payload["model"]
+        or not isinstance(content, str)
+        or not content.strip()
+        or choice.get("finish_reason") != "stop"
+        or body.get("usage", {}).get("completion_tokens", 0) < 2
+    ):
+        raise RuntimeError(f"Invalid GLM chat completion: {body!r}")
+    return {"http_status": status, "request": payload, "response": body}
+
+
+@app.function(
+    image=server_image,
+    gpu="H200:4",
+    cpu=24,
+    memory=196608,
+    timeout=GLM_SMOKE_TIMEOUT_SECONDS,
+    retries=0,
+    max_containers=1,
+    scaledown_window=2,
+    volumes={str(MODEL_ROOT): model_volume.read_only(), str(RESULTS_ROOT): results_volume},
+)
+def smoke_glm_serving(run_id: str, modes: str = "native,packed") -> dict:
+    """Boot the same pinned checkpoint in each mode and make a chat request."""
+    selected = modes.split(",")
+    if modes not in ("native,packed", "native", "packed"):
+        raise ValueError("modes must be native,packed, native, or packed")
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,100}", run_id):
+        raise ValueError("Invalid GLM serving run ID")
+    checkpoint = _check_glm_serving_checkpoint(_check_glm_serving_image())
+    devices = subprocess.check_output(
+        ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"],
+        text=True,
+        timeout=10,
+    ).splitlines()
+    if len(devices) != 4 or any("H200" not in device for device in devices):
+        raise RuntimeError(f"Expected four H200 devices, got {devices!r}")
+    root = RESULTS_ROOT / "glm53-serving" / run_id
+    root.mkdir(parents=True, exist_ok=False)
+    record = {
+        "checkpoint": checkpoint,
+        "sources": SOURCE_IDENTITIES,
+        "launcher": str(REMOTE_REPO / "scripts/local/run-server.sh"),
+        "model_path": str(MODEL_DIR),
+        "compiled_image": compiled_image_id,
+        "gpus": devices,
+        "mode_results": {},
+    }
+    settings = {
+        "MODEL_FAMILY": "glm53",
+        "MODEL_NAME": "glm53-flash",
+        "TP": "4",
+        "EP": "4",
+        "PORT": "30211",
+        "CTX_LEN": "8192",
+        "MAX_RUN": "4",
+        "CHUNK": "2048",
+        "MAX_TOTAL_TOKENS": "16384",
+        # Build only the DeepGEMM shapes used by this small smoke workload.
+        "SGLANG_JIT_DEEPGEMM_PRECOMPILE": "0",
+        "MEM_FRAC": "0.86",
+        # Readiness probes must not queue work during first-use JIT.
+        "SGLANG_ENABLE_HEALTH_ENDPOINT_GENERATION": "0",
+        # The verified kernel image does not bundle the optional Rust tree.
+        "SGLANG_UNIFIED_RADIX_TREE_CORE_BACKEND": "python",
+        "HF_HUB_OFFLINE": "1",
+        "TRANSFORMERS_OFFLINE": "1",
+        "GLM_REASONING_PARSER": "auto",
+        "DECODE_CFG": json.dumps(
+            {"decode": {"backend": "full", "max_bs": 4, "bs": [1, 2, 4]},
+             "prefill": {"backend": "disabled"}}
+        ),
+    }
+    record["settings"] = settings
+    for mode in selected:
+        start = time.monotonic()
+        deadline = start + GLM_SMOKE_MODE_SECONDS
+        log = root / f"{mode}.log"
+        result = record["mode_results"][mode] = {"status": "failed"}
+        env = {
+            **os.environ,
+            **settings,
+            "PATH": f"{Path(GLM_SMOKE_PYTHON).parent}:{os.environ['PATH']}",
+            "SERVING_MODE": mode,
+        }
+        try:
+            print(f"Starting GLM {mode} on four H200s", flush=True)
+            with _running_serving_server(env, log, deadline):
+                result["health_http_status"] = 200
+                result["ready_seconds"] = time.monotonic() - start
+                result["chat"] = _glm_chat_request(env["PORT"], deadline)
+            result["status"] = "passed"
+        except (OSError, RuntimeError, ValueError) as exc:
+            result["error"] = str(exc)
+            if log.exists():
+                print("\n".join(log.read_text(errors="replace").splitlines()[-40:]), flush=True)
+        finally:
+            result["worker_seconds"] = time.monotonic() - start
+            (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
+            results_volume.commit()
+    print(json.dumps(record), flush=True)
+    if any(item["status"] != "passed" for item in record["mode_results"].values()):
+        raise RuntimeError(f"GLM serving smoke failed. See {root}/result.json")
+    return record
 
 
 # Installed extension checks (never compile inside a GPU function).

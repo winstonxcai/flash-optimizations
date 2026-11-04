@@ -366,8 +366,52 @@ Focused Direct numerical/graph and three-tool checks, and Adapter >2 GiB
 numerical and three-tool checks, subsequently passed at `9185c6d25115`. These
 results qualify their recorded sources; they do not automatically qualify the
 current pin. The expanded producer/pool/public-dispatch GPU test has not run.
-Full-grid/combine sanitizer instrumentation, full-model loading, serving,
-model quality, multi-GPU execution and H20 execution remain unverified.
+Full-grid/combine sanitizer instrumentation, model quality and H20 execution
+remain unverified. The four-H200 text-only serving scope is recorded below.
+
+### Full-model H200 smoke test
+
+The [SGLang cookbook](https://cookbook.sglang.io/autoregressive/GLM/GLM-5.3-Flash)
+uses TileLang DSA and DeepGEMM on H200. Its verified high-throughput recipe
+uses TP8/EP8 with BF16 KV. The Remnant smoke test uses TP4/EP4, FP8 E4M3 KV,
+text-only loading, an 8K context and decode graphs up to batch four. Native
+and Packed Direct use the same checkpoint and launcher settings. The smoke
+uses the Python radix-tree backend supplied by the verified image.
+
+From the parent worktree, with a Modal profile that can access the verified
+GLM image, run:
+
+```sh
+export REMNANT_INTEGRATION=v0.5.22 REMNANT_MODEL_FAMILY=glm53
+export REMNANT_COMPILED_IMAGE=<verified-cpu-built-image>
+modal run scripts/modal/serve.py::download_model
+modal run scripts/modal/serve.py::prepare_glm_serving
+modal run scripts/modal/serve.py::smoke_glm_serving --run-id <unique-run-id>
+```
+
+For a deliberate experiment against an uncommitted candidate, set
+`REMNANT_SGLANG_SOURCE_OVERRIDE` to its checkout. The runner records the
+source content hash and verifies the compiled-source digest before overlaying
+Python files. Ordinary launches still require exact clean pins.
+
+The checkpoint function downloads the pinned official FP8 weights once to
+`glm53-flash`. The CPU preflight verifies checkpoint receipts, shard bytes,
+the config hash and the LLM CLI. The four-H200 function mounts the checkpoint
+read-only and starts one loopback server at a time. Each mode must return HTTP
+200 from `/health` and a nonempty OpenAI-compatible chat completion. Logs and
+responses go to `remnant-stage2a-results/glm53-serving/<unique-run-id>`.
+
+The [four-H200 run](https://modal.com/apps/caiw/main/ap-kOVXUiAnMymNtwN0njkeOe)
+loaded all 62 official FP8 shards and captured decode graphs on every rank in
+both modes. Both returned HTTP 200 for `/health` and `/v1/chat/completions`.
+Each response contained `1, 2, 3, 4, 5` with finish reason `stop`. The tested
+Modal serving image is `im-VvBWmlcKXOGyVuHTE6kVxx` in `caiw`. It used an
+explicit source override with benchmark-only prefill edits alongside the
+serving fixes. The 64-row prefill experiment was outside this smoke scope.
+The [qualification record](../benchmarks/microbench/glm53-packed/qualification.json)
+contains the exact image and source identities, commands, response bodies,
+log hashes and costs. This was a single-request smoke per mode. Serving
+performance, capacity and multimodal behavior remain unverified.
 
 Rollback is Native format or the pre-optimization SGLang pin `889edf56`. The
 v0.5.22 FlashMLA pin and both v0.5.18 pins are unchanged.

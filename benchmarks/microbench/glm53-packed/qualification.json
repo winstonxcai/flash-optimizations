@@ -376,5 +376,271 @@
     "No checkpoint loading, serving capacity, quality, latency, multi-GPU or H20 qualification.",
     "No optimized prefill timing; old 128-case experiment remains incomplete."
   ],
-  "rollback": "Select Native cache format; optimized-loader baseline SGLang 889edf56b33226c80b17ddf3472c1206df62c3f0."
+  "rollback": "Select Native cache format; optimized-loader baseline SGLang 889edf56b33226c80b17ddf3472c1206df62c3f0.",
+  "full_model_smoke": {
+    "status": "passed",
+    "decision": "Retain the serving startup fixes and the verified image. Native and Packed Direct both pass the four-H200 text-only full-checkpoint smoke.",
+    "run_id": "glm53-h200-tp4-final-answer-20261104",
+    "modal_profile": "caiw",
+    "serving_image": "im-VvBWmlcKXOGyVuHTE6kVxx",
+    "compiled_base_image": "im-VNWowCrHAn7IchjzCb3JkM",
+    "final_sglang_pin": "d748fe5e4ae74b76a103dbadb3d9cf85b4cfce0a",
+    "source_note": "The verified image used the recorded source override, including existing benchmark-only prefill edits. The new pin commits only the serving fixes. The production Packed decode dispatch was exercised.",
+    "official_guide": "https://cookbook.sglang.io/autoregressive/GLM/GLM-5.3-Flash",
+    "checkpoint_repository": "zai-org/GLM-5.3-Flash",
+    "checkpoint_volume": "glm53-flash",
+    "checkpoint_download_app": "ap-9UgvnU2XOq6Y9bmYqicHIq",
+    "cpu_preflight_app": "ap-P4aigzYBTItQhySv036DCp",
+    "serving_app": "ap-kOVXUiAnMymNtwN0njkeOe",
+    "commands": {
+      "download": "MODAL_PROFILE=caiw REMNANT_INTEGRATION=v0.5.22 REMNANT_MODEL_FAMILY=glm53 REMNANT_SGLANG_SOURCE_OVERRIDE=\"$PWD/third_party/sglang-v0.5.22\" REMNANT_COMPILED_IMAGE=im-VNWowCrHAn7IchjzCb3JkM modal run scripts/modal/serve.py::download_model",
+      "cpu_preflight": "MODAL_PROFILE=caiw REMNANT_INTEGRATION=v0.5.22 REMNANT_MODEL_FAMILY=glm53 REMNANT_SGLANG_SOURCE_OVERRIDE=\"$PWD/third_party/sglang-v0.5.22\" REMNANT_COMPILED_IMAGE=im-VNWowCrHAn7IchjzCb3JkM modal run scripts/modal/serve.py::prepare_glm_serving",
+      "smoke": "MODAL_PROFILE=caiw REMNANT_INTEGRATION=v0.5.22 REMNANT_MODEL_FAMILY=glm53 REMNANT_SGLANG_SOURCE_OVERRIDE=\"$PWD/third_party/sglang-v0.5.22\" REMNANT_COMPILED_IMAGE=im-VNWowCrHAn7IchjzCb3JkM modal run scripts/modal/serve.py::smoke_glm_serving --run-id glm53-h200-tp4-final-answer-20261104",
+      "export": "MODAL_PROFILE=caiw modal volume get remnant-stage2a-results glm53-serving/glm53-h200-tp4-final-answer-20261104 <local-output-dir>",
+      "billing": "MODAL_PROFILE=caiw modal billing summary --for 2026-11 --json",
+      "active_allocations": "MODAL_PROFILE=caiw modal container list"
+    },
+    "result_volume": "remnant-stage2a-results",
+    "result_path": "glm53-serving/glm53-h200-tp4-final-answer-20261104",
+    "export_sha256": {
+      "result.json": "50d74a40dc1d78a76638ea57d3bc725eef1129d616a00fae14dca1130db5f627",
+      "native.log": "be6e72e7095c3dd0d3ff5011bbf1304599458e64b543e0b2cbe69a2d32fb49c0",
+      "packed.log": "6ff4f2007e3836729bba47fe13bb069b2bdee33402b45cdf39ff63dae90963be"
+    },
+    "previous_attempts": [
+      {
+        "app": "ap-ZrY1msHLszjcqoOAdrDwRM",
+        "status": "checkpoint worker import failed"
+      },
+      {
+        "app": "ap-Zr0zFkY3FB57h9Qr57QTHX",
+        "status": "CPU CLI help imported GPU-only diffusion code"
+      },
+      {
+        "app": "ap-ll7X49TvrUBFscFawzd6K3",
+        "run_id": "glm53-h200-tp4-smoke-20261104",
+        "status": "GLM missing from text-only architecture allowlist"
+      },
+      {
+        "app": "ap-2K1oUe3w8WdUmUIVdGxax9",
+        "run_id": "glm53-h200-tp4-text-only-20261104",
+        "status": "weight load passed, stale cache-pool field blocked decode graph capture"
+      },
+      {
+        "app": "ap-GSErmiri6jid3pnGfNxlc9",
+        "run_id": "glm53-h200-tp4-forward-context-20261104",
+        "status": "Native graph capture passed, missing optional Rust radix tree blocked startup. Stopped during Packed loading."
+      },
+      {
+        "app": "ap-RKSNqUeAxFlx4UXGhldx2u",
+        "run_id": "glm53-h200-tp4-python-tree-20261104",
+        "status": "both modes returned HTTP 200, but exhausted the 32-token limit during reasoning"
+      }
+    ],
+    "cost": {
+      "authorized_usd": 60,
+      "month": "2026-11",
+      "workspace_gross_metered_baseline_usd": "11.50386751",
+      "workspace_gross_metered_after_usd": "26.81355577",
+      "gross_metered_delta_usd": "15.30968826",
+      "workspace_ephemeral_apps_after_usd": "25.19746344",
+      "workspace_volumes_after_usd": "1.44380919",
+      "workspace_egress_after_usd": "0.16974658",
+      "active_containers_after": 0,
+      "note": "Gross workspace delta includes CPU and GPU attempts, storage and egress, before credits. Billing can lag and the retained checkpoint can accrue storage."
+    },
+    "limitations": [
+      "One short request per mode on one four-H200 TP4/EP4 worker. Startup times include first-use compilation and different cache state.",
+      "No serving throughput, latency, capacity, multimodal, or model-quality qualification.",
+      "The experimental 64-row prefill tile was benchmark-only."
+    ],
+    "smoke": {
+      "checkpoint": {
+        "revision": "46a050bec13002ad29ee795c16e61cf4fa3c4a9c",
+        "shards": 62,
+        "bytes": 328337455672,
+        "heads": 64,
+        "layers": 45,
+        "config_sha256": "bb8f01c42cb92a52ca72e65afb4d5bd8d11aef083cd210e8de25dfb904f23e9f"
+      },
+      "sources": {
+        "parent": {
+          "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations",
+          "commit": "8a9a9397df90dcdea7d36ff99ba70ac04fc80d38"
+        },
+        "sglang": {
+          "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+          "expected_commit": "51744625288154ea36714434a3d2e46ae3f15047",
+          "commit": "51744625288154ea36714434a3d2e46ae3f15047",
+          "override": true,
+          "dirty": true,
+          "sha256": "5167964a5f4f20d2bc8db39322ac834c38d6cc6dba0988fce61a02fb7aa46d88",
+          "integration": "v0.5.22"
+        },
+        "flashmla/csrc/cutlass": {
+          "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+          "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "override": false,
+          "dirty": false
+        },
+        "flashmla": {
+          "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22",
+          "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+          "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+          "override": false,
+          "dirty": false,
+          "integration": "v0.5.22"
+        }
+      },
+      "launcher": "/opt/flash-optimizations/scripts/local/run-server.sh",
+      "model_path": "/models/GLM-5.3-Flash",
+      "compiled_image": "im-VNWowCrHAn7IchjzCb3JkM",
+      "gpus": [
+        "NVIDIA H200, 143771 MiB",
+        "NVIDIA H200, 143771 MiB",
+        "NVIDIA H200, 143771 MiB",
+        "NVIDIA H200, 143771 MiB"
+      ],
+      "mode_results": {
+        "native": {
+          "status": "passed",
+          "health_http_status": 200,
+          "ready_seconds": 397.457129303,
+          "chat": {
+            "http_status": 200,
+            "request": {
+              "model": "glm53-flash",
+              "messages": [
+                {
+                  "role": "user",
+                  "content": "Write the numbers one to five in order."
+                }
+              ],
+              "chat_template_kwargs": {
+                "reasoning_effort": "low"
+              },
+              "temperature": 0,
+              "max_tokens": 256
+            },
+            "response": {
+              "id": "4244934bf03f418d9c17533775b775a5",
+              "object": "chat.completion",
+              "created": 1793800688,
+              "model": "glm53-flash",
+              "choices": [
+                {
+                  "index": 0,
+                  "message": {
+                    "role": "assistant",
+                    "content": "1, 2, 3, 4, 5",
+                    "reasoning_content": null
+                  },
+                  "logprobs": null,
+                  "finish_reason": "stop",
+                  "matched_stop": 154827
+                }
+              ],
+              "usage": {
+                "prompt_tokens": 21,
+                "total_tokens": 36,
+                "completion_tokens": 15,
+                "prompt_tokens_details": null,
+                "reasoning_tokens": 1
+              },
+              "metadata": {
+                "weight_version": "default",
+                "weight_versions": [
+                  {
+                    "version": "default",
+                    "start": 0,
+                    "end": 15
+                  }
+                ]
+              }
+            }
+          },
+          "worker_seconds": 474.738915013
+        },
+        "packed": {
+          "status": "passed",
+          "health_http_status": 200,
+          "ready_seconds": 165.18281268100003,
+          "chat": {
+            "http_status": 200,
+            "request": {
+              "model": "glm53-flash",
+              "messages": [
+                {
+                  "role": "user",
+                  "content": "Write the numbers one to five in order."
+                }
+              ],
+              "chat_template_kwargs": {
+                "reasoning_effort": "low"
+              },
+              "temperature": 0,
+              "max_tokens": 256
+            },
+            "response": {
+              "id": "b4bde693a96b4dd8a770aaa5a88e1082",
+              "object": "chat.completion",
+              "created": 1793800865,
+              "model": "glm53-flash",
+              "choices": [
+                {
+                  "index": 0,
+                  "message": {
+                    "role": "assistant",
+                    "content": "1, 2, 3, 4, 5",
+                    "reasoning_content": null
+                  },
+                  "logprobs": null,
+                  "finish_reason": "stop",
+                  "matched_stop": 154827
+                }
+              ],
+              "usage": {
+                "prompt_tokens": 21,
+                "total_tokens": 36,
+                "completion_tokens": 15,
+                "prompt_tokens_details": null,
+                "reasoning_tokens": 1
+              },
+              "metadata": {
+                "weight_version": "default",
+                "weight_versions": [
+                  {
+                    "version": "default",
+                    "start": 0,
+                    "end": 15
+                  }
+                ]
+              }
+            }
+          },
+          "worker_seconds": 177.100810082
+        }
+      },
+      "settings": {
+        "MODEL_FAMILY": "glm53",
+        "MODEL_NAME": "glm53-flash",
+        "TP": "4",
+        "EP": "4",
+        "PORT": "30211",
+        "CTX_LEN": "8192",
+        "MAX_RUN": "4",
+        "CHUNK": "2048",
+        "MAX_TOTAL_TOKENS": "16384",
+        "SGLANG_JIT_DEEPGEMM_PRECOMPILE": "0",
+        "MEM_FRAC": "0.86",
+        "SGLANG_ENABLE_HEALTH_ENDPOINT_GENERATION": "0",
+        "SGLANG_UNIFIED_RADIX_TREE_CORE_BACKEND": "python",
+        "HF_HUB_OFFLINE": "1",
+        "TRANSFORMERS_OFFLINE": "1",
+        "GLM_REASONING_PARSER": "auto",
+        "DECODE_CFG": "{\"decode\": {\"backend\": \"full\", \"max_bs\": 4, \"bs\": [1, 2, 4]}, \"prefill\": {\"backend\": \"disabled\"}}"
+      }
+    }
+  }
 }

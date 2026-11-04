@@ -13,6 +13,15 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Measured parent `8a9a939`, serving fix SGLang `d748fe5` / FlashMLA
+  `3eb8594`: support standalone GLM text-only loading and use the active MLA
+  cache pool from the forward context. Add CPU checkpoint and serving-image
+  preflight and bounded Native/Packed Direct smoke. Four H200s at TP4/EP4
+  loaded the pinned FP8 checkpoint, captured decode graphs, and returned
+  HTTP 200 and a complete response in both modes. The measured source override
+  also contained benchmark-only prefill edits. See the qualification record
+  for source hashes, image, commands, failure history and costs.
+
 - Parent implementation `0e3f94b`, v0.5.22 SGLang `5174462` / FlashMLA
   `3eb8594`: reject conflicting GLM image modes and resolved non-BF16 Packed
   activations; bind benchmark resume to complete verified source/artifact

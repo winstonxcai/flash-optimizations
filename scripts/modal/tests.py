@@ -1189,6 +1189,35 @@ class LauncherTests(unittest.TestCase):
                 ):
                     serve.inspect_model_cache.local()
 
+    def test_glm_serving_chat_requires_generated_content(self):
+        from scripts.modal import serve
+
+        body = {
+            "model": "glm53-flash",
+            "choices": [
+                {"message": {"content": "One, two, three, four, five."}, "finish_reason": "stop"}
+            ],
+            "usage": {"completion_tokens": 8},
+        }
+        for content, finish_reason, succeeds in (
+            ("One, two, three, four, five.", "stop", True),
+            (" ", "stop", False),
+            ("One, two", "length", False),
+        ):
+            body["choices"][0]["message"]["content"] = content
+            body["choices"][0]["finish_reason"] = finish_reason
+            response = io.BytesIO(json.dumps(body).encode())
+            response.status = 200
+            with patch.object(serve.urllib.request, "urlopen", return_value=response) as send:
+                deadline = serve.time.monotonic() + 10
+                if succeeds:
+                    result = serve._glm_chat_request("30211", deadline)
+                    self.assertEqual(result["response"], body)
+                    self.assertEqual(send.call_args.args[0].get_method(), "POST")
+                else:
+                    with self.assertRaisesRegex(RuntimeError, "Invalid GLM chat completion"):
+                        serve._glm_chat_request("30211", deadline)
+
     def test_public_commands_import_without_launching_jobs(self):
         code = """
 from unittest.mock import patch
@@ -2195,6 +2224,7 @@ class GlmLauncherTests(unittest.TestCase):
                 "PATH": str(path) + os.pathsep + os.environ["PATH"],
                 "MODEL_FAMILY": "glm53",
                 "DECODE_CFG": "{}",
+                "MAX_TOTAL_TOKENS": "16384",
             }
             for name in (
                 "TP",
@@ -2234,6 +2264,8 @@ class GlmLauncherTests(unittest.TestCase):
                         )
                         args = json.loads(result.stdout)
                         for flag, expected in (
+                            ("--model-type", "llm"),
+                            ("--max-total-tokens", "16384"),
                             ("--tp", str(tp)),
                             ("--ep", str(tp)),
                             ("--kv-cache-dtype", "fp8_e4m3"),
