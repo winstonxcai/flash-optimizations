@@ -208,6 +208,7 @@ if INTEGRATION["version"] == "v0.5.22":
 if MODEL_FAMILY == "glm53":
     VALIDATION_TESTS = (GLM_CPU_TEST, GLM_TEST)
     CPU_TESTS = (GLM_CPU_TEST, GLM_BENCHMARK_CPU + "::test_glm_matrix_order_and_baseline_identity", GLM_BENCHMARK_CPU + "::test_glm_grouped_causal_prefill_and_shared_prefix", GLM_BENCHMARK_CPU + "::test_glm_separate_decode_requests_and_page_mapping", GLM_BENCHMARK_CPU + "::test_glm_rotation_and_call_normalization", GLM_BENCHMARK_CPU + "::test_glm_shared_round_schedule_and_preconditioning", GLM_BENCHMARK_CPU + "::test_glm_cli_rejects_adapter_and_deepseek_options", GLM_BENCHMARK_CPU + "::test_glm_entrypoint_dispatches_before_deepseek_imports", GLM_BENCHMARK_CPU + "::test_glm_rejects_incomplete_timing", GLM_BENCHMARK_CPU + "::test_glm_cpu_oracle_preserves_fp8_rounding_and_empty_rows")
+    CPU_TESTS += (GLM_BENCHMARK_CPU + "::test_glm_full_prefill_scope_and_resume",)
     SANITIZER_TESTS = (*GLM_SANITIZER, GLM_SANITIZER_GRAPH)
     BENCHMARK_TESTS = ()
 
@@ -354,7 +355,7 @@ def _reuse_glm_cpu_artifacts(build: Path, deadline: float, binding_requirements:
         raise RuntimeError("Harness-only CPU reuse NVCC changed")
     compiled = previous["glm_compile"]
     expected = {(h,i,p) for h in (8,16,32,64) for i in (1,2,33,66) for p in (False,True)}
-    if {(v["heads"],v["inner"],v["packed"]) for v in compiled["tilelang"]} != expected:
+    if {(v["heads"],v["inner"],v["packed"]) for v in compiled["tilelang"] if v.get("block_i", 32) == 32} != expected:
         raise RuntimeError("Harness-only CPU reuse lacks maintained SM90 variants")
     Path("/opt/remnant-glm-compile.json").write_text(json.dumps(compiled,indent=2)+"\n")
     environment = _cpu_preflight_environment(build)
@@ -560,8 +561,12 @@ def _build_image() -> None:
                 entrypoints[path] = dict(sha256=digest, symbol=names[0])
             if any(name.startswith("glm_packed_bytes") for name in names):
                 probe_sources[path] = dict(sha256=digest, symbol=names[0])
-        if len(entrypoints) != 32 or not probe_sources:
-            raise RuntimeError("Incomplete verified TileLang entrypoint sources")
+        missing = set(current) - {entry["sha256"] for entry in entrypoints.values()}
+        if missing or not probe_sources:
+            raise RuntimeError(
+                f"Incomplete verified TileLang entrypoint sources: {sorted(missing)}, "
+                f"bytes probe present={bool(probe_sources)}"
+            )
         compiled["scope_symbol_audit"] = dict(filter="regex=glm_packed_(partial|bytes)",
             partial_sources=entrypoints, probe_sources=probe_sources,
             excluded="Unchanged Native, combine and framework kernels")
@@ -747,11 +752,17 @@ elif rebuild_image_id:
     candidate = glm_rebuild_source_digest(
         roots, tuple(transition["files"]) if transition else ()
     )
+    rebuild_base_sglang = os.environ.get(
+        "REMNANT_GLM_CPU_REBUILD_BASE_SGLANG",
+        "889edf56b33226c80b17ddf3472c1206df62c3f0",
+    )
+    if not re.fullmatch(r"[0-9a-f]{40}", rebuild_base_sglang):
+        raise ValueError("CPU rebuild base SGLang identity must be a full commit hash")
     base = (
         transition["base_commits"]
         if transition
         else dict(
-            sglang="889edf56b33226c80b17ddf3472c1206df62c3f0",
+            sglang=rebuild_base_sglang,
             flashmla="3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
         )
     )
@@ -891,7 +902,20 @@ def prepare_kernels(model_family: str = "dsv4") -> None:
 # Public workflows.
 
 
-@app.function(**{**_GPU, "timeout": 1200 if MODEL_FAMILY == "glm53" else 900})
+_GLM_PREFILL_H200 = os.environ.get("REMNANT_GLM_PREFILL_H200") == "1"
+_GLM_PREFILL_TIMEOUT_S = 2400
+if _GLM_PREFILL_H200 and MODEL_FAMILY != "glm53":
+    raise ValueError("REMNANT_GLM_PREFILL_H200 requires REMNANT_MODEL_FAMILY=glm53")
+
+
+@app.function(**{
+    **_GPU,
+    "gpu": "H200" if _GLM_PREFILL_H200 else _GPU["gpu"],
+    "image": kernel_image.env({"REMNANT_GLM_PREFILL_H200": "1"})
+    if _GLM_PREFILL_H200 else kernel_image,
+    "timeout": _GLM_PREFILL_TIMEOUT_S if _GLM_PREFILL_H200 else
+    (1200 if MODEL_FAMILY == "glm53" else 900),
+})
 def benchmark_kernels(
     run_id: str,
     keep_count: int = 256,
@@ -901,31 +925,54 @@ def benchmark_kernels(
     model_family: str = "dsv4", max_seconds: int = RUN_BUDGETS_S["timing"],
     qualification_runs: str = "", resume_run: str = "",
     allow_incomplete_qualification: bool = False, phase: str = "all",
+    packed_prefill_tile: int = 32,
 ) -> str:
     """Validate and time the complete matrix for the selected survivor budget."""
     if model_family != MODEL_FAMILY:
         raise ValueError("--model-family must match REMNANT_MODEL_FAMILY")
+    prefill_h200 = phase in ("prefill", "prefill-small")
+    if phase == "prefill":
+        if model_family != "glm53" or packed_prefill_tile != 64:
+            raise ValueError("Full GLM prefill requires --packed-prefill-tile 64")
+    elif packed_prefill_tile != 32 and (
+        packed_prefill_tile not in (64, 128) or model_family != "glm53" or phase != "prefill-small" or resume_run
+    ):
+        raise ValueError("Wide Packed tile requires prefill or a fresh GLM prefill-small run")
     if model_family == "glm53":
-        if phase not in ("all", "decode"):
-            raise ValueError("GLM phase must be all or decode")
-        if phase == "decode" and allow_incomplete_qualification:
-            raise ValueError("Decode timing requires all focused gates")
+        if phase not in ("all", "decode", "prefill", "prefill-small"):
+            raise ValueError("GLM phase must be all, decode, prefill, or prefill-small")
+        if prefill_h200 != _GLM_PREFILL_H200:
+            raise ValueError("GLM prefill scopes require REMNANT_GLM_PREFILL_H200=1")
+        if (phase == "decode" or prefill_h200) and allow_incomplete_qualification:
+            raise ValueError(f"{phase} timing requires qualification")
         if suite != "glm-attention" or keep_count != 256 or modes not in ("", "native,direct") or prefill_reader != "split":
             raise ValueError("GLM timing requires --suite glm-attention and exactly native,direct")
-        if not 60 <= max_seconds <= 1140:
-            raise ValueError("GLM timing max_seconds must be between 60 and 1140")
+        limit = _GLM_PREFILL_TIMEOUT_S - 60 if phase == "prefill" else 1140
+        if not 60 <= max_seconds <= limit:
+            raise ValueError(f"GLM timing max_seconds must be between 60 and {limit}")
         with _run_context(run_id, "timing", max_seconds) as (root, record, deadline):
             _verify_glm_image()
-            record["qualification"] = _glm_timing_qualification(
-                qualification_runs, allow_incomplete=allow_incomplete_qualification, phase=phase
-            )
+            if phase == "prefill-small":
+                if qualification_runs or resume_run:
+                    raise ValueError("Small prefill qualifies and confirms within a fresh run")
+                _qualify_glm_prefill(root, record, deadline, packed_prefill_tile)
+            elif phase == "prefill":
+                if qualification_runs:
+                    raise ValueError("Full prefill qualifies both heads in its first run")
+                _qualify_full_glm_prefill(root, record, deadline, resume_run)
+            else:
+                record["qualification"] = _glm_timing_qualification(
+                    qualification_runs, allow_incomplete=allow_incomplete_qualification, phase=phase
+                )
             record["experiment_status"] = (
                 "unqualified" if record["qualification"]["status"] != "passed"
                 else "qualified"
             )
-            _run_pytest((GLM_DECODE_GRAPH if phase == "decode" else GLM_BENCHMARK_GRAPH,), root, "benchmark-graphs", deadline)
+            if not prefill_h200:
+                _run_pytest((GLM_DECODE_GRAPH if phase == "decode" else GLM_BENCHMARK_GRAPH,), root, "benchmark-graphs", deadline)
             argv = _benchmark_command("--model-family", "glm53", "--suite", suite,
-                                      "--phase", phase, "--output", str(root / "timing"),
+                                      "--phase", phase, "--packed-prefill-tile", str(packed_prefill_tile),
+                                      "--output", str(root / "timing"),
                                       "--max-seconds", str(max(60, int(deadline-time.monotonic())-10)))
             if resume_run:
                 checkpoint = _glm_timing_checkpoint(resume_run)
@@ -933,7 +980,30 @@ def benchmark_kernels(
                 record["resume_run"] = resume_run
             record.update(command=argv, modes=("native", "direct"), suite=suite)
             _run_command(argv, root / "timing.log", deadline)
-            _glm_benchmark_contract().validate_timing(json.loads((root / "timing.json").read_text()))
+            contract = _glm_benchmark_contract()
+            first = json.loads((root / "timing.json").read_text())
+            contract.validate_timing(first)
+            if phase == "prefill-small":
+                second_argv = argv.copy()
+                second_argv[second_argv.index("--output") + 1] = str(root / "confirmation")
+                second_argv[second_argv.index("--max-seconds") + 1] = str(max(60, int(deadline-time.monotonic())-10))
+                record["confirmation_command"] = second_argv
+                _run_command(second_argv, root / "confirmation.log", deadline)
+                second = json.loads((root / "confirmation.json").read_text())
+                contract.validate_timing(second)
+                if first["source"] != second["source"]:
+                    raise RuntimeError("Prefill confirmation changed source or artifact identity")
+                ratios = {
+                    a["name"]: [
+                        row["paired_ratios"]["direct_over_native"]["median"]
+                        for row in (a, b)
+                    ]
+                    for a, b in zip(first["cases"], second["cases"], strict=True)
+                }
+                record["prefill_parity"] = dict(
+                    paired_medians=ratios,
+                    status="passed" if all(max(pair) <= 1.0 for pair in ratios.values()) else "missed",
+                )
         return str(root)
     if qualification_runs or resume_run or allow_incomplete_qualification or phase != "all":
         raise ValueError("qualification_runs/resume_run/allow_incomplete_qualification are GLM-only")
@@ -1094,7 +1164,7 @@ def validate_kernels(
             if MODEL_FAMILY == "glm53":
                 compiled = manifest.get("glm_compile")
                 expected_variants = {(h, i, p) for h in (8, 16, 32, 64) for i in (1, 2, 33, 66) for p in (False, True)}
-                if not compiled or compiled.get("attention_scale") != 0.0625 or {(v["heads"], v["inner"], v["packed"]) for v in compiled["tilelang"]} != expected_variants:
+                if not compiled or compiled.get("attention_scale") != 0.0625 or {(v["heads"], v["inner"], v["packed"]) for v in compiled["tilelang"] if v.get("block_i", 32) == 32} != expected_variants:
                     raise RuntimeError("Incomplete CPU-compiled GLM TileLang variants")
                 for path, expected in compiled["cache_files"].items():
                     if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
@@ -1636,6 +1706,110 @@ def _verify_glm_image() -> None:
     from sglang.srt.remnant.glm import compile_kernels
     if [k.hash for k in compile_kernels()] != manifest["glm_compile"]["triton"]:
         raise RuntimeError("GLM timing Triton variant mismatch")
+
+
+def _qualify_full_glm_prefill(
+    root: Path, record: dict, deadline: float, resume_run: str
+) -> None:
+    if resume_run:
+        previous_root = _glm_timing_checkpoint(resume_run).parent
+        previous = json.loads((previous_root / "result.json").read_text())
+        origin = previous.get("qualification_run", resume_run)
+        origin_root = _glm_timing_checkpoint(origin).parent
+        qualification = json.loads((origin_root / "result.json").read_text())["qualification"]
+        if (
+            (origin_root / "build-manifest.json").read_bytes() != MANIFEST.read_bytes()
+            or qualification["status"] != "passed"
+            or set(qualification["by_heads"]) != {"16", "8"}
+        ):
+            raise RuntimeError("Full prefill checkpoint lacks matching two-head qualification")
+        for heads, result in qualification["by_heads"].items():
+            variant = _glm_prefill_variant(int(heads), 64)
+            if (
+                result["status"] != "passed"
+                or result["tile_rows"] != 64
+                or result["inner_iter"] != variant["inner"]
+                or any(result[key] != variant[key] for key in ("cubin_sha256", "source_sha256", "dynamic_shared"))
+            ):
+                raise RuntimeError(f"Full prefill checkpoint has incomplete H{heads} qualification")
+            for tool in SANITIZER_ORDER:
+                name = f"prefill-{tool}" if heads == "16" else f"prefill-h8-{tool}"
+                output = (origin_root / f"{name}.log").read_bytes()
+                report = (origin_root / f"{name}.xml").read_bytes()
+                if (
+                    hashlib.sha256(output).hexdigest() != result["tools"][tool]["log_sha256"]
+                    or hashlib.sha256(report).hexdigest() != result["tools"][tool]["report_sha256"]
+                ):
+                    raise RuntimeError(f"Full prefill checkpoint sanitizer evidence changed: {name}")
+                _check_sanitizer_report(output.decode(), tool)
+        record.update(qualification=qualification, qualification_run=origin)
+        return
+
+    by_heads = {}
+    record["qualification"] = qualification = dict(status="incomplete", by_heads=by_heads)
+    for heads in (16, 8):
+        head_record = {}
+        try:
+            _qualify_glm_prefill(root, head_record, deadline, 64, heads=heads)
+        finally:
+            by_heads[str(heads)] = head_record.get("qualification", {"status": "incomplete"})
+    qualification["status"] = "passed"
+
+
+def _glm_prefill_variant(heads: int, tile_rows: int) -> dict:
+    manifest = json.loads(MANIFEST.read_text())
+    variants = manifest["glm_compile"]["tilelang"]
+    inner = {32: 66, 64: 17, 128: 9}[tile_rows]
+    matches = [
+        variant for variant in variants
+        if (variant["heads"], variant["inner"], variant["packed"], variant.get("block_i", 32))
+        == (heads, inner, True, tile_rows)
+    ]
+    if len(matches) != 1 or not matches[0].get("cubin_sha256"):
+        raise RuntimeError(f"Missing verified H{heads} Packed prefill artifact for tile {tile_rows}")
+    return matches[0]
+
+
+def _qualify_glm_prefill(
+    root: Path, record: dict, deadline: float, tile_rows: int, *, heads: int = 16
+) -> None:
+    """Instrument the selected production partial on the same image and device as timing."""
+    import torch
+
+    device = torch.cuda.get_device_name()
+    if "H200" not in device or torch.cuda.get_device_capability() != (9, 0):
+        raise RuntimeError(f"GLM prefill requires H200 SM90, got {device}")
+    variant = _glm_prefill_variant(heads, tile_rows)
+    qualification = dict(
+        status="incomplete",
+        device=device,
+        tile_rows=tile_rows,
+        inner_iter=variant["inner"],
+        cubin_sha256=variant["cubin_sha256"],
+        source_sha256=variant["source_sha256"],
+        dynamic_shared=variant["dynamic_shared"],
+        tools={},
+    )
+    record["qualification"] = qualification
+    node = (f"{GLM_TEST}::test_prefill_partial_graph[{tile_rows}]" if heads == 16
+            else f"{GLM_TEST}::test_prefill_partial_graph_h8")
+    for tool in SANITIZER_ORDER:
+        name = f"prefill-{tool}" if heads == 16 else f"prefill-h8-{tool}"
+        prefix = (SANITIZER, "--tool", tool, "--error-exitcode", "1", "--kernel-name",
+                  "regex=glm_packed_partial_kernel")
+        _run_pytest((node,), root, name, min(deadline, time.monotonic()+240), prefix=prefix)
+        output = (root / f"{name}.log").read_bytes()
+        _check_sanitizer_report(output.decode(), tool)
+        report = (root / f"{name}.xml").read_bytes()
+        properties = {prop.get("name"): prop.get("value") for prop in ET.fromstring(report).iter("property")}
+        if json.loads(properties.get("partial_cubins", "{}")).get("True") != variant["cubin_sha256"]:
+            raise RuntimeError(f"Prefill sanitizer did not test the selected cubin: {name}")
+        qualification["tools"][tool] = dict(
+            status="passed", prefix=prefix, test=node,
+            log_sha256=hashlib.sha256(output).hexdigest(),
+            report_sha256=hashlib.sha256(report).hexdigest(),
+        )
+    qualification["status"] = "passed"
 
 
 def _glm_timing_checkpoint(run_id: str) -> Path:

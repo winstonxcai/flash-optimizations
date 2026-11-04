@@ -369,6 +369,17 @@ current pin. The expanded producer/pool/public-dispatch GPU test has not run.
 Full-grid/combine sanitizer instrumentation, model quality and H20 execution
 remain unverified. The four-H200 text-only serving scope is recorded below.
 
+### Full prefill kernel comparison
+
+The opt-in 64-row Packed TileLang prefill candidate is exercised by the
+maintained GLM benchmark with `--phase prefill --packed-prefill-tile 64`. It
+uses two splits and reuses the unpacked latent tile in QK and PV. The H200
+suite completed 80 paired cases at both local head counts with focused
+sanitizers. Packed Direct was faster in 70 cases and missed the strict
+per-case parity criterion. The serving launcher uses its production dispatch.
+See the [GLM experiment guide](../benchmarks/microbench/glm53-packed/README.md)
+for reproduction and the source-bound evidence.
+
 ### Full-model H200 smoke test
 
 The [SGLang cookbook](https://cookbook.sglang.io/autoregressive/GLM/GLM-5.3-Flash)

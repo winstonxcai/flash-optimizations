@@ -123,8 +123,65 @@ hybrid pool and public prefill/decode dispatch for Adapter and Direct. It checks
 nonidentity physical row placement, second-layer mapping, current-token writes,
 duplicates and invalids against independently reconstructed Packed input. Index
 selection and page-table transforms are outside this test. This expanded GPU
-test has not run. Broad qualification, optimized prefill, checkpoint loading,
-model quality, serving capacity and H20 execution remain unverified.
+test has not run. Broad qualification, model quality, serving capacity and
+H20 execution remain unverified. See the newer prefill results below and the
+[full-checkpoint H200 smoke](../../../third_party/README.md#full-model-h200-smoke-test).
+
+## H200 small-prefill comparison
+
+`remnant-glm-prefill-small-v1` pairs stock Native FP8 with Packed Direct on
+one H200. It covers 16 local heads, 128 and 512 queries, shared and independent
+history selections, warm buffers, and an initial 128K prefix. Both modes time
+the complete attention call. The 64-row candidate expands two 32-row waves
+into one KV tile and uses two partial groups. Results record each path's
+geometry because Native may choose two groups at Q128.
+
+After CPU preparation, select the verified image and run from the parent root:
+
+```sh
+REMNANT_INTEGRATION=v0.5.22 REMNANT_MODEL_FAMILY=glm53 \
+REMNANT_GLM_PREFILL_H200=1 REMNANT_COMPILED_IMAGE=<verified-image-id> \
+modal run scripts/modal/kernels.py::benchmark_kernels \
+  --model-family glm53 --suite glm-attention --phase prefill-small \
+  --packed-prefill-tile 64 --run-id <unique-run-id> --max-seconds 1100
+```
+
+The runner qualifies one CTA of the selected Packed cubin under memcheck,
+racecheck, and synccheck. It then validates full fixtures and times two fresh
+captures in separate processes. Each capture uses 30 paired rounds of at least
+100 calls per sample. All four per-case median ratios must be at most 1.00 in
+both captures. Retain misses alongside the raw samples. The CTA probe covers
+the changed partial kernel. Full-grid sanitizer coverage is separate.
+
+This phase has its own aggregate $15 Modal ceiling. The optimized prefill
+candidate remains experimental until numerical and paired timing gates pass.
+
+## Full paired H200 prefill comparison
+
+The `remnant-glm-prefill-v1` experiment asks whether the qualified 64-row
+Packed loader holds up against stock Native FP8 across the full prefill matrix.
+It measures 80 cases on one H200 with local heads 16 and 8, query chunks 128,
+512, 1,536, 4,096 and 8,192, tail phases 0 and 3, shared and independent
+history, and warm and rotating buffers. Every case gets 30 fresh paired rounds
+using the established graph protocol. The decision is per-case parity, with all
+slowdowns retained. The run stops at the $5 phase ceiling.
+
+CPU-prepare the missing H8 64-row artifact, then run the maintained command
+above with `--phase prefill --packed-prefill-tile 64 --max-seconds 2340` and a
+new run ID. Both head variants must pass focused sanitizer checks. A timeout
+can resume from the last valid case with `--resume-run <prior-run-id>` and
+the same source, artifact and focused sanitizer evidence. The optimized tile
+is selected explicitly by the benchmark. Full-model serving uses its production
+dispatch.
+
+The full run completed all 80 cases after a same-image resume of the final
+two cases. Packed Direct was faster in 70 cases. Ten missed parity, with a
+maximum slowdown of 1.11%. Both head variants passed focused memcheck,
+racecheck and synccheck. The saved JSON and CSV contain every paired sample.
+The phase used $4.01 gross metered on Modal, with $4.02 conservatively
+accounted and all workers stopped. Keep the wide tile as a benchmark candidate.
+See the `full_prefill` entry in the qualification record for artifact hashes,
+commands, exact cases and costs.
 
 ## Budget and shutdown
 

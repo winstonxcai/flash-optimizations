@@ -191,7 +191,7 @@ def qualify_glm_timing(
                         cubins = {
                             str(v["packed"]): v["cubin_sha256"]
                             for v in manifest["glm_compile"]["tilelang"]
-                            if v["heads"] == heads and v["inner"] == inner
+                            if v["heads"] == heads and v["inner"] == inner and v.get("block_i", 32) == 32
                         }
                         if json.loads(props.get("partial_cubins", "{}")) != cubins:
                             raise RuntimeError(

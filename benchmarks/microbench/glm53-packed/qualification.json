@@ -642,5 +642,369 @@
         "DECODE_CFG": "{\"decode\": {\"backend\": \"full\", \"max_bs\": 4, \"bs\": [1, 2, 4]}, \"prefill\": {\"backend\": \"disabled\"}}"
       }
     }
+  },
+  "full_prefill": {
+    "protocol": "remnant-glm-prefill-v1",
+    "status": "qualified_timing_complete",
+    "decision": "Retain the benchmark-only 64-row candidate. Strict per-case parity missed, so the serving dispatch does not select it.",
+    "paired_parity": "missed",
+    "completed_cases": 80,
+    "paired_rounds_per_case": 30,
+    "seed": 20261024,
+    "direct_faster_cases": 70,
+    "per_query_size": {
+      "128": {
+        "cases": 16,
+        "direct_faster": 16,
+        "min_paired_median": 0.870402715116722,
+        "median_of_case_paired_medians": 0.9095979660058074,
+        "max_paired_median": 0.9828152175748965
+      },
+      "512": {
+        "cases": 16,
+        "direct_faster": 14,
+        "min_paired_median": 0.9091823962887898,
+        "median_of_case_paired_medians": 0.9369915316458473,
+        "max_paired_median": 1.0021914456330356
+      },
+      "1536": {
+        "cases": 16,
+        "direct_faster": 16,
+        "min_paired_median": 0.9306621432803354,
+        "median_of_case_paired_medians": 0.9639055941966201,
+        "max_paired_median": 0.9977853762360696
+      },
+      "4096": {
+        "cases": 16,
+        "direct_faster": 16,
+        "min_paired_median": 0.9287760274583703,
+        "median_of_case_paired_medians": 0.9629254013196322,
+        "max_paired_median": 0.9995348145987731
+      },
+      "8192": {
+        "cases": 16,
+        "direct_faster": 8,
+        "min_paired_median": 0.9382944541003517,
+        "median_of_case_paired_medians": 0.97348667023371,
+        "max_paired_median": 1.0111386626560646
+      }
+    },
+    "fastest": {
+      "case": "prefill_h8_q128_t3_independent_warm",
+      "median_native_ms": 0.15493455886840818,
+      "median_direct_ms": 0.13484560012817381,
+      "paired_median_direct_over_native": 0.870402715116722
+    },
+    "parity_misses": [
+      {
+        "case": "prefill_h8_q8192_t3_shared_rotating",
+        "median_native_ms": 7.8210033840603295,
+        "median_direct_ms": 7.907798767089844,
+        "paired_median_direct_over_native": 1.0111386626560646
+      },
+      {
+        "case": "prefill_h8_q8192_t3_shared_warm",
+        "median_native_ms": 7.883289184570312,
+        "median_direct_ms": 7.968683471679688,
+        "paired_median_direct_over_native": 1.0108310079708867
+      },
+      {
+        "case": "prefill_h8_q8192_t0_shared_rotating",
+        "median_native_ms": 7.905190811676233,
+        "median_direct_ms": 7.982814659066752,
+        "paired_median_direct_over_native": 1.0098281327657341
+      },
+      {
+        "case": "prefill_h8_q8192_t0_shared_warm",
+        "median_native_ms": 7.848282165527344,
+        "median_direct_ms": 7.924500732421875,
+        "paired_median_direct_over_native": 1.0097044973127627
+      },
+      {
+        "case": "prefill_h16_q8192_t0_shared_warm",
+        "median_native_ms": 8.084979553222656,
+        "median_direct_ms": 8.129476928710936,
+        "paired_median_direct_over_native": 1.0055109844415584
+      },
+      {
+        "case": "prefill_h16_q8192_t3_shared_rotating",
+        "median_native_ms": 8.08456336127387,
+        "median_direct_ms": 8.1233278910319,
+        "paired_median_direct_over_native": 1.004808079086151
+      },
+      {
+        "case": "prefill_h16_q8192_t0_shared_rotating",
+        "median_native_ms": 8.084773264774661,
+        "median_direct_ms": 8.12326195126488,
+        "paired_median_direct_over_native": 1.0047578116098732
+      },
+      {
+        "case": "prefill_h16_q8192_t3_shared_warm",
+        "median_native_ms": 8.085235900878907,
+        "median_direct_ms": 8.119301147460938,
+        "paired_median_direct_over_native": 1.0041426924685402
+      },
+      {
+        "case": "prefill_h8_q512_t0_shared_warm",
+        "median_native_ms": 0.5122776031494141,
+        "median_direct_ms": 0.5134527969360352,
+        "paired_median_direct_over_native": 1.0021914456330356
+      },
+      {
+        "case": "prefill_h8_q512_t3_shared_warm",
+        "median_native_ms": 0.5120639991760254,
+        "median_direct_ms": 0.5129982376098633,
+        "paired_median_direct_over_native": 1.001850526565991
+      }
+    ],
+    "cpu": {
+      "app": "ap-XQaiaX9meg0KqY7lve0nrx",
+      "base_image": "im-VNWowCrHAn7IchjzCb3JkM",
+      "image": "im-OoDLtduw24molSSF2ZCvQB",
+      "h200_image": "im-RNTNo2aeJKl1e9VarNWrpS",
+      "command": "modal run scripts/modal/kernels.py::prepare_kernels --model-family glm53",
+      "new_tilelang_variant": [
+        8,
+        17,
+        true,
+        64
+      ],
+      "unchanged_native_partial_cubins": 16,
+      "unchanged_packed_tile32_partial_cubins": 16,
+      "local_tests": {
+        "fork_benchmark": 50,
+        "modal_protocol_and_rebuild": 17
+      },
+      "independent_review": "Matrix and GPU call ownership reviewed. Physical indices and sorted row unions matched the pinned implementation across the 40 distinct prefill fixture definitions at two bank seeds."
+    },
+    "controller_environment": {
+      "MODAL_PROFILE": "caiw",
+      "REMNANT_INTEGRATION": "v0.5.22",
+      "REMNANT_MODEL_FAMILY": "glm53",
+      "REMNANT_GLM_PREFILL_H200": "1",
+      "REMNANT_SGLANG_SOURCE_OVERRIDE": "$PWD/third_party/sglang-v0.5.22",
+      "REMNANT_GLM_CPU_REBUILD_FROM": "im-VNWowCrHAn7IchjzCb3JkM",
+      "REMNANT_GLM_CPU_REBUILD_BASE_SGLANG": "51744625288154ea36714434a3d2e46ae3f15047"
+    },
+    "runs": [
+      {
+        "run_id": "glm53-prefill-full-20261104T173438Z",
+        "app": "ap-DUtmZAZDz95GFCYdHkFD3w",
+        "command": "modal run scripts/modal/kernels.py::benchmark_kernels --model-family glm53 --suite glm-attention --phase prefill --packed-prefill-tile 64 --run-id glm53-prefill-full-20261104T173438Z --max-seconds 2340",
+        "function_timeout_seconds": 2400,
+        "worker_seconds": 2338.96323137,
+        "accepted_cases": 78,
+        "status": "work deadline reached on case 79",
+        "timing_error": "TimeoutError('prefill_h8_q8192_t3_shared_warm: fixture/timing deadline reached')",
+        "worker_command": [
+          "/opt/sglang/bin/python",
+          "/sgl-workspace/sglang-remnant/benchmark/remnant/microbench.py",
+          "--model-family",
+          "glm53",
+          "--suite",
+          "glm-attention",
+          "--phase",
+          "prefill",
+          "--packed-prefill-tile",
+          "64",
+          "--output",
+          "/results/microbench/glm53-prefill-full-20261104T173438Z/timing/timing",
+          "--max-seconds",
+          "2011"
+        ]
+      },
+      {
+        "run_id": "glm53-prefill-full-resume-20261104T181617Z",
+        "app": "ap-a1cF59TZh6HijhAwykDtwo",
+        "command": "PYTHONPATH=$PWD python data/glm53-packed/full-prefill-20261104T173438Z/resume.py glm53-prefill-full-resume-20261104T181617Z glm53-prefill-full-20261104T173438Z",
+        "function_timeout_seconds": 360,
+        "work_deadline_seconds": 300,
+        "worker_seconds": 209.826931374,
+        "accepted_prefix_cases": 78,
+        "new_cases": 2,
+        "status": "passed",
+        "worker_command": [
+          "/opt/sglang/bin/python",
+          "/sgl-workspace/sglang-remnant/benchmark/remnant/microbench.py",
+          "--model-family",
+          "glm53",
+          "--suite",
+          "glm-attention",
+          "--phase",
+          "prefill",
+          "--packed-prefill-tile",
+          "64",
+          "--output",
+          "/results/microbench/glm53-prefill-full-resume-20261104T181617Z/timing/timing",
+          "--max-seconds",
+          "263",
+          "--resume",
+          "/results/microbench/glm53-prefill-full-20261104T173438Z/timing/timing.json"
+        ]
+      }
+    ],
+    "qualification": {
+      "status": "passed",
+      "by_heads": {
+        "16": {
+          "status": "passed",
+          "device": "NVIDIA H200",
+          "tile_rows": 64,
+          "inner_iter": 17,
+          "cubin_sha256": "e08e234f855f3e26f1a085da6876edd67689ee4de560d9759159f14f80b6f26e",
+          "source_sha256": "5d83d9105d74152c444786a362a738c926a38fbc3dbbbb3d02e87567d3870409",
+          "dynamic_shared": 51712,
+          "tools": {
+            "synccheck": {
+              "status": "passed",
+              "prefix": [
+                "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+                "--tool",
+                "synccheck",
+                "--error-exitcode",
+                "1",
+                "--kernel-name",
+                "regex=glm_packed_partial_kernel"
+              ],
+              "test": "test/registered/attention/unittests/test_glm5_remnant.py::test_prefill_partial_graph[64]",
+              "log_sha256": "a4464805a9cc7f81e42b4fafc4322f87f6bf6cb7db878b5e95c5947cb0c89803",
+              "report_sha256": "175c7eb6581e3bf3b7ee57426c3106a7194cefb04de7def7dd8d934044a6f8fd"
+            },
+            "racecheck": {
+              "status": "passed",
+              "prefix": [
+                "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+                "--tool",
+                "racecheck",
+                "--error-exitcode",
+                "1",
+                "--kernel-name",
+                "regex=glm_packed_partial_kernel"
+              ],
+              "test": "test/registered/attention/unittests/test_glm5_remnant.py::test_prefill_partial_graph[64]",
+              "log_sha256": "4b35d26de001c6946774f6771231f3b3d3023dc772dbacfd2098ef9ce6060817",
+              "report_sha256": "d4da256de03102dbdd1f283125a2431fd4884e7f8acb0b878a09ba6a82ceb903"
+            },
+            "memcheck": {
+              "status": "passed",
+              "prefix": [
+                "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+                "--tool",
+                "memcheck",
+                "--error-exitcode",
+                "1",
+                "--kernel-name",
+                "regex=glm_packed_partial_kernel"
+              ],
+              "test": "test/registered/attention/unittests/test_glm5_remnant.py::test_prefill_partial_graph[64]",
+              "log_sha256": "df05e016ef930de3b0ba412338bd2f2004f4ae5b105cdae1316cc704a4b1a0b4",
+              "report_sha256": "9aa2a3488718383eb08bdca97221085c1a298cc07d7440f9d5a839d8dfe15dfd"
+            }
+          }
+        },
+        "8": {
+          "status": "passed",
+          "device": "NVIDIA H200",
+          "tile_rows": 64,
+          "inner_iter": 17,
+          "cubin_sha256": "0f214c662eb2184d58b34296b85144d85754962dc72f24031037df2f24771fd3",
+          "source_sha256": "ac6f7949b414bb5ab22f3044d618e116d9faa5b4aeede8e0da327a101e4e5c77",
+          "dynamic_shared": 51712,
+          "tools": {
+            "synccheck": {
+              "status": "passed",
+              "prefix": [
+                "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+                "--tool",
+                "synccheck",
+                "--error-exitcode",
+                "1",
+                "--kernel-name",
+                "regex=glm_packed_partial_kernel"
+              ],
+              "test": "test/registered/attention/unittests/test_glm5_remnant.py::test_prefill_partial_graph_h8",
+              "log_sha256": "6116ec0188125a74592e2394ac40a66447134cfb42a6a503f4796dc3ee8494f1",
+              "report_sha256": "e78130fb8878337ffb3a404f54aed1a7310e646c3fac609254b71937ce707449"
+            },
+            "racecheck": {
+              "status": "passed",
+              "prefix": [
+                "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+                "--tool",
+                "racecheck",
+                "--error-exitcode",
+                "1",
+                "--kernel-name",
+                "regex=glm_packed_partial_kernel"
+              ],
+              "test": "test/registered/attention/unittests/test_glm5_remnant.py::test_prefill_partial_graph_h8",
+              "log_sha256": "c97e82f33a345e22b311e3332d0e1d86538339a4e8dc9e37e38e7d5248b8124d",
+              "report_sha256": "4c2e150d2a3946cd30e394ddb34d39643f95313e7ab61ea3bac3f26bc4b724b9"
+            },
+            "memcheck": {
+              "status": "passed",
+              "prefix": [
+                "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+                "--tool",
+                "memcheck",
+                "--error-exitcode",
+                "1",
+                "--kernel-name",
+                "regex=glm_packed_partial_kernel"
+              ],
+              "test": "test/registered/attention/unittests/test_glm5_remnant.py::test_prefill_partial_graph_h8",
+              "log_sha256": "7f2c7530716a91acde0fe17c4d61c1455236954b1863b1a33f312d07bc8d2775",
+              "report_sha256": "53f4355d9d4b9e377b7fab04f7a42ef963c4da4edfe865edb9f045aa5be6410b"
+            }
+          }
+        }
+      }
+    },
+    "scope": "Model-free complete attention calls on one H200. Focused sanitizer qualification covers the exact 64-row Packed partial cubin for each head geometry. It instruments one CTA per variant, with changing inputs and invalid indices. Full fixtures pass numerical and graph checks.",
+    "source": {
+      "measured_parent": "d3aa23f19e062eb5a6ffce85c8678a5105072944",
+      "measured_sglang": {
+        "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+        "expected_commit": "d748fe5e4ae74b76a103dbadb3d9cf85b4cfce0a",
+        "commit": "d748fe5e4ae74b76a103dbadb3d9cf85b4cfce0a",
+        "override": true,
+        "dirty": true,
+        "sha256": "fd07a1f67fae1fa4d2a46a098a266a64c51edde91319b36d52a9f1520ba3e694",
+        "integration": "v0.5.22"
+      },
+      "flashmla": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+      "committed_sglang": "6667e5d024f15995d0cf67c4c4145ea4aad31b1c",
+      "note": "Measured source was the exact recorded overlay. The final SGLang commit additionally initializes synthetic test fixture fields, with no change to timed code.",
+      "sglang_patch_sha256": "2d88df2d46763f9f8a3393d227761865037e187d083f0701c09982a80e2ff7a8",
+      "modal_patch_sha256": "e4f9f3d2cd18cca5ee105358b0baa3407e2b157c944412b8c771fefa1d6f8757"
+    },
+    "cost": {
+      "authorized_usd": 5,
+      "gross_workspace_baseline_usd": "26.81355577",
+      "after_cpu_usd": "26.95355655",
+      "after_first_run_usd": "30.50355655",
+      "gross_workspace_final_usd": "30.82355655",
+      "gross_workspace_delta_usd": "4.01000078",
+      "compute_meter_delta_usd": "4.01290264",
+      "conservative_accrued_usd": "4.02",
+      "remaining_against_conservative_usd": "0.98",
+      "gpu_hour_rate_including_worker_usd": "4.9852",
+      "active_containers_after": 0
+    },
+    "artifacts": {
+      "result_volume": "caiw/remnant-stage2a-results",
+      "checkpoint": "microbench/glm53-prefill-full-20261104T173438Z/timing",
+      "final": "microbench/glm53-prefill-full-resume-20261104T181617Z/timing",
+      "local_export": "data/glm53-packed/full-prefill-20261104T173438Z",
+      "final_manifest_sha256": "83acb3a3f948166079c4d26bc910572db194e56726601d06598aa9d64b6b7492",
+      "final_timing_sha256": "c24aebabaa7287d77791d2dfa4e700f3596523c95e7864b9c65a09b00bb4d683",
+      "final_csv_sha256": "b5f0e98da099fa3d9b4b60ae47b4ec8829f53300482aba46792a43d52de45f18",
+      "initial_timing_sha256": "1a5a8f17a2ad14f775724957ef9eaef95933e5f9c2ddc580df4b762fa89f2b1e"
+    },
+    "limitations": [
+      "Timing is descriptive for this model-free H200 matrix. Ten cases missed parity.",
+      "Focused sanitizer gates do not cover the full grid or combine.",
+      "The experiment does not establish serving latency, capacity or multi-GPU performance."
+    ]
   }
 }

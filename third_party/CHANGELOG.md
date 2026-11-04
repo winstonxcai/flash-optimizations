@@ -13,6 +13,13 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Measured parent `d3aa23f`, v0.5.22 SGLang `6667e5d` / FlashMLA
+  `3eb8594`: qualify the opt-in 64-row Packed prefill candidate for the full
+  80-case paired H200 benchmark. Both head variants passed focused tools and
+  numerical/graph checks. A source-bound resume recovered the final two cases.
+  Direct was faster in 70 cases, with a 1.11% worst slowdown. Keep the candidate
+  benchmark-only. Modal gross metered $4.01 under the $5 cap.
+
 - Measured parent `8a9a939`, serving fix SGLang `d748fe5` / FlashMLA
   `3eb8594`: support standalone GLM text-only loading and use the active MLA
   cache pool from the forward context. Add CPU checkpoint and serving-image
