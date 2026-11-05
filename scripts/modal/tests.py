@@ -420,10 +420,20 @@ class LauncherTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
+        volume = patch.object(kernels, "results_volume")
+        self.results_volume = volume.start()
+        self.addCleanup(volume.stop)
 
     def test_only_three_remote_functions_and_no_model_volumes(self):
         self.assertEqual(
-            set(kernels.app.registered_functions), {"benchmark_kernels", "profile_kernels", "validate_kernels"}
+            set(kernels.app.registered_functions),
+            {
+                "_benchmark_worker",
+                "_preflight_fp4_timing",
+                "_preflight_glm_timing",
+                "profile_kernels",
+                "validate_kernels",
+            },
         )
         for function in kernels.app.registered_functions.values():
             self.assertNotIn("/models", function.spec.volumes)
@@ -449,9 +459,10 @@ class LauncherTests(unittest.TestCase):
                         kernels._run_pytest(kernels.BENCHMARK_TESTS, self.root, "check", 100)
                 argv = command.call_args.args[0]
                 self.assertEqual(
-                    argv[:5],
-                    [sys.executable, "-m", "pytest", "-q", str(kernels.SGLANG_ROOT / kernels.BENCHMARK_TESTS[0])],
+                    argv[:4],
+                    [sys.executable, "-m", "pytest", "-q"],
                 )
+                self.assertIn(str(kernels.SGLANG_ROOT / kernels.BENCHMARK_TESTS[0]), argv)
                 self.assertNotIn("--worker", argv)
 
     def test_validation_budget_is_bounded_before_execution(self):
@@ -459,7 +470,11 @@ class LauncherTests(unittest.TestCase):
         parameters = inspect.signature(function).parameters
         self.assertEqual(parameters["max_seconds"].default, 1100)
         self.assertEqual(parameters["sanitizer_scope"].default, "all")
-        with patch.object(kernels, "_run_context") as run:
+        with (
+            patch.object(kernels, "_run_context") as run,
+            patch.object(kernels, "VALIDATION_TIMEOUT_CAP_S", 2700),
+            patch.object(kernels, "VALIDATION_TIMEOUT_S", 2700),
+        ):
             for seconds in (0, 59, 2641, 2700):
                 with self.assertRaisesRegex(ValueError, "max_seconds"):
                     function("fixture", max_seconds=seconds)
@@ -467,6 +482,54 @@ class LauncherTests(unittest.TestCase):
         with patch.object(kernels, "VALIDATION_TIMEOUT_S", 120):
             with self.assertRaisesRegex(ValueError, "between 60 and 60"):
                 function("fixture", max_seconds=61)
+
+    def test_sanitizer_order_rejects_missing_duplicate_unknown_and_disabled(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        with patch.object(kernels, "_run_context") as run:
+            for order in (
+                "memcheck",
+                "racecheck,memcheck",
+                "memcheck,memcheck,synccheck",
+                "racecheck,memcheck,unknown",
+            ):
+                with (
+                    self.subTest(order=order),
+                    self.assertRaisesRegex(ValueError, "exactly once"),
+                ):
+                    function("fixture", sanitizer=True, sanitizer_order=order)
+            with self.assertRaisesRegex(ValueError, "requires --sanitizer"):
+                function("fixture", sanitizer_order="racecheck,memcheck,synccheck")
+            run.assert_not_called()
+
+    def test_sanitizer_reordering_preserves_all_tools_and_checkpoints_receipts(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        order = ("racecheck", "memcheck", "synccheck")
+        record = {}
+        with (
+            patch.object(kernels, "INTEGRATION", {"version": "v0.5.18"}),
+            patch.object(
+                kernels,
+                "_run_context",
+                return_value=nullcontext((self.root, record, 100)),
+            ),
+            patch.object(kernels.time, "monotonic", return_value=0),
+            patch.object(kernels, "_run_pytest") as run,
+        ):
+            function("fixture", sanitizer=True, sanitizer_order=",".join(order))
+        self.assertEqual(
+            [c.args[2] for c in run.call_args_list], ["validation", *order]
+        )
+        self.assertEqual(
+            set(record["sanitizer_results"]), {"racecheck", "memcheck", "synccheck"}
+        )
+        self.assertTrue(
+            all(r["status"] == "passed" for r in record["sanitizer_results"].values())
+        )
+        self.assertEqual(
+            json.loads((self.root / "result.json").read_text())["sanitizer_results"],
+            record["sanitizer_results"],
+        )
+        self.assertEqual(self.results_volume.commit.call_count, 3)
 
     def test_sanitizer_failures_preserve_later_results_and_fail_the_run(self):
         function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
@@ -1032,7 +1095,7 @@ class LauncherTests(unittest.TestCase):
         from scripts.modal import serve
 
         with (
-            patch.object(serve, "_compiled_source_digest", return_value="matching"),
+            patch("scripts.sources.compiled_source_digest", return_value="matching"),
             patch.dict(os.environ, {"REMNANT_BUILT_INTEGRATION": serve.INTEGRATION["version"]}),
         ):
             serve._verify_compiled_sources("matching")
@@ -1040,7 +1103,7 @@ class LauncherTests(unittest.TestCase):
                 serve._verify_compiled_sources("different")
             wrong = "v0.5.18" if serve.INTEGRATION["version"] == "v0.5.22" else "v0.5.22"
             with patch.dict(os.environ, {"REMNANT_BUILT_INTEGRATION": wrong}):
-                with self.assertRaisesRegex(RuntimeError, "different REMNANT_INTEGRATION"):
+                with self.assertRaisesRegex(RuntimeError, "different integration"):
                     serve._verify_compiled_sources("matching")
         source = self.root / "source"
         source.mkdir()
@@ -1195,12 +1258,12 @@ class LauncherTests(unittest.TestCase):
         body = {
             "model": "glm53-flash",
             "choices": [
-                {"message": {"content": "One, two, three, four, five."}, "finish_reason": "stop"}
+                {"message": {"content": "1, 2, 3, 4, 5"}, "finish_reason": "stop"}
             ],
             "usage": {"completion_tokens": 8},
         }
         for content, finish_reason, succeeds in (
-            ("One, two, three, four, five.", "stop", True),
+            ("1, 2, 3, 4, 5", "stop", True),
             (" ", "stop", False),
             ("One, two", "length", False),
         ):
@@ -1231,7 +1294,7 @@ with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')
     assert Path(recipe.call_args.args[0]).name == expected
     assert recipe.call_args.kwargs['build_args']['REMNANT_INTEGRATION'] == serve.INTEGRATION['version']
     assert 'benchmark_serving' in serve.app.registered_functions
-    assert {'benchmark_kernels', 'profile_kernels', 'validate_kernels'} <= set(kernels.app.registered_functions)
+    assert {'_benchmark_worker', '_preflight_fp4_timing', 'profile_kernels', 'validate_kernels'} <= set(kernels.app.registered_functions)
     expected_order = ('synccheck', 'racecheck', 'memcheck') if serve.INTEGRATION['version'] == 'v0.5.22' else ('memcheck', 'racecheck', 'synccheck')
     assert kernels.SANITIZER_ORDER == expected_order
 """
@@ -1348,7 +1411,7 @@ class LocalScriptTests(unittest.TestCase):
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                     self.assertIn("production image ready", result.stdout)
                     fields.write_text(fields.read_text().replace(
-                        "dsv4_c4_cache_implementation", "missing_implementation_flag"
+                        "kv_cache_format" if version == "v0.5.22" else "dsv4_c4_cache_implementation", "missing_implementation_flag"
                     ))
                     self.assertNotEqual(prep().returncode, 0)
                     if version == "v0.5.22":
@@ -1822,7 +1885,7 @@ class SurvivorBudgetLauncherTests(unittest.TestCase):
         self.root = Path(temporary.name)
 
     def test_invalid_budgets_and_kernel_combinations_fail_before_run_context(self):
-        for function in (kernels.benchmark_kernels, kernels.profile_kernels):
+        for function in (kernels._benchmark_worker, kernels.profile_kernels):
             for count, modes in ((0, ""), (63, ""), (512, ""), (192, "kernel")):
                 with (
                     self.subTest(function=function, count=count, modes=modes),
@@ -1844,7 +1907,10 @@ class SurvivorBudgetLauncherTests(unittest.TestCase):
             patch.object(kernels, "_run_command") as command,
             patch.object(contract, "validate_timing") as check,
         ):
-            self.assertEqual(kernels.benchmark_kernels.local("count192", keep_count=192), str(self.root))
+            self.assertEqual(
+                kernels._benchmark_worker.local("count192", keep_count=192),
+                str(self.root),
+            )
         argv = command.call_args.args[0]
         self.assertEqual(argv[argv.index("--keep-count") + 1], "192")
         self.assertEqual(argv[argv.index("--modes") + 1], "native,triton")
@@ -2005,7 +2071,7 @@ class PrefillReadLauncherTests(unittest.TestCase):
             patch.object(kernels, "_run_command") as command,
             patch.object(contract, "validate_timing") as validate,
         ):
-            kernels.benchmark_kernels.local("prefill", suite="prefill-read")
+            kernels._benchmark_worker.local("prefill", suite="prefill-read")
         argv = command.call_args.args[0]
         self.assertEqual(argv[argv.index("--suite") + 1], "prefill-read")
         self.assertNotIn("--modes", argv)
@@ -2013,7 +2079,7 @@ class PrefillReadLauncherTests(unittest.TestCase):
         validate.assert_called_once_with(payload, suite="prefill-read")
 
     def test_prefill_invalid_options_fail_before_context(self):
-        for function in (kernels.benchmark_kernels, kernels.profile_kernels):
+        for function in (kernels._benchmark_worker, kernels.profile_kernels):
             with patch.object(kernels, "_run_context") as allocation:
                 with self.assertRaises(ValueError):
                     function.local("prefill", suite="prefill-read", keep_count=192)
@@ -2035,7 +2101,7 @@ class PrefillReadLauncherTests(unittest.TestCase):
             patch.object(kernels, "_run_command") as command,
             patch.object(contract, "validate_timing") as validate,
         ):
-            kernels.benchmark_kernels.local(
+            kernels._benchmark_worker.local(
                 "fused-reader", suite="prefill-read", prefill_reader="fused"
             )
         argv = command.call_args.args[0]
@@ -2044,7 +2110,7 @@ class PrefillReadLauncherTests(unittest.TestCase):
         validate.assert_called_once_with(
             payload, suite="prefill-read", prefill_reader="fused"
         )
-        for function in (kernels.benchmark_kernels, kernels.profile_kernels):
+        for function in (kernels._benchmark_worker, kernels.profile_kernels):
             for suite, reader in (("all", "fused"), ("prefill-read", "typo")):
                 with patch.object(kernels, "_run_context") as context:
                     with self.assertRaisesRegex(ValueError, "prefill_reader"):
@@ -2223,6 +2289,7 @@ class GlmLauncherTests(unittest.TestCase):
                 **os.environ,
                 "PATH": str(path) + os.pathsep + os.environ["PATH"],
                 "MODEL_FAMILY": "glm53",
+                "REMNANT_INTEGRATION": "v0.5.22",
                 "DECODE_CFG": "{}",
                 "MAX_TOTAL_TOKENS": "16384",
             }
@@ -2241,11 +2308,7 @@ class GlmLauncherTests(unittest.TestCase):
                 base.pop(name, None)
             script = str(kernels.REPO_ROOT / "scripts/local/run-server.sh")
             for tp in (4, 8):
-                for mode, implementation in (
-                    ("native", "direct"),
-                    ("triton", "adapter"),
-                    ("kernel", "direct"),
-                ):
+                for mode in ("native", "direct"):
                     with self.subTest(tp=tp, mode=mode):
                         result = subprocess.run(
                             [
@@ -2271,7 +2334,7 @@ class GlmLauncherTests(unittest.TestCase):
                             ("--kv-cache-dtype", "fp8_e4m3"),
                             ("--dsa-prefill-backend", "tilelang"),
                             ("--dsa-decode-backend", "tilelang"),
-                            ("--glm5-mla-cache-implementation", implementation),
+                            ("--kv-cache-format", mode),
                             ("--moe-runner-backend", "deep_gemm"),
                         ):
                             self.assertEqual(args[args.index(flag) + 1], expected)
@@ -2283,7 +2346,7 @@ class GlmLauncherTests(unittest.TestCase):
                 ({"TP": "4", "GPUS": "0,1,2,"}, "visible GPUs"),
             ):
                 result = subprocess.run(
-                    ["bash", script, "kernel", "/config-only", "127.0.0.1", "30212"],
+                    ["bash", script, "direct", "/config-only", "127.0.0.1", "30212"],
                     env={**base, **changes},
                     capture_output=True,
                     text=True,
@@ -2334,7 +2397,7 @@ class GlmLauncherTests(unittest.TestCase):
             )
             end = serve.index("\nBASH", start) + len("\nBASH")
             prefix = (
-                '. "$1"\nTREE="$2"; SGLANG_PY="$2/python"; REPO_CT="$2"; MODE=kernel\n'
+                '. "$1"\nTREE="$2"; SGLANG_PY="$2/python"; REPO_CT="$2"; MODE=direct\n'
             )
             prefix += (
                 'MODEL_CT="/model with spaces"; SERVE_LOG_CT="$3"; NSYS_OUTPUT_CT=\n'
@@ -2346,11 +2409,14 @@ class GlmLauncherTests(unittest.TestCase):
                 env = {
                     **os.environ,
                     "MODEL_FAMILY": "glm53",
+                "REMNANT_INTEGRATION": "v0.5.22",
                     "TP": str(tp),
                     "EP": "2",
                     "CONTAINER": "fixture",
                     "GPUS": ",".join(map(str, range(tp))),
                     "DECODE_CFG": '{"decode": {"bs": [1, 8]}}',
+                    "MAX_TOTAL_TOKENS": "16384",
+                    "GLM_REASONING_PARSER": "parser with spaces;$(do-not-run)",
                     "PATH": str(tools) + os.pathsep + os.environ["PATH"],
                 }
                 for name in (
@@ -2388,8 +2454,10 @@ class GlmLauncherTests(unittest.TestCase):
                     ("--tp", str(tp)),
                     ("--ep", "2"),
                     ("--model-path", "/model with spaces"),
-                    ("--glm5-mla-cache-format", "remnant"),
+                    ("--kv-cache-format", "direct"),
                     ("--cuda-graph-config", env["DECODE_CFG"]),
+                    ("--max-total-tokens", "16384"),
+                    ("--reasoning-parser", env["GLM_REASONING_PARSER"]),
                     ("--export-metrics-to-file-dir", str(metrics)),
                 ):
                     self.assertEqual(args[args.index(flag) + 1], expected)
@@ -2803,375 +2871,188 @@ class GLMAttentionProtocolTests(unittest.TestCase):
             kernels._glm_timing_qualification('../invalid')
 
 
-class LswbSweepTests(unittest.TestCase):
-    """Author: Winston Cai. Replay and server boundaries are CPU-only fakes."""
+
+
+class FP4QualificationTests(unittest.TestCase):
+    """Fail-closed receipt aggregation, independent of GPU/native dependencies."""
 
     def setUp(self):
-        from scripts.local.business_replay import sweep
-        self.sweep = sweep
-        temporary = tempfile.TemporaryDirectory(prefix="lswb-sweep-")
+        from scripts.modal import qualification as q
+
+        self.q = q
+        temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
-        self.image = "sha256:" + "1" * 64
-        self.env = {
-            "HOST_REPO": str(self.root), "RESULTS_HOST": str(self.root / "results"),
-            "CONTAINER": "fixture", "PORT": "30381", "MASTER_PORT": "29781", "TP": "4",
-            "MEM_FRAC": ".88", "MAX_RUN": "256", "DECODE_CFG": json.dumps({"decode": {"backend": "full", "bs": [4, 8, 32]}}),
-            "CTX_LEN": "1048576", "CHUNK": "8192", "MODEL_CT": "/model", "MODEL_NAME": "fixture",
-            "REPLAY_RUNNER": str(self.root / "runner.py"), "REPLAY_ADAPTER": str(self.root / "adapter.py"),
-            "REPLAY_MANIFEST": str(self.root / "dataset.json"), "REPLAY_DATASET": str(self.root / "data"),
-            "CUDA_VISIBLE_DEVICES": "4,5,6,7", "GPUS": "4,5,6,7", "REMNANT_INTEGRATION": "v0.5.18",
+        self.manifest = {key: {"fixture": key} for key in q.IDENTITY_FIELDS}
+
+    def receipt(self, name, passed=(), failed=None, manifest=None, count=34):
+        root = self.root / "microbench" / name / "validation"
+        root.mkdir(parents=True)
+        (root / "build-manifest.json").write_text(json.dumps(manifest or self.manifest))
+        states = {
+            tool: {"status": "passed" if tool in passed else "not_run"}
+            for tool in self.q.TOOLS
         }
-        self.sources = {"parent": {"commit": "parent"}, "sglang": {"commit": "fork", "dirty": False}}
-        self.info = {
-            "model_path": "/model", "served_model_name": "fixture", "export_metrics_to_file": True, "enable_metrics": True,
-            "tp_size": 4, "mem_fraction_static": .88, "random_seed": 20260919,
-            "chunked_prefill_size": 8192, "context_length": 1048576, "max_running_requests": 256,
-            "enable_hierarchical_cache": False, "dsv4_c4_cache_format": "remnant",
-            "dsv4_c4_cache_implementation": "kernel", "dsv4_c4_cache_store_implementation": "kernel",
-            "dsv4_c4_cache_keep_count": 256, "dsv4_c4_cache_layer_keep_counts": None,
-            "cuda_graph_config": json.loads(self.env["DECODE_CFG"]), "max_total_num_tokens": 4536832,
-        }
-
-    def args(self, *extra):
-        return self.sweep.parse_args(["kernel", "--concurrencies", "2,3", "--tag", "screen",
-                                      "--expected-image-id", self.image, *extra])
-
-    def manifest(self, args):
-        return {"points": [{"concurrency": c, "repeat": r} for c in args.concurrencies
-                           for r in range(1, args.repeats + 1)],
-                "settings": dict(self.env), "protocol": self.sweep.runner.PROTOCOL,
-                "duration_s": args.duration_s, "minimum_success_rate": args.minimum_success_rate,
-                "ttft_slo_ms": args.ttft_slo_ms, "source_hashes": {self.env["REPLAY_MANIFEST"]: "dataset-hash"}}
-
-    def fixture(self, path, point, manifest, *, fifo=False):
-        """Independent tiny raw workload, summarized by the existing replay owner."""
-        runner = self.sweep.runner
-        path.mkdir(parents=True)
-        (path / "client").mkdir()
-        records = [runner.Record(str(i), "user", 1, Path(f"{i}.json"), "sha", 1, 2) for i in range(2)]
-        clients = [dict(request_id="0", user_id="user", valid=True, errors=[], prompt_tokens=1,
-                        completion_tokens=2, ttft_ms=10000., latency_ms=12000., tpot_ms=2000.,
-                        cached_tokens_details={"device": 0, "host": 0, "storage": 0},
-                        cached_tokens_details_status="requested_zero_hit", completed_offset_s=12.,
-                        dispatch_offset_s=0., ready_ttft_ms=10000., ready_latency_ms=12000.),
-                   dict(request_id="1", user_id="user", valid=False, errors=["missing_output_event"],
-                        completed_offset_s=13., dispatch_offset_s=12.)]
-        activity = [{"event": "user_activate", "user_id": "user", "active": 1, "active_users": 1},
-                    {"event": "ready", "request_id": "0", "user_sequence": 0,
-                     "ready_offset_s": 0., "session_slot_id": 0},
-                    {"event": "ready", "request_id": "1", "user_sequence": 1,
-                     "ready_offset_s": 12., "session_slot_id": 0}]
-        if fifo:
-            slots = runner.request_slots
-            outcome = slots.ReplayOutcome(manifest["duration_s"], 13., activity=activity)
-            outcome.states = [slots.RequestState(r, i, float(i * 12), 0, float(i * 12), c)
-                              for i, (r, c) in enumerate(zip(records, clients))]
-            summary = slots.summarize(outcome, records, manifest["minimum_success_rate"],
-                                      manifest["ttft_slo_ms"], runner.summarize, runner.distribution)
-        else:
-            summary = runner.summarize(records, clients, activity, manifest["duration_s"], manifest["minimum_success_rate"])
-        record_rows = [{**r.__dict__, "path": str(r.path)} for r in records]
-        for relative, data in {
-            "client/summary.json": summary,
-            "client/done.json": {"valid": summary["valid"], "protocol": manifest["protocol"]},
-            "request-timing-validation.json": {"complete": True, "partial": False, "errors": [], "records": 2},
-            "replay-window.json": {"started_at": 100., "ended_at": 100. + manifest["duration_s"]},
-            "client/dataset_manifest.json": {"records": record_rows, "source_manifest_sha256": "dataset-hash"},
-            "client/manifest.json": {"replay": {"max_concurrency": point["concurrency"], "max_duration_s": manifest["duration_s"]}},
-        }.items():
-            (path / relative).write_text(json.dumps(data))
-        for relative, data in (("client/responses.jsonl", clients), ("client/active_requests.jsonl", activity)):
-            (path / relative).write_text("".join(json.dumps(row) + "\n" for row in data))
-        (path / "cache-flush.log").write_text("Cache flushed.\n")
-        (path / "request-timings.jsonl").write_text('{"id":"server-0"}\n{"id":"server-1"}\n')
-        for relative in ("client.log", "server.log"):
-            (path / relative).write_text("fixture\n")
-        (path / "server-info.json").write_text(json.dumps(self.info))
-        return 0 if summary["valid"] else 1
-
-    def test_defaults_and_invalid_arguments(self):
-        args = self.args()
-        self.assertEqual((args.duration_s, args.repeats, args.point_timeout_s), (1200, 1, 2100))
-        for extra in (("--concurrencies", "2,2"), ("--concurrencies", "2,,3"),
-                      ("--duration-s", "0"), ("--repeats", "-1"), ("--tag", "../bad"),
-                      ("--expected-image-id", "latest"), ("--ttft-slo-ms", "nan"),
-                      ("--minimum-success-rate", "1.1"), ("--point-timeout-s", "1200")):
-            with self.subTest(extra=extra), patch("sys.stderr"), self.assertRaises(SystemExit):
-                self.args(*extra)
-
-    def test_help_requires_no_docker_or_data(self):
-        script = kernels.REPO_ROOT / "scripts/local/sweep-lswb.sh"
-        result = subprocess.run(["bash", str(script), "--help"], capture_output=True, text=True,
-                                env={"PATH": os.environ["PATH"], "PYTHON": sys.executable}, timeout=10)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("--expected-image-id", result.stdout)
-
-    def prepare_mocks(self, args, env=None, image=None):
-        env = env or self.env
-        container = [{"Image": image or self.image, "State": {"Running": True}}]
-        return patch.multiple(self.sweep, helper=MagicMock(return_value=""),
-                              source_identity=MagicMock(return_value=self.sources),
-                              source_hashes=MagicMock(return_value={}), check_ports=MagicMock(),
-                              check_owner_record=MagicMock(),
-                              command=MagicMock(return_value=subprocess.CompletedProcess([], 0, json.dumps(container))))
-
-    def test_preflight_freezes_order_and_defaults(self):
-        args = self.args("--repeats", "3")
-        with self.prepare_mocks(args), patch.object(self.sweep.runner, "load_dataset_manifest", return_value=([], 0)):
-            manifest, env = self.sweep.prepare(args, self.env)
-        self.assertEqual(manifest["points"], [dict(concurrency=c, repeat=r) for c in (2, 3) for r in (1, 2, 3)])
-        self.assertEqual(env["GPUS"], "4,5,6,7")
-        self.assertEqual(env["SERVER_SEED"], "20260919")
-        self.assertNotIn("DSV4_ASYNC_PREPARATION", env)
-        self.assertNotIn("HICACHE_RATIO", env)
-
-    def test_image_mismatch_and_source_failure_prevent_startup(self):
-        args = self.args()
-        with self.prepare_mocks(args, image="sha256:" + "2" * 64), self.assertRaisesRegex(ValueError, "image mismatch"):
-            self.sweep.prepare(args, self.env)
-        with self.prepare_mocks(args):
-            with patch.object(self.sweep, "source_identity", side_effect=RuntimeError("dirty fork")), self.assertRaisesRegex(RuntimeError, "dirty fork"):
-                self.sweep.prepare(args, self.env)
-
-    def test_gpuq_assignment_required_except_dry_run(self):
-        env = {k: v for k, v in self.env.items() if k != "CUDA_VISIBLE_DEVICES"}
-        with self.assertRaisesRegex(ValueError, "GPUQ"):
-            self.sweep.prepare(self.args(), env)
-        args = self.args("--dry-run")
-        with self.prepare_mocks(args), patch.object(self.sweep.runner, "load_dataset_manifest", return_value=([], 0)):
-            _, resolved = self.sweep.prepare(args, env)
-        self.assertNotIn("CUDA_VISIBLE_DEVICES", resolved)
-
-    def test_occupied_port_and_ownership_record(self):
-        import socket
-        with socket.socket() as occupied:
-            occupied.bind(("0.0.0.0", 0))
-            env = {**self.env, "PORT": str(occupied.getsockname()[1])}
-            with self.assertRaisesRegex(RuntimeError, "occupied"):
-                self.sweep.check_ports(env)
-        with patch.object(self.sweep, "command", return_value=subprocess.CompletedProcess([], 0, "")), self.assertRaisesRegex(RuntimeError, "ownership record"):
-            self.sweep.check_owner_record(self.env)
-
-    def test_hicache_requires_bound_reset_evidence(self):
-        env = {**self.env, "HICACHE_RATIO": "2", "SWEEP_MODE": "kernel"}
-        with self.assertRaisesRegex(ValueError, "HICACHE_RESET_RECEIPT"):
-            self.sweep.validate_hicache_receipt(env, self.image, self.sources)
-        evidence = self.root / "reset.json"
-        evidence.write_text("GPU reset observation")
-        receipt = {"image_id": self.image, "integration": "v0.5.18", "mode": "kernel", "hicache_ratio": 2.,
-                   "fork_commits": {"sglang": "fork"}, "checks": {key: True for key in (
-                       "gpu_cache_empty", "host_cache_empty", "transfers_drained")},
-                   "evidence_path": str(evidence), "evidence_sha256": self.sweep.sha256(evidence)}
-        path = self.root / "receipt.json"
-        path.write_text(json.dumps(receipt))
-        env["HICACHE_RESET_RECEIPT"] = str(path)
-        self.assertIsNotNone(self.sweep.validate_hicache_receipt(env, self.image, self.sources))
-        evidence.write_text("changed")
-        with self.assertRaisesRegex(ValueError, "matching SHA256"):
-            self.sweep.validate_hicache_receipt(env, self.image, self.sources)
-
-    def test_gate_boundaries_and_recomputed_values(self):
-        args = self.args("--minimum-success-rate", "0.5")
-        manifest, point = self.manifest(args), dict(concurrency=2, repeat=1)
-        path = self.root / "point"
-        code = self.fixture(path, point, manifest)
-        row = self.sweep.collect_point(path, point, manifest, code)
-        self.assertTrue(row["measurement_complete"])
-        self.assertTrue(row["response_success_pass"])
-        self.assertFalse(row["ttft_slo_pass"])  # Exactly 10,000 ms is a failure.
-        self.assertEqual(row["request_throughput"], 1 / 1200)
-        self.assertEqual(row["completion_token_throughput"], 2 / 1200)
-        path_summary = path / "client/summary.json"
-        summary = json.loads(path_summary.read_text())
-        summary["request_throughput"] += 1
-        path_summary.write_text(json.dumps(summary))
-        with self.assertRaisesRegex(ValueError, "raw records"):
-            self.sweep.collect_point(path, point, manifest, code)
-
-    def test_fifo_uses_existing_accounting_and_ready_slo(self):
-        args = self.args()
-        manifest = self.manifest(args)
-        manifest["protocol"] = self.sweep.runner.request_slots.PROTOCOL
-        point, path = dict(concurrency=2, repeat=1), self.root / "fifo"
-        code = self.fixture(path, point, manifest, fifo=True)
-        row = self.sweep.collect_point(path, point, manifest, code)
-        self.assertFalse(row["response_success_pass"])
-        self.assertFalse(row["ttft_slo_pass"])
-
-    def run_sweep(self, failure=None):
-        args = self.args("--repeats", "2")
-        manifest = self.manifest(args)
-        env = {**self.env, "SERVER_SEED": "20260919"}
-        calls = []
-        def fake_command(arguments, environment, **kwargs):
-            calls.append(arguments)
-            if "bench-lswb.sh" in str(arguments):
-                path = Path(environment["LSWB_RUN_ROOT"])
-                if failure:
-                    raise failure
-                point = {"concurrency": int(arguments[-2]), "repeat": int(path.name.rsplit("-", 1)[1])}
-                code = self.fixture(path, point, manifest)
-                return subprocess.CompletedProcess(arguments, code, "")
-            return subprocess.CompletedProcess(arguments, 0, "gpu0,H100\n")
-        with (patch.object(self.sweep, "command", side_effect=fake_command),
-              patch.object(self.sweep, "check_ports"), patch.object(self.sweep, "check_owner_record"),
-              patch.object(self.sweep, "server_info", return_value=self.info),
-              patch.object(self.sweep, "check_frozen"), patch("builtins.print")):
-            if failure:
-                with self.assertRaisesRegex(RuntimeError, "Sweep failed"):
-                    self.sweep.execute(args, manifest, env)
-                root = next((Path(env["RESULTS_HOST"]) / "lswb-replay").iterdir())
-            else:
-                root = self.sweep.execute(args, manifest, env)
-        return root, calls
-
-    def test_one_boot_cleanup_repeat_order_and_continue_measured_failures(self):
-        root, calls = self.run_sweep()
-        serve = [c for c in calls if "serve.sh" in str(c)]
-        self.assertEqual([c[-1] for c in serve], ["kernel", "stop"])
-        rows = json.loads((root / "summary.json").read_text())["points"]
-        self.assertEqual([(r["concurrency"], r["repeat"]) for r in rows], [(2, 1), (2, 2), (3, 1), (3, 2)])
-        self.assertTrue(all(r["measurement_complete"] for r in rows))
-        self.assertTrue(all(not r["response_success_pass"] and not r["ttft_slo_pass"] for r in rows))
-        self.assertEqual(len({r["artifact_path"] for r in rows}), 4)
-        self.assertEqual(json.loads((root / "summary.json").read_text())["status"], "complete")
-
-    def test_timeout_and_health_failure_stop_and_cleanup(self):
-        root, calls = self.run_sweep(subprocess.TimeoutExpired("replay", 2100))
-        self.assertEqual(sum("bench-lswb.sh" in str(c) for c in calls), 1)
-        self.assertEqual(calls[-1][-1], "stop")
-        self.assertEqual(json.loads((root / "summary.json").read_text())["status"], "failed")
-
-    def test_interruption_stops_remaining_points_and_cleans_up(self):
-        root, calls = self.run_sweep(InterruptedError("interrupt"))
-        self.assertEqual(sum("bench-lswb.sh" in str(c) for c in calls), 1)
-        self.assertEqual(calls[-1][-1], "stop")
-        self.assertEqual(json.loads((root / "summary.json").read_text())["status"], "failed")
-
-    def test_local_command_timeout_terminates_its_process_group(self):
-        with self.assertRaises(subprocess.TimeoutExpired):
-            self.sweep.command([sys.executable, "-c", "import time; time.sleep(60)"],
-                               self.env, timeout=1)
-
-    def test_startup_failure_and_missing_artifacts_cleanup(self):
-        args = self.args()
-        for boot_fails in (True, False):
-            with self.subTest(boot_fails=boot_fails):
-                calls = []
-                def fake(arguments, env, **kwargs):
-                    calls.append(arguments)
-                    if boot_fails and str(arguments[-1]) == "kernel":
-                        raise RuntimeError("startup failed")
-                    return subprocess.CompletedProcess(arguments, 0, "")
-                with (patch.object(self.sweep, "command", side_effect=fake),
-                      patch.object(self.sweep, "check_ports"), patch.object(self.sweep, "check_owner_record"),
-                      patch.object(self.sweep, "check_frozen"), patch.object(self.sweep, "server_info", return_value=self.info),
-                      patch("builtins.print"), self.assertRaisesRegex(RuntimeError, "Sweep failed")):
-                    self.sweep.execute(args, self.manifest(args), {**self.env, "SERVER_SEED": "20260919"})
-                self.assertEqual(calls[-1][-1], "stop")
-
-    def test_changed_server_or_source_is_operational_failure(self):
-        with patch.object(self.sweep, "source_identity", return_value={"sglang": {"commit": "changed"}}), self.assertRaisesRegex(RuntimeError, "Frozen source"):
-            self.sweep.check_frozen({"sources": self.sources, "source_hashes": {}}, self.env)
-        for change in ({"tp_size": 2}, {"enable_hierarchical_cache": True}, {"dsv4_c4_cache_implementation": "triton"}):
-            with self.subTest(change=change), self.assertRaisesRegex(ValueError, "Server configuration mismatch"):
-                self.sweep.check_server({**self.info, **change}, {**self.env, "SERVER_SEED": "20260919"}, "kernel", 3)
-
-    def test_dry_run_does_not_execute_or_create_results(self):
-        args = self.args("--dry-run")
-        with (patch.object(self.sweep, "parse_args", return_value=args),
-              patch.object(self.sweep, "prepare", return_value=({}, self.env)),
-              patch.object(self.sweep, "execute") as execute, patch("builtins.print")):
-            self.assertEqual(self.sweep.main(), 0)
-        execute.assert_not_called()
-        self.assertFalse(Path(self.env["RESULTS_HOST"]).exists())
-
-    def test_health_failure_stops_before_first_replay_and_cleans_up(self):
-        args = self.args()
-        calls = []
-        def fake(arguments, env, **kwargs):
-            calls.append(arguments)
-            return subprocess.CompletedProcess(arguments, 0, "gpu,H100\n")
-        with (patch.object(self.sweep, "command", side_effect=fake),
-              patch.object(self.sweep, "check_ports"), patch.object(self.sweep, "check_owner_record"),
-              patch.object(self.sweep, "server_info", side_effect=OSError("unhealthy")),
-              patch("builtins.print"), self.assertRaisesRegex(RuntimeError, "unhealthy")):
-            self.sweep.execute(args, self.manifest(args), {**self.env, "SERVER_SEED": "20260919"})
-        self.assertEqual(calls[-1][-1], "stop")
-        self.assertFalse(any("bench-lswb.sh" in str(c) for c in calls))
-
-    def test_incomplete_and_inconsistent_artifacts_are_rejected(self):
-        args = self.args()
-        manifest, point = self.manifest(args), dict(concurrency=2, repeat=1)
-        for issue in ("timing", "missing", "exit", "dataset"):
-            with self.subTest(issue=issue):
-                path = self.root / issue
-                code = self.fixture(path, point, manifest)
-                if issue == "timing":
-                    (path / "request-timing-validation.json").write_text('{"complete":false}')
-                elif issue == "missing":
-                    (path / "request-timings.jsonl").unlink()
-                elif issue == "dataset":
-                    target = path / "client/dataset_manifest.json"
-                    data = json.loads(target.read_text())
-                    data["source_manifest_sha256"] = "changed"
-                    target.write_text(json.dumps(data))
-                else:
-                    code = 0
-                with self.assertRaises(ValueError):
-                    self.sweep.collect_point(path, point, manifest, code)
-
-    def test_standalone_replay_output_and_response_threshold(self):
-        """Run the real replay shell with a fake HTTP endpoint and client, no GPUs."""
-        repo = self.root / "standalone"
-        local = repo / "scripts/local"
-        local.mkdir(parents=True)
-        (local / "bench-lswb.sh").write_text((kernels.REPO_ROOT / "scripts/local/bench-lswb.sh").read_text())
-        fake_runner = repo / "client.py"
-        fake_runner.write_text(
-            "import json, pathlib, sys\n"
-            "args=sys.argv[1:]; root=pathlib.Path(args[args.index('--result-root')+1])\n"
-            "(root/'args.json').write_text(json.dumps(args))\n"
-            "(root/'summary.json').write_text(json.dumps({'counts':{'successful':1}}))\n"
+        if failed:
+            states[failed] = {
+                "status": "failed",
+                "error": "sanitizer reported a hazard",
+            }
+        (root / "result.json").write_text(
+            json.dumps(
+                {
+                    "status": "failed",
+                    "error": "KeyboardInterrupt",
+                    "allocation": {"status": "passed"},
+                    "sanitizer_results": states,
+                }
+            )
         )
-        info = {"cuda_graph_config": {"decode": {"backend": "full", "bs": [32]}},
-                "dsv4_c4_cache_format": "native", "export_metrics_to_file": False}
-        tools = repo / "tools"
-        tools.mkdir()
-        curl = tools / "curl"
-        curl.write_text("#!/bin/sh\ncase \"$*\" in\n*server_info*) cat <<'JSON'\n" + json.dumps(info) + "\nJSON\n;;\n*flush_cache*) [ \"${FAIL_FLUSH:-0}\" != 1 ] || exit 22; echo 'Cache flushed.';;\nesac\n")
-        curl.chmod(0o755)
-        (local / "env.sh").write_text(
-            f"HOST_REPO={shlex.quote(str(repo))}\nRESULTS_HOST=$HOST_REPO/results\n"
-            "REPO_CT=/mnt/host_root$HOST_REPO\nLOG_HOST=$HOST_REPO/logs\nPORT=30381\nMODEL_NAME=fixture\n"
-            "check_sources() { return 0; }\nts() { echo 20260101_000000; }\n"
+        for tool in passed:
+            cases = "".join(
+                f'<testcase classname="fp4" name="case{i}"/>' for i in range(count)
+            )
+            (root / f"{tool}.xml").write_text(
+                f"<testsuites><testsuite>{cases}</testsuite></testsuites>"
+            )
+
+    def test_complete_tools_from_interrupted_jobs_can_combine(self):
+        self.receipt("a", ("memcheck", "racecheck"))
+        self.receipt("b", ("synccheck",))
+        result = self.q.qualify_fp4_runs(self.root, "a,b", self.manifest)
+        self.assertEqual(set(result["tools"]), self.q.TOOLS)
+        self.assertEqual(result["case_count_per_tool"], 34)
+        self.assertEqual(len(result["identity_sha256"]), 64)
+
+    def test_a_later_pass_does_not_erase_a_sanitizer_failure(self):
+        self.receipt("bad", ("memcheck",), failed="racecheck")
+        self.receipt("good", self.q.TOOLS)
+        for order in ("bad,good", "good,bad"):
+            with (
+                self.subTest(order=order),
+                self.assertRaisesRegex(RuntimeError, "Unresolved sanitizer failure"),
+            ):
+                self.q.qualify_fp4_runs(self.root, order, self.manifest)
+
+    def test_each_identity_field_is_required_and_matches(self):
+        for index, key in enumerate(self.q.IDENTITY_FIELDS):
+            changed = copy.deepcopy(self.manifest)
+            changed[key] = "different runtime/input"
+            name = f"changed{index}"
+            self.receipt(name, self.q.TOOLS, manifest=changed)
+            with (
+                self.subTest(key=key),
+                self.assertRaisesRegex(RuntimeError, "identity changed"),
+            ):
+                self.q.qualify_fp4_runs(self.root, name, self.manifest)
+            missing = dict(self.manifest)
+            del missing[key]
+            with self.assertRaisesRegex(
+                RuntimeError, "Incomplete qualification identity"
+            ):
+                self.q.QualificationIdentity.from_manifest(missing)
+
+    def test_missing_or_skipped_cases_never_qualify(self):
+        self.receipt("short", self.q.TOOLS, count=33)
+        with self.assertRaisesRegex(RuntimeError, "Incomplete qualification XML"):
+            self.q.qualify_fp4_runs(self.root, "short", self.manifest)
+        self.receipt("skipped", self.q.TOOLS)
+        report = self.root / "microbench/skipped/validation/memcheck.xml"
+        report.write_text(
+            report.read_text().replace(
+                'name="case0"/>', 'name="case0"><skipped/></testcase>'
+            )
         )
-        (local / "eval-env.sh").write_text(f"REPLAY_RUNNER={shlex.quote(str(fake_runner))}\nREPLAY_ADAPTER=$REPLAY_RUNNER\nREPLAY_DATASET=$HOST_REPO\nREPLAY_MANIFEST=$REPLAY_RUNNER\nrequire_replay_config() {{ return 0; }}\n")
-        environment = {"PATH": str(tools) + os.pathsep + os.environ["PATH"], "PYTHON": sys.executable}
-        output = repo / "results/lswb-replay/explicit"
-        for explicit in (False, True):
-            with self.subTest(explicit=explicit):
-                env = {**environment, **({"LSWB_RUN_ROOT": str(output), "REPLAY_MINIMUM_SUCCESS_RATE": ".5"} if explicit else {})}
-                result = subprocess.run(["bash", str(local / "bench-lswb.sh"), "tag", "30381", "2", "1"], env=env,
-                                        capture_output=True, text=True, timeout=15)
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                root = output if explicit else repo / "results/lswb-replay/tag/20260101_000000"
-                arguments = json.loads((root / "client/args.json").read_text())
-                self.assertEqual(arguments[arguments.index("--minimum-success-rate") + 1], ".5" if explicit else "0.99")
-        result = subprocess.run(["bash", str(local / "bench-lswb.sh"), "tag"],
-                                env={**environment, "LSWB_RUN_ROOT": str(output)}, capture_output=True, text=True, timeout=10)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("must be fresh", result.stderr)
-        failed_root = repo / "results/lswb-replay/failed-flush"
-        result = subprocess.run(["bash", str(local / "bench-lswb.sh"), "failed", "30381", "2", "1"],
-                                env={**environment, "LSWB_RUN_ROOT": str(failed_root), "FAIL_FLUSH": "1"},
-                                capture_output=True, text=True, timeout=10)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("prefix cache flush failed", result.stderr)
-        self.assertFalse((failed_root / "client/args.json").exists())
+        with self.assertRaisesRegex(RuntimeError, "Incomplete qualification XML"):
+            self.q.qualify_fp4_runs(self.root, "skipped", self.manifest)
 
 
+class FP4PreflightTests(unittest.TestCase):
+    def test_failed_cpu_preflight_never_schedules_an_h100(self):
+        with (
+            patch.object(kernels, "VALIDATION_SUITE", "v41-fp4"),
+            patch.object(
+                kernels._preflight_fp4_timing,
+                "remote",
+                side_effect=RuntimeError("bad receipt"),
+            ),
+            patch.object(kernels._benchmark_worker, "remote") as gpu,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "bad receipt"):
+                kernels._dispatch_benchmark(
+                    "run", 256, "", "v41-fp4-decode", "split", "bad"
+                )
+            gpu.assert_not_called()
+
+    def test_gpu_receives_the_successful_cpu_proof(self):
+        proof = {"identity_sha256": "a" * 64, "receipts": {"clean": "b" * 64}}
+        with (
+            patch.object(kernels, "VALIDATION_SUITE", "v41-fp4"),
+            patch.object(
+                kernels._preflight_fp4_timing, "remote", return_value=proof
+            ) as cpu,
+            patch.object(
+                kernels._benchmark_worker, "remote", return_value="result"
+            ) as gpu,
+        ):
+            actual = kernels._dispatch_benchmark(
+                "run", 256, "", "v41-fp4-decode", "split", "clean"
+            )
+            self.assertEqual(actual, "result")
+            cpu.assert_called_once_with("run", "clean")
+            bound = inspect.signature(inspect.unwrap(kernels._benchmark_worker.get_raw_f())).bind(*gpu.call_args.args, **gpu.call_args.kwargs)
+            self.assertEqual(bound.arguments["preflight"], proof)
+
+
+
+class SharedModelContractsTests(unittest.TestCase):
+    def test_profiles_are_pure_and_preserve_assets(self):
+        from scripts.model_profiles import model_profile
+        for family in ("dsv4", "glm53"):
+            profile = model_profile(family, "v0.5.22")
+            self.assertIn(profile.revision, profile.config_url)
+            self.assertEqual(len(profile.config_sha256), 64)
+        self.assertEqual(model_profile("glm53", "v0.5.22").checkpoint_bytes, 328337455672)
+        self.assertEqual(model_profile("glm53", "v0.5.22").volume, "glm53-flash")
+        for family, version in (("glm53", "v0.5.18"), ("unknown", "v0.5.22")):
+            with self.assertRaises(ValueError):
+                model_profile(family, version)
+
+    def test_shared_report_parsing_and_new_raw_identity(self):
+        import hashlib
+        from scripts.modal.qualification import read_pytest_report, validate_run_id, verify_sanitizer_artifacts
+        for name in ("../bad", "a/b", "", "a" * 129):
+            with self.assertRaises(ValueError):
+                validate_run_id(name)
+        validate_run_id("good-run_1")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "memcheck.xml").write_text('<testsuite tests="1"><testcase classname="unit" name="case"><properties><property name="shape" value="8"/></properties></testcase></testsuite>')
+            (root / "memcheck.log").write_text('========= ERROR SUMMARY: 0 errors\n')
+            cases, counts = read_pytest_report(root / "memcheck.xml")
+            self.assertEqual(counts, dict(tests=1, errors=0, failures=0, skipped=0))
+            self.assertEqual(cases[0].find("properties/property").get("value"), "8")
+            state = {"report_schema": "remnant-sanitizer-raw-v1", **{f"{s}_sha256": hashlib.sha256((root / f"memcheck.{s}").read_bytes()).hexdigest() for s in ("log", "xml")}}
+            verify_sanitizer_artifacts(root, "memcheck", state)
+            (root / "memcheck.log").write_text('changed')
+            with self.assertRaisesRegex(RuntimeError, "raw report changed"):
+                verify_sanitizer_artifacts(root, "memcheck", state)
+
+    def test_ambiguous_sanitizers_fail_before_run_context(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        with patch.object(kernels, "_run_context") as context:
+            with self.assertRaises(ValueError):
+                function("ambiguous", sanitizer=True, sanitizer_tools="memcheck", sanitizer_order="memcheck,racecheck,synccheck")
+            context.assert_not_called()
+
+    def test_cpu_preflight_does_not_commit_gpu_cache(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest = root / "manifest.json"; manifest.write_text('{}')
+            with patch.object(kernels, "MANIFEST", manifest), patch.object(kernels, "RESULTS_ROOT", root), patch.object(kernels, "results_volume"), patch.object(kernels, "triton_volume") as cache:
+                with kernels._run_context("cpu", "preflight", 1, resource="cpu"):
+                    pass
+                cache.commit.assert_not_called()
 
 if __name__ == "__main__":
     unittest.main()

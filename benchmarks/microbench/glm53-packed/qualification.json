@@ -1006,5 +1006,43 @@
       "Focused sanitizer gates do not cover the full grid or combine.",
       "The experiment does not establish serving latency, capacity or multi-GPU performance."
     ]
+  },
+  "ds41_integration": {
+    "status": "cpu_validation_in_progress",
+    "author": "Winston Cai",
+    "candidate_worktree": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration",
+    "parent_ancestors": [
+      "8a3d5b223e7e4332bfba45a2fe34a2825b0111c9",
+      "d385c1c3a52229b86cebb62aeb86e4d26933946c"
+    ],
+    "sglang": "d2a99aa6c612757c9f618efecbdc8c1372c324dc",
+    "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159",
+    "budget": {
+      "authorized_usd": 20,
+      "routine_stop_usd": 17,
+      "reserve_usd": 3,
+      "cpu_cap_usd": 4,
+      "h100_cap_usd": 6,
+      "serving_cap_usd": 7,
+      "h100_cap_minutes": 75,
+      "serving_cap_minutes": 20,
+      "accounted_usd": 0,
+      "launches": []
+    },
+    "cpu": {
+      "fork_command": "python -m pytest benchmark/remnant/test_microbench.py test/registered/unit/test_glm5_mla_cache_format.py -q",
+      "passed": 194,
+      "gpu_skipped": 103,
+      "test_inventory": "all 67 original top-level benchmark functions retained; one new statistics regression",
+      "parent": "pending"
+    },
+    "review": {
+      "runtime": "passed after fixes for V4.1 auto backend and None architectures",
+      "parent": "initial findings fixed; final review pending"
+    },
+    "h100": "pending",
+    "serving": "pending",
+    "excluded_replay_capture_files": 236,
+    "original_dirty_ledger_preserved": true
   }
 }

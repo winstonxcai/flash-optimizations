@@ -37,19 +37,19 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import modal
-from scripts.sources import check_sources, integration_profile
+from scripts.sources import check_sources, integration_profile, verify_compiled_image_sources
+from scripts.model_profiles import model_profile
 
 INTEGRATION = integration_profile()
 
 MODEL_FAMILY = os.environ.get("REMNANT_MODEL_FAMILY", "dsv4")
 if MODEL_FAMILY not in ("dsv4", "glm53") or (MODEL_FAMILY == "glm53" and INTEGRATION["version"] != "v0.5.22"):
     raise ValueError("GLM launchers require REMNANT_INTEGRATION=v0.5.22")
-MODEL_REPO = "zai-org/GLM-5.3-Flash" if MODEL_FAMILY == "glm53" else "deepseek-ai/DeepSeek-V4-Flash-0731"
-MODEL_REVISION = "46a050bec13002ad29ee795c16e61cf4fa3c4a9c" if MODEL_FAMILY == "glm53" else "7872f01b1d1fe23eabc4c98b48bffcef5a386062"
-GLM_CHECKPOINT_SHARDS = 62
-GLM_CHECKPOINT_BYTES = 328_337_455_672
+MODEL_PROFILE = model_profile(MODEL_FAMILY, INTEGRATION["version"])
+MODEL_REPO = MODEL_PROFILE.repository
+MODEL_REVISION = MODEL_PROFILE.revision
 MODEL_ROOT = Path("/models")
-MODEL_DIR = MODEL_ROOT / ("GLM-5.3-Flash" if MODEL_FAMILY == "glm53" else "DeepSeek-V4-Flash-0731")
+MODEL_DIR = MODEL_ROOT / MODEL_PROFILE.directory
 RESULTS_ROOT = Path("/results")
 SGLANG_ROOT = Path("/sgl-workspace/sglang-remnant")
 REMOTE_REPO = Path("/opt/flash-optimizations")
@@ -82,16 +82,11 @@ from scripts.sources import compiled_source_digest as _compiled_source_digest
 
 def _verify_compiled_sources(expected: str) -> None:
     """CPU-only gate: never overlay Python onto mismatched compiled kernel sources."""
-    if os.environ.get("REMNANT_BUILT_INTEGRATION", "v0.5.18") != INTEGRATION["version"]:
-        raise RuntimeError("Compiled image belongs to a different REMNANT_INTEGRATION")
-    actual = _compiled_source_digest(
-        [SGLANG_ROOT / "python/sglang/kernels", Path("/opt/flashmla-remnant/csrc")]
+    verify_compiled_image_sources(
+        expected,
+        [str(SGLANG_ROOT / "python/sglang/kernels"), "/opt/flashmla-remnant/csrc"],
+        INTEGRATION["version"],
     )
-    if actual != expected:
-        raise RuntimeError(
-            "Compiled source changed; rebuild the selected Dockerfile "
-            "instead of reusing this image"
-        )
 
 
 SOURCE_REVISIONS = {
@@ -109,7 +104,7 @@ SOURCE_ENV["REMNANT_COMPILED_IMAGE"] = os.environ.get("REMNANT_COMPILED_IMAGE", 
 app = modal.App("remnant")
 checkpoint_app = modal.App("remnant-checkpoint")
 SGLANG_SOURCE = Path(SOURCE_IDENTITIES["sglang"]["path"])
-model_volume = modal.Volume.from_name("glm53-flash" if MODEL_FAMILY == "glm53" else "deepseek-v4-flash-0731", create_if_missing=True)
+model_volume = modal.Volume.from_name(MODEL_PROFILE.volume, create_if_missing=True)
 # Keep the existing volume name: renaming the public modes must not orphan results.
 results_volume = modal.Volume.from_name(
     "remnant-stage2a-results", create_if_missing=True
@@ -120,6 +115,10 @@ download_image = (
         "huggingface-hub[hf-xet]==0.34.4",
     )
     .env({**SOURCE_ENV, "PYTHONPATH": str(REMOTE_REPO)})
+    .add_local_file(
+        REPO_ROOT / "scripts/model_profiles.py",
+        str(REMOTE_REPO / "scripts/model_profiles.py"), copy=True,
+    )
     .add_local_file(
         REPO_ROOT / "scripts/sources.py",
         str(REMOTE_REPO / "scripts/sources.py"),
@@ -154,6 +153,10 @@ if modal.is_local():
                 str(REMOTE_REPO / "scripts/sources.py"),
                 copy=True,
             )
+            .add_local_file(
+                REPO_ROOT / "scripts/model_profiles.py",
+                str(REMOTE_REPO / "scripts/model_profiles.py"), copy=True,
+            )
             .run_function(
                 _verify_compiled_sources, kwargs={"expected": expected}, timeout=180
             )
@@ -186,9 +189,17 @@ if modal.is_local():
     server_image = (
         fork_image.env(SOURCE_ENV)
         .add_local_file(
+            REPO_ROOT / "scripts/model_profiles.py",
+            str(REMOTE_REPO / "scripts/model_profiles.py"), copy=True,
+        )
+        .add_local_file(
             REPO_ROOT / "scripts/sources.py",
             str(REMOTE_REPO / "scripts/sources.py"),
             copy=True,
+        )
+        .add_local_file(
+            REPO_ROOT / "scripts/modal/qualification.py",
+            str(REMOTE_REPO / "scripts/modal/qualification.py"), copy=True,
         )
         .apt_install("curl", "jq", "util-linux", "coreutils")
         .add_local_dir(
@@ -241,12 +252,10 @@ def _check_model_cache() -> dict:
     config = json.loads((MODEL_DIR / "config.json").read_text())
     index = json.loads((MODEL_DIR / "model.safetensors.index.json").read_text())
     names = sorted(set(index["weight_map"].values()))
-    expected_shards = GLM_CHECKPOINT_SHARDS if MODEL_FAMILY == "glm53" else 48
+    expected_shards = MODEL_PROFILE.shards
     if len(names) != expected_shards:
         raise RuntimeError(f"Expected {expected_shards} pinned checkpoint shards, got {len(names)}")
-    metadata_files = ["config.json", "model.safetensors.index.json"]
-    if MODEL_FAMILY == "glm53":
-        metadata_files += ["tokenizer.json", "tokenizer_config.json", "chat_template.jinja"]
+    metadata_files = list(MODEL_PROFILE.metadata_files)
     for name in names + metadata_files:
         path = MODEL_DIR / name
         receipt = MODEL_DIR / ".cache/huggingface/download" / (name + ".metadata")
@@ -258,8 +267,8 @@ def _check_model_cache() -> dict:
         ):
             raise RuntimeError(f"missing or unpinned checkpoint file: {name}")
     size = sum((MODEL_DIR / name).stat().st_size for name in names)
-    if MODEL_FAMILY == "glm53" and size != GLM_CHECKPOINT_BYTES:
-        raise RuntimeError(f"Expected {GLM_CHECKPOINT_BYTES} checkpoint bytes, got {size}")
+    if MODEL_PROFILE.checkpoint_bytes is not None and size != MODEL_PROFILE.checkpoint_bytes:
+        raise RuntimeError(f"Expected {MODEL_PROFILE.checkpoint_bytes} checkpoint bytes, got {size}")
     result = {
         "revision": MODEL_REVISION,
         "shards": len(names),
@@ -369,12 +378,8 @@ def benchmark_serving(
     timeout_minutes: int = 60,
 ) -> str:
     """Own one server boot and call the shared client against it."""
-    if mode not in {"native", "triton", "kernel", "packed"}:
-        raise ValueError(
-            "mode must be native, triton, or kernel (packed aliases kernel)"
-        )
-    if mode == "packed":
-        mode = "kernel"
+    if mode not in {"native", "direct"}:
+        raise ValueError("mode must be native or direct")
     if not 1 <= timeout_minutes <= 240:
         raise ValueError("timeout_minutes must be 1–240")
     if min(input_tokens, output_tokens, concurrency) < 1:
@@ -436,8 +441,8 @@ def benchmark_serving(
     return str(run)
 
 
-GLM_SMOKE_MODE_SECONDS = 960
-GLM_SMOKE_TIMEOUT_SECONDS = 2 * GLM_SMOKE_MODE_SECONDS + 120
+GLM_SMOKE_MODE_SECONDS = 540
+GLM_SMOKE_TIMEOUT_SECONDS = 1140
 GLM_SMOKE_PYTHON = "/opt/sglang/bin/python"
 
 
@@ -509,7 +514,7 @@ def _glm_chat_request(port: str, deadline: float) -> dict:
         status != 200
         or body.get("model") != payload["model"]
         or not isinstance(content, str)
-        or not content.strip()
+        or content.strip() != "1, 2, 3, 4, 5"
         or choice.get("finish_reason") != "stop"
         or body.get("usage", {}).get("completion_tokens", 0) < 2
     ):
@@ -528,13 +533,14 @@ def _glm_chat_request(port: str, deadline: float) -> dict:
     scaledown_window=2,
     volumes={str(MODEL_ROOT): model_volume.read_only(), str(RESULTS_ROOT): results_volume},
 )
-def smoke_glm_serving(run_id: str, modes: str = "native,packed") -> dict:
+def smoke_glm_serving(run_id: str, modes: str = "native,direct") -> dict:
     """Boot the same pinned checkpoint in each mode and make a chat request."""
     selected = modes.split(",")
-    if modes not in ("native,packed", "native", "packed"):
-        raise ValueError("modes must be native,packed, native, or packed")
-    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,100}", run_id):
-        raise ValueError("Invalid GLM serving run ID")
+    if modes not in ("native,direct", "native", "direct"):
+        raise ValueError("modes must be native,direct, native, or direct")
+    from scripts.modal.qualification import validate_run_id
+
+    validate_run_id(run_id, max_length=101)
     checkpoint = _check_glm_serving_checkpoint(_check_glm_serving_image())
     devices = subprocess.check_output(
         ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"],
@@ -580,11 +586,19 @@ def smoke_glm_serving(run_id: str, modes: str = "native,packed") -> dict:
         ),
     }
     record["settings"] = settings
+    allocation_started = time.monotonic()
+    worker_deadline = allocation_started + GLM_SMOKE_TIMEOUT_SECONDS - 30
+    record["started_at"] = time.time()
     for mode in selected:
+        if worker_deadline - time.monotonic() < GLM_SMOKE_MODE_SECONDS + 30:
+            record["mode_results"][mode] = {"status": "pending", "error": "Insufficient time for full mode allowance and cleanup"}
+            (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
+            results_volume.commit()
+            break
         start = time.monotonic()
         deadline = start + GLM_SMOKE_MODE_SECONDS
         log = root / f"{mode}.log"
-        result = record["mode_results"][mode] = {"status": "failed"}
+        result = record["mode_results"][mode] = {"status": "failed", "started_at": time.time()}
         env = {
             **os.environ,
             **settings,
@@ -596,13 +610,16 @@ def smoke_glm_serving(run_id: str, modes: str = "native,packed") -> dict:
             with _running_serving_server(env, log, deadline):
                 result["health_http_status"] = 200
                 result["ready_seconds"] = time.monotonic() - start
+                result["chat_started_at"] = time.time()
                 result["chat"] = _glm_chat_request(env["PORT"], deadline)
+                result["chat_completed_at"] = time.time()
             result["status"] = "passed"
         except (OSError, RuntimeError, ValueError) as exc:
             result["error"] = str(exc)
             if log.exists():
                 print("\n".join(log.read_text(errors="replace").splitlines()[-40:]), flush=True)
         finally:
+            result["terminated_at"] = time.time()
             result["worker_seconds"] = time.monotonic() - start
             (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
             results_volume.commit()

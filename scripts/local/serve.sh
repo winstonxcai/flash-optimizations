@@ -5,9 +5,7 @@
 # Author: Winston Cai.
 #
 #   serve.sh native             untouched 0731, stock 584-byte C4 (default)
-#   serve.sh triton             Packed C4 with Triton packing/reconstruction
-#   serve.sh kernel             Packed C4 with current optimized dispatch
-#   serve.sh packed             compatibility alias for kernel
+#   serve.sh direct             Packed with the model-specific Direct kernel
 #   serve.sh <mode> profile     Nsight Systems, capture waits for profiler API
 #   serve.sh <mode> stop        kill the server on $PORT
 #
@@ -15,8 +13,7 @@
 # They use the fp4-native MoE runner (flashinfer_mxfp4), mem-frac 0.88,
 # 1M ctx cap, fp8 KV, and DeepSeek reasoning/tool parsers (needed by the
 # agentic evals; harmless for benches). Native uses the fork's default cache
-# format; triton/kernel default to 328-byte Packed records. Triton also supports
-# startup per-layer survivor counts with smaller/larger value planes.
+# format; direct selects the model-specific Packed storage and reader.
 #
 # GLM: MODEL_FAMILY=glm53 uses raw FP8 TileLang; TP/EP/GPUS resolve together.
 # Env overrides (all optional): MODEL_FAMILY, EP, PORT, GPUS, MASTER_PORT, TP, DECODE_CFG,
@@ -25,7 +22,7 @@
 # DSV4_ASYNC_PREPARATION (0 or 1; default off),
 # DSV4_PREPARATION_WORKERS (1, 2 or 4; default 1), HICACHE_RATIO (positive
 # CPU-L2/device pool ratio; unset disables HiCache). Boot log:
-#   <LOG_HOST>/serve_<native|triton|kernel>.log
+#   <LOG_HOST>/serve_<native|direct>.log
 # Server is left RUNNING; use "serve.sh <mode> stop" to tear it down.
 # =====================================================================
 set -u
@@ -37,12 +34,12 @@ DECODE_CFG_WAS_SET=${DECODE_CFG+x}
 
 MODE=${1:-}; ACTION=${2:-boot}
 case "$MODE" in
-  native|triton|kernel|packed) ;;
-  *) echo "usage: $0 <native|triton|kernel> [boot|profile|stop] (packed aliases kernel)"; exit 1 ;;
+  native|direct) ;;
+  *) echo "usage: $0 <native|direct> [boot|profile|stop]"; exit 1 ;;
 esac
 case "$ACTION" in
   boot|profile|stop) ;;
-  *) echo "usage: $0 <native|triton|kernel> [boot|profile|stop]"; exit 1 ;;
+  *) echo "usage: $0 <native|direct> [boot|profile|stop]"; exit 1 ;;
 esac
 SERVE_LOG="$LOG_HOST/serve_${MODE}.log"  # host-side log path
 SERVE_LOG_CT=$(to_ct "$SERVE_LOG")             # same file inside container

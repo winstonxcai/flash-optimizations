@@ -3,6 +3,10 @@
 # Consumers: env.sh, run-server.sh, and serve.sh. Author: Winston Cai.
 
 resolve_launch_config () {
+  case "${MODE:-native}" in
+    native|direct) CACHE_FORMAT=${MODE:-native} ;;
+    *) echo "serving mode must be native or direct" >&2; return 2 ;;
+  esac
   MODEL_FAMILY=${MODEL_FAMILY:-dsv4}
   case "$MODEL_FAMILY" in
     dsv4) TP=${TP:-4}; MODEL_NAME=${MODEL_NAME:-deepseek-v4-flash} ;;
@@ -38,7 +42,7 @@ ct_launch_script () {
   local name
   local -a environment=()
   for name in MODEL_FAMILY MODEL_NAME TP EP GPUS MASTER_PORT MEM_FRAC CTX_LEN \
-    MAX_RUN CHUNK DECODE_CFG SERVER_SEED REQUEST_METRICS_DIR STORE_IMPLEMENTATION \
+    MAX_RUN CHUNK MAX_TOTAL_TOKENS GLM_REASONING_PARSER REMNANT_INTEGRATION DECODE_CFG SERVER_SEED REQUEST_METRICS_DIR STORE_IMPLEMENTATION \
     C4_KEEP_COUNT C4_LAYER_KEEP_COUNTS HICACHE_RATIO NSYS_GRAPH_TRACE \
     FRONTEND_DIAGNOSTICS DSV4_ASYNC_PREPARATION DSV4_PREPARATION_WORKERS; do
     environment+=(-e "$name=${!name-}")

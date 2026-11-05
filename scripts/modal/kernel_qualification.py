@@ -16,6 +16,8 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 
+from scripts.modal.qualification import check_sanitizer_report, read_pytest_report, validate_run_id, verify_sanitizer_artifacts
+
 GLM_BASELINE = "9e42a0d8886dd93944dc6b47ef3bffef4e033b5a"
 # SHA256 of each exact baseline blob under python/sglang; never current HEAD.
 GLM_BASELINE_RUNTIME_HASHES = {
@@ -46,10 +48,10 @@ class QualificationContext:
 
 def qualification_run_ids(run_ids: str) -> list[str]:
     ids = run_ids.split(",")
-    if not run_ids or any(
-        not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", x) for x in ids
-    ):
+    if not run_ids:
         raise ValueError("GLM timing requires explicit --qualification-runs IDs")
+    for item in ids:
+        validate_run_id(item)
     return ids
 
 
@@ -130,6 +132,7 @@ def qualify_glm_timing(
                 check_glm_interrupted_checkpoint(
                     json.loads(note.read_text()), root, run_id, tool, log
                 )
+            verify_sanitizer_artifacts(root, tool, status)
             check_sanitizer_report(log, tool)
             if phase == "decode" and result.get("sanitizer_scope") == "glm-decode":
                 audit = result.get("scope_audit", {})
@@ -148,8 +151,7 @@ def qualify_glm_timing(
                 check_sanitizer_report(audit_log, "racecheck")
                 check_glm_scope_audit(audit_log, run_id)
             if phase == "decode":
-                tree = ET.parse(root / f"{tool}.xml")
-                tests = list(tree.iter("testcase"))
+                tests, _ = read_pytest_report(root / f"{tool}.xml")
                 names = {x.attrib["name"] for x in tests}
                 if (
                     not names
@@ -352,21 +354,3 @@ def check_glm_sanitizer_cases(
                     f"Missing focused sanitizer geometry: {run_id}/{node.get('name')}"
                 )
     return names
-
-
-def check_sanitizer_report(output: str, tool: str) -> None:
-    expected = (
-        "RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)"
-        if tool == "racecheck"
-        else "ERROR SUMMARY: 0 errors"
-    )
-    records = [r.strip() for r in re.findall(r"========= ([^\r\n]*)", output)]
-    summaries = [
-        r for r in records if r.startswith(("ERROR SUMMARY:", "RACECHECK SUMMARY:"))
-    ]
-    if (
-        summaries != [expected]
-        or any(r.startswith(("Warning:", "Error:")) for r in records)
-        or "terminated before first instrumented API call" in output
-    ):
-        raise RuntimeError(f"Incomplete sanitizer evidence {tool}")

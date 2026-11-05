@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Start one production-fork SGLang server in the foreground.
 #
-# Usage: run-server.sh <native|triton|kernel> <model> <host> <port>
+# Usage: run-server.sh <native|direct> <model> <host> <port>
 # Author: Winston Cai.
 # The caller owns process groups, logging, and cleanup. Shared server flags
 # live here so local-container and Modal launches cannot silently diverge.
@@ -12,12 +12,6 @@ MODEL=${2:-}
 HOST=${3:-127.0.0.1}
 PORT_VALUE=${4:-}
 
-case "$MODE" in
-  native) CACHE_FORMAT=native; CACHE_IMPLEMENTATION=kernel ;;
-  triton|kernel) CACHE_FORMAT=remnant; CACHE_IMPLEMENTATION=$MODE ;;
-  packed) CACHE_FORMAT=remnant; CACHE_IMPLEMENTATION=kernel ;;
-  *) echo "usage: $0 <native|triton|kernel> <model> <host> <port> (packed aliases kernel)" >&2; exit 2 ;;
-esac
 case "${STORE_IMPLEMENTATION:-}" in
   ""|triton|kernel) ;;
   *) echo "STORE_IMPLEMENTATION must be triton or kernel" >&2; exit 2 ;;
@@ -82,21 +76,14 @@ fi
 
 case "${MODEL_FAMILY:-dsv4}" in
   dsv4)
-    args+=(--dsv4-c4-cache-format "$CACHE_FORMAT"
-      --dsv4-c4-cache-implementation "$CACHE_IMPLEMENTATION"
-      --moe-runner-backend flashinfer_mxfp4
+    args+=(--moe-runner-backend flashinfer_mxfp4
       --reasoning-parser deepseek-v4 --tool-call-parser deepseekv4)
     ;;
   glm53)
     [ -z "${HICACHE_RATIO:-}${C4_KEEP_COUNT:-}${C4_LAYER_KEEP_COUNTS:-}${STORE_IMPLEMENTATION:-}" ] || {
       echo "GLM Packed does not support HiCache or DeepSeek codec overrides" >&2; exit 2;
     }
-    case "$MODE" in
-      triton) GLM_IMPLEMENTATION=adapter ;;
-      *) GLM_IMPLEMENTATION=direct ;;
-    esac
-    args+=(--model-type llm --glm5-mla-cache-format "$CACHE_FORMAT"
-      --glm5-mla-cache-implementation "$GLM_IMPLEMENTATION"
+    args+=(--model-type llm
       --dsa-prefill-backend tilelang --dsa-decode-backend tilelang
       --moe-runner-backend deep_gemm --ep "$EP" --language-model-only)
     if [ -n "${GLM_REASONING_PARSER:-}" ]; then
@@ -105,6 +92,17 @@ case "${MODEL_FAMILY:-dsv4}" in
     ;;
   *) echo "MODEL_FAMILY must be dsv4 or glm53" >&2; exit 2 ;;
 esac
+
+# The untouched v0.5.18 fork predates the generic selector. Its transport
+# remains explicit; model-specific selector fields exist only in that pin.
+if [ "${REMNANT_INTEGRATION:-v0.5.18}" = v0.5.18 ]; then
+  [ "$MODEL_FAMILY" = dsv4 ] || { echo "GLM requires v0.5.22" >&2; exit 2; }
+  legacy_format=native
+  [ "$CACHE_FORMAT" = native ] || legacy_format=remnant
+  args+=(--dsv4-c4-cache-format "$legacy_format" --dsv4-c4-cache-implementation kernel)
+else
+  args+=(--kv-cache-format "$CACHE_FORMAT")
+fi
 
 if [ -n "${STORE_IMPLEMENTATION:-}" ]; then
   args+=(--dsv4-c4-cache-store-implementation "$STORE_IMPLEMENTATION")

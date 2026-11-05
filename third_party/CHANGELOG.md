@@ -13,6 +13,15 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Integration candidate from parent `8a3d5b2` + V4.1 `d385c1c`; combined SGLang
+  `d2a99aa6c612` (descends from `6667e5d` and `c470887`) / FlashMLA
+  `4e72722671d8`: merge both model implementations and replace public model-specific
+  selectors with `--kv-cache-format native|direct`. Preserve numerical kernels,
+  persistent ABIs and v0.5.18 pins. Share pinned metadata, source verification,
+  report parsing, launcher normalization/transport and pure timing statistics.
+  Merge CPU and GPU validation is tracked separately in the existing GLM ledger;
+  historical serving/timing records do not qualify this new source automatically.
+
 - Measured parent `d3aa23f`, v0.5.22 SGLang `6667e5d` / FlashMLA
   `3eb8594`: qualify the opt-in 64-row Packed prefill candidate for the full
   80-case paired H200 benchmark. Both head variants passed focused tools and
@@ -99,6 +108,75 @@ records rather than this milestone log.
   experiment. Production kernels and all fork pins are unchanged. Seven focused
   launcher tests and real saved-evidence reconciliation pass (racecheck and
   synccheck 13 cases each; memcheck unverified). No timing claim yet.
+- Review-fix integration parent `cc1b9a8`, CPU runner follow-up `2707db9`:
+  SGLang `c47088700085` / FlashMLA `4e72722671d8`. Reject effective Q8KV8
+  overrides and misaligned cache bases/page strides; retain startup prefill
+  policy, name layouts and reject ignored geometry flags. Pure receipt checks
+  reject failed tools and compare recorded runtime/toolchain identities on CPU
+  before H100 timing, with a GPU recheck. Existing fixtures own regressions.
+  CPU build/precompile, scoped style/registry, 24 + 15-subtest preflight, six
+  new guards, 17 launcher and 103 + 45-subtest V4 CPU checks passed. H100 passed
+  39 ordinary cases and 34/tool under all three strict sanitizers; independent
+  source/artifact review passed. Final v3 timing: ten cases/600 samples, Packed
+  latency +1.30% geomean overall (+1.72% C1, +0.87% C2), range −1.02%..+2.71%.
+  Fixed-cap allocator gain remains 21.96%; full-history prefill scratch and
+  serving/quality limits are explicit. Follow-up compute conservatively $14.87
+  before settlement, all allocations stopped. Historical evidence is preserved.
+  Rollback uses `auto` or baseline pins; no production promotion.
+
+- Publish the completed V4.1 experiment from parent `81c0777` on matching
+  `ds41-flash-packed` branches in all three repositories. Fork pins remain
+  SGLang `f5afebd90750` / FlashMLA `e274b715f49a`; only v0.5.22 branch hints
+  and integration documentation change. No runtime/kernel or validation change.
+  v0.5.18 and the original development branches are preserved.
+
+- SWA page correction from parent `c6c9f0f`: SGLang `f5afebd90750` /
+  FlashMLA `e274b715f49a` (unchanged). The paged H100 factory requires
+  SWA page256 while attention reads a 128-token window; v2 mistakenly used
+  page128. V3 fixes only the fixture/protocol and adds a window-as-page
+  rejection check. The two existing contract/V4 matrix tests passed on Modal
+  CPU (2 passed in 0.14 s), cached image, no GPU run or native rebuild.
+  Allocation measurements/prediction already used page256. Historical receipts
+  remain unchanged; v3 GPU timing is unmeasured. CPU app stopped/zero containers.
+
+- Production-geometry fixture correction from parent `60e5bbe`: SGLang
+  `a0f7ff18314c` / FlashMLA `e274b715f49a` (unchanged). V4.1 FP4 timing now
+  uses H64/SWA128/page128, Q1/K512, five batches and both C1/page256 and
+  C2/page128 (ten cases). Protocol v2 rejects historical v1 timing; SWA64/H128
+  remain correctness coverage. Existing matrix/timing contract and V4 matrix
+  regression passed on Modal CPU (2 passed in 0.08 s). No native rebuild or GPU
+  rerun; v2 GPU timing remains unmeasured. Both CPU apps stopped. Rollback uses
+  the prior SGLang pin `98991169803f`; historical receipts/CSV remain intact.
+
+- Follow-up to parent `cc0f82f`: SGLang `98991169803f` / FlashMLA `e274b715f49a`.
+  Packed FP4 now stages survivors/bitmap prefixes once and reconstructs fragments
+  with V4-style selectors. Adds two exhaustive-mask Direct fixtures and paired
+  Native/Packed FP4 timing for all 20 H64/H128/batch/SWA cases. Scheduling, Native,
+  persistent layouts and v0.5.18 pins remain unchanged. Fresh-context source
+  review passed. From parent `8e9e3e9`, Modal CPU startup 24 tests + 15 subtests,
+  ordinary 39 cases, all 34 cases under each strict sanitizer, and 20 paired timing
+  cases passed. Packed Direct is 2.69%/2.58% slower than dense Native FP4 for
+  SWA64/128 (geometric-mean case ratios); record savings stay 22.22%. Follow-up
+  compute approximately $7.81 before billing settlement, all allocations stopped.
+  Fresh-context source/artifact review passed with no blocking findings.
+  No model/serving/production promotion.
+
+- Experimental V4.1 FP4 integration validated from parent `9ec5971`, based on
+  `9419d0e`. v0.5.22 pins: SGLang `0a36a662562f` / FlashMLA `91463e004ec9`;
+  v0.5.18 and CUTLASS pins unchanged. Adds opt-in Native 288-byte/Packed
+  224-byte storage, deterministic post-quantization 256-coordinate selection,
+  SM90 mixed-SWA Direct, BF16 reconstruction/prefill, reserved-page accounting
+  and model-free Modal fixtures. Separate FP4 prefill synchronization retains
+  stock auto behavior. Native CPU builds/preflight, 37 ordinary cases, full
+  32-case synccheck/racecheck and fresh-context review passed. **Unqualified:**
+  workspace disablement interrupted memcheck after 27/32; no clean memory
+  sanitizer summary/exit. Reported task compute $11.91, all allocations stopped;
+  a full rerun exceeds the remaining work allowance while preserving the $2
+  reserve. Physical 1-GiB allocation fixture: 656384 Native / 800512 Packed
+  tokens (+21.96%); record-byte savings 22.22% are separate. No model quality,
+  serving, performance or production claim. Source hashes, exact commands,
+  failed attempts, costs and the missing gate are indexed by the
+  [experiment record](../benchmarks/microbench/v41-packed-fp4/README.md).
 
 - Reconciled GitHub main `ffb11cb` in parent merge `814aaa8`, retaining its
   v0.5.18 SGLang `6687a7c36c0c`, FlashMLA `97f3faa58450`, frontend preparation/

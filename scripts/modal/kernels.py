@@ -20,6 +20,7 @@ GLM: REMNANT_INTEGRATION=v0.5.22 REMNANT_MODEL_FAMILY=glm53 selects the
 320-byte codec, config-only preparation and CPU SM90 compilation. validate_kernels
 requires --model-family glm53 and --stage numerical|sanitizer|corrective. Stages
 share the caller's aggregate $15 ledger; a stage does not grant another budget.
+Set REMNANT_VALIDATION_SUITE=v41-fp4 for scoped model-free SM90 FP4 validation.
 CPU build/preflight precedes H100; Modal caches source/binaries. Authorization required.
 Limits are caps, not ETAs; no weights/retries. Results: remnant-stage2a-results/microbench/<run-id>/<action>.
 Download: modal volume get remnant-stage2a-results microbench/<run-id> <local-dir>
@@ -47,6 +48,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import modal
+from scripts.model_profiles import model_profile
 from scripts.modal.kernel_qualification import (
     QualificationContext,
     check_glm_scope_audit as _check_glm_scope_audit,
@@ -54,6 +56,8 @@ from scripts.modal.kernel_qualification import (
     qualification_run_ids,
     qualify_glm_timing,
 )
+
+from scripts.modal.qualification import qualify_fp4_runs, read_pytest_report, validate_run_id
 from scripts.sources import check_sources, integration_profile
 
 
@@ -78,6 +82,7 @@ MODEL_FAMILY = os.environ.get("REMNANT_MODEL_FAMILY", "dsv4")
 if MODEL_FAMILY not in ("dsv4", "glm53") or (MODEL_FAMILY == "glm53" and INTEGRATION["version"] != "v0.5.22"):
     raise ValueError("GLM validation requires REMNANT_INTEGRATION=v0.5.22")
 compiled_image_id, rebuild_image_id = _resolve_image_sources(MODEL_FAMILY, os.environ)
+MODEL_PROFILE = model_profile(MODEL_FAMILY, INTEGRATION["version"])
 GLM_TEST = "test/registered/attention/unittests/test_glm5_remnant.py"
 GLM_CPU_TEST = "test/registered/unit/test_glm5_mla_cache_format.py"
 GLM_BENCHMARK_CPU = "benchmark/remnant/test_microbench.py"
@@ -89,6 +94,14 @@ GLM_SMOKE = (GLM_TEST + "::test_producer_reconstruction", GLM_TEST + "::test_nat
              GLM_TEST + "::test_attention[3-8-8]",
              GLM_TEST + "::test_changing_input_graph", GLM_TEST + "::test_production_backend_constructor")
 GLM_SANITIZER = (*GLM_SMOKE, GLM_TEST + "::test_attention[0-1-64]", GLM_TEST + "::test_pool_lifecycle")
+VALIDATION_SUITE = os.environ.get("REMNANT_VALIDATION_SUITE", "v4")
+if VALIDATION_SUITE not in ("v4", "v41-fp4") or (
+    VALIDATION_SUITE == "v41-fp4" and INTEGRATION["version"] != "v0.5.22"
+):
+    raise ValueError("REMNANT_VALIDATION_SUITE must be v4, or v41-fp4 with v0.5.22")
+if MODEL_FAMILY == "glm53" and VALIDATION_SUITE != "v4":
+    raise ValueError("GLM cannot use a DeepSeek FP4 validation suite")
+
 
 REMOTE_REPO = Path("/opt/flash-optimizations")
 REPO_ROOT = Path(__file__).resolve().parents[2] if modal.is_local() else REMOTE_REPO
@@ -135,14 +148,21 @@ SANITIZER = (
     else "compute-sanitizer"
 )
 # Preserve existing work caps; reserve time inside the outer timeout for cleanup.
-CPU_BUILD_TIMEOUT_S = GPU_TIMEOUT_S = 3600
+GPU_TIMEOUT_S = 3600
+CPU_BUILD_TIMEOUT_S = 900 if VALIDATION_SUITE == "v41-fp4" else 3600
 VALIDATION_TIMEOUT_S = (
     int(os.environ.get("REMNANT_VALIDATION_TIMEOUT_S", "2700"))
     if INTEGRATION["version"] == "v0.5.22"
     else GPU_TIMEOUT_S
 )
-if INTEGRATION["version"] == "v0.5.22" and not 120 <= VALIDATION_TIMEOUT_S <= 2700:
-    raise ValueError("REMNANT_VALIDATION_TIMEOUT_S must be between 120 and 2700")
+VALIDATION_TIMEOUT_CAP_S = 5400 if VALIDATION_SUITE == "v41-fp4" else 2700
+if (
+    INTEGRATION["version"] == "v0.5.22"
+    and not 120 <= VALIDATION_TIMEOUT_S <= VALIDATION_TIMEOUT_CAP_S
+):
+    raise ValueError(
+        f"REMNANT_VALIDATION_TIMEOUT_S must be between 120 and {VALIDATION_TIMEOUT_CAP_S}"
+    )
 CPU_BUILD_BUDGET_S = CPU_BUILD_TIMEOUT_S - 200
 RUN_BUDGETS_S = {"timing": 850, "validation": 1100, "profile": 1800}
 PROFILE_CAPTURE_TIMEOUT_S, PROFILE_EXPORT_TIMEOUT_S = 110, 45
@@ -219,6 +239,34 @@ SANITIZER_ORDER = (
     if INTEGRATION["version"] == "v0.5.22"
     else ("memcheck", "racecheck", "synccheck")
 )
+# Scoped FP4 qualification keeps the legacy suite intact. Collection and XML
+# gates reject skips; these explicit lists are copied into each result manifest.
+if VALIDATION_SUITE == "v41-fp4":
+    fp4_tests = TEST_ROOT + "test_remnant_fp4.py"
+    VALIDATION_TESTS = (
+        fp4_tests,
+        TEST_MODULES["flashmla_direct"]
+        + "::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+        TEST_MODULES["flashmla_direct"]
+        + "::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]",
+    )
+    CPU_TESTS = (
+        fp4_tests + "::test_fp4_startup_contract",
+        fp4_tests + "::test_fp4_backend_dispatch",
+        TEST_MODULES["cache_format"],
+        "benchmark/remnant/test_microbench.py::test_v41_fp4_matrix_and_timing_gate",
+    )
+    SANITIZER_TESTS = tuple(
+        fp4_tests + "::" + name
+        for name in (
+            "test_fp4_store_and_reader",
+            "test_fp4_direct",
+            "test_fp4_graph_and_stream",
+            "test_fp4_compressor_boundary",
+            "test_fp4_fragment_masks",
+        )
+    )
+
 NCU_SECTIONS = [
     "SpeedOfLight",
     "MemoryWorkloadAnalysis",
@@ -270,6 +318,9 @@ def _source_hashes() -> dict[str, str]:
                 digest.update(str(relative).encode() + b"\0")
                 digest.update(path.read_bytes())
         hashes[label] = digest.hexdigest()
+    # Policy and shared metadata are build inputs too, even outside fork trees.
+    for name in ("scripts/modal/kernel_qualification.py", "scripts/modal/qualification.py", "scripts/model_profiles.py"):
+        hashes[name] = hashlib.sha256((REPO_ROOT / name).read_bytes()).hexdigest()
     return hashes
 
 
@@ -373,6 +424,16 @@ def _reuse_glm_cpu_artifacts(build: Path, deadline: float, binding_requirements:
         artifact_reuse="Verified unchanged compiled sources and compile owners; harness-only overlay")
     MANIFEST.write_text(json.dumps(previous,indent=2)+"\n")
     return True
+def _validation_sanitizer_order(value: str) -> tuple[str, ...]:
+    """Prioritize pending tools without permitting missing/duplicate tools."""
+    if not value:
+        return SANITIZER_ORDER
+    tools = tuple(value.split(","))
+    if len(tools) != 3 or set(tools) != set(SANITIZER_ORDER):
+        raise ValueError(
+            "sanitizer_order must list memcheck,racecheck,synccheck exactly once"
+        )
+    return tools
 
 
 def _build_image() -> None:
@@ -380,6 +441,23 @@ def _build_image() -> None:
     import torch
     from sglang.kernels.jit.utils import override_jit_cuda_arch
 
+    # CPU-only orchestration boundary checks before any GPU allocation.
+    expected_order = ("racecheck", "memcheck", "synccheck")
+    if _validation_sanitizer_order(",".join(expected_order)) != expected_order:
+        raise RuntimeError("Sanitizer order preflight changed the requested order")
+    for invalid in (
+        "memcheck",
+        "racecheck,memcheck",
+        "memcheck,memcheck,synccheck",
+        "racecheck,memcheck,unknown",
+    ):
+        try:
+            _validation_sanitizer_order(invalid)
+        except ValueError:
+            continue
+        raise RuntimeError(
+            f"Sanitizer order preflight accepted invalid input: {invalid}"
+        )
     deadline = time.monotonic() + CPU_BUILD_BUDGET_S
     build = BUILD_ROOT
     # This directory belongs solely to CPU preparation. A verified reused image
@@ -387,6 +465,28 @@ def _build_image() -> None:
     if build.exists() and MODEL_FAMILY == "glm53" and (os.environ.get("REMNANT_COMPILED_IMAGE") or os.environ.get("REMNANT_GLM_CPU_REBUILD_FROM")):
         shutil.rmtree(build)
     build.mkdir()
+    if VALIDATION_SUITE == "v41-fp4":
+        # Run pure receipt and mocked dispatch tests in the existing CPU builder.
+        # Child vendor Python lacks Modal's injected SDK/dependencies/context.
+        # Keep these tests before core precompilation and GPU allocation.
+        import unittest
+
+        from scripts.modal import tests as launcher_tests
+
+        suite = unittest.TestSuite(
+            unittest.defaultTestLoader.loadTestsFromTestCase(case)
+            for case in (
+                launcher_tests.FP4QualificationTests,
+                launcher_tests.FP4PreflightTests,
+            )
+        )
+        report = build / "qualification-tests.log"
+        with report.open("w") as stream:
+            result = unittest.TextTestRunner(stream=stream, verbosity=2).run(suite)
+        if not result.wasSuccessful():
+            raise RuntimeError(
+                f"CPU launcher contract tests failed: {report.read_text()}"
+            )
     binding_requirements = (
         _check_cuda_binding_requirements()
         if INTEGRATION["version"] == "v0.5.22"
@@ -531,12 +631,12 @@ def _build_image() -> None:
             binary_architectures[str(binary)] = architectures
     model_config = None
     if MODEL_FAMILY == "glm53":
-        revision = "46a050bec13002ad29ee795c16e61cf4fa3c4a9c"
-        url = f"https://huggingface.co/zai-org/GLM-5.3-Flash/resolve/{revision}/config.json"
+        revision = MODEL_PROFILE.revision
+        url = MODEL_PROFILE.config_url
         with urllib.request.urlopen(url, timeout=30) as response:
             payload = response.read()
         digest = hashlib.sha256(payload).hexdigest()
-        if digest != "bb8f01c42cb92a52ca72e65afb4d5bd8d11aef083cd210e8de25dfb904f23e9f":
+        if digest != MODEL_PROFILE.config_sha256:
             raise RuntimeError("Pinned GLM configuration content changed")
         Path("/opt/remnant-glm-config.json").write_bytes(payload)
         model_config = {"revision": revision, "sha256": digest, "url": url}
@@ -574,15 +674,42 @@ def _build_image() -> None:
     else:
         model_config = None
         if INTEGRATION["version"] == "v0.5.22":
-            revision = "7872f01b1d1fe23eabc4c98b48bffcef5a386062"
-            url = f"https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731/resolve/{revision}/config.json"
+            revision = MODEL_PROFILE.revision
+            url = MODEL_PROFILE.config_url
             with urllib.request.urlopen(url, timeout=30) as response:
                 payload = response.read()
             digest = hashlib.sha256(payload).hexdigest()
-            if digest != "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023":
+            if digest != MODEL_PROFILE.config_sha256:
                 raise RuntimeError("Pinned 0731 configuration content changed")
             Path("/opt/remnant-0731-config.json").write_bytes(payload)
             model_config = {"revision": revision, "sha256": digest, "url": url}
+    if VALIDATION_SUITE == "v41-fp4":
+        # Compile every new core format/geometry on CPU before an H100 exists.
+        code = """
+import triton
+from triton.compiler import ASTSource
+from triton.backends.compiler import GPUTarget
+from sglang.kernels.ops.attention.dsv4.fp4_cache import _store, _read
+from sgl_kernel import flashmla_ops
+import torch
+assert hasattr(torch.ops.sgl_kernel, 'fp4_sparse_decode_fwd')
+assert hasattr(torch.ops.sgl_kernel, 'fp4_sparse_prefill_fwd')
+for p in (128,256):
+    for packed in (False,True):
+        stride=p*(224 if packed else 288)
+        for rotate in (False,True):
+            src=ASTSource(_store, signature={'X':'*bf16','F':'*fp32' if rotate else '*bf16','LOC':'*i64','C':'*u8'}, constexprs={'XS':512,'FS':64 if rotate else 512,'P':p,'STRIDE':stride,'N':2,'PACKED':packed,'DATA_BYTES':192 if packed else 256,'VALUE_BYTES':128 if packed else 256,'ROTATE':rotate})
+            triton.compile(src,target=GPUTarget('cuda',90,32),options={'num_warps':4,'enable_fp_fusion':False})
+        src=ASTSource(_read,signature={'C':'*u8','IDS':'*i32','OUT':'*bf16'},constexprs={'OS':512,'P':p,'STRIDE':stride,'N':2,'PACKED':packed,'DATA_BYTES':192 if packed else 256,'VALUE_BYTES':128 if packed else 256})
+        triton.compile(src,target=GPUTarget('cuda',90,32),options={'num_warps':4})
+print('FP4 CPU SM90 precompilation passed')
+"""
+        _run_command(
+            [sys.executable, "-c", code],
+            build / "fp4-precompile.log",
+            deadline,
+            environment=cpu_environment,
+        )
     # 4. Preflight imports, coverage and profiler availability on CPU.
     if MODEL_FAMILY == "dsv4":
         _run_command(
@@ -600,6 +727,13 @@ def _build_image() -> None:
     if MODEL_FAMILY == "glm53":
         _run_command(_benchmark_command("--model-family", "glm53", "--suite", "glm-attention", "--check-imports"),
                      build / "glm-benchmark-imports.log", deadline, environment=cpu_environment)
+    if VALIDATION_SUITE == "v41-fp4":
+        _run_command(
+            _benchmark_command("--suite", "v41-fp4-decode", "--check-imports"),
+            build / "fp4-benchmark-imports.log",
+            deadline,
+            environment=cpu_environment,
+        )
     _run_pytest(
         VALIDATION_TESTS,
         build,
@@ -633,6 +767,12 @@ def _build_image() -> None:
     manifest = {
         "model_family": MODEL_FAMILY,
         "glm_compile": (json.loads(Path("/opt/remnant-glm-compile.json").read_text()) if MODEL_FAMILY == "glm53" else None),
+        "validation_suite": VALIDATION_SUITE,
+        "coverage": {
+            "validation": VALIDATION_TESTS,
+            "cpu": CPU_TESTS,
+            "sanitizer": SANITIZER_TESTS,
+        },
         "integration": INTEGRATION["version"],
         "base_image": INTEGRATION["base_image"],
         "compiled_base_image": os.environ.get("REMNANT_COMPILED_IMAGE"),
@@ -662,6 +802,15 @@ def _build_image() -> None:
         "native_dtype": "bfloat16" if MODEL_FAMILY == "glm53" else "float32",
         "triton": importlib.metadata.version("triton") if MODEL_FAMILY == "glm53" else None,
         "tilelang": importlib.metadata.version("tilelang") if MODEL_FAMILY == "glm53" else None,
+        "fp4_precompile_artifacts": (
+            {
+                str(p): hashlib.sha256(p.read_bytes()).hexdigest()
+                for p in Path(os.environ["TRITON_CACHE_DIR"]).rglob("*")
+                if p.is_file()
+            }
+            if VALIDATION_SUITE == "v41-fp4"
+            else {}
+        ),
         "cpu_import_driver_stub_sha256": hashlib.sha256(
             (build / "cpu-driver-stubs/libcuda.so.1").read_bytes()
         ).hexdigest(),
@@ -826,6 +975,7 @@ else:
 kernel_image = (
     kernel_base.env(
         {
+            "REMNANT_VALIDATION_SUITE": VALIDATION_SUITE,
             "REMNANT_INTEGRATION": INTEGRATION["version"],
             "REMNANT_BUILT_INTEGRATION": INTEGRATION["version"],
             "REMNANT_SOURCE_IDENTITIES": json.dumps(SOURCE_IDENTITIES),
@@ -859,6 +1009,10 @@ kernel_image = (
             **({"TILELANG_DEFAULT_TARGET": json.dumps({"kind": "cuda", "arch": "sm_90a"}), "TILELANG_CACHE_DIR": "/opt/remnant-tilelang-glm"} if MODEL_FAMILY == "glm53" else {}),
         }
     )
+    .add_local_file(
+        REPO_ROOT / "scripts/model_profiles.py",
+        str(REMOTE_REPO / "scripts/model_profiles.py"), copy=True,
+    )
     # Include launcher helpers in the image cache key, not just _build_image.
     .add_local_file(
         REPO_ROOT / "scripts/modal/kernels.py", "/opt/remnant-launcher.py", copy=True
@@ -872,6 +1026,21 @@ kernel_image = (
         REPO_ROOT / "scripts/modal/kernel_qualification.py",
         str(REMOTE_REPO / "scripts/modal/kernel_qualification.py"), copy=True,
     )
+    .add_local_file(
+        REPO_ROOT / ".dockerignore", str(REMOTE_REPO / ".dockerignore"), copy=True
+    )
+    .add_local_file(
+        REPO_ROOT / "scripts/modal/kernels.py",
+        str(REMOTE_REPO / "scripts/modal/kernels.py"), copy=True
+    )
+    .add_local_file(
+        REPO_ROOT / "scripts/modal/qualification.py",
+        str(REMOTE_REPO / "scripts/modal/qualification.py"), copy=True
+    )
+    .add_local_file(
+        REPO_ROOT / "scripts/modal/tests.py",
+        str(REMOTE_REPO / "scripts/modal/tests.py"), copy=True
+    )
     .run_function(_build_image, cpu=16, memory=65536, timeout=CPU_BUILD_TIMEOUT_S)
 )
 _GPU = {
@@ -883,7 +1052,12 @@ _GPU = {
     "retries": 0,
     "max_containers": 1,
     "scaledown_window": 2,
-    "volumes": {str(RESULTS_ROOT): results_volume, "/triton-cache": triton_volume},
+    # FP4 precompilation populates this image path on CPU. Mounting a volume
+    # over a nonempty path fails Modal startup; retain its verified image cache.
+    "volumes": {
+        str(RESULTS_ROOT): results_volume,
+        **({"/triton-cache": triton_volume} if VALIDATION_SUITE != "v41-fp4" else {}),
+    },
 }
 
 
@@ -905,27 +1079,163 @@ def prepare_kernels(model_family: str = "dsv4") -> None:
 _GLM_PREFILL_H200 = os.environ.get("REMNANT_GLM_PREFILL_H200") == "1"
 _GLM_PREFILL_TIMEOUT_S = 2400
 if _GLM_PREFILL_H200 and MODEL_FAMILY != "glm53":
-    raise ValueError("REMNANT_GLM_PREFILL_H200 requires REMNANT_MODEL_FAMILY=glm53")
+    raise ValueError("REMNANT_GLM_PREFILL_H200 requires GLM")
+
+def _fp4_timing_qualification(run_ids: str) -> dict:
+    """Author: Winston Cai. Aggregate only complete tools with identical inputs."""
+    current = json.loads(MANIFEST.read_text())
+    if (
+        current["sources"] != _source_hashes()
+        or current["source_identities"] != SOURCE_IDENTITIES
+    ):
+        raise RuntimeError("Timing source identity mismatch")
+    for path, digest in current["binaries"].items():
+        if hashlib.sha256(Path(path).read_bytes()).hexdigest() != digest:
+            raise RuntimeError(f"Timing binary changed: {path}")
+    return qualify_fp4_runs(RESULTS_ROOT, run_ids, current)
+
+
+@app.function(
+    image=kernel_image,
+    cpu=2,
+    memory=4096,
+    timeout=180,
+    retries=0,
+    max_containers=1,
+    scaledown_window=2,
+    volumes={str(RESULTS_ROOT): results_volume},
+)
+def _preflight_fp4_timing(run_id: str, qualification_runs: str) -> dict:
+    """Check receipts and the matrix contract on CPU before reserving an H100."""
+    results_volume.reload()
+    with _run_context(run_id, "preflight", 120, resource="cpu") as (
+        root,
+        record,
+        deadline,
+    ):
+        record["qualification"] = _fp4_timing_qualification(qualification_runs)
+        _run_pytest(
+            (
+                "benchmark/remnant/test_microbench.py::test_v41_fp4_matrix_and_timing_gate",
+            ),
+            root,
+            "contract",
+            deadline,
+        )
+    return record["qualification"]
+
+
+@app.function(
+    image=kernel_image, cpu=2, memory=4096, timeout=180, retries=0,
+    max_containers=1, scaledown_window=2,
+    volumes={str(RESULTS_ROOT): results_volume},
+)
+def _preflight_glm_timing(
+    run_id: str, qualification_runs: str, phase: str,
+    allow_incomplete: bool, resume_run: str,
+) -> dict | None:
+    """Check existing GLM receipts before scheduling its GPU worker."""
+    results_volume.reload()
+    if resume_run:
+        _glm_timing_checkpoint(resume_run)
+    if phase in ("prefill", "prefill-small"):
+        if qualification_runs:
+            raise ValueError("Fresh prefill qualifies its selected cubins in the worker")
+        manifest = json.loads(MANIFEST.read_text())
+        required_heads = (16, 8) if phase == "prefill" else (16,)
+        for heads in required_heads:
+            if phase == "prefill":
+                _glm_prefill_variant(heads, 64)
+        return None
+    with _run_context(run_id, "preflight", 120, resource="cpu") as (_, record, _):
+        record["qualification"] = _glm_timing_qualification(
+            qualification_runs, allow_incomplete=allow_incomplete, phase=phase
+        )
+    return record["qualification"]
+
+
+def _dispatch_benchmark(
+    run_id: str, keep_count: int, modes: str, suite: str,
+    prefill_reader: str, qualification_runs: str,
+    *, model_family: str = "dsv4", max_seconds: int = RUN_BUDGETS_S["timing"],
+    resume_run: str = "", allow_incomplete_qualification: bool = False,
+    phase: str = "all", packed_prefill_tile: int = 32,
+) -> str:
+    if model_family != MODEL_FAMILY:
+        raise ValueError("--model-family must match REMNANT_MODEL_FAMILY")
+    preflight = None
+    if model_family == "glm53":
+        if (
+            suite != "glm-attention" or modes not in ("", "native,direct")
+            or keep_count != 256 or prefill_reader != "split"
+            or phase not in ("all", "decode", "prefill", "prefill-small")
+        ):
+            raise ValueError("GLM requires its attention suite and Native/Direct paths")
+        if (phase in ("prefill", "prefill-small")) != _GLM_PREFILL_H200:
+            raise ValueError("GLM prefill scopes require the H200 image selection")
+        if allow_incomplete_qualification and phase != "all":
+            raise ValueError("This GLM scope requires qualification")
+        if phase == "prefill" and packed_prefill_tile != 64:
+            raise ValueError("Full GLM prefill requires tile64")
+        limit = _GLM_PREFILL_TIMEOUT_S - 60 if phase == "prefill" else 1140
+        if not 60 <= max_seconds <= limit:
+            raise ValueError(f"GLM timing max_seconds must be between 60 and {limit}")
+        preflight = _preflight_glm_timing.remote(
+            run_id, qualification_runs, phase, allow_incomplete_qualification, resume_run
+        )
+    elif suite == "v41-fp4-decode":
+        if (
+            VALIDATION_SUITE != "v41-fp4" or keep_count != 256
+            or modes not in ("", "native,kernel") or prefill_reader != "split"
+        ):
+            raise ValueError("FP4 timing requires qualified Native/Packed Direct keep256")
+        preflight = _preflight_fp4_timing.remote(run_id, qualification_runs)
+    elif qualification_runs:
+        raise ValueError("qualification_runs requires GLM or v41-fp4-decode")
+    return _benchmark_worker.remote(
+        run_id, keep_count, modes, suite, prefill_reader, qualification_runs, preflight,
+        model_family, max_seconds, resume_run, allow_incomplete_qualification,
+        phase, packed_prefill_tile,
+    )
+
+
+@app.local_entrypoint()
+def benchmark_kernels(
+    run_id: str, keep_count: int = 256, modes: str = "", suite: str = "all",
+    prefill_reader: str = "split", qualification_runs: str = "",
+    model_family: str = "dsv4", max_seconds: int = RUN_BUDGETS_S["timing"],
+    resume_run: str = "", allow_incomplete_qualification: bool = False,
+    phase: str = "all", packed_prefill_tile: int = 32,
+) -> None:
+    """Public CLI: validate the requested suite before scheduling its worker."""
+    print(_dispatch_benchmark(
+        run_id, keep_count, modes, suite, prefill_reader, qualification_runs,
+        model_family=model_family, max_seconds=max_seconds,
+        resume_run=resume_run, allow_incomplete_qualification=allow_incomplete_qualification,
+        phase=phase, packed_prefill_tile=packed_prefill_tile,
+    ))
 
 
 @app.function(**{
     **_GPU,
     "gpu": "H200" if _GLM_PREFILL_H200 else _GPU["gpu"],
     "image": kernel_image.env({"REMNANT_GLM_PREFILL_H200": "1"})
-    if _GLM_PREFILL_H200 else kernel_image,
-    "timeout": _GLM_PREFILL_TIMEOUT_S if _GLM_PREFILL_H200 else
-    (1200 if MODEL_FAMILY == "glm53" else 900),
+        if _GLM_PREFILL_H200 else kernel_image,
+    "timeout": _GLM_PREFILL_TIMEOUT_S if _GLM_PREFILL_H200
+        else (1200 if MODEL_FAMILY == "glm53" else 900),
+    **({"cpu": 2, "memory": 16384} if VALIDATION_SUITE == "v41-fp4" else {}),
 })
-def benchmark_kernels(
+def _benchmark_worker(
     run_id: str,
     keep_count: int = 256,
     modes: str = "",
     suite: str = "all",
     prefill_reader: str = "split",
+    qualification_runs: str = "",
+    preflight: dict | None = None,
     model_family: str = "dsv4", max_seconds: int = RUN_BUDGETS_S["timing"],
-    qualification_runs: str = "", resume_run: str = "",
-    allow_incomplete_qualification: bool = False, phase: str = "all",
-    packed_prefill_tile: int = 32,
+    resume_run: str = "", allow_incomplete_qualification: bool = False,
+    phase: str = "all", packed_prefill_tile: int = 32,
 ) -> str:
     """Validate and time the complete matrix for the selected survivor budget."""
     if model_family != MODEL_FAMILY:
@@ -1005,10 +1315,49 @@ def benchmark_kernels(
                     status="passed" if all(max(pair) <= 1.0 for pair in ratios.values()) else "missed",
                 )
         return str(root)
-    if qualification_runs or resume_run or allow_incomplete_qualification or phase != "all":
-        raise ValueError("qualification_runs/resume_run/allow_incomplete_qualification are GLM-only")
+    if resume_run or allow_incomplete_qualification or phase != "all":
+        raise ValueError("resume_run/allow_incomplete_qualification/phase are GLM-only")
+    if qualification_runs and suite != "v41-fp4-decode":
+        raise ValueError("qualification_runs requires v41-fp4-decode")
     contract = _benchmark_cases()
     is_prefill = suite == "prefill-read"
+    is_fp4 = suite == "v41-fp4-decode"
+    if is_fp4:
+        if (
+            VALIDATION_SUITE != "v41-fp4"
+            or keep_count != 256
+            or modes not in ("", "native,kernel")
+        ):
+            raise ValueError(
+                "FP4 timing requires v41-fp4 qualification and Native/Packed keep256"
+            )
+        if prefill_reader != "split":
+            raise ValueError("FP4 timing uses the Direct decode paths")
+        results_volume.reload()
+        with _run_context(run_id, "timing", RUN_BUDGETS_S["timing"]) as (
+            root,
+            record,
+            deadline,
+        ):
+            # Recheck after allocation to detect receipts changed since CPU preflight.
+            # Missing/failed receipts have already failed without an H100 allocation.
+            if preflight is None:
+                raise RuntimeError("FP4 timing requires the CPU preflight entry point")
+            qualification = _fp4_timing_qualification(qualification_runs)
+            if qualification != preflight:
+                raise RuntimeError("Qualification changed after CPU preflight")
+            record["qualification"] = qualification
+            argv = _benchmark_command(
+                "--suite", suite, "--output", str(root / "timing")
+            )
+            record.update(command=argv, suite=suite)
+            _run_command(argv, root / "timing.log", deadline)
+            contract.validate_timing(
+                json.loads((root / "timing.json").read_text()), suite=suite
+            )
+        return str(root)
+    if qualification_runs:
+        raise ValueError("qualification_runs is only supported by v41-fp4-decode")
     if prefill_reader not in ("split", "fused") or (
         not is_prefill and prefill_reader != "split"
     ):
@@ -1078,12 +1427,13 @@ def benchmark_kernels(
     **{
         **_GPU,
         "timeout": VALIDATION_TIMEOUT_S,
+        **({"cpu": 2, "memory": 16384} if VALIDATION_SUITE == "v41-fp4" else {}),
     }
 )
 def validate_kernels(
     run_id: str, sanitizer: bool = False, max_seconds: int = RUN_BUDGETS_S["validation"],
     model_family: str = "dsv4", stage: str = "numerical", cases: str = "", sanitizer_tools: str = "",
-    sanitizer_scope: str = "all",
+    sanitizer_scope: str = "all", sanitizer_order: str = "",
 ) -> str:
     """Run existing GPU tests; skipped tests fail coverage. Optional three sanitizers."""
     if model_family != MODEL_FAMILY:
@@ -1092,8 +1442,13 @@ def validate_kernels(
         raise ValueError("stage must be numerical, sanitizer or corrective")
     if stage == "corrective":
         selected_tests = tuple(cases.split(","))
-        if MODEL_FAMILY != "glm53" or not cases or any(not case.startswith(GLM_TEST + "::test_") for case in selected_tests):
-            raise ValueError("GLM corrective stage requires explicit --cases pytest node IDs")
+        owner = GLM_TEST if MODEL_FAMILY == "glm53" else TEST_ROOT + "test_remnant_fp4.py"
+        if (
+            (MODEL_FAMILY != "glm53" and VALIDATION_SUITE != "v41-fp4")
+            or not cases
+            or any(not case.startswith(owner + "::test_") for case in selected_tests)
+        ):
+            raise ValueError("Corrective cases must belong to the selected model's test module")
     else:
         if cases:
             raise ValueError("--cases is only supported for the GLM corrective stage")
@@ -1104,8 +1459,16 @@ def validate_kernels(
             or not sanitizer or set(selected_tests) != {GLM_TEST + "::test_packed_loader_bytes", GLM_DECODE_GRAPH}):
         raise ValueError("glm-decode sanitizer scope requires the exact focused decode tests")
     sanitizer = sanitizer or stage == "sanitizer"
-    selected_tools = _selected_sanitizer_tools(sanitizer_tools, sanitizer, model_family)
-    maximum = min(2640, VALIDATION_TIMEOUT_S - 60)
+    if sanitizer_tools and sanitizer_order:
+        raise ValueError("Use sanitizer_tools or sanitizer_order, not both")
+    if sanitizer_order and not sanitizer:
+        raise ValueError("sanitizer_order requires --sanitizer")
+    selected_tools = (
+        _validation_sanitizer_order(sanitizer_order) if sanitizer_order
+        else _selected_sanitizer_tools(sanitizer_tools, sanitizer, model_family)
+    )
+    tool_order = selected_tools
+    maximum = min(VALIDATION_TIMEOUT_CAP_S - 60, VALIDATION_TIMEOUT_S - 60)
     if not 60 <= max_seconds <= maximum:
         raise ValueError(f"max_seconds must be between 60 and {maximum}")
     with _run_context(run_id, "validation", max_seconds) as (
@@ -1114,12 +1477,18 @@ def validate_kernels(
         deadline,
     ):
         environment = dict(os.environ)
+        record["validation_suite"] = VALIDATION_SUITE
+        record["coverage"] = {
+            "validation": VALIDATION_TESTS,
+            "sanitizer": SANITIZER_TESTS,
+        }
         record["sanitizer"] = sanitizer
         record["sanitizer_scope"] = sanitizer_scope
         record["selected_sanitizer_tools"] = selected_tools
         record["sanitizer_qualification_complete"] = False
         if MODEL_FAMILY == "glm53":
             record["runtime_hashes"] = _glm_benchmark_contract().runtime_hashes(SGLANG_ROOT / "python/sglang")
+        record["sanitizer_order"] = tool_order
         if sanitizer:
             record["sanitizer_results"] = {
                 tool: {"status": "not_run"} for tool in SANITIZER_ORDER
@@ -1135,6 +1504,8 @@ def validate_kernels(
             if "cpu-driver-stubs" in environment.get("LD_LIBRARY_PATH", ""):
                 raise RuntimeError("CPU-only driver stubs leaked into the GPU loader")
             manifest = json.loads(MANIFEST.read_text())
+            if manifest.get("validation_suite", "v4") != VALIDATION_SUITE:
+                raise RuntimeError("Validation suite mismatch")
             if manifest["integration"] != "v0.5.22":
                 raise RuntimeError("Serving image integration mismatch")
             if (
@@ -1153,6 +1524,13 @@ def validate_kernels(
             for path, expected in manifest["binaries"].items():
                 if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
                     raise RuntimeError(f"Loaded binary input changed: {path}")
+            if VALIDATION_SUITE == "v41-fp4":
+                artifacts = manifest.get("fp4_precompile_artifacts", {})
+                if not artifacts:
+                    raise RuntimeError("Missing CPU-precompiled FP4 artifacts")
+                for path, expected in artifacts.items():
+                    if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
+                        raise RuntimeError(f"FP4 precompiled artifact changed: {path}")
             tool = manifest["sanitizer"]
             if (
                 tool["path"] != SANITIZER
@@ -1248,12 +1626,19 @@ def validate_kernels(
                 _run_pytest((GLM_CPU_TEST,), root, "startup-regressions", deadline, environment=environment)
                 _run_pytest((GLM_BENCHMARK_GRAPH,), root, "benchmark-graph-smoke", min(deadline, time.monotonic()+300), environment=environment)
         else:
-            _run_pytest(VALIDATION_TESTS, root, "validation", deadline, environment=environment)
-        if INTEGRATION["version"] == "v0.5.22" and (stage == "numerical" or (stage == "corrective" and GLM_TEST + "::test_real_gpu_allocations" in selected_tests)):
+            _run_pytest(
+                selected_tests if stage == "corrective" else VALIDATION_TESTS,
+                root, "validation", deadline, environment=environment,
+            )
+        if INTEGRATION["version"] == "v0.5.22" and (stage == "numerical" or MODEL_FAMILY != "glm53" and stage != "corrective" or (stage == "corrective" and GLM_TEST + "::test_real_gpu_allocations" in selected_tests)):
             allocation = json.loads((root / "allocation.json").read_text())
             if allocation["status"] != "passed" or {
                 r["mode"] for r in allocation["modes"]
-            } != ({"native", "adapter", "direct"} if MODEL_FAMILY == "glm53" else {"native", "triton", "kernel"}):
+            } != (
+                {"native", "adapter", "direct"} if MODEL_FAMILY == "glm53"
+                else {"Native", "Packed"} if VALIDATION_SUITE == "v41-fp4"
+                else {"native", "triton", "kernel"}
+            ):
                 raise RuntimeError("Incomplete real-allocation coverage")
             record["allocation"] = allocation
         if sanitizer and sanitizer_scope == "glm-decode":
@@ -1301,9 +1686,15 @@ def validate_kernels(
                     # evidence without converting this failure into a pass.
                 else:
                     record["sanitizer_results"][tool] = {"status": "passed"}
-                if MODEL_FAMILY == "glm53":
-                    (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
-                    results_volume.commit()
+                state = record["sanitizer_results"][tool]
+                state["report_schema"] = "remnant-sanitizer-raw-v1"
+                for suffix in ("log", "xml"):
+                    path = root / f"{tool}.{suffix}"
+                    if path.is_file():
+                        state[f"{suffix}_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+                # Preserve completed evidence even if a later tool is cancelled.
+                (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
+                results_volume.commit()
             incomplete = [
                 tool
                 for tool in selected_tools
@@ -1407,7 +1798,7 @@ def profile_kernels(
             argv = ["ncu", *[arg for pair in options.items() for arg in pair]]
             if is_prefill:
                 argv += ["--nvtx"]
-            for section in ([] if is_prefill else NCU_SECTIONS):
+            for section in [] if is_prefill else NCU_SECTIONS:
                 argv += ["--section", section]
             argv += [
                 "--metrics",
@@ -1646,19 +2037,21 @@ def _run_pytest(
     environment: dict[str, str] | None = None,
 ) -> None:
     report = root / f"{name}.xml"
-    argv = [*prefix, sys.executable, *["-m", "pytest", "-q"]]
+    argv = [
+        *prefix,
+        sys.executable,
+        "-m",
+        "pytest",
+        "-q",
+        "--disable-warnings",
+        "--tb=short",
+    ]
     argv += [str(SGLANG_ROOT / path) for path in tests]
     argv += ["--collect-only"] if collect else [f"--junitxml={report}"]
     output = _run_command(argv, root / f"{name}.log", deadline, environment=environment)
     if not collect:
         try:
-            counts = {
-                key: sum(
-                    int(s.get(key, 0))
-                    for s in ET.parse(report).getroot().iter("testsuite")
-                )
-                for key in ("tests", "errors", "failures", "skipped")
-            }
+            _, counts = read_pytest_report(report)
         except (OSError, ET.ParseError, ValueError) as error:
             raise RuntimeError(
                 f"Incomplete validation {name}: unreadable {report}"
@@ -1677,8 +2070,8 @@ def _run_pytest(
 
 
 def _selected_sanitizer_tools(value: str, enabled: bool, family: str) -> tuple[str, ...]:
-    if value and (not enabled or family != "glm53"):
-        raise ValueError("--sanitizer-tools requires GLM sanitizer validation")
+    if value and (not enabled or (family != "glm53" and VALIDATION_SUITE != "v41-fp4")):
+        raise ValueError("--sanitizer-tools requires GLM or FP4 sanitizer validation")
     tools = tuple(value.split(",")) if value else SANITIZER_ORDER
     if not tools or len(set(tools)) != len(tools) or set(tools) - set(SANITIZER_ORDER):
         raise ValueError("--sanitizer-tools must select unique memcheck,racecheck,synccheck")
@@ -1813,8 +2206,7 @@ def _qualify_glm_prefill(
 
 
 def _glm_timing_checkpoint(run_id: str) -> Path:
-    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", run_id):
-        raise ValueError("Invalid GLM checkpoint run ID")
+    validate_run_id(run_id)
     checkpoint = RESULTS_ROOT / "microbench" / run_id / "timing" / "timing.json"
     if not checkpoint.is_file():
         raise FileNotFoundError(f"GLM checkpoint not found: {checkpoint}")
@@ -1851,10 +2243,9 @@ def _benchmark_cases():
 
 @contextmanager
 def _run_context(
-    run_id: str, action: str, seconds: int
+    run_id: str, action: str, seconds: int, *, resource: str = "gpu"
 ) -> Iterator[tuple[Path, dict, float]]:
-    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", run_id):
-        raise ValueError("run_id must be a unique simple identifier")
+    validate_run_id(run_id)
     root = RESULTS_ROOT / "microbench" / run_id / action
     root.mkdir(parents=True, exist_ok=False)
     record = {"status": "running", "action": action, "model_load": False}
@@ -1867,9 +2258,10 @@ def _run_context(
         record.update(status="failed", error=repr(error))
         raise
     finally:
-        record["gpu_function_seconds"] = time.monotonic() - started
+        record[f"{resource}_function_seconds"] = time.monotonic() - started
         (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
         try:
             results_volume.commit()
         finally:
-            triton_volume.commit()
+            if resource == "gpu" and VALIDATION_SUITE != "v41-fp4":
+                triton_volume.commit()

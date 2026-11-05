@@ -17,8 +17,8 @@ Folder suffixes identify the SGLang integration pair, not a FlashMLA release.
 |---|---|---|---|
 | `sglang-v0.5.18/` | `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` | `6687a7c` |
 | `flashmla-v0.5.18/` | `05e26647fe840b8baedae486c2d86d5ce4efeb7c` | `remnant/flashmla-v0518` | `97f3faa` |
-| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `glm53-flash-packed` | `5174462` |
-| `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `remnant/flashmla-v0522` | `3eb8594` |
+| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `fix/glm53-flash/ds41-integration` | `d2a99aa6c612` |
+| `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `ds41-flash-packed` | `4e72722671d8` |
 
 Both FlashMLA checkouts pin CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`.
 The default remains v0.5.18; `REMNANT_INTEGRATION=v0.5.22` selects the other pair.
@@ -49,6 +49,79 @@ content hashes and nested-source identities are retained in the build manifest.
 Ordinary serving does not accept these overrides. A source check does not prove
 that an existing container's loaded binaries match; source changes need a rebuild.
 
+## Experimental V4.1 FP4 on SM90
+
+Review-fix integration: SGLang `c4708870`, FlashMLA `4e72722`, based on parent
+`af12dd9`. The current pins add effective Q8KV8 override rejection, retained
+prefill policy, aligned cache base/page checks, named FP4 layouts and explicit
+fixed-matrix CLI validation. Parent qualification uses
+`scripts/modal/qualification.py` to reject failed tools, compare complete runtime
+identities and check receipts on CPU before GPU timing. These pins passed the fresh model-free numerical, graph/stream, allocator,
+34-case/tool sanitizer and review gates using parent runner `2707db9`. The final
+v3 ten-case timing is complete; historical evidence is kept separate below.
+
+Prefill still reconstructs the selected requests' full compressed history into
+an inherited BF16 scratch buffer. Its high-watermark allocation scales roughly
+as `1024 * (sum(floor(sequence_length/compression_ratio)) + SWA_union)` bytes
+per GPU. At C1, 32 requests of 128K need about 4 GiB before the SWA union and
+padding. The microbenchmark's small scratch fixture does not establish serving
+memory safety or concurrency capacity. This review does not redesign prefill.
+
+The isolated `ds41-flash-packed` candidate starts from parent
+`9419d0e18e1e7677c0e48b8e40ad54bbc30010ca`; the original integration/worktrees
+remain unchanged. Its original model-specific selector is replaced in the merged
+v0.5.22 interface by `--kv-cache-format native|direct`. Native always selects the
+existing FP4 global-cache path; Direct selects Packed FP4. Both require
+SM90 FlashMLA and V4.1 ratio-1/2 shared global caches; HiCache, distributed cache
+transfer, speculation/DSpark, replay and legacy layout overrides are rejected.
+
+- **Storage/producer ownership:** SGLang's `kernels/ops/attention/dsv4/fp4_cache.py`
+  owns software SM90 E2M1 packing and BF16 reconstruction. It takes normalized
+  BF16 rows, applies upstream RoPE/BF16 rounding, quantizes with per-16 E4M3
+  scales, then optionally retains the 256 largest dequantized magnitudes.
+  Ties retain lower coordinates; codes/scales are unchanged. Indexer input is
+  unpruned. Native is 288 bytes; Packed is 224 (128 codes + 64 bitmap + 32 scales).
+- **Runtime ownership:** grouped model args, the existing remnant configuration
+  boundary, `deepseek_v4_memory_pool.py`, `pool_configurator.py`, and
+  `deepseek_v4_backend.py` select layouts, budget physical reserved rows and
+  dispatch. Existing SWA storage and FP8 Remnant interfaces are retained.
+- **FP4 prefill ownership:** FlashMLA `sm90/prefill/sparse/phase1.cuh` has an
+  opt-in named-barrier policy and two FP4-only D512 instantiations. Separate
+  `fp4_sparse_prefill_fwd`/`flash_mla_fp4_sparse_fwd` entries serve reconstructed
+  BF16 caches and SWA-only layers in explicit FP4 modes. Stock/auto retain the
+  existing policy. SGLang owns AOT registration and explicit-mode dispatch.
+- **Direct ownership:** FlashMLA's separate `flash_mla_with_fp4_kvcache` entry
+  point and SM90 template specializations read global FP4 beside V4 SWA. Packed
+  data rows hold ascending survivors and eight MSB-first uint64 bitmap words;
+  even ranks occupy low nibbles. Pages store all data rows then all scale rows.
+  Scale lookup uses original coordinate groups. Global records already have
+  RoPE applied. SGLang's AOT CMake, extension registration and Python binding
+  expose the same contract without importing experiment code.
+- **Validation:** model-free fixtures extend the existing tests and Modal runner.
+  CPU native build/precompile passed before H100, along with 24 CPU tests +
+  15 subtests, six receipt/dispatch tests, 17 launcher regressions and 103 V4
+  CPU regressions + 45 subtests. Scoped style/registry checks passed. H100
+  validation passed 39 ordinary cases and 34/34 under each strict memcheck,
+  racecheck and synccheck tool, with zero errors/hazards. Independent source
+  and artifact review found no unresolved finding. Complete e/f tool receipts
+  match one runtime/source/binary identity; overall interruptions remain failed.
+- **Timing/allocation:** the fresh v3 H64/window128/SWA-page256 matrix has ten
+  cases across C1/page256 and C2/page128. Packed/Native geometric-mean latency
+  changes are +1.30% overall, +1.72% C1 and +0.87% C2 (range −1.02%..+2.71%).
+  These warm synthetic graph results establish no serving or repeatable speedup.
+  The fixed-cap 1 GiB allocator fixture again gains 21.96% token capacity;
+  global records shrink 22.22%. Historical v1 timing is separately retained.
+- **Scope/rollback:** experimental and opt-in; no weights, full-model loads,
+  serving, quality, H20, SM100 execution, GPUQ or profiling qualification.
+  Follow-up compute is conservatively about $14.87 before settlement, under
+  the $20 ceiling with its reserve intact. All task allocations are stopped.
+  Full-history prefill scratch scaling above remains a serving limitation.
+  Select `--kv-cache-format native` or restore recorded baseline pins to roll back.
+
+See the [single experiment record](../benchmarks/microbench/v41-packed-fp4/README.md)
+for exact sources, commands, all cases, costs, failed attempts and limitations.
+Broader GitHub lint/gating statuses are separate from these focused Modal gates.
+
 ## Parallel v0.5.22 integration
 
 Parent branch `codex/sglang-v0.5.22` starts from local `main` `6fa18c7` in
@@ -61,7 +134,8 @@ launcher options and benchmark defaults. The v0.5.22 pair is unchanged. Main's
 custom asynchronous-preparation controls remain v0.5.18-specific; v0.5.22 keeps
 upstream conversion offload, and unsupported opt-ins fail the CPU preflight.
 
-Target: 0731 on H100/SM90, **V4 584-byte logical Native layout**, not V4.1.
+Baseline target: 0731 on H100/SM90, **V4 584-byte logical Native layout**.
+The separate experimental V4.1 candidate above extends this baseline.
 
 | Area | Decision | Contract / adaptation |
 |---|---|---|
@@ -132,7 +206,8 @@ and hashes unchanged. Historical v0.5.18 performance is not v0.5.22 performance.
 ## Default v0.5.18 integration map
 
 Paths below are relative to the owning fork. Native is the default; Packed is
-selected by `--dsv4-c4-cache-format remnant`.
+selected by `--kv-cache-format direct` on v0.5.22 (the unchanged v0.5.18 pin uses
+`--dsv4-c4-cache-format remnant --dsv4-c4-cache-implementation kernel`).
 
 | Capability | Owner and entry point | Contract / checks |
 |---|---|---|
@@ -324,9 +399,9 @@ this guide and the changelog are its curated index.
 
 Author: Winston Cai.
 
-Native remains the default. `--glm5-mla-cache-format remnant` enables Packed;
-`--glm5-mla-cache-implementation adapter|direct` selects its reader (Direct by
-default). Packed requires resolved BF16 model activations, supported GLM
+Native remains the default. `--kv-cache-format direct` selects the 320-byte
+Packed MLA pool and TileLang Direct. Adapter remains an explicit internal test
+and benchmark input.
 geometry, FP8 KV and TileLang sparse attention. Startup rejects unsupported
 combinations before pool allocation, including a non-BF16 resolved `auto` dtype.
 
@@ -426,3 +501,43 @@ performance, capacity and multimodal behavior remain unverified.
 
 Rollback is Native format or the pre-optimization SGLang pin `889edf56`. The
 v0.5.22 FlashMLA pin and both v0.5.18 pins are unchanged.
+The fragment reconstruction follow-up stages Packed FP4 rows and prefix ranks
+once, reusing V4's fragment selectors with nibble adaptation. Producer geometry
+and persistent formats stay fixed. The maintained microbenchmark now includes
+`v41-fp4-decode`. Its active v3 matrix uses H64/SWA128 with 256-token SWA pages, batches
+8/16/24/28/32, and both C1/page256 and C2/page128 (ten cases), with
+actual captured-output checks and fresh dense Native FP4 controls. Timing is
+blocked until identical source/binary/tool receipts pass 34 cases per sanitizer.
+The prior source pins passed scoped model-free correctness and v1 timing.
+Fresh-context source/artifact review passed with no blocking findings. The v3
+fixture correction passed its two existing matrix/contract tests on Modal CPU
+(2 passed in 0.14 s) and changes no runtime/kernel code. Historical v1 measurements
+retain their original source identities. Fresh v3 GPU timing is recorded in the
+review-fix milestone; historical timing remains unchanged. V2 incorrectly equated
+the 128-token
+window with page128; the runtime factory requires page256. The measured
+allocator fixture and capacity prediction already used page256.
+
+
+## Combined serving interface
+
+On v0.5.22, `--kv-cache-format {native,direct}` replaces all model-specific
+format/reader selectors. Removed flags produce ordinary unknown-option errors.
+`direct` maps to Packed C4/FlashMLA for V4, Packed FP4/FlashMLA for V4.1, and
+Packed MLA/TileLang for GLM. Native is the default. Model family is resolved from
+loaded configuration and carried through spawned-worker publication; unsupported
+Direct models/profiles fail before pool allocation. Internal Adapter and Triton
+reconstruction fixtures retain their original benchmark mode names.
+
+The merge candidate is `fix/glm53-flash/ds41-integration` in parent and SGLang,
+with GLM/V4.1 published heads preserved as merge ancestors. Shared parent
+metadata is owned by `scripts/model_profiles.py`; launch normalization and named
+environment transport by `scripts/local/launch-config.sh`; compiled-image
+verification by `scripts/sources.py`; pure report parsing by
+`scripts/modal/qualification.py`. Model-specific evidence policies remain
+separate. Shared numerical timing statistics live in the fork's `timing.py`.
+
+The current merge-validation status and $20 phase ledger are recorded in the
+existing GLM [qualification record](../benchmarks/microbench/glm53-packed/qualification.json).
+Historical qualification and prefill parity misses stay bound to their measured
+sources. The 64-row prefill candidate remains benchmark-only.

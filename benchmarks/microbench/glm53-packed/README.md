@@ -212,3 +212,20 @@ clones can recover the complete record even without the local extracted archive.
 The existing CSVs and pinned [model metadata](model-config.json) remain unchanged.
 
 Rollback: select Native, or restore the pre-optimization SGLang pin `889edf56`.
+
+
+## GLM / V4.1 merge validation
+
+The isolated integration candidate merges both PR histories and exposes
+`--kv-cache-format native|direct` on v0.5.22. The untouched v0.5.18 pair keeps its
+recorded interface; shared launchers translate Native/Direct explicitly.
+`qualification.json` → `ds41_integration` owns this phase's new **$20** budget,
+validation status, source identities and eventual receipts. Historical runs and
+the original worktree's unstaged ledger are preserved. The 236 unrelated replay
+capture additions and replay-only sweep are excluded from the resulting PR diff.
+
+Next step: finish both integration/suite CPU regressions and final independent
+review, prepare verified CPU images, then run focused one-H100 qualification and
+the bounded Native/Direct four-H200 smoke. No new timing or prefill promotion is
+part of this merge. Pending gates remain pending until source-bound evidence is
+exported; Native remains the serving default.

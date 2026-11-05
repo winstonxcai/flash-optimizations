@@ -1,0 +1,4185 @@
+{
+  "schema": 1,
+  "status": "passed_model_free_correctness_and_timing",
+  "experiment": "V4.1 Packed FP4 SM90 engineering validation",
+  "model_load": false,
+  "budget": {
+    "authorized_usd": 15,
+    "reserve_usd": 2,
+    "max_projected_work_usd": 13,
+    "account": "wpooh1579",
+    "baseline_compute_usd": 18.51013772,
+    "latest_compute_usd": 30.42292268,
+    "incremental_compute_usd": 11.91278496,
+    "billing_lag": true,
+    "cpu_core_hour_usd": 0.0473,
+    "memory_gib_hour_usd": 0.008,
+    "h100_hour_usd": 3.95,
+    "next_cpu_preflight_cap_seconds": 900,
+    "next_gpu_cap_seconds": 4500,
+    "next_gpu_cpu_cores": 2,
+    "next_gpu_memory_gib": 16,
+    "next_gpu_hour_usd": 4.1726,
+    "next_projected_max_usd": 5.63295,
+    "remaining_projected_work_usd": 1.08721504,
+    "all_task_allocations_stopped": true,
+    "workspace_status": "disabled during memcheck; no account/billing setting changed",
+    "account_billed_cost_usd": 0.42,
+    "baseline_metered_total_usd": 31.50823044,
+    "latest_metered_total_usd": 43.41836328,
+    "latest_network_egress_usd": 0.00189581,
+    "storage_cost_unchanged": true,
+    "projection_note": "next_* fields record the final attempt012 pre-launch projection, not authorization for another launch; work stopped after interruption"
+  },
+  "attempts": [
+    {
+      "id": "attempt001",
+      "account": "poohthewinniechurchill",
+      "status": "rejected_before_build",
+      "reason": "workspace spend limit",
+      "gpu_allocated": false
+    },
+    {
+      "id": "attempt002",
+      "account": "wpooh1579",
+      "app_id": "ap-HbGInp86LfsFYh4OlB3qy9",
+      "status": "aborted_before_compilation",
+      "reason": "source audit identified empty legacy pool handling",
+      "gpu_allocated": false,
+      "source_parent": "97573d2"
+    },
+    {
+      "id": "attempt003",
+      "account": "wpooh1579",
+      "app_id": "ap-cFImi5E8eq4FX9EP0f2KIz",
+      "status": "assembly_failed",
+      "reason": "runner changed during build; rejected by Modal",
+      "gpu_allocated": false,
+      "source_parent": "f4f21a869ea6c5fae20a2b5a30823d716fe8fc70",
+      "sglang": "f2ba3a07cab55d36b9aac761f86b4e89b580ab87",
+      "flashmla": "4ff78bc9a9c5f87f5a3fc7efa2fd5f2354915086",
+      "compiled_base_image": "im-XUR1C0KC5J1HIUVyDM3i34",
+      "cpu_native_compilation": "passed",
+      "cpu_preflight": "not_run",
+      "gpu_tests": "not_run",
+      "sanitizers": "not_run"
+    },
+    {
+      "id": "attempt004",
+      "account": "wpooh1579",
+      "app_id": "ap-tfsbiBLd5DCI5aLYMnkbwy",
+      "status": "cpu_preflight_failed",
+      "source_parent": "880bf65acf095c9800763d7d340931103257d5c6",
+      "sglang": "6ad4413fafa6aec51eef82113b85010dea491fe3",
+      "flashmla": "0e34a09a4f5d5d3879a94c483a4feef8eba8dc03",
+      "cpu_native_compilation": "passed",
+      "cpu_fp4_precompilation": "passed",
+      "cpu_tests": {
+        "passed": 22,
+        "failed": 3,
+        "subtests_passed": 13
+      },
+      "gpu_allocated": false,
+      "reason": "startup tests failed; source audit fixes auto attention default and missing legacy flag fallback; next run verifies diagnosis"
+    },
+    {
+      "id": "attempt005",
+      "account": "wpooh1579",
+      "app_id": "ap-i9KtfByyB4cKGE78RhDJcK",
+      "status": "cpu_preflight_failed",
+      "source_parent": "6e02faeb7b632ec4762ce17c647d22dab7949ce0",
+      "sglang": "fe7dd84620f135f50f1dc50ea0939a21ac12e8dd",
+      "flashmla": "0e34a09a4f5d5d3879a94c483a4feef8eba8dc03",
+      "cpu_native_compilation": "passed",
+      "cpu_fp4_precompilation": "passed",
+      "cpu_tests": {
+        "passed": 22,
+        "failed": 1,
+        "subtests_passed": 15
+      },
+      "gpu_allocated": false,
+      "reason": "unset upstream KV layout defaults to v4; conflict validation must check explicit environment presence"
+    },
+    {
+      "id": "attempt006",
+      "account": "wpooh1579",
+      "app_id": "ap-misaGh3NhWdoxQaOeiFIhD",
+      "status": "gpu_container_startup_failed",
+      "source_parent": "c468f814b8e9c970f85a657e9960f4be7c13b32b",
+      "sglang": "d3e86c632616e0414583f0ee025f4eefd07916f5",
+      "flashmla": "0e34a09a4f5d5d3879a94c483a4feef8eba8dc03",
+      "cpu_preflight": "passed",
+      "cpu_tests": {
+        "passed": 23,
+        "failed": 0,
+        "subtests_passed": 15
+      },
+      "cpu_image": "im-7H2YIAf2ocroGo0CEJN7A8",
+      "gpu_allocation_attempted": true,
+      "gpu_tests": "not_run",
+      "reason": "persistent Triton volume cannot mount over CPU-prepopulated /triton-cache; use hash-verified embedded cache for scoped FP4 suite"
+    },
+    {
+      "id": "attempt007",
+      "account": "wpooh1579",
+      "app_id": "ap-QlS7WmsuD00uhZRYW63mex",
+      "status": "gpu_fixture_import_failed",
+      "source_parent": "f39b25f6c79411991056be2f2d523c07338f0f1f",
+      "sglang": "d3e86c632616e0414583f0ee025f4eefd07916f5",
+      "flashmla": "0e34a09a4f5d5d3879a94c483a4feef8eba8dc03",
+      "cpu_preflight": "passed",
+      "gpu": "NVIDIA H100 80GB HBM3",
+      "gpu_function_seconds": 56.693831632,
+      "tests": {
+        "passed": 24,
+        "failed": 13,
+        "seconds": 34.98
+      },
+      "passed_components": [
+        "exact FP4 store/read 16 cases",
+        "C1/C2 producer boundary 4 cases",
+        "startup/dispatch 2 cases",
+        "V4 Direct regressions 2 cases"
+      ],
+      "blocked_components": [
+        "FP4 attention",
+        "graph/stream",
+        "allocation"
+      ],
+      "sanitizers": "not_run",
+      "reason": "sibling fixture imports require pytest package-relative paths; moved to collection time",
+      "evidence": "remnant-stage2a-results/microbench/v41-fp4-20261025-attempt007/validation/"
+    },
+    {
+      "id": "attempt008",
+      "account": "wpooh1579",
+      "app_id": "ap-kjGoAsXjXCwc16fn7ZnBzX",
+      "status": "adapter_fixture_alignment_failed",
+      "source_parent": "1f0630c65e59be39065cbd44cdb2a7fc9ea4b6b3",
+      "sglang": "0e1a6b0801d68f36c55aa3e9f21c203d7910697d",
+      "flashmla": "0e34a09a4f5d5d3879a94c483a4feef8eba8dc03",
+      "cpu_preflight": "passed",
+      "tests": {
+        "passed": 29,
+        "failed": 8,
+        "seconds": 49.81
+      },
+      "passed_components": [
+        "all exact packing/producer/V4 regressions",
+        "Native/Packed Direct vs independent references and negative controls",
+        "graph/stream",
+        "allocator boundaries and actual storage"
+      ],
+      "reason": "Adapter selections576 require stock SM90 prefill alignment128; pad64 invalid entries to640",
+      "sanitizers": "not_run",
+      "evidence": "remnant-stage2a-results/microbench/v41-fp4-20261025-attempt008/validation/"
+    },
+    {
+      "id": "attempt009",
+      "account": "wpooh1579",
+      "app_id": "ap-zYhVLbCTc5uLmFPPVuUAz8",
+      "source_parent": "8d332cccd699a71d51da72c47df08b13d56e8884",
+      "sglang": "0872a474afa6",
+      "flashmla": "0e34a09a4f5d",
+      "cpu_image": "im-Ez2oqXxEwesDBevoGbOA3x",
+      "cpu_preflight": "passed",
+      "cpu_tests": {
+        "passed": 23,
+        "subtests_passed": 15
+      },
+      "gpu_tests": {
+        "passed": 37,
+        "failed": 0,
+        "seconds": 46.9
+      },
+      "sanitizers": {
+        "synccheck": {
+          "passed": 16,
+          "failed": 16,
+          "errors": 12800,
+          "seconds": 175.89
+        },
+        "racecheck": "not_qualified_after_cuda_fault",
+        "memcheck": "not_run"
+      },
+      "status": "unqualified",
+      "reason": "Inherited stock BF16 sparse prefill divergent aligned named barriers; CUDA719/Xid43. Separate opt-in FP4 prefill specialization required.",
+      "stopped_at": "2026-10-24T17:51:23Z"
+    },
+    {
+      "id": "attempt010",
+      "account": "wpooh1579",
+      "app_id": "ap-0KsEd3K9DvX4uXW4fmtzXJ",
+      "source_parent": "08c75c0",
+      "sglang": "55660d7f6d36029d9cc713867a63fa490c03f172",
+      "flashmla": "91463e004ec99762f39a173cd687f9ab98d3628d",
+      "cpu_native_image": "im-O64c12Igt3h0QxPZunBTGU",
+      "cpu_image": "im-qe56FQ27sUhO3vKpL7ct78",
+      "cpu_preflight": "passed",
+      "gpu_tests": {
+        "passed": 37,
+        "failed": 0,
+        "seconds": 39.4
+      },
+      "status": "stopped_incomplete_sanitizer",
+      "sanitizers": {
+        "synccheck": {
+          "completed_cases": 26,
+          "live_errors_reported": 0,
+          "status": "incomplete_not_qualified"
+        },
+        "racecheck": "not_run",
+        "memcheck": "not_run"
+      },
+      "reason": "CPU-heavy sanitizer instrumentation also covered repeated independent GPU torch/cuBLAS oracle operations. Stopped existing allocation; reviewed CPU-only oracle correction preserves all32 cases and tolerances.",
+      "stopped_at": "2026-10-24T18:54:27Z"
+    },
+    {
+      "id": "attempt011",
+      "account": "wpooh1579",
+      "app_id": "ap-mgS2O0dT6duPCuHvhEA7jN",
+      "source_parent": "8d4015af1d41ab6917258fde9df8bb5aa7c285f8",
+      "sglang": "0a36a662562ff3aa98ebc5abca12dcc7cff83168",
+      "flashmla": "91463e004ec99762f39a173cd687f9ab98d3628d",
+      "cpu_native_image": "im-cfGoyqhse4dRqKBTSlMtIL",
+      "cpu_preflight": "passed",
+      "gpu_tests": {
+        "passed": 37,
+        "failed": 0,
+        "seconds": 47.72
+      },
+      "status": "stopped_after_complete_synccheck",
+      "sanitizers": {
+        "synccheck": {
+          "status": "passed",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0,
+          "errors": 0,
+          "seconds": 2063.42,
+          "process_exit": "successful; verified result.json sanitizer status passed",
+          "log_sha256": "96029439df7b550b3abdfa9d55053e82531436eb7f7796d8b9a85413d5b77b6f",
+          "xml_sha256": "7bad4213b326b790eb3d9a101c593a5456e5944f91dbf264c40d891bd10fcd64"
+        },
+        "racecheck": "not_run",
+        "memcheck": "not_run"
+      },
+      "gpu_function_seconds": 2195.382827917,
+      "stopped_at": "2026-10-24T19:55:20Z",
+      "evidence": "remnant-stage2a-results/microbench/v41-fp4-20261025-attempt011/validation/"
+    },
+    {
+      "id": "attempt012",
+      "account": "wpooh1579",
+      "app_id": "ap-dk5bM8Ddk2LX1VNvMDU1ix",
+      "source_parent": "9ec5971da3e117691311e43680d2ff3e6b8d6885",
+      "sglang": "0a36a662562ff3aa98ebc5abca12dcc7cff83168",
+      "flashmla": "91463e004ec99762f39a173cd687f9ab98d3628d",
+      "status": "workspace_disabled_during_memcheck",
+      "cpu_preflight": "passed",
+      "cpu_tests": {
+        "passed": 23,
+        "subtests_passed": 15,
+        "seconds": 132.35
+      },
+      "gpu_tests": {
+        "passed": 37,
+        "failed": 0,
+        "seconds": 51.58
+      },
+      "gpu_resources": {
+        "h100": 1,
+        "cpu": 2,
+        "memory_gib": 16,
+        "timeout_seconds": 4500,
+        "inner_budget_seconds": 4440,
+        "retries": 0
+      },
+      "sanitizer_order": [
+        "racecheck",
+        "memcheck",
+        "synccheck"
+      ],
+      "sanitizers": {
+        "racecheck": {
+          "status": "passed",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0,
+          "errors": 0,
+          "warnings": 0,
+          "seconds": 1298.37,
+          "process_exit": "successful; checkpoint status passed",
+          "xml_sha256": "85a170e93d7b18a113ce275c57fe280478479631e197c75e6b0f6adb8900fc00",
+          "log_sha256": "87f1b336392836a6fefffaa815d5c5e090e7db8adfd0b3f7ee2729e5a5d2d48c"
+        },
+        "memcheck": {
+          "status": "interrupted_unqualified",
+          "required_cases": 32,
+          "completed_named_cases": 27,
+          "seconds": 2506.21,
+          "xml_sha256": "cf76b7ea8ec3244c4f3f4646526a4063a8934ee81a48d43bb65bbb4a2b351957",
+          "log_sha256": "1a41b2ab81fa26fc131da9741e1611570f1b2d1d07ecf762003cece14eba3bee",
+          "clean_sanitizer_summary": false,
+          "successful_process_exit": false,
+          "missing_case_ids": [
+            "test_fp4_compressor_boundary[False-1]",
+            "test_fp4_compressor_boundary[False-2]",
+            "test_fp4_compressor_boundary[True-1]",
+            "test_fp4_compressor_boundary[True-2]",
+            "test_fp4_graph_and_stream[128-True]"
+          ],
+          "full_matrix_rerun_required": true,
+          "raw_checkpoint_state": "not_run because interruption preceded tool return"
+        },
+        "synccheck": {
+          "status": "not_run",
+          "note": "complete matching-identity receipt retained from attempt011"
+        }
+      },
+      "gpu_function_seconds": 3885.865746193,
+      "stopped_at": "2026-10-24T21:15:55Z",
+      "termination": "ConflictError: workspace is disabled; all containers confirmed stopped",
+      "transport_warnings": "CLI heartbeat timeout recovered before CPU allocation; later CLI log gaps; no replacement/retry was launched",
+      "evidence": "remnant-stage2a-results/microbench/v41-fp4-20261025-attempt012/validation/",
+      "manifest_sha256": "d7e2b5fc0b10252f9d6967316b903b9a19ed74d327125f93cd67e169416b7cc0"
+    }
+  ],
+  "review": {
+    "status": "passed; no blocking findings",
+    "resolved": "actual captured graph outputs now checked after capture and all timing rounds; dropped coordinates skip scale multiply",
+    "local_tests_run": false,
+    "reviewer": "fresh-context fragment_final_review",
+    "scope": [
+      "numerical nibble/rank/scale reconstruction and invalid rows",
+      "CUDA scratch ownership, synchronization and shared-memory geometry",
+      "source/binary/fixture identities across all receipts",
+      "strict sanitizer matrix completeness and clean exits",
+      "captured outputs, complete measured paths and all 20 timing cases",
+      "independent recomputation of reported latency ratios"
+    ],
+    "findings": []
+  },
+  "limitations": [
+    "Synthetic model-free H100 validation only; no weights, full-model loads, quality evaluation, serving or production qualification.",
+    "Warm graph microbenchmarks compare fresh dense Native with current Packed Direct; no old-Packed-versus-new-Packed timing or performance profiling.",
+    "Timed global pages use C1 page256; C2 page128 is correctness-covered but not timed. H20-3e and multi-GPU behavior remain unverified.",
+    "Supported Direct/prefill query-head fixtures are 64/128 on SM90; other head counts and distributed/runtime configurations remain unqualified or rejected.",
+    "HiCache, distributed cache transfer, CP, speculative/DSpark and incompatible legacy overrides remain deferred/rejected.",
+    "Two validation jobs were deliberately interrupted overall; only complete matching sanitizer-tool receipts qualify, as verified by the timing gate."
+  ],
+  "allocation": {
+    "direct_workspace_peak_bytes": 20492288,
+    "direct_workspace_case": "B8/S1/H128/K512 plus K64 SWA, page128",
+    "status": "passed",
+    "modes": [
+      {
+        "mode": "Native",
+        "groups": {
+          "swa": 467251200,
+          "global_kv": 472891392,
+          "indexer": 111646208,
+          "compressor_state": 270336
+        },
+        "prefill_workspace_bytes": 1048576,
+        "direct_workspace_bytes": 20492288,
+        "total_bytes": 1073600000,
+        "byte_budget": 1073741824,
+        "full_tokens": 656384,
+        "swa_tokens": 19712,
+        "reserved_page_bytes": 6346240
+      },
+      {
+        "mode": "Packed",
+        "groups": {
+          "swa": 467251200,
+          "global_kv": 448516096,
+          "indexer": 136147968,
+          "compressor_state": 270336
+        },
+        "prefill_workspace_bytes": 1048576,
+        "direct_workspace_bytes": 20492288,
+        "total_bytes": 1073726464,
+        "byte_budget": 1073741824,
+        "full_tokens": 800512,
+        "swa_tokens": 19712,
+        "reserved_page_bytes": 6280704
+      }
+    ],
+    "edges": [
+      {
+        "layout": "v41_fp4",
+        "page": 128,
+        "rows": 0,
+        "storage_bytes": 73728
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 128,
+        "rows": 1,
+        "storage_bytes": 110592
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 128,
+        "rows": 127,
+        "storage_bytes": 110592
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 128,
+        "rows": 128,
+        "storage_bytes": 110592
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 128,
+        "rows": 129,
+        "storage_bytes": 147456
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 128,
+        "rows": 255,
+        "storage_bytes": 147456
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 128,
+        "rows": 256,
+        "storage_bytes": 147456
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 128,
+        "rows": 257,
+        "storage_bytes": 184320
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 256,
+        "rows": 0,
+        "storage_bytes": 73728
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 256,
+        "rows": 1,
+        "storage_bytes": 147456
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 256,
+        "rows": 127,
+        "storage_bytes": 147456
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 256,
+        "rows": 128,
+        "storage_bytes": 147456
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 256,
+        "rows": 129,
+        "storage_bytes": 147456
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 256,
+        "rows": 255,
+        "storage_bytes": 147456
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 256,
+        "rows": 256,
+        "storage_bytes": 147456
+      },
+      {
+        "layout": "v41_fp4",
+        "page": 256,
+        "rows": 257,
+        "storage_bytes": 221184
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 128,
+        "rows": 0,
+        "storage_bytes": 57344
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 128,
+        "rows": 1,
+        "storage_bytes": 86016
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 128,
+        "rows": 127,
+        "storage_bytes": 86016
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 128,
+        "rows": 128,
+        "storage_bytes": 86016
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 128,
+        "rows": 129,
+        "storage_bytes": 114688
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 128,
+        "rows": 255,
+        "storage_bytes": 114688
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 128,
+        "rows": 256,
+        "storage_bytes": 114688
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 128,
+        "rows": 257,
+        "storage_bytes": 143360
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 256,
+        "rows": 0,
+        "storage_bytes": 57344
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 256,
+        "rows": 1,
+        "storage_bytes": 114688
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 256,
+        "rows": 127,
+        "storage_bytes": 114688
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 256,
+        "rows": 128,
+        "storage_bytes": 114688
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 256,
+        "rows": 129,
+        "storage_bytes": 114688
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 256,
+        "rows": 255,
+        "storage_bytes": 114688
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 256,
+        "rows": 256,
+        "storage_bytes": 114688
+      },
+      {
+        "layout": "v41_fp4_remnant",
+        "page": 256,
+        "rows": 257,
+        "storage_bytes": 172032
+      }
+    ],
+    "scope": "model-free actual pool storage; no serving capacity claim",
+    "capacity_gain_percent": 21.957878315132607
+  },
+  "diagnostics": [
+    {
+      "app_id": "ap-sElVVs92ttleWoKaZcllsN",
+      "resource": "CPU only; no GPU or native rebuild",
+      "purpose": "cuobjdump artifact inspection of exact attempt009 binary",
+      "binary_sha256": "06c8dffa8155b3a7e1d2cc5085dd9fd38471838e887c84ea4c9e7a7c5192d606",
+      "finding": "BAR.SYNC.DEFER_BLOCKING 0xc,0x100 at PCs0x5b90/0xd020 in separate consumer branches"
+    },
+    {
+      "app_id": "ap-K6z2M5uoTJNFlIfb2pDupI",
+      "resource": "CPU only; no GPU or native rebuild",
+      "purpose": "cuobjdump artifact inspection of exact attempt009 binary",
+      "binary_sha256": "06c8dffa8155b3a7e1d2cc5085dd9fd38471838e887c84ea4c9e7a7c5192d606",
+      "finding": "BAR.SYNC.DEFER_BLOCKING 0xc,0x100 at PCs0x5b90/0xd020 in separate consumer branches"
+    }
+  ],
+  "prefill_review": {
+    "status": "no_blocking_findings",
+    "scope": "FP4-only unaligned CUTLASS named barrier policy, raw/AOT entry points, C0/C1/C2 production dispatch, length/no-length Adapter and graph fixtures",
+    "validation": "source review only; compilation/sanitizers remain required"
+  },
+  "oracle_review": {
+    "status": "no_blocking_findings",
+    "scope": "Independent FP32/BF16 CPU attention oracle, unchanged tolerances/negative controls/full32 sanitizer matrix, GPU production graph ordering"
+  },
+  "aggregation_policy": {
+    "required_tools": [
+      "synccheck",
+      "racecheck",
+      "memcheck"
+    ],
+    "required_cases_per_tool": 32,
+    "requirements": [
+      "successful tool process exit",
+      "zero failures/errors/skips and zero sanitizer errors/hazards",
+      "identical fixture test-case IDs and source hashes",
+      "identical runtime commits/source content and binary hashes",
+      "identical sanitizer binary/package hashes"
+    ],
+    "parent_runner_changes_only": [
+      "tool order",
+      "checkpoint receipts",
+      "resource/time bounds"
+    ]
+  },
+  "orchestration_review": {
+    "status": "no_blocking_findings",
+    "scope": "Permutation-only tool order, unchanged all-three gate, per-tool durable receipt, scoped FP4 resource/time bounds",
+    "executable_validation": "CPU boundary guards passed; actual reordered workflow/checkpoint confirmed on Modal; no local tests"
+  },
+  "decision": "keep experimental opt-in; no speedup or serving promotion claim",
+  "qualification_scope": "H100 model-free FP4 storage/attention/allocation/graphs/streams/sanitizers plus descriptive paired Direct timing; no model or serving qualification",
+  "sources": {
+    "validated_parent": "8e9e3e93c0fc3dbea86b6e0ca145d34fecf80163",
+    "sglang": "98991169803f4ec0b1b2c3f369695dc62d0bf3ec",
+    "flashmla": "e274b715f49ab6c300f62e0d42c1cd627b8d1bb5"
+  },
+  "gates": {
+    "cpu_startup": "24 tests +15 subtests passed on Modal CPU",
+    "ordinary_correctness": "39 passed on each H100;49.86s/51.02s",
+    "memcheck": "34/34; zero errors;2736.45s",
+    "racecheck": "34/34; zero errors/warnings;1308.45s",
+    "synccheck": "34/34; zero errors;2022.15s",
+    "source_identity": "all runtime/fixture/source, binary, tool, precompile and34 case IDs match",
+    "timing": "20/20 cases;40 paths;1200 samples;actual captured outputs validated",
+    "review": "fresh-context source/artifact review passed; no blocking findings"
+  },
+  "allocation_source_run_id": "v41-fragments-20261025-attempt002",
+  "allocation_fixture": {
+    "byte_budget": 1073741824,
+    "layers": 40,
+    "compress_ratios": [
+      0,
+      0,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "global_source_layers": [
+      2,
+      8,
+      14,
+      20
+    ],
+    "context_len": 131072,
+    "window_size": 128,
+    "global_page_size": 256,
+    "max_running_requests": 8,
+    "chunked_prefill_size": 512,
+    "scope": "actual physical tensor storage + specified workspaces under a synthetic budget, not serving/SLO capacity"
+  },
+  "allocation_gain_percent": 21.957878315132607,
+  "theoretical_main_record_savings_percent": 22.22222222222222,
+  "cleanup": {
+    "allocations": "all three follow-up apps stopped; zero containers confirmed",
+    "retained": "canonical implementation/tests, one experiment README, JSON receipt and compact allocation/timing CSVs; hashed raw artifacts in existing Modal volume/cache",
+    "consolidated": "README chronology consolidated; full attempt history retained in JSON/Git",
+    "local_downloads": "owned temporary receipt downloads removed after summary commit; raw sources remain in the canonical volume",
+    "source_probes": "no temporary source runner/harness retained",
+    "unrelated_work": "original dirty checkout, other worktrees and v0.5.18 pins preserved",
+    "pushes": false
+  },
+  "next_step": "No required implementation, measurement or review gate remains. Performance tuning, H20-3e, C2-page timing, full-model quality and serving require separate scoped work.",
+  "commands": [
+    "MODAL_PROFILE=peroace360 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_VALIDATION_TIMEOUT_S=5400 modal run scripts/modal/kernels.py::validate_kernels --run-id v41-fragments-20261025-attempt001 --sanitizer --sanitizer-order memcheck,racecheck,synccheck --max-seconds 5340",
+    "MODAL_PROFILE=peroace360 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_VALIDATION_TIMEOUT_S=5400 modal run scripts/modal/kernels.py::validate_kernels --run-id v41-fragments-20261025-attempt002 --sanitizer --sanitizer-order synccheck,racecheck,memcheck --max-seconds 2640",
+    "MODAL_PROFILE=peroace360 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_VALIDATION_TIMEOUT_S=5400 modal run scripts/modal/kernels.py::benchmark_kernels --run-id v41-fragments-20261025-timing001 --suite v41-fp4-decode --qualification-runs v41-fragments-20261025-attempt001,v41-fragments-20261025-attempt002"
+  ],
+  "fragment_followup": {
+    "status": "passed_model_free_correctness_and_timing",
+    "baseline_parent": "cc0f82fa71126f466b53b24624ab1a6937cc3165",
+    "authorized_usd": 20,
+    "reserve_usd": 2,
+    "max_projected_work_usd": 18,
+    "accounts": {
+      "peroace360": {
+        "baseline_compute_usd": 13.73409128
+      }
+    },
+    "attempts": [
+      {
+        "run_id": "v41-fragments-20261025-attempt001",
+        "account": "peroace360",
+        "app_id": "ap-O7vfpyrZYul9Kgy8PWgQT3",
+        "raw_prefix": "microbench/v41-fragments-20261025-attempt001/validation/",
+        "result": {
+          "status": "failed",
+          "action": "validation",
+          "model_load": false,
+          "validation_suite": "v41-fp4",
+          "coverage": {
+            "validation": [
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]"
+            ],
+            "sanitizer": [
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks"
+            ]
+          },
+          "sanitizer": true,
+          "sanitizer_order": [
+            "memcheck",
+            "racecheck",
+            "synccheck"
+          ],
+          "sanitizer_results": {
+            "synccheck": {
+              "status": "not_run"
+            },
+            "racecheck": {
+              "status": "passed"
+            },
+            "memcheck": {
+              "status": "passed"
+            }
+          },
+          "sanitizer_tool": {
+            "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+            "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+            "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+            "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+            "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+          },
+          "gpu": "NVIDIA H100 80GB HBM3",
+          "loaded_extensions": [
+            "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so",
+            "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so"
+          ],
+          "platform_timeout_seconds": 5400,
+          "allocation": {
+            "direct_workspace_peak_bytes": 20492288,
+            "direct_workspace_case": "B8/S1/H128/K512 plus K64 SWA, page128",
+            "status": "passed",
+            "modes": [
+              {
+                "mode": "Native",
+                "groups": {
+                  "swa": 467251200,
+                  "global_kv": 472891392,
+                  "indexer": 111646208,
+                  "compressor_state": 270336
+                },
+                "prefill_workspace_bytes": 1048576,
+                "direct_workspace_bytes": 20492288,
+                "total_bytes": 1073600000,
+                "byte_budget": 1073741824,
+                "full_tokens": 656384,
+                "swa_tokens": 19712,
+                "reserved_page_bytes": 6346240
+              },
+              {
+                "mode": "Packed",
+                "groups": {
+                  "swa": 467251200,
+                  "global_kv": 448516096,
+                  "indexer": 136147968,
+                  "compressor_state": 270336
+                },
+                "prefill_workspace_bytes": 1048576,
+                "direct_workspace_bytes": 20492288,
+                "total_bytes": 1073726464,
+                "byte_budget": 1073741824,
+                "full_tokens": 800512,
+                "swa_tokens": 19712,
+                "reserved_page_bytes": 6280704
+              }
+            ],
+            "edges": [
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 0,
+                "storage_bytes": 73728
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 1,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 127,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 128,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 129,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 255,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 256,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 257,
+                "storage_bytes": 184320
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 0,
+                "storage_bytes": 73728
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 1,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 127,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 128,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 129,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 255,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 256,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 257,
+                "storage_bytes": 221184
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 0,
+                "storage_bytes": 57344
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 1,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 127,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 128,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 129,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 255,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 256,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 257,
+                "storage_bytes": 143360
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 0,
+                "storage_bytes": 57344
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 1,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 127,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 128,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 129,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 255,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 256,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 257,
+                "storage_bytes": 172032
+              }
+            ],
+            "scope": "model-free actual pool storage; no serving capacity claim",
+            "capacity_gain_percent": 21.957878315132607
+          },
+          "error": "KeyboardInterrupt()",
+          "gpu_function_seconds": 4205.984720726
+        },
+        "completed_tools": [
+          "memcheck",
+          "racecheck"
+        ],
+        "reason_stopped": "needed complete tool receipts saved; stop allocation before redundant/incomplete next tool; per-run gate remains failed",
+        "stopped_at": "2026-10-26T00:02:29+08:00",
+        "platform_timeout_seconds": 5400,
+        "inner_seconds": 5340,
+        "command": "MODAL_PROFILE=peroace360 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_VALIDATION_TIMEOUT_S=5400 modal run scripts/modal/kernels.py::validate_kernels --run-id v41-fragments-20261025-attempt001 --sanitizer --sanitizer-order memcheck,racecheck,synccheck --max-seconds 5340",
+        "artifact_sha256": {
+          "validation.log": "b3f7cf187e99e6b469a2ef555c0e86fd4e8a0de0c0999fe5269239676f4951fc",
+          "racecheck.xml": "b2bbe0cd2fd291d24b8fc126dcb9c837317ca8f2448513fa7b87bd9e1863189c",
+          "result.json": "9433c90aaf6b88276e6d1c72494d0160d85b75fe6153e6caf16266adba883aa1",
+          "synccheck.xml": "4c6c56ddf0458456d2ad0f99b1c2fed753a3365095b2a96f950e919a288ad17e",
+          "build-manifest.json": "d10e5a1a55f16423cfd59cad9ffd02b4eee7ae01ce636d8c5052e2acfdbd2f7c",
+          "memcheck.xml": "73f992635c19a38b381204634dede4681e069c3b578858556f962f9a723a9e3d",
+          "allocation.json": "6fcb6bf0cdf3f2b80337f731c0d2fd65f0d2144ee253553e4d3f24dc2e4798c0",
+          "memcheck.log": "d1f4910846fb955e4b67be2982a0db0613d78042e2ff44534da9e7241b11bff8",
+          "validation.xml": "f51ba11ee54238c8e37eaf26748deb52839110da01d71d2422b0696b9a3fadd4",
+          "racecheck.log": "f85606b29b3fadf2ed6de6812e381acc307efad66419dde2b0ac8fe81e31b906",
+          "synccheck.log": "cf9e14c0de194fc15f682e9e2c73469d899ad4f217b75ec8b93fd44cb1fa72d4",
+          "cpu-preflight/cpu-tests.log": "f7ff464b3484c497ed33c74bcd8cf9a78ca6a6d6ef161ad1fdd9f443fcd111c8",
+          "cpu-preflight/cpu-tests.xml": "3009dead9c81627e76ce5694ef69ac1f1e51608c26bddfa7f65198b4367d994c",
+          "cpu-preflight/fp4-precompile.log": "d33a945f1bf85e63ebc2dc3318c143e3652ffd88461dc44c6ef20dfb8941b880"
+        },
+        "incomplete_synccheck": {
+          "completed_cases": 7,
+          "interrupted": true,
+          "qualified": false
+        }
+      },
+      {
+        "run_id": "v41-fragments-20261025-attempt002",
+        "account": "peroace360",
+        "app_id": "ap-7T0fHCJBB3k79WPnInL0mm",
+        "raw_prefix": "microbench/v41-fragments-20261025-attempt002/validation/",
+        "result": {
+          "status": "failed",
+          "action": "validation",
+          "model_load": false,
+          "validation_suite": "v41-fp4",
+          "coverage": {
+            "validation": [
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]"
+            ],
+            "sanitizer": [
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks"
+            ]
+          },
+          "sanitizer": true,
+          "sanitizer_order": [
+            "synccheck",
+            "racecheck",
+            "memcheck"
+          ],
+          "sanitizer_results": {
+            "synccheck": {
+              "status": "passed"
+            },
+            "racecheck": {
+              "status": "not_run"
+            },
+            "memcheck": {
+              "status": "not_run"
+            }
+          },
+          "sanitizer_tool": {
+            "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+            "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+            "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+            "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+            "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+          },
+          "gpu": "NVIDIA H100 80GB HBM3",
+          "loaded_extensions": [
+            "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so",
+            "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so"
+          ],
+          "platform_timeout_seconds": 5400,
+          "allocation": {
+            "direct_workspace_peak_bytes": 20492288,
+            "direct_workspace_case": "B8/S1/H128/K512 plus K64 SWA, page128",
+            "status": "passed",
+            "modes": [
+              {
+                "mode": "Native",
+                "groups": {
+                  "swa": 467251200,
+                  "global_kv": 472891392,
+                  "indexer": 111646208,
+                  "compressor_state": 270336
+                },
+                "prefill_workspace_bytes": 1048576,
+                "direct_workspace_bytes": 20492288,
+                "total_bytes": 1073600000,
+                "byte_budget": 1073741824,
+                "full_tokens": 656384,
+                "swa_tokens": 19712,
+                "reserved_page_bytes": 6346240
+              },
+              {
+                "mode": "Packed",
+                "groups": {
+                  "swa": 467251200,
+                  "global_kv": 448516096,
+                  "indexer": 136147968,
+                  "compressor_state": 270336
+                },
+                "prefill_workspace_bytes": 1048576,
+                "direct_workspace_bytes": 20492288,
+                "total_bytes": 1073726464,
+                "byte_budget": 1073741824,
+                "full_tokens": 800512,
+                "swa_tokens": 19712,
+                "reserved_page_bytes": 6280704
+              }
+            ],
+            "edges": [
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 0,
+                "storage_bytes": 73728
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 1,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 127,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 128,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 129,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 255,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 256,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 257,
+                "storage_bytes": 184320
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 0,
+                "storage_bytes": 73728
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 1,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 127,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 128,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 129,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 255,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 256,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 257,
+                "storage_bytes": 221184
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 0,
+                "storage_bytes": 57344
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 1,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 127,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 128,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 129,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 255,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 256,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 257,
+                "storage_bytes": 143360
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 0,
+                "storage_bytes": 57344
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 1,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 127,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 128,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 129,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 255,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 256,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 257,
+                "storage_bytes": 172032
+              }
+            ],
+            "scope": "model-free actual pool storage; no serving capacity claim",
+            "capacity_gain_percent": 21.957878315132607
+          },
+          "error": "KeyboardInterrupt()",
+          "gpu_function_seconds": 2154.050413369
+        },
+        "completed_tools": [
+          "synccheck"
+        ],
+        "reason_stopped": "needed complete tool receipts saved; stop allocation before redundant/incomplete next tool; per-run gate remains failed",
+        "stopped_at": "2026-10-26T00:41:51+08:00",
+        "platform_timeout_seconds": 5400,
+        "inner_seconds": 2640,
+        "command": "MODAL_PROFILE=peroace360 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_VALIDATION_TIMEOUT_S=5400 modal run scripts/modal/kernels.py::validate_kernels --run-id v41-fragments-20261025-attempt002 --sanitizer --sanitizer-order synccheck,racecheck,memcheck --max-seconds 2640",
+        "artifact_sha256": {
+          "validation.log": "acc9d5d6ac9dfc57229ff8a2c217a04899567bf6f9a57b44bcfbfec2397b6dbd",
+          "result.json": "ee458cc4bfd2e296aadc37870e03cde699b7fce1220bee2c02f040ec74e3619d",
+          "synccheck.xml": "c2a35784d109b0ac80e414113610018e963c19f15fcc0d89714ad2ccfaeb172c",
+          "build-manifest.json": "d10e5a1a55f16423cfd59cad9ffd02b4eee7ae01ce636d8c5052e2acfdbd2f7c",
+          "allocation.json": "6fcb6bf0cdf3f2b80337f731c0d2fd65f0d2144ee253553e4d3f24dc2e4798c0",
+          "validation.xml": "ee01200887d5492e066b2fcfb02fa7de7c62e32704f90cd5844fdb39e2528c0d",
+          "synccheck.log": "bc2e6dc5b71e591d8a67a324737cb254c2703e86e0fbc16890e0b380b8079cf1"
+        }
+      }
+    ],
+    "source_review": {
+      "status": "no blocking findings",
+      "graph_output_check": "captured outputs checked after capture and all paired rounds",
+      "executable_checks": false
+    },
+    "sources": {
+      "sglang": "98991169803f4ec0b1b2c3f369695dc62d0bf3ec",
+      "flashmla": "e274b715f49ab6c300f62e0d42c1cd627b8d1bb5"
+    },
+    "planned_initial_run": {
+      "id": "v41-fragments-20261025-attempt001",
+      "account": "peroace360",
+      "gpu_timeout_seconds": 5400,
+      "inner_seconds": 5340,
+      "sanitizer_order": [
+        "memcheck",
+        "racecheck",
+        "synccheck"
+      ],
+      "projected_gpu_compute_usd": 6.2589,
+      "total_initial_projection_cap_usd": 8.5
+    },
+    "decision": "keep experimental opt-in; no speedup or serving promotion claim",
+    "validated_parent": "8e9e3e93c0fc3dbea86b6e0ca145d34fecf80163",
+    "validation_suite": "v41-fp4",
+    "timing_suite": "v41-fp4-decode",
+    "protocol": "remnant-v41-fp4-decode-v1",
+    "environment": {
+      "device": "NVIDIA H100 80GB HBM3",
+      "capability": [
+        9,
+        0
+      ],
+      "python": "3.12.15 (main, Oct 14 2026, 01:05:27) [Clang 23.1.3 ]",
+      "torch": "2.14.1+cu130",
+      "cuda": "13.0",
+      "triton": "3.8.0",
+      "tvm_ffi": "0.1.11"
+    },
+    "source_content_hashes": {
+      "sglang": "75b8d70ea638cd53779d728cefa51bf4fe175f5d07951426a5a6da66a41a56b2",
+      "flashmla": "e221865cce8ebf12fd090155242b462bebac8384a27aed17e6778e2785fbdbe2"
+    },
+    "binaries": {
+      "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so": "dd32f856f845495e4f6940a89f386ad050126dd62f132a0af144a60658123d56",
+      "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so": "dc8206fba219596acf73c47352b6c0b3e387b871250e00cfef4c8f0c2a224005",
+      "/opt/remnant-native-store.so": "509edf30ceba9039b384e936758f4dd5b23ba4339fddb570320151400a868f3c"
+    },
+    "tool": {
+      "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+      "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+      "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+      "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+      "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+    },
+    "all_task_allocations_stopped": true,
+    "latest_compute_usd": 21.53927724,
+    "incremental_compute_usd": 7.80518596,
+    "billing_lag": true,
+    "remaining_projected_work_usd": 10.19481404,
+    "network_egress_increment_usd": 1.6490000000000013e-05,
+    "storage_cost_unchanged": true,
+    "resource_audit": {
+      "execution": "temporary CPU-only sizeof query on the existing Modal preflight worker; compiled for sm90a; probe removed afterward",
+      "shared_memory_bytes": {
+        "native_h64": 208896,
+        "packed_h64": 225280,
+        "native_h128": 208896,
+        "packed_h128": 225280
+      },
+      "command": "modal container exec ta-01M5SR9C0DXVG4BBWJJX08JKAR -- python3 -c <temporary nvcc -std=c++17 -arch=sm_90a sizeof query>",
+      "expression": "sizeof(sm90::decode::sparse::KernelTemplate<ModelType::V4,H,false,F>::SharedMemoryPlan), H in {64,128}, F in {1,2}",
+      "includes": [
+        "kernels/sm90/decode/sparse/config.h"
+      ],
+      "local_executable_checks": false
+    },
+    "review": {
+      "status": "passed; no blocking findings",
+      "resolved": "actual captured graph outputs now checked after capture and all timing rounds; dropped coordinates skip scale multiply",
+      "local_tests_run": false,
+      "reviewer": "fresh-context fragment_final_review",
+      "scope": [
+        "numerical nibble/rank/scale reconstruction and invalid rows",
+        "CUDA scratch ownership, synchronization and shared-memory geometry",
+        "source/binary/fixture identities across all receipts",
+        "strict sanitizer matrix completeness and clean exits",
+        "captured outputs, complete measured paths and all 20 timing cases",
+        "independent recomputation of reported latency ratios"
+      ],
+      "findings": []
+    },
+    "timing": {
+      "run_id": "v41-fragments-20261025-timing001",
+      "app_id": "ap-B4698ifvkhZeOfsG4dqZTB",
+      "raw_prefix": "microbench/v41-fragments-20261025-timing001/timing/",
+      "result": {
+        "status": "passed",
+        "action": "timing",
+        "model_load": false,
+        "qualification": {
+          "receipts": {
+            "v41-fragments-20261025-attempt001": "9433c90aaf6b88276e6d1c72494d0160d85b75fe6153e6caf16266adba883aa1",
+            "v41-fragments-20261025-attempt002": "ee458cc4bfd2e296aadc37870e03cde699b7fce1220bee2c02f040ec74e3619d"
+          },
+          "tools": [
+            "memcheck",
+            "racecheck",
+            "synccheck"
+          ],
+          "case_count_per_tool": 34
+        },
+        "command": [
+          "/opt/sglang/bin/python",
+          "/sgl-workspace/sglang-remnant/benchmark/remnant/microbench.py",
+          "--native-library",
+          "/opt/remnant-native-store.so",
+          "--suite",
+          "v41-fp4-decode",
+          "--output",
+          "/results/microbench/v41-fragments-20261025-timing001/timing/timing"
+        ],
+        "suite": "v41-fp4-decode",
+        "gpu_function_seconds": 74.137199976
+      },
+      "stopped_at": "2026-10-26T00:46:58+08:00",
+      "command": "MODAL_PROFILE=peroace360 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_VALIDATION_TIMEOUT_S=5400 modal run scripts/modal/kernels.py::benchmark_kernels --run-id v41-fragments-20261025-timing001 --suite v41-fp4-decode --qualification-runs v41-fragments-20261025-attempt001,v41-fragments-20261025-attempt002",
+      "cases": [
+        {
+          "case": "v41_h64_b8_k512_swa64_p64_g256",
+          "heads": 64,
+          "batch": 8,
+          "swa_length": 64,
+          "swa_page_size": 64,
+          "global_page_size": 256,
+          "native_mean_us": 72.00014940897624,
+          "packed_direct_mean_us": 72.31304502487183,
+          "native_median_us": 71.8891191482544,
+          "packed_direct_median_us": 72.20655918121338,
+          "native_p95_us": 72.26870274543762,
+          "packed_direct_p95_us": 72.5939667224884,
+          "direct_over_native": 1.0043457634249933,
+          "latency_change_percent": 0.43457634249932653,
+          "paired_round_mean_ratio": 1.004346062006724,
+          "samples_per_path": 30,
+          "valid": true,
+          "common_inputs_sha256": "438c267099070b7ce7707adbec94fa275e15fd6c84fbdb76f1853829b9e9af7e"
+        },
+        {
+          "case": "v41_h64_b16_k512_swa64_p64_g256",
+          "heads": 64,
+          "batch": 16,
+          "swa_length": 64,
+          "swa_page_size": 64,
+          "global_page_size": 256,
+          "native_mean_us": 99.8168420791626,
+          "packed_direct_mean_us": 101.79414367675783,
+          "native_median_us": 99.57823753356934,
+          "packed_direct_median_us": 101.60624027252196,
+          "native_p95_us": 101.04887628555298,
+          "packed_direct_p95_us": 103.04370927810669,
+          "direct_over_native": 1.0198092982748048,
+          "latency_change_percent": 1.980929827480482,
+          "paired_round_mean_ratio": 1.019811957307399,
+          "samples_per_path": 30,
+          "valid": true,
+          "common_inputs_sha256": "6d990c28697063972fb50f9db9fe9d919f4f9074aa20ab60cdd059e473f572d9"
+        },
+        {
+          "case": "v41_h64_b24_k512_swa64_p64_g256",
+          "heads": 64,
+          "batch": 24,
+          "swa_length": 64,
+          "swa_page_size": 64,
+          "global_page_size": 256,
+          "native_mean_us": 128.4171625773112,
+          "packed_direct_mean_us": 132.41718324025473,
+          "native_median_us": 128.20047855377197,
+          "packed_direct_median_us": 132.18639850616455,
+          "native_p95_us": 130.0043044090271,
+          "packed_direct_p95_us": 133.88892650604248,
+          "direct_over_native": 1.031148645419847,
+          "latency_change_percent": 3.1148645419847076,
+          "paired_round_mean_ratio": 1.0311543174914137,
+          "samples_per_path": 30,
+          "valid": true,
+          "common_inputs_sha256": "43c63ec0dde4f2e1fe32f73db8d4a7d7a60fe91097701ef5ab0fdcde5c02f5c1"
+        },
+        {
+          "case": "v41_h64_b28_k512_swa64_p64_g256",
+          "heads": 64,
+          "batch": 28,
+          "swa_length": 64,
+          "swa_page_size": 64,
+          "global_page_size": 256,
+          "native_mean_us": 129.60462951660156,
+          "packed_direct_mean_us": 133.34628327687582,
+          "native_median_us": 129.33519840240476,
+          "packed_direct_median_us": 133.05696010589602,
+          "native_p95_us": 131.06660842895508,
+          "packed_direct_p95_us": 134.8029599189758,
+          "direct_over_native": 1.0288697539141143,
+          "latency_change_percent": 2.8869753914114282,
+          "paired_round_mean_ratio": 1.028878005207332,
+          "samples_per_path": 30,
+          "valid": true,
+          "common_inputs_sha256": "20032501ef48ce1e0437e9ef8108048a998f595d13353196c84c580697c9f30b"
+        },
+        {
+          "case": "v41_h64_b32_k512_swa64_p64_g256",
+          "heads": 64,
+          "batch": 32,
+          "swa_length": 64,
+          "swa_page_size": 64,
+          "global_page_size": 256,
+          "native_mean_us": 158.76998329162598,
+          "packed_direct_mean_us": 163.73006884257,
+          "native_median_us": 158.5207986831665,
+          "packed_direct_median_us": 163.4779167175293,
+          "native_p95_us": 161.18960285186768,
+          "packed_direct_p95_us": 165.82665729522705,
+          "direct_over_native": 1.0312407008435178,
+          "latency_change_percent": 3.124070084351782,
+          "paired_round_mean_ratio": 1.031252167455841,
+          "samples_per_path": 30,
+          "valid": true,
+          "common_inputs_sha256": "bb4aed143c934686d7cd468f40ca6d9bc98e35ffe2aa3212376545ee6cc5d904"
+        },
+        {
+          "case": "v41_h128_b8_k512_swa64_p64_g256",
+          "heads": 128,
+          "batch": 8,
+          "swa_length": 64,
+          "swa_page_size": 64,
+          "global_page_size": 256,
+          "native_mean_us": 56.21300252278646,
+          "packed_direct_mean_us": 57.55003722508748,
+          "native_median_us": 56.248319149017334,
+          "packed_direct_median_us": 57.595200538635254,
+          "native_p95_us": 56.29848003387451,
+          "packed_direct_p95_us": 57.66547083854675,
+          "direct_over_native": 1.0237851500951056,
+          "latency_change_percent": 2.3785150095105623,
+          "paired_round_mean_ratio": 1.0237851600837866,
+          "samples_per_path": 30,
+          "valid": true,
+          "common_inputs_sha256": "9691893db079054de50b8ec2427583e9b725a454757f50398f57bfefa2e71cf3"
+        },
+        {
+          "case": "v41_h128_b16_k512_swa64_p64_g256",
+          "heads": 128,
+          "batch": 16,
+          "swa_length": 64,
+          "swa_page_size": 64,
+          "global_page_size": 256,
+          "native_mean_us": 80.46540816624959,
+          "packed_direct_mean_us": 83.16634591420491,
+          "native_median_us": 80.19295692443848,
+          "packed_direct_median_us": 82.88640022277832,
+          "native_p95_us": 81.5505599975586,
+          "packed_direct_p95_us": 84.14890909194946,
+          "direct_over_native": 1.0335664456256148,
+          "latency_change_percent": 3.356644562561484,
+          "paired_round_mean_ratio": 1.033572160274069,
+          "samples_per_path": 30,
+          "valid": true,
+          "common_inputs_sha256": "12e6cdcc45a9459bf0ea8044fbc0f23d43d1c7063545c1a69353b1529c15cc64"
+        },
+        {
+          "case": "v41_h128_b24_k512_swa64_p64_g256",
+          "heads": 128,
+          "batch": 24,
+          "swa_length": 64,
+          "swa_page_size": 64,
+          "global_page_size": 256,
+          "native_mean_us": 92.96443716684976,
+          "packed_direct_mean_us": 96.77981853485107,
+          "native_median_us": 92.6097583770752,
+          "packed_direct_median_us": 96.38303756713867,
+          "native_p95_us": 94.61009645462036,
+          "packed_direct_p95_us": 98.4386730194092,
+          "direct_over_native": 1.0410413001388217,
+          "latency_change_percent": 4.104130013882168,
+          "paired_round_mean_ratio": 1.0410472168320901,
+          "samples_per_path": 30,
+          "valid": true,
+          "common_inputs_sha256": "876fc996935a6377783965f783da52bdf485e81746bdc7c9c2166d0e4b2adf61"
+        },
+        {
+          "case": "v41_h128_b28_k512_swa64_p64_g256",
+          "heads": 128,
+          "batch": 28,
+          "swa_length": 64,
+          "swa_page_size": 64,
+          "global_page_size": 256,
+          "native_mean_us": 95.53621355692546,
+          "packed_direct_mean_us": 100.29319445292155,
+          "native_median_us": 95.25839805603027,
+          "packed_direct_median_us": 100.01455783843993,
+          "native_p95_us": 96.64025592803955,
+          "packed_direct_p95_us": 101.35146808624268,
+          "direct_over_native": 1.0497924370130247,
+          "latency_change_percent": 4.9792437013024715,
+          "paired_round_mean_ratio": 1.0497959361587315,
+          "samples_per_path": 30,
+          "valid": true,
+          "common_inputs_sha256": "0b308d2126d0177bdc2b093c4a7b7cca4d721ed0d30c3a5258de9499213e6b02"
+        },
+        {
+          "case": "v41_h128_b32_k512_swa64_p64_g256",
+          "heads": 128,
+          "batch": 32,
+          "swa_length": 64,
+          "swa_page_size": 64,
+          "global_page_size": 256,
+          "native_mean_us": 133.008895556132,
+          "packed_direct_mean_us": 133.85953044891357,
+          "native_median_us": 132.95007705688477,
+          "packed_direct_median_us": 133.7388801574707,
+          "native_p95_us": 133.92972421646118,
+          "packed_direct_p95_us": 134.59230375289917,
+          "direct_over_native": 1.0063953233295033,
+          "latency_change_percent": 0.6395323329503322,
+          "paired_round_mean_ratio": 1.006399553516839,
+          "samples_per_path": 30,
+          "valid": true,
+          "common_inputs_sha256": "8f65ccd09522cb1c9f4aabc672fc14662504728a4239f9754eac48cd6d980c7f"
+        },
+        {
+          "case": "v41_h64_b8_k512_swa128_p128_g256",
+          "heads": 64,
+          "batch": 8,
+          "swa_length": 128,
+          "swa_page_size": 128,
+          "global_page_size": 256,
+          "native_mean_us": 72.4280424118042,
+          "packed_direct_mean_us": 72.32218710581462,
+          "native_median_us": 72.39055871963501,
+          "packed_direct_median_us": 72.23488092422487,
+          "native_p95_us": 72.76311874389648,
+          "packed_direct_p95_us": 72.62428998947144,
+          "direct_over_native": 0.9985384762246131,
+          "latency_change_percent": -0.1461523775386886,
+          "paired_round_mean_ratio": 0.9985398601682927,
+          "samples_per_path": 30,
+          "valid": true,
+          "common_inputs_sha256": "806dc0455d9a61a2df3aa6a31be620d48f21752353ce50f027416f9b36145151"
+        },
+        {
+          "case": "v41_h64_b16_k512_swa128_p128_g256",
+          "heads": 64,
+          "batch": 16,
+          "swa_length": 128,
+          "swa_page_size": 128,
+          "global_page_size": 256,
+          "native_mean_us": 102.5668478012085,
+          "packed_direct_mean_us": 103.42866071065266,
+          "native_median_us": 102.30624198913574,
+          "packed_direct_median_us": 103.52831840515137,
+          "native_p95_us": 104.20487928390503,
+          "packed_direct_p95_us": 105.07974195480348,
+          "direct_over_native": 1.008402450966559,
+          "latency_change_percent": 0.8402450966559005,
+          "paired_round_mean_ratio": 1.0084185672748993,
+          "samples_per_path": 30,
+          "valid": true,
+          "common_inputs_sha256": "a5056667396f0773703ed35350a7ac621ac3d53234512057452dcb31ec9b794c"
+        },
+        {
+          "case": "v41_h64_b24_k512_swa128_p128_g256",
+          "heads": 64,
+          "batch": 24,
+          "swa_length": 128,
+          "swa_page_size": 128,
+          "global_page_size": 256,
+          "native_mean_us": 129.82434209187826,
+          "packed_direct_mean_us": 133.06867281595865,
+          "native_median_us": 129.3168020248413,
+          "packed_direct_median_us": 132.57920265197754,
+          "native_p95_us": 132.48609685897827,
+          "packed_direct_p95_us": 135.64617681503296,
+          "direct_over_native": 1.0249901572525155,
+          "latency_change_percent": 2.499015725251552,
+          "paired_round_mean_ratio": 1.025002331489768,
+          "samples_per_path": 30,
+          "valid": true,
+          "common_inputs_sha256": "4fc94c5218caf7d288adeffd6202beac0d364d0635aea6767342b1db47f589a3"
+        },
+        {
+          "case": "v41_h64_b28_k512_swa128_p128_g256",
+          "heads": 64,
+          "batch": 28,
+          "swa_length": 128,
+          "swa_page_size": 128,
+          "global_page_size": 256,
+          "native_mean_us": 159.67634137471518,
+          "packed_direct_mean_us": 166.54805374145508,
+          "native_median_us": 159.4488000869751,
+          "packed_direct_median_us": 166.4180850982666,
+          "native_p95_us": 161.6552333831787,
+          "packed_direct_p95_us": 168.17502880096436,
+          "direct_over_native": 1.0430352568676027,
+          "latency_change_percent": 4.303525686760268,
+          "paired_round_mean_ratio": 1.0430456739666363,
+          "samples_per_path": 30,
+          "valid": true,
+          "common_inputs_sha256": "2cb543d644b2dbb3b9d904a79623e04fcf328f40af65e0ec8a6d08a529ee24c9"
+        },
+        {
+          "case": "v41_h64_b32_k512_swa128_p128_g256",
+          "heads": 64,
+          "batch": 32,
+          "swa_length": 128,
+          "swa_page_size": 128,
+          "global_page_size": 256,
+          "native_mean_us": 159.0664955774943,
+          "packed_direct_mean_us": 165.44183603922528,
+          "native_median_us": 158.60191822052002,
+          "packed_direct_median_us": 165.0990390777588,
+          "native_p95_us": 162.104416847229,
+          "packed_direct_p95_us": 167.7744550704956,
+          "direct_over_native": 1.0400797191048006,
+          "latency_change_percent": 4.007971910480057,
+          "paired_round_mean_ratio": 1.0401006154535852,
+          "samples_per_path": 30,
+          "valid": true,
+          "common_inputs_sha256": "43521fded1bb7a161d78aae8377377fb454622886af110166a8531f7ca2e9a06"
+        },
+        {
+          "case": "v41_h128_b8_k512_swa128_p128_g256",
+          "heads": 128,
+          "batch": 8,
+          "swa_length": 128,
+          "swa_page_size": 128,
+          "global_page_size": 256,
+          "native_mean_us": 56.715903759002686,
+          "packed_direct_mean_us": 57.64477841059367,
+          "native_median_us": 56.661601066589355,
+          "packed_direct_median_us": 57.528958320617676,
+          "native_p95_us": 57.290766954422,
+          "packed_direct_p95_us": 58.2445433139801,
+          "direct_over_native": 1.0163776752203044,
+          "latency_change_percent": 1.6377675220304422,
+          "paired_round_mean_ratio": 1.0163791016381436,
+          "samples_per_path": 30,
+          "valid": true,
+          "common_inputs_sha256": "21610aaaa7fbbe5eb5576582e5f120beb1ca47863bb4cf75169bfc955d191c1f"
+        },
+        {
+          "case": "v41_h128_b16_k512_swa128_p128_g256",
+          "heads": 128,
+          "batch": 16,
+          "swa_length": 128,
+          "swa_page_size": 128,
+          "global_page_size": 256,
+          "native_mean_us": 80.4323091506958,
+          "packed_direct_mean_us": 83.85431480407715,
+          "native_median_us": 80.06016254425049,
+          "packed_direct_median_us": 83.34943771362305,
+          "native_p95_us": 81.69054174423218,
+          "packed_direct_p95_us": 85.1683874130249,
+          "direct_over_native": 1.0425451623795852,
+          "latency_change_percent": 4.254516237958517,
+          "paired_round_mean_ratio": 1.042547668571601,
+          "samples_per_path": 30,
+          "valid": true,
+          "common_inputs_sha256": "fabb0ca7071631d5ea5848cc39e302d3fc2ca536bc93882743bbf83f92558d96"
+        },
+        {
+          "case": "v41_h128_b24_k512_swa128_p128_g256",
+          "heads": 128,
+          "batch": 24,
+          "swa_length": 128,
+          "swa_page_size": 128,
+          "global_page_size": 256,
+          "native_mean_us": 83.77408059438069,
+          "packed_direct_mean_us": 86.4479570388794,
+          "native_median_us": 83.51263999938965,
+          "packed_direct_median_us": 86.12864017486572,
+          "native_p95_us": 85.12427425384523,
+          "packed_direct_p95_us": 87.94843053817749,
+          "direct_over_native": 1.0319177056379183,
+          "latency_change_percent": 3.191770563791829,
+          "paired_round_mean_ratio": 1.0319214528316403,
+          "samples_per_path": 30,
+          "valid": true,
+          "common_inputs_sha256": "8e0d6b1c0daafe82be406adc9996ee2e7033e75558b31c0908c7325a868acb3d"
+        },
+        {
+          "case": "v41_h128_b28_k512_swa128_p128_g256",
+          "heads": 128,
+          "batch": 28,
+          "swa_length": 128,
+          "swa_page_size": 128,
+          "global_page_size": 256,
+          "native_mean_us": 99.84115219116211,
+          "packed_direct_mean_us": 100.1230074564616,
+          "native_median_us": 99.55663681030273,
+          "packed_direct_median_us": 99.7273588180542,
+          "native_p95_us": 101.36771392822266,
+          "packed_direct_p95_us": 101.82694149017334,
+          "direct_over_native": 1.0028230369853888,
+          "latency_change_percent": 0.28230369853887716,
+          "paired_round_mean_ratio": 1.0028272521397479,
+          "samples_per_path": 30,
+          "valid": true,
+          "common_inputs_sha256": "fe48bac26655be7fee88f1523f1965957b6cba8ab10503dbc929410869499df3"
+        },
+        {
+          "case": "v41_h128_b32_k512_swa128_p128_g256",
+          "heads": 128,
+          "batch": 32,
+          "swa_length": 128,
+          "swa_page_size": 128,
+          "global_page_size": 256,
+          "native_mean_us": 141.39335378011066,
+          "packed_direct_mean_us": 148.51672490437826,
+          "native_median_us": 140.98544120788574,
+          "packed_direct_median_us": 148.06496143341064,
+          "native_p95_us": 143.54615879058838,
+          "packed_direct_p95_us": 150.78411054611203,
+          "direct_over_native": 1.050379815838767,
+          "latency_change_percent": 5.037981583876694,
+          "paired_round_mean_ratio": 1.0503799644760337,
+          "samples_per_path": 30,
+          "valid": true,
+          "common_inputs_sha256": "619efcc8a68694ea39b7f8e7d9b5d3ea1906db50646e95caf50d94b068f0b33f"
+        }
+      ],
+      "aggregates_by_swa": {
+        "64": {
+          "cases": 10,
+          "geomean_direct_over_native": 1.026911737169067,
+          "latency_change_percent": 2.691173716906703
+        },
+        "128": {
+          "cases": 10,
+          "geomean_direct_over_native": 1.0257581438949257,
+          "latency_change_percent": 2.57581438949257
+        }
+      },
+      "raw_sample_count": 1200,
+      "graph_replays_per_sample": 100,
+      "warmups": 10,
+      "paired_rounds": 30,
+      "seed": 20260919,
+      "p95_definition": "p95 of round-average CUDA graph replay times; not request latency",
+      "baseline": "fresh unpruned Native FP4, not historical V4 FP8 or pruned matched control",
+      "artifact_sha256": {
+        "timing.json": "f89b67f5a955c829301e36b3aa042fce3fcf254b38643924c04dd1299632452d",
+        "contract.log": "c91dad03511eb111dba9f317cdb7962c64ec389c7d259de488e167c78aac1b31",
+        "result.json": "5f2bba66e14c9d76e1b01327757175fdf70268e09d8d687fe6cc83401824b280",
+        "build-manifest.json": "d10e5a1a55f16423cfd59cad9ffd02b4eee7ae01ce636d8c5052e2acfdbd2f7c",
+        "timing.csv": "454441ec89c1feaeda92213addfbb7cf5b556a81a063e8057be7ac2d447be495",
+        "contract.xml": "45ecc2df87604bb574cf0f0d1fb2790b80c10fd37ffb5160a1de2ec750b09d9a",
+        "timing.log": "fc6f71aa18d0bff84e1c3ef3207e1ecc44a5ec572f366871ae30364a15bcbd04"
+      },
+      "interpretation": "descriptive warm graph timings; no minimum speedup gate; no old-Packed-versus-new-Packed measurement"
+    },
+    "gates": {
+      "cpu_startup": "24 tests +15 subtests passed on Modal CPU",
+      "ordinary_correctness": "39 passed on each H100;49.86s/51.02s",
+      "memcheck": "34/34; zero errors;2736.45s",
+      "racecheck": "34/34; zero errors/warnings;1308.45s",
+      "synccheck": "34/34; zero errors;2022.15s",
+      "source_identity": "all runtime/fixture/source, binary, tool, precompile and34 case IDs match",
+      "timing": "20/20 cases;40 paths;1200 samples;actual captured outputs validated",
+      "review": "fresh-context source/artifact review passed; no blocking findings"
+    },
+    "cleanup": {
+      "retained": "canonical fork implementation/tests and existing maintained runners; one experiment README and JSON receipt, compact allocation/timing CSVs; raw reports on existing Modal volume",
+      "temporary_downloads": "owned temporary receipt copies removed after summary commit; canonical raw reports retained on Modal volume",
+      "source_probes": "temporary Modal CPU resource probe removed; no extra harness retained",
+      "pushes": false,
+      "unrelated_work_preserved": true
+    }
+  },
+  "previous_candidate_qualification": {
+    "status": "unqualified",
+    "decision": "keep experimental opt-in candidate; no production promotion",
+    "sources": {
+      "baseline_parent": "9419d0e18e1e7677c0e48b8e40ad54bbc30010ca",
+      "baseline_sglang": "7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7",
+      "baseline_flashmla": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+      "validated_parent_attempt011": "8d4015af1d41ab6917258fde9df8bb5aa7c285f8",
+      "validated_parent_attempt012": "9ec5971da3e117691311e43680d2ff3e6b8d6885",
+      "sglang": "0a36a662562ff3aa98ebc5abca12dcc7cff83168",
+      "flashmla": "91463e004ec99762f39a173cd687f9ab98d3628d",
+      "cutlass": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+      "content_sha256": {
+        "sglang": "adb48a480f629df3829052687ff97041c065553724c4d813915806e97310028e",
+        "flashmla": "b4ee3971c86dc31a6b9c5427732684cd3b0d2dc4b8cbc286a4d4ea7a1ad794a7"
+      },
+      "binaries_sha256": {
+        "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so": "d400f3d40e3d51cae5f07310749306b874072b480f54e401db0212241f203cfe",
+        "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so": "8e7d6df0c41554882840948177b6a0802a6c635b5de0c81206da145be132355b",
+        "/opt/remnant-native-store.so": "509edf30ceba9039b384e936758f4dd5b23ba4339fddb570320151400a868f3c"
+      },
+      "binary_architectures": {
+        "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so": [
+          "sm_90"
+        ],
+        "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so": [
+          "sm_90a"
+        ],
+        "/opt/remnant-native-store.so": [
+          "sm_90a"
+        ]
+      },
+      "tool": {
+        "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+        "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+        "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+        "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+        "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+      },
+      "toolchain": {
+        "torch": "2.14.1+cu130",
+        "cuda": "13.0",
+        "nvcc": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:58:59_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0\n",
+        "driver": "610.57.04"
+      },
+      "attempt011_012_identical": {
+        "sources": true,
+        "binaries": true,
+        "sanitizer": true,
+        "coverage": true,
+        "fp4_precompile_artifacts": true
+      },
+      "completed_tool_case_ids_identical": true
+    },
+    "gates": {
+      "cpu_native_build_and_fp4_core_precompile": "passed on Modal CPU workers",
+      "cpu_startup": "23 tests + 15 subtests passed; order boundary guards passed",
+      "ordinary_correctness": "37 cases passed, including 4 graph/stream cases, allocation and 2 V4 regressions",
+      "synccheck": "passed 32/32, zero errors, attempt011",
+      "racecheck": "passed 32/32, zero errors/warnings, attempt012",
+      "memcheck": "incomplete 27/32; no clean summary/process exit; full rerun required",
+      "fresh_context_review": "no blocking findings; source-only review",
+      "overall": "unqualified"
+    },
+    "qualification_scope": "Synthetic H100/SM90 FP4 storage, attention, allocation and runtime engineering only",
+    "commands": {
+      "attempt011": "MODAL_PROFILE=wpooh1579 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_VALIDATION_TIMEOUT_S=2700 /Users/poohthewinnie/.local/bin/modal run scripts/modal/kernels.py::validate_kernels --run-id v41-fp4-20261025-attempt011 --sanitizer --max-seconds 2640",
+      "attempt012": "MODAL_PROFILE=wpooh1579 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_VALIDATION_TIMEOUT_S=4500 /Users/poohthewinnie/.local/bin/modal run scripts/modal/kernels.py::validate_kernels --run-id v41-fp4-20261025-attempt012 --sanitizer --sanitizer-order racecheck,memcheck,synccheck --max-seconds 4440"
+    },
+    "next_step": {
+      "entrypoint": "scripts/modal/kernels.py::validate_kernels",
+      "requirement": "new approved budget and enabled account before a full32-case memcheck rerun",
+      "order": "memcheck,synccheck,racecheck",
+      "reuse_policy": "only complete successful receipts with identical source/fixture/binary/tool identities and case IDs; otherwise requalify all gates",
+      "reason_stopped": "remaining work allowance is insufficient even for the observed interrupted41m46s memcheck plus required remaining cases and CPU preflight"
+    }
+  },
+  "historical_scalar_source_review": {
+    "kind": "fresh-context read-only source review",
+    "runtime_findings": [],
+    "fixture_findings": [
+      "add whole-pool/disjoint ownership checks",
+      "cover real C2 pending state and consumer dispatch",
+      "empty C2 scores use negative infinity",
+      "balance SWA/global values and require zero-global/zero-tail negative-control sensitivity"
+    ],
+    "fixture_findings_addressed": true,
+    "executable_validation": false
+  },
+  "historical_scalar_limitations": [
+    "Full strict32-case memcheck gate remains unqualified after workspace interruption.",
+    "No full-model loads, weights, serving, task-quality evaluation, performance profiling/benchmark or production promotion.",
+    "Supported Direct/prefill query-head fixtures are64/128 on SM90; other local head counts and distributed/runtime configurations are unqualified or rejected.",
+    "HiCache, distributed cache transfer, CP, speculative/DSpark and incompatible legacy overrides are deferred/rejected.",
+    "Added mocked Modal launcher unit tests were not run as a standalone local suite; CPU boundary guards and the live reordered workflow executed on Modal."
+  ],
+  "production_geometry_correction": {
+    "status": "superseded_by_swa_page_correction_no_gpu_timing",
+    "baseline_parent": "60e5bbe",
+    "baseline_sglang": "98991169803f4ec0b1b2c3f369695dc62d0bf3ec",
+    "unchanged_flashmla": "e274b715f49ab6c300f62e0d42c1cd627b8d1bb5",
+    "protocol": "remnant-v41-fp4-decode-v2",
+    "case_count": 10,
+    "query_heads": 64,
+    "kv_heads": 1,
+    "indexer_heads": 32,
+    "swa_length": 128,
+    "swa_page_size": 128,
+    "global_page_sizes": {
+      "C1": 256,
+      "C2": 128
+    },
+    "batches": [
+      8,
+      16,
+      24,
+      28,
+      32
+    ],
+    "query_length": 1,
+    "topk_length": 512,
+    "historical_v1_results_preserved": true,
+    "gpu_timing_run": false,
+    "limitations": [
+      "Synthetic batches; no serving-traffic or TP padding-value claim.",
+      "Historical v1 timings do not qualify v2; no new C2 timing exists.",
+      "No runtime/kernel change; correctness fixtures retain SWA64/H128 coverage."
+    ],
+    "source_sha256": {
+      "python/sglang/benchmark/remnant/cases.py": "77fd30211cf2b92a09d5139edf9fda4903267659b9d6c51351b61c9da8fb4571",
+      "benchmark/remnant/microbench.py": "1ecb2374668aea5c21e316e2fe6cf89b1dec164a3df4c25037c7ada1c2fdf7f2",
+      "benchmark/remnant/test_microbench.py": "21770732def98b57abc6b88b4a2b74cd8562646b7ef8055d95257c9e38ae1514"
+    },
+    "modal_cpu_test": {
+      "account": "peroace360",
+      "app_id": "ap-vTOOo7wo8VWRzuxlSPA0kn",
+      "base_image": "python:3.12-slim",
+      "image_id": "im-VqSQJWWMrtpbdbzBgw2Aum",
+      "cpu": 1,
+      "memory_mib": 1024,
+      "command_timeout_seconds": 120,
+      "projected_cost_cap_usd": 0.05,
+      "baseline_account_compute_usd": 21.42800725,
+      "tests": [
+        "test_v41_fp4_matrix_and_timing_gate",
+        "test_established_matrix_and_profile_coverage"
+      ],
+      "no_gpu": true,
+      "no_volumes": true,
+      "initial_attempt": {
+        "app_id": "ap-oZk7DOhHytWM0s13lQkWyG",
+        "status": "stopped_without_usable_test_report_not_qualified",
+        "start": "2026-10-26T14:27:06+08:00",
+        "stop": "2026-10-26T14:29:19+08:00",
+        "diagnosis": "CLI wraps --cmd with an additional bash/shlex quoting layer; retry used direct Sandbox argv and captured output. Initial attempt has no passing receipt."
+      },
+      "sandbox_id": "sb-VlwGIna0tur3OdjhBLKqsw",
+      "image_build_seconds": 3.23,
+      "pytest": "8.4.2",
+      "return_code": 0,
+      "stdout": ".. [100%]\n2 passed in 0.08s\n",
+      "stopped_at": "2026-10-26T14:31:16+08:00",
+      "argv": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "/work/benchmark/remnant/test_microbench.py::test_v41_fp4_matrix_and_timing_gate",
+        "/work/benchmark/remnant/test_microbench.py::test_established_matrix_and_profile_coverage"
+      ],
+      "latest_account_compute_usd": 21.43512718,
+      "reported_compute_delta_usd": 0.00711993,
+      "billing_settlement_pending": true,
+      "all_apps_stopped": true,
+      "container_count_after": 0,
+      "local_executable_checks": false,
+      "reproduction": "With MODAL_PROFILE=peroace360, use modal.Image.from_registry(\"python:3.12-slim\").pip_install(\"pytest==8.4.2\"), add_local_file the two existing source/test paths to matching /work/<relative-path>; inside modal.App(\"remnant-v41-production-contract\").run(), call modal.Sandbox.create(*argv, image=image, app=app, cpu=1, memory=1024, timeout=120, block_network=True), read stdout/stderr, wait/check returncode, and terminate(wait=True) in finally. No volumes or GPU."
+    },
+    "sglang": "a0f7ff18314c4349426d54f49a5a54a6a1f716ef"
+  },
+  "swa_page_correction": {
+    "status": "passed_modal_cpu_contracts_gpu_timing_not_run",
+    "baseline_parent": "c6c9f0f",
+    "sglang": "f5afebd90750e2de5ef18fe2094653c86c72841a",
+    "flashmla": "e274b715f49ab6c300f62e0d42c1cd627b8d1bb5",
+    "protocol": "remnant-v41-fp4-decode-v3",
+    "window": 128,
+    "swa_page_size": 256,
+    "source_anchor": "python/sglang/srt/mem_cache/kv_cache_configurator.py:1767-1769 requires paged SWA page256, passed into pool at1818",
+    "source_sha256": {
+      "python/sglang/benchmark/remnant/cases.py": "55a22487cac58825bac66b93d666a1cf2d994a12e2071c16ce17a1682f5864ae",
+      "benchmark/remnant/test_microbench.py": "80e29311f4ef8e0140b22ae8cfafa5d8cd983664db02944c6d597bcd593fbb84"
+    },
+    "modal_cpu_test": {
+      "account": "peroace360",
+      "app_id": "ap-c1tXzPaAYr6DRwi2B458Vm",
+      "sandbox_id": "sb-kzKEd6BWog8iG60p9Or1N2",
+      "cached_image": "im-VqSQJWWMrtpbdbzBgw2Aum",
+      "cpu": 1,
+      "memory_mib": 1024,
+      "timeout_seconds": 120,
+      "projected_cpu_work_cap_usd": 0.05,
+      "argv": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "/work/benchmark/remnant/test_microbench.py::test_v41_fp4_matrix_and_timing_gate",
+        "/work/benchmark/remnant/test_microbench.py::test_established_matrix_and_profile_coverage"
+      ],
+      "reproduction": "With MODAL_PROFILE=peroace360, use modal.Image.from_registry(\"python:3.12-slim\").pip_install(\"pytest==8.4.2\"), add_local_file the two existing source/test paths to matching /work/<relative-path>; inside modal.App(\"remnant-v41-production-contract\").run(), call modal.Sandbox.create(*argv, image=image, app=app, cpu=1, memory=1024, timeout=120, block_network=True), read stdout/stderr, wait/check returncode, and terminate(wait=True) in finally. No volumes or GPU.",
+      "stdout": ".. [100%]\n2 passed in 0.14s\n",
+      "return_code": 0,
+      "no_gpu": true,
+      "no_volumes": true,
+      "worker_network_blocked": true,
+      "pre_compute_usd": 21.43365249,
+      "post_compute_usd": 21.43365249,
+      "billing_settlement_pending": true,
+      "stopped_at": "2026-10-26T14:58:37+08:00",
+      "container_count_after": 0
+    },
+    "allocator_prediction_changed": false,
+    "historical_results_preserved": true,
+    "scope": "benchmark fixture/protocol correction only; runtime/kernel code unchanged; no native rebuild or GPU timing"
+  },
+  "review_fixes": {
+    "status": "passed_scoped_model_free_gates_and_production_geometry_timing",
+    "purpose": [
+      "Reject effective Q8KV8 prefill with explicit FP4 and retain one startup policy",
+      "Reject misaligned cache bases and page strides",
+      "Centralize FP4 layout contracts and reject ignored benchmark geometry",
+      "Reject failed sanitizer states and bind complete recorded runtime identity",
+      "Check timing receipts on Modal CPU before H100 scheduling"
+    ],
+    "sources": {
+      "parent_runner": "2707db9afb073e92046dbda60b18e36f98d11acb",
+      "sglang": "c4708870008528ea68ed783c68add708687d71fd",
+      "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159",
+      "baseline_parent": "af12dd9d068b4f87eedd88506da657787fd6c6d9"
+    },
+    "build_manifest": {
+      "validation_suite": "v41-fp4",
+      "coverage": {
+        "validation": [
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py",
+          "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+          "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]"
+        ],
+        "cpu": [
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_startup_contract",
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_backend_dispatch",
+          "test/registered/unit/test_dsv4_c4_cache_format.py",
+          "benchmark/remnant/test_microbench.py::test_v41_fp4_matrix_and_timing_gate"
+        ],
+        "sanitizer": [
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader",
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct",
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream",
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary",
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks"
+        ]
+      },
+      "integration": "v0.5.22",
+      "base_image": "lmsysorg/sglang:v0.5.22",
+      "sources": {
+        "sglang": "fc0ba855a2904e050fda3a1318e008e6bb114b2549cb06e15d69425e7670dde1",
+        "flashmla": "205ce698b75d7bc1e0ebc4472a8ca9dff27b428e6e25c7cea877eb2ff5b083ea"
+      },
+      "source_identities": {
+        "parent": {
+          "path": "/Users/poohthewinnie/.codex/worktrees/v41-packed-fp4/flash-optimizations",
+          "commit": "2707db9afb073e92046dbda60b18e36f98d11acb"
+        },
+        "sglang": {
+          "path": "/Users/poohthewinnie/.codex/worktrees/v41-packed-fp4/flash-optimizations/third_party/sglang-v0.5.22",
+          "expected_commit": "c4708870008528ea68ed783c68add708687d71fd",
+          "commit": "c4708870008528ea68ed783c68add708687d71fd",
+          "override": false,
+          "dirty": false,
+          "integration": "v0.5.22"
+        },
+        "flashmla/csrc/cutlass": {
+          "path": "/Users/poohthewinnie/.codex/worktrees/v41-packed-fp4/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+          "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "override": true,
+          "dirty": true,
+          "sha256": "2a0a58a442fff4a1d604d440e26845ab20bc5650739347e45f95abc7cbc6bd5d"
+        },
+        "flashmla": {
+          "path": "/Users/poohthewinnie/.codex/worktrees/v41-packed-fp4/flash-optimizations/third_party/flashmla-v0.5.22",
+          "expected_commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+          "commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+          "override": true,
+          "dirty": true,
+          "sha256": "6c00e7d3081743e75cf8ba34f6d7587d87916dcc7021de8ae2025b818238e857",
+          "integration": "v0.5.22"
+        }
+      },
+      "model_config": {
+        "revision": "7872f01b1d1fe23eabc4c98b48bffcef5a386062",
+        "sha256": "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023",
+        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731/resolve/7872f01b1d1fe23eabc4c98b48bffcef5a386062/config.json"
+      },
+      "torch": "2.14.1+cu130",
+      "cuda": "13.0",
+      "cuda_python": "13.0.3",
+      "cuda_bindings": "13.0.3",
+      "cuda_binding_requirements": [
+        {
+          "consumer": "cuda-bindings",
+          "requirement": "cuda-pathfinder~=1.1",
+          "installed": "1.8.3"
+        },
+        {
+          "consumer": "cuda-python",
+          "requirement": "cuda-bindings~=13.0.3",
+          "installed": "13.0.3"
+        },
+        {
+          "consumer": "cuda-python",
+          "requirement": "cuda-pathfinder~=1.1",
+          "installed": "1.8.3"
+        },
+        {
+          "consumer": "flashinfer-python",
+          "requirement": "cuda-python>=12.0",
+          "installed": "13.0.3"
+        },
+        {
+          "consumer": "humming-kernels",
+          "requirement": "cuda-bindings",
+          "installed": "13.0.3"
+        },
+        {
+          "consumer": "nvidia-cutlass-dsl-libs-base",
+          "requirement": "cuda-bindings>=12.8",
+          "installed": "13.0.3"
+        },
+        {
+          "consumer": "nvidia-cutlass-dsl-libs-core",
+          "requirement": "cuda-bindings>=12.8",
+          "installed": "13.0.3"
+        },
+        {
+          "consumer": "nvidia-cutlass-dsl-libs-cu12",
+          "requirement": "cuda-bindings>=12.8",
+          "installed": "13.0.3"
+        },
+        {
+          "consumer": "nvidia-cutlass-dsl-libs-cu13",
+          "requirement": "cuda-bindings>=12.8",
+          "installed": "13.0.3"
+        },
+        {
+          "consumer": "nvshmem4py-cu13",
+          "requirement": "cuda-python<14.0,>=13.0",
+          "installed": "13.0.3"
+        },
+        {
+          "consumer": "sglang",
+          "requirement": "cuda-python>=13.0",
+          "installed": "13.0.3"
+        },
+        {
+          "consumer": "torch",
+          "requirement": "cuda-bindings<14,>=13.0.3; platform_system == \"Linux\" and python_version < \"3.15\"",
+          "installed": "13.0.3"
+        }
+      ],
+      "sanitizer": {
+        "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+        "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+        "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+        "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+        "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+      },
+      "arch": "sm_90a",
+      "binary_architectures": {
+        "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so": [
+          "sm_90"
+        ],
+        "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so": [
+          "sm_90a"
+        ],
+        "/opt/remnant-native-store.so": [
+          "sm_90a"
+        ]
+      },
+      "fp4_precompile_artifacts": {
+        "/triton-cache/GN7IZJFWJDZPR6J7QZ7SQHCVS247VFU5RIMSVI667L63M3DGU3MQ/_store.source": "da2ee3eb1350b6896139d095e66a41c8c6f676231eea34223483887af566fd61",
+        "/triton-cache/GN7IZJFWJDZPR6J7QZ7SQHCVS247VFU5RIMSVI667L63M3DGU3MQ/_store.ttir": "198619171fe096953e0d3e730b3b48eb23ef10cceff2afa2048c383c5315498e",
+        "/triton-cache/GN7IZJFWJDZPR6J7QZ7SQHCVS247VFU5RIMSVI667L63M3DGU3MQ/_store.ttgir": "bd54fcea4b0460352f9f074f958bcfdf7a33328bdef88943f4fd502a14cd6f5b",
+        "/triton-cache/GN7IZJFWJDZPR6J7QZ7SQHCVS247VFU5RIMSVI667L63M3DGU3MQ/_store.llir": "b9fe35cd91b2618da24eaeaf11cce06d0210315d5ff5c42c40f15541d3b85abf",
+        "/triton-cache/GN7IZJFWJDZPR6J7QZ7SQHCVS247VFU5RIMSVI667L63M3DGU3MQ/_store.ptx": "14ec3429dc9f9e0dacd148914af063b64850950ff95399338b7a625e0d565187",
+        "/triton-cache/GN7IZJFWJDZPR6J7QZ7SQHCVS247VFU5RIMSVI667L63M3DGU3MQ/_store.cubin": "cbb097d8a37731c66da3d9ae9498982a346405568f882ccb1bab417546a5424e",
+        "/triton-cache/GN7IZJFWJDZPR6J7QZ7SQHCVS247VFU5RIMSVI667L63M3DGU3MQ/_store.json": "f340d4aaa2a55d12b7a6f0b7b5292ba23aba602e3c83e0f394eb6bdda30218eb",
+        "/triton-cache/GN7IZJFWJDZPR6J7QZ7SQHCVS247VFU5RIMSVI667L63M3DGU3MQ/__grp___store.json": "acd0632cdeed240b331e43b9a2ce8ce7478bda6937850ad2d3214993c873de19",
+        "/triton-cache/6E4SUWPYKPN6KAHEYAERYFNUQOABTUL7LSLDYWKTVB7OV7RRQPXQ/_store.source": "6c1ab148ec71c50613ad7f0b6648e2f4648fa2fe70a8a3c5afd464278baa2576",
+        "/triton-cache/6E4SUWPYKPN6KAHEYAERYFNUQOABTUL7LSLDYWKTVB7OV7RRQPXQ/_store.ttir": "af796ec179709d0e13ed1a694e82c5b5cf8210c265e45fb053ca1f913bcfa0d4",
+        "/triton-cache/6E4SUWPYKPN6KAHEYAERYFNUQOABTUL7LSLDYWKTVB7OV7RRQPXQ/_store.ttgir": "5da24adf7daac6f5a9181177fb643da0c4bb56d65df5b99d6aa5eae5b8269b15",
+        "/triton-cache/6E4SUWPYKPN6KAHEYAERYFNUQOABTUL7LSLDYWKTVB7OV7RRQPXQ/_store.llir": "7e305280b0c856bf38d51f75fcd3eefcb739099c739f505d7de432a0acf2b891",
+        "/triton-cache/6E4SUWPYKPN6KAHEYAERYFNUQOABTUL7LSLDYWKTVB7OV7RRQPXQ/_store.ptx": "57b876dad25aa97a064475b505dc64e6d36130140d9ff55a995e2406252ae7ea",
+        "/triton-cache/6E4SUWPYKPN6KAHEYAERYFNUQOABTUL7LSLDYWKTVB7OV7RRQPXQ/_store.cubin": "804b5a65d3e59d55a9fb30ec44004fc0cda8476089bac54dfda8922ae08e68ef",
+        "/triton-cache/6E4SUWPYKPN6KAHEYAERYFNUQOABTUL7LSLDYWKTVB7OV7RRQPXQ/_store.json": "a1f1b02523b9147840dad9a6bc096e00935957db46ad6fe1c31e0ad439d32fcc",
+        "/triton-cache/6E4SUWPYKPN6KAHEYAERYFNUQOABTUL7LSLDYWKTVB7OV7RRQPXQ/__grp___store.json": "38559f766789ec2166a9d9a2cc9c356792fce3d674b27c37cb5e64fe6c86ded7",
+        "/triton-cache/Y4HARMS7ZU2T7AVJ6CBVGQIVB7F2QMTQIJTACJRAOPGIWLGFYQIQ/_read.source": "37ee665b2b19ff015f827e3789f991a06e7555df093d6dea62772b36d05832f6",
+        "/triton-cache/Y4HARMS7ZU2T7AVJ6CBVGQIVB7F2QMTQIJTACJRAOPGIWLGFYQIQ/_read.ttir": "9887d4635e719d113df00bc11133e3fb699728eada1353fba35ebf3fc2bb1231",
+        "/triton-cache/Y4HARMS7ZU2T7AVJ6CBVGQIVB7F2QMTQIJTACJRAOPGIWLGFYQIQ/_read.ttgir": "c91e83298d9b25cd6010e204d70beb5b3eb438f6a3e0b339e7b46d8120cf2855",
+        "/triton-cache/Y4HARMS7ZU2T7AVJ6CBVGQIVB7F2QMTQIJTACJRAOPGIWLGFYQIQ/_read.llir": "ac52ea5d19b55d90952785a3adbe605136bb21d5a022cb6f8b8f74064b3ebd72",
+        "/triton-cache/Y4HARMS7ZU2T7AVJ6CBVGQIVB7F2QMTQIJTACJRAOPGIWLGFYQIQ/_read.ptx": "52b94460aa29288c69970ef7d9424ff17d09d7af1d6bac975fe8c81b6a3a0227",
+        "/triton-cache/Y4HARMS7ZU2T7AVJ6CBVGQIVB7F2QMTQIJTACJRAOPGIWLGFYQIQ/_read.cubin": "da1477efc4320402e67b0cd865c2f593222c962afbed3d356f3455dcab49e64d",
+        "/triton-cache/Y4HARMS7ZU2T7AVJ6CBVGQIVB7F2QMTQIJTACJRAOPGIWLGFYQIQ/_read.json": "79a4715dd4bb32089731cbc8dc1f30aec729e880407279393650efa3328c9732",
+        "/triton-cache/Y4HARMS7ZU2T7AVJ6CBVGQIVB7F2QMTQIJTACJRAOPGIWLGFYQIQ/__grp___read.json": "77a798a6f2fa867d18a775acffaece21d3b851ae844eed8635a2b721905d4a73",
+        "/triton-cache/WZJWPHBQ5LCFG7S5FWSMTXHUTPXDYHNISJXYCK64NLBRW3D7VLUA/_store.source": "3223d63d676b2ec935d6d2105a5af542ec005d70d2313fcb5ae773c256b1116e",
+        "/triton-cache/WZJWPHBQ5LCFG7S5FWSMTXHUTPXDYHNISJXYCK64NLBRW3D7VLUA/_store.ttir": "f2675484c3ccc99e406cc5bcfa2f805e6648d6cda48448b0dba8e08143161770",
+        "/triton-cache/WZJWPHBQ5LCFG7S5FWSMTXHUTPXDYHNISJXYCK64NLBRW3D7VLUA/_store.ttgir": "61f0a40aa875b6f44f0b6800ad3f2d93ab4d0a7304db2fa1adee4e45a7e51e08",
+        "/triton-cache/WZJWPHBQ5LCFG7S5FWSMTXHUTPXDYHNISJXYCK64NLBRW3D7VLUA/_store.llir": "077004103b166cbd948e68a7d4fe72580d80822b8c48f8ef0826657199642328",
+        "/triton-cache/WZJWPHBQ5LCFG7S5FWSMTXHUTPXDYHNISJXYCK64NLBRW3D7VLUA/_store.ptx": "508f462e8109d6495bf70a9500f7b15eb696178cc06e3d21fbdfadadcd971d02",
+        "/triton-cache/WZJWPHBQ5LCFG7S5FWSMTXHUTPXDYHNISJXYCK64NLBRW3D7VLUA/_store.cubin": "6de660274a7e6e195d2ddfd3ebc0f3eb70d64081d4c50b8ba3d479428e19465f",
+        "/triton-cache/WZJWPHBQ5LCFG7S5FWSMTXHUTPXDYHNISJXYCK64NLBRW3D7VLUA/_store.json": "1101db7f4b5b10f226db286d2be800db4a54d2862c9c01f86f0e01d708fb64b1",
+        "/triton-cache/WZJWPHBQ5LCFG7S5FWSMTXHUTPXDYHNISJXYCK64NLBRW3D7VLUA/__grp___store.json": "852e88e82cba8ae86de39601a7f955f18ced72718cfffa7ccf20fcc66c7f24fa",
+        "/triton-cache/2ZLWZODJ4HDXKAWTQ6SRPTT2BDNH2GCLD3P5QINS7KL7CTQBPJ4A/_store.source": "b3b9c94333f477d62f3c194a2c6ba81b3966a0e4ad2530bc7fc95e4edc79e139",
+        "/triton-cache/2ZLWZODJ4HDXKAWTQ6SRPTT2BDNH2GCLD3P5QINS7KL7CTQBPJ4A/_store.ttir": "629a1cb52b8c9c977feb45ac8e8f40cb0ab5a3c21174b4bb3f83d9957fff77df",
+        "/triton-cache/2ZLWZODJ4HDXKAWTQ6SRPTT2BDNH2GCLD3P5QINS7KL7CTQBPJ4A/_store.ttgir": "def89af564de5c632a289bddfdfb5386ec96e0ae28ade36ae22b326460a77750",
+        "/triton-cache/2ZLWZODJ4HDXKAWTQ6SRPTT2BDNH2GCLD3P5QINS7KL7CTQBPJ4A/_store.llir": "820a89ff929d3338c32530b7c511ca4bfee08fc266c759c06323627136dabacd",
+        "/triton-cache/2ZLWZODJ4HDXKAWTQ6SRPTT2BDNH2GCLD3P5QINS7KL7CTQBPJ4A/_store.ptx": "f034308d798adda2fb09492336771d27e249ab751211e33d92569ea9d9131683",
+        "/triton-cache/2ZLWZODJ4HDXKAWTQ6SRPTT2BDNH2GCLD3P5QINS7KL7CTQBPJ4A/_store.cubin": "d428489a672832e072efa88e1df8f633991e2c8d8a86538cd070419303d7c6dd",
+        "/triton-cache/2ZLWZODJ4HDXKAWTQ6SRPTT2BDNH2GCLD3P5QINS7KL7CTQBPJ4A/_store.json": "069375def4aa455896c1a7d7b0726aad301eafa0a30db1a02e1a142156e7bfd8",
+        "/triton-cache/2ZLWZODJ4HDXKAWTQ6SRPTT2BDNH2GCLD3P5QINS7KL7CTQBPJ4A/__grp___store.json": "da13840f9cb9e173c659312832ffd834053600e85f55bc0581378912aaf291c3",
+        "/triton-cache/SF2AVQRIUTHRDSPTFWERLWXNG6RPF72XANDD7VHHSW5PN7NAGUAA/_read.source": "4d487e953eaae951d8177b588a78964a338b806fb105922ba7051619480e83dc",
+        "/triton-cache/SF2AVQRIUTHRDSPTFWERLWXNG6RPF72XANDD7VHHSW5PN7NAGUAA/_read.ttir": "1dca85a5cf7dbd1b36ed2b918776b8239a0e29970df70b10730366582192a23e",
+        "/triton-cache/SF2AVQRIUTHRDSPTFWERLWXNG6RPF72XANDD7VHHSW5PN7NAGUAA/_read.ttgir": "c198987efcdedd1b8e10a3374aac4dbeede6ea45e7dfc5e33aab60a8667f3f2c",
+        "/triton-cache/SF2AVQRIUTHRDSPTFWERLWXNG6RPF72XANDD7VHHSW5PN7NAGUAA/_read.llir": "043e6e9f6cd4ae59f8e1b2b51c61031a1256148823ee77ca98c4ae36af066fcb",
+        "/triton-cache/SF2AVQRIUTHRDSPTFWERLWXNG6RPF72XANDD7VHHSW5PN7NAGUAA/_read.ptx": "d888300a19b5ffee0359e142e403f98b4f17ca51dd4d1fd843587b3384cb76c0",
+        "/triton-cache/SF2AVQRIUTHRDSPTFWERLWXNG6RPF72XANDD7VHHSW5PN7NAGUAA/_read.cubin": "9a91044f40e99ff47f7108831ba3d703707576fd7e5c70eba154715e7d86aead",
+        "/triton-cache/SF2AVQRIUTHRDSPTFWERLWXNG6RPF72XANDD7VHHSW5PN7NAGUAA/_read.json": "9e91ca8342cd5f1c89384b6017ff6930db25a75c7139a9c263fdfbd4af101c06",
+        "/triton-cache/SF2AVQRIUTHRDSPTFWERLWXNG6RPF72XANDD7VHHSW5PN7NAGUAA/__grp___read.json": "245fcfc5264932197324cead08d243202db29a7d7ed702a56a5305020418b1a8",
+        "/triton-cache/T4FNM6M2L6MFUHWCYHDV4VUNRPDULMXYTX5BJJAVFD76VTROXI7Q/_store.source": "65021c6905e52ad1fcb866635420fb09b410557a848f5db0a0f14232283679de",
+        "/triton-cache/T4FNM6M2L6MFUHWCYHDV4VUNRPDULMXYTX5BJJAVFD76VTROXI7Q/_store.ttir": "d6f58772d9ee8a818f3d00e77b9db0d6e8bd92355467b6111920ee93bf8b3449",
+        "/triton-cache/T4FNM6M2L6MFUHWCYHDV4VUNRPDULMXYTX5BJJAVFD76VTROXI7Q/_store.ttgir": "d2f1f3f909014b37cba8c5452027cf5ba0362596ef0a2d641ef504a5a1af106d",
+        "/triton-cache/T4FNM6M2L6MFUHWCYHDV4VUNRPDULMXYTX5BJJAVFD76VTROXI7Q/_store.llir": "71b7fd9d18f0ac72397b14aa1e27ed98eb999146701d431664eddc3b83c6638c",
+        "/triton-cache/T4FNM6M2L6MFUHWCYHDV4VUNRPDULMXYTX5BJJAVFD76VTROXI7Q/_store.ptx": "84464c45ef7bb9deb46b91552d505bd3a738158ec4f3a7d676680a2a64296a1c",
+        "/triton-cache/T4FNM6M2L6MFUHWCYHDV4VUNRPDULMXYTX5BJJAVFD76VTROXI7Q/_store.cubin": "918374d044fa4a6111c9c0ca0e7880c81082c0cde22c8157050696334af31ee5",
+        "/triton-cache/T4FNM6M2L6MFUHWCYHDV4VUNRPDULMXYTX5BJJAVFD76VTROXI7Q/_store.json": "8d83036f192f48bbb5e1729a82506969ab6023e7ad41062650b5dd387cdb894d",
+        "/triton-cache/T4FNM6M2L6MFUHWCYHDV4VUNRPDULMXYTX5BJJAVFD76VTROXI7Q/__grp___store.json": "eba7bf0f463809deff448d6de591e53eab5ed4b6bbff90d07071156f7a134f3b",
+        "/triton-cache/I7KXKQVT3YOUFZEM3MERKX66WIKSIHUYUNFXPITOTBBL2KQSDNWQ/_store.source": "c57c8d7d0ed4a696fa1ca4ea7ab3464af4e94c1d3d2f55b29b5aad7f8d99864a",
+        "/triton-cache/I7KXKQVT3YOUFZEM3MERKX66WIKSIHUYUNFXPITOTBBL2KQSDNWQ/_store.ttir": "75c4b1fc1179fe0021d463d1893da3789287792d548934ef670692cb0e6e8758",
+        "/triton-cache/I7KXKQVT3YOUFZEM3MERKX66WIKSIHUYUNFXPITOTBBL2KQSDNWQ/_store.ttgir": "ccfbe41a50a6d5adb35570f286638fc658b282530ee5b6713d371f46467126f0",
+        "/triton-cache/I7KXKQVT3YOUFZEM3MERKX66WIKSIHUYUNFXPITOTBBL2KQSDNWQ/_store.llir": "325b3ed8547cfd9029bda211be5bc848d1f7e5594ae315e20905473f43d85340",
+        "/triton-cache/I7KXKQVT3YOUFZEM3MERKX66WIKSIHUYUNFXPITOTBBL2KQSDNWQ/_store.ptx": "26b772f13846e68ac383358d989288e1785b9392af8f326259aa00102404c45a",
+        "/triton-cache/I7KXKQVT3YOUFZEM3MERKX66WIKSIHUYUNFXPITOTBBL2KQSDNWQ/_store.cubin": "359ad68f57f765fd3c96c49a0fb3a793c14eb73fdbcb47bf159bd6a84147f4dd",
+        "/triton-cache/I7KXKQVT3YOUFZEM3MERKX66WIKSIHUYUNFXPITOTBBL2KQSDNWQ/_store.json": "b5e34d549a5ccafdcd786e868b5869c74f1584b8c4a6d6fb74e9b3800f11b91c",
+        "/triton-cache/I7KXKQVT3YOUFZEM3MERKX66WIKSIHUYUNFXPITOTBBL2KQSDNWQ/__grp___store.json": "6a9fcf2759b465b4e044f9f5158f39477384ae4aa9585ce30cd6aae1eef6a0c5",
+        "/triton-cache/6QAJJG77ZGIWMUDXT6XCWVQV6ZLJIB3LN375ZEIRFPHRQCSMSW5A/_read.source": "852fddb18e974bbde0f7bcc5628a83d5d91a15dc94fdd5c04dab7dae31a4c880",
+        "/triton-cache/6QAJJG77ZGIWMUDXT6XCWVQV6ZLJIB3LN375ZEIRFPHRQCSMSW5A/_read.ttir": "9ccf9a8e0b0d05b9ef5462a4caf2f2222e157241cec1596d6ba49463c6018cc0",
+        "/triton-cache/6QAJJG77ZGIWMUDXT6XCWVQV6ZLJIB3LN375ZEIRFPHRQCSMSW5A/_read.ttgir": "3eef62705534cc4096530fbeb4fdef93deeddb2475b32d82fe1d0e1156a8b33d",
+        "/triton-cache/6QAJJG77ZGIWMUDXT6XCWVQV6ZLJIB3LN375ZEIRFPHRQCSMSW5A/_read.llir": "3d817af920b78b23e0ddf224eb7edd6339e447a438609316eb8b5fe3941edb5b",
+        "/triton-cache/6QAJJG77ZGIWMUDXT6XCWVQV6ZLJIB3LN375ZEIRFPHRQCSMSW5A/_read.ptx": "e752463e748c2b60fdab416091a1559677c0d971c148397f5077b783f633ab3d",
+        "/triton-cache/6QAJJG77ZGIWMUDXT6XCWVQV6ZLJIB3LN375ZEIRFPHRQCSMSW5A/_read.cubin": "0096f842fcce6910ed14333f8d138710a884c5fc804dee3df5d4cdb088473e35",
+        "/triton-cache/6QAJJG77ZGIWMUDXT6XCWVQV6ZLJIB3LN375ZEIRFPHRQCSMSW5A/_read.json": "776eaebc48427029eaf960643d9cc8085e2f231934c3055f1e023214bf00f546",
+        "/triton-cache/6QAJJG77ZGIWMUDXT6XCWVQV6ZLJIB3LN375ZEIRFPHRQCSMSW5A/__grp___read.json": "41bb493c89afb04310c5ad712014c6a8bd5bd4bfa1f9a60ac1d4cf5856b10ed1",
+        "/triton-cache/7XFXEZ6UMOLBSIZMWUKS3GVMMP5I2DSSYIUW7NIHXACLFJXWMPXQ/_store.source": "e0d0e25188539c3bb2be539f6f13549d0630ea292d9e4ba97814a759f005620b",
+        "/triton-cache/7XFXEZ6UMOLBSIZMWUKS3GVMMP5I2DSSYIUW7NIHXACLFJXWMPXQ/_store.ttir": "7bcc406964931720e59007b56e868f3445cf64199d7c8a386c03fae3487f58a7",
+        "/triton-cache/7XFXEZ6UMOLBSIZMWUKS3GVMMP5I2DSSYIUW7NIHXACLFJXWMPXQ/_store.ttgir": "84da8a8100fd270482ebdf7932220b46885bce9144906883f7febbf3d1920035",
+        "/triton-cache/7XFXEZ6UMOLBSIZMWUKS3GVMMP5I2DSSYIUW7NIHXACLFJXWMPXQ/_store.llir": "a2d15298842448c5f5f3cc80e2c8ad2c9881398ede9c6180f295c03b704c0116",
+        "/triton-cache/7XFXEZ6UMOLBSIZMWUKS3GVMMP5I2DSSYIUW7NIHXACLFJXWMPXQ/_store.ptx": "54ac008e542b908c904274a38d66705d7c5dc51b63123a28d5cc7164b53622f2",
+        "/triton-cache/7XFXEZ6UMOLBSIZMWUKS3GVMMP5I2DSSYIUW7NIHXACLFJXWMPXQ/_store.cubin": "a4aaf234d8f0296ca5f720fc3522085b72a83054f8a7ab0f178e241c9f6fe74f",
+        "/triton-cache/7XFXEZ6UMOLBSIZMWUKS3GVMMP5I2DSSYIUW7NIHXACLFJXWMPXQ/_store.json": "d3404c3df024582c703fd6a817ff96bcbfdf4468eeb6f43b2981c3c680b4e539",
+        "/triton-cache/7XFXEZ6UMOLBSIZMWUKS3GVMMP5I2DSSYIUW7NIHXACLFJXWMPXQ/__grp___store.json": "2a50152e909b5d73ab5661c394b982988c9a23f37f13ddc64415e411338f1f95",
+        "/triton-cache/V7FOHJCFLECY5JWDSIPUBPTYGJKDHCJ3NP3JLOXKVOV23MTKJ6PA/_store.source": "82e930a5a1da6357ee5d861419d71987162eb23c47134780514cd398f80a6c77",
+        "/triton-cache/V7FOHJCFLECY5JWDSIPUBPTYGJKDHCJ3NP3JLOXKVOV23MTKJ6PA/_store.ttir": "c2be8082b7c8409be4ad5a6bd387f199a0bb02b3942bf2cd092cd1a691506e13",
+        "/triton-cache/V7FOHJCFLECY5JWDSIPUBPTYGJKDHCJ3NP3JLOXKVOV23MTKJ6PA/_store.ttgir": "13e0dd39ef2aa78d68b6ae08a760c3ffcc93bd206a04194af054d7ca9ded3807",
+        "/triton-cache/V7FOHJCFLECY5JWDSIPUBPTYGJKDHCJ3NP3JLOXKVOV23MTKJ6PA/_store.llir": "2edb0509595e6ced5d4a1a9b9a16be95917ec4a4fea7061df4226af5947c6c58",
+        "/triton-cache/V7FOHJCFLECY5JWDSIPUBPTYGJKDHCJ3NP3JLOXKVOV23MTKJ6PA/_store.ptx": "7db362f8fdad72fd52ffd14722b3c1c75b34d2d6579c2ba10be2756de6854425",
+        "/triton-cache/V7FOHJCFLECY5JWDSIPUBPTYGJKDHCJ3NP3JLOXKVOV23MTKJ6PA/_store.cubin": "a1e31c8400a0907ffaf1efadf6e4cbe184bbcfb082db0582ff7d403e84884efc",
+        "/triton-cache/V7FOHJCFLECY5JWDSIPUBPTYGJKDHCJ3NP3JLOXKVOV23MTKJ6PA/_store.json": "54d8f2a260e333e083b36224b0e6e3c2ee1fa71d1b0fd16301583173b098fc01",
+        "/triton-cache/V7FOHJCFLECY5JWDSIPUBPTYGJKDHCJ3NP3JLOXKVOV23MTKJ6PA/__grp___store.json": "64987e5a6924699cf4239ef06fe805d30bcbe7bd5bd90835cf7d11de19d501eb",
+        "/triton-cache/4OKIDEB26CELXAJBDHN3TMJJMBDRIX732O55M7FYHU7H2CMSRQMA/_read.source": "4b845b2c5bde929150eef2e88f6fa9e7ec1dcd48b324dbc2afef6ab8425ce4e3",
+        "/triton-cache/4OKIDEB26CELXAJBDHN3TMJJMBDRIX732O55M7FYHU7H2CMSRQMA/_read.ttir": "2db2fecb61f0dd9ed8af95d8dccacfd574edfb10696e114d22c886c083b4636d",
+        "/triton-cache/4OKIDEB26CELXAJBDHN3TMJJMBDRIX732O55M7FYHU7H2CMSRQMA/_read.ttgir": "119e14d57d3114cee2335f56fbd22f33e35caae149e5f656fbc6a13f4fb9d461",
+        "/triton-cache/4OKIDEB26CELXAJBDHN3TMJJMBDRIX732O55M7FYHU7H2CMSRQMA/_read.llir": "d1a4ed2055bfcefca0b1e7d7e4fc5351e36f837ee6e905f2af788478713634c8",
+        "/triton-cache/4OKIDEB26CELXAJBDHN3TMJJMBDRIX732O55M7FYHU7H2CMSRQMA/_read.ptx": "eef6ac834ff3651263ea4a8e6bc1e8ef83eb91c482f772c3c6b436477b80ebbb",
+        "/triton-cache/4OKIDEB26CELXAJBDHN3TMJJMBDRIX732O55M7FYHU7H2CMSRQMA/_read.cubin": "9ca15ac2acf68b8739f1ceeaa90252ff7528c1f49da92646ab29d78184275ce5",
+        "/triton-cache/4OKIDEB26CELXAJBDHN3TMJJMBDRIX732O55M7FYHU7H2CMSRQMA/_read.json": "6273c969296efc4438121680faa0399f7c01711b2c213f4d97fff3a7ca454272",
+        "/triton-cache/4OKIDEB26CELXAJBDHN3TMJJMBDRIX732O55M7FYHU7H2CMSRQMA/__grp___read.json": "2fdcb3e8bbf867716bbf5cc2f3ede0adacd2f8c926d68715bfcaea457eb6d6aa"
+      },
+      "native_dtype": "float32",
+      "cpu_import_driver_stub_sha256": "67f959d1ab945005774464fcbf5a10722f97d0781b5800dd8636dc56747c2735",
+      "binaries": {
+        "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so": "dd32f856f845495e4f6940a89f386ad050126dd62f132a0af144a60658123d56",
+        "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so": "1b90f89c1f935a971a7a5b4ab29c44df01c5d13831b7e7c92ab14eef95de7e0f",
+        "/opt/remnant-native-store.so": "509edf30ceba9039b384e936758f4dd5b23ba4339fddb570320151400a868f3c"
+      },
+      "nvcc": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:58:59_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0\n",
+      "ncu": null
+    },
+    "native_compiled_image": "im-RktGCcyR8NG0ZMsXcxRWvY",
+    "qualified_cpu_image": "im-MZqnw8UUhUxovTFl16mxln",
+    "cpu": {
+      "preflight": {
+        "tests": 24,
+        "subtests": 15,
+        "seconds": 171.12
+      },
+      "qualification_and_dispatch": {
+        "tests": 6,
+        "seconds": 0.058
+      },
+      "style_and_launcher": {
+        "source_identities": {
+          "parent": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/v41-packed-fp4/flash-optimizations",
+            "commit": "2707db9afb073e92046dbda60b18e36f98d11acb"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/v41-packed-fp4/flash-optimizations/third_party/sglang-v0.5.22",
+            "expected_commit": "c4708870008528ea68ed783c68add708687d71fd",
+            "commit": "c4708870008528ea68ed783c68add708687d71fd",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/v41-packed-fp4/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": true,
+            "dirty": true,
+            "sha256": "2a0a58a442fff4a1d604d440e26845ab20bc5650739347e45f95abc7cbc6bd5d"
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/.codex/worktrees/v41-packed-fp4/flash-optimizations/third_party/flashmla-v0.5.22",
+            "expected_commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "override": true,
+            "dirty": true,
+            "sha256": "6c00e7d3081743e75cf8ba34f6d7587d87916dcc7021de8ae2025b818238e857",
+            "integration": "v0.5.22"
+          }
+        },
+        "commands": [
+          {
+            "argv": [
+              "ruff",
+              "check",
+              "--select",
+              "F401,F821,F823,UP037",
+              "/sgl-workspace/sglang-remnant/python/sglang/kernels/ops/attention/dsv4/fp4_cache.py",
+              "/sgl-workspace/sglang-remnant/python/sglang/kernels/ops/attention/dsv4/kv_layout.py",
+              "/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py",
+              "/opt/flash-optimizations/scripts/modal/qualification.py"
+            ],
+            "cwd": "/sgl-workspace/sglang-remnant",
+            "returncode": 0,
+            "stdout": "All checks passed!\n",
+            "stderr": ""
+          },
+          {
+            "argv": [
+              "isort",
+              "--check-only",
+              "/sgl-workspace/sglang-remnant/python/sglang/kernels/ops/attention/dsv4/fp4_cache.py",
+              "/sgl-workspace/sglang-remnant/python/sglang/kernels/ops/attention/dsv4/kv_layout.py",
+              "/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py",
+              "/opt/flash-optimizations/scripts/modal/qualification.py"
+            ],
+            "cwd": "/sgl-workspace/sglang-remnant",
+            "returncode": 0,
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "argv": [
+              "ruff",
+              "format",
+              "--check",
+              "/sgl-workspace/sglang-remnant/python/sglang/kernels/ops/attention/dsv4/fp4_cache.py",
+              "/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py",
+              "/opt/flash-optimizations/scripts/modal/qualification.py"
+            ],
+            "cwd": "/sgl-workspace/sglang-remnant",
+            "returncode": 0,
+            "stdout": "3 files already formatted\n",
+            "stderr": ""
+          },
+          {
+            "argv": [
+              "clang-format",
+              "--dry-run",
+              "--Werror",
+              "--style=file",
+              "/opt/flashmla-remnant/csrc/kernels/sm90/decode/sparse/instantiations/v41_fp4_native_h64.cu"
+            ],
+            "cwd": "/opt/flashmla-remnant",
+            "returncode": 0,
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "argv": [
+              "clang-format",
+              "--dry-run",
+              "--Werror",
+              "--style=file",
+              "/opt/flashmla-remnant/csrc/kernels/sm90/decode/sparse/instantiations/v41_fp4_native_h128.cu"
+            ],
+            "cwd": "/opt/flashmla-remnant",
+            "returncode": 0,
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "argv": [
+              "clang-format",
+              "--dry-run",
+              "--Werror",
+              "--style=file",
+              "/opt/flashmla-remnant/csrc/kernels/sm90/decode/sparse/instantiations/v41_fp4_packed_h64.cu"
+            ],
+            "cwd": "/opt/flashmla-remnant",
+            "returncode": 0,
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "argv": [
+              "clang-format",
+              "--dry-run",
+              "--Werror",
+              "--style=file",
+              "/opt/flashmla-remnant/csrc/kernels/sm90/decode/sparse/instantiations/v41_fp4_packed_h128.cu"
+            ],
+            "cwd": "/opt/flashmla-remnant",
+            "returncode": 0,
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "argv": [
+              "clang-format",
+              "--dry-run",
+              "--Werror",
+              "--style=file",
+              "/opt/flashmla-remnant/csrc/kernels/sm90/prefill/sparse/instantiations/fp4_prefill_k512.cu"
+            ],
+            "cwd": "/opt/flashmla-remnant",
+            "returncode": 0,
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "argv": [
+              "clang-format",
+              "--dry-run",
+              "--Werror",
+              "--style=file",
+              "/opt/flashmla-remnant/csrc/kernels/sm90/prefill/sparse/instantiations/fp4_prefill_k512_topklen.cu"
+            ],
+            "cwd": "/opt/flashmla-remnant",
+            "returncode": 0,
+            "stdout": "",
+            "stderr": ""
+          }
+        ],
+        "status": "passed",
+        "launcher_regressions": {
+          "tests": 17,
+          "status": "passed",
+          "output": "test_profile_coverage_and_metric_failures (scripts.modal.tests.ContractTests.test_profile_coverage_and_metric_failures) ... ok\ntest_profile_matrix_is_complete (scripts.modal.tests.ContractTests.test_profile_matrix_is_complete) ... ok\ntest_representative_profile_matrix (scripts.modal.tests.ContractTests.test_representative_profile_matrix) ... ok\ntest_timing_rejects_missing_duplicate_and_invalid_cases (scripts.modal.tests.ContractTests.test_timing_rejects_missing_duplicate_and_invalid_cases) ... ok\ntest_wide_profile_export (scripts.modal.tests.ContractTests.test_wide_profile_export) ... ok\ntest_invalid_budgets_and_kernel_combinations_fail_before_run_context (scripts.modal.tests.SurvivorBudgetLauncherTests.test_invalid_budgets_and_kernel_combinations_fail_before_run_context) ... ok\ntest_profile_rejects_another_survivor_budget_or_implementation (scripts.modal.tests.SurvivorBudgetLauncherTests.test_profile_rejects_another_survivor_budget_or_implementation) ... ok\ntest_profiles_cover_only_supported_requested_modes_and_match_inputs (scripts.modal.tests.SurvivorBudgetLauncherTests.test_profiles_cover_only_supported_requested_modes_and_match_inputs) ... ok\ntest_timing_passes_budget_modes_and_validates_the_requested_contract (scripts.modal.tests.SurvivorBudgetLauncherTests.test_timing_passes_budget_modes_and_validates_the_requested_contract) ... ok\ntest_cpu_driver_stub_is_scoped_to_child_import_environment (scripts.modal.tests.PrefillReadLauncherTests.test_cpu_driver_stub_is_scoped_to_child_import_environment) ... ok\ntest_fused_prefill_profile_rejects_a_split_capture (scripts.modal.tests.PrefillReadLauncherTests.test_fused_prefill_profile_rejects_a_split_capture) ... ok\ntest_fused_prefill_timing_is_forwarded_and_validated_explicitly (scripts.modal.tests.PrefillReadLauncherTests.test_fused_prefill_timing_is_forwarded_and_validated_explicitly) ... ok\ntest_missing_cpu_driver_stub_fails_before_import (scripts.modal.tests.PrefillReadLauncherTests.test_missing_cpu_driver_stub_fails_before_import) ... ok\ntest_prefill_invalid_options_fail_before_context (scripts.modal.tests.PrefillReadLauncherTests.test_prefill_invalid_options_fail_before_context) ... ok\ntest_prefill_profile_application_replay_and_three_variant_coverage (scripts.modal.tests.PrefillReadLauncherTests.test_prefill_profile_application_replay_and_three_variant_coverage) ... ok\ntest_prefill_timing_uses_fixed_variants_and_coverage_judge (scripts.modal.tests.PrefillReadLauncherTests.test_prefill_timing_uses_fixed_variants_and_coverage_judge) ... ok\ntest_worker_pythonpath_excludes_serialized_launcher_shadow (scripts.modal.tests.PrefillReadLauncherTests.test_worker_pythonpath_excludes_serialized_launcher_shadow) ... ok\n\n----------------------------------------------------------------------\nRan 17 tests in 0.485s\n\nOK\n"
+        },
+        "registration": {
+          "backend": "CUDA",
+          "disabled": "Modal-only H100 qualification",
+          "suite": "stage-b-test-1-gpu-small"
+        }
+      },
+      "v4_runtime_regressions": {
+        "receipt": {
+          "status": "passed",
+          "action": "cpu",
+          "model_load": false,
+          "tests": [
+            "test/registered/unit/test_dsv4_c4_cache_format.py",
+            "test/registered/attention/unittests/dsv4/test_remnant_pack.py",
+            "test/registered/attention/unittests/dsv4/test_remnant_backend.py",
+            "test/registered/attention/unittests/dsv4/test_remnant_compressor_store.py",
+            "test/registered/attention/unittests/dsv4/test_remnant_pool.py::TestRemnantPool"
+          ],
+          "cpu_function_seconds": 175.872096836
+        },
+        "tests": 103,
+        "subtests": 45,
+        "seconds": 171.52
+      },
+      "reproduction_invocation": "\"\"\"Temporary Modal CPU invocation of existing style/CI checks. Author: Winston Cai.\"\"\"\nimport modal\n\napp = modal.App('remnant-v41-review-style')\nimage = modal.Image.from_id('im-MZqnw8UUhUxovTFl16mxln').pip_install(\n    'ruff==0.15.1', 'isort==7.0.0', 'clang-format==20.1.7'\n)\nvolume = modal.Volume.from_name('remnant-stage2a-results')\n\n@app.function(image=image, cpu=1, memory=2048, timeout=180, retries=0,\n              max_containers=1, scaledown_window=2, volumes={'/results': volume})\ndef check():\n    import hashlib\n    import json\n    import subprocess\n    import time\n    from pathlib import Path\n    from scripts.modal import kernels\n    from sglang.test.ci.ci_register import collect_tests, HWBackend\n\n    volume.reload()\n    root = Path('/results/microbench/v41-reviewfix-20261026-style/cpu')\n    root.mkdir(parents=True, exist_ok=False)\n    manifest = json.loads(kernels.MANIFEST.read_text())\n    assert manifest['sources'] == kernels._source_hashes()\n    assert manifest['source_identities'] == kernels.SOURCE_IDENTITIES\n    for path, expected in manifest['binaries'].items():\n        assert hashlib.sha256(Path(path).read_bytes()).hexdigest() == expected\n    sg = Path('/sgl-workspace/sglang-remnant')\n    mla = Path('/opt/flashmla-remnant')\n    fp4 = sg/'python/sglang/kernels/ops/attention/dsv4/fp4_cache.py'\n    layout = fp4.with_name('kv_layout.py')\n    test = sg/'test/registered/attention/unittests/dsv4/test_remnant_fp4.py'\n    qualification = Path('/opt/flash-optimizations/scripts/modal/qualification.py')\n    paths = [str(p) for p in (fp4, layout, test, qualification)]\n    commands = [\n        (['ruff', 'check', '--select', 'F401,F821,F823,UP037', *paths], sg),\n        (['isort', '--check-only', *paths], sg),\n        (['ruff', 'format', '--check', str(fp4), str(test), str(qualification)], sg),\n    ]\n    for name in ('native_h64', 'native_h128', 'packed_h64', 'packed_h128'):\n        p = mla/f'csrc/kernels/sm90/decode/sparse/instantiations/v41_fp4_{name}.cu'\n        commands.append((['clang-format', '--dry-run', '--Werror', '--style=file', str(p)], mla))\n    for name in ('fp4_prefill_k512', 'fp4_prefill_k512_topklen'):\n        p = mla/f'csrc/kernels/sm90/prefill/sparse/instantiations/{name}.cu'\n        commands.append((['clang-format', '--dry-run', '--Werror', '--style=file', str(p)], mla))\n    record = {'source_identities': manifest['source_identities'], 'commands': [], 'status': 'running'}\n    deadline = time.monotonic()+150\n    try:\n        for argv, cwd in commands:\n            result = subprocess.run(argv, cwd=cwd, text=True, capture_output=True,\n                                    timeout=max(1, int(deadline-time.monotonic())))\n            record['commands'].append({'argv': argv, 'cwd': str(cwd), 'returncode': result.returncode,\n                                       'stdout': result.stdout, 'stderr': result.stderr})\n        import io\n        import unittest\n        from scripts.modal import tests as launcher_tests\n        suite = unittest.TestSuite(\n            unittest.defaultTestLoader.loadTestsFromTestCase(case)\n            for case in (launcher_tests.ContractTests,\n                         launcher_tests.SurvivorBudgetLauncherTests,\n                         launcher_tests.PrefillReadLauncherTests)\n        )\n        stream = io.StringIO()\n        outcome = unittest.TextTestRunner(stream=stream, verbosity=2).run(suite)\n        record['launcher_regressions'] = {'tests': outcome.testsRun,\n            'status': 'passed' if outcome.wasSuccessful() else 'failed',\n            'output': stream.getvalue()}\n        registries = collect_tests([str(test)], sanity_check=True)\n        assert len(registries) == 1\n        registration = registries[0]\n        assert registration.backend == HWBackend.CUDA\n        assert registration.disabled == 'Modal-only H100 qualification'\n        record['registration'] = {'backend': registration.backend.name, 'disabled': registration.disabled,\n                                  'suite': registration.effective_suite}\n        record['status'] = 'passed' if outcome.wasSuccessful() and all(c['returncode']==0 for c in record['commands']) else 'failed'\n    finally:\n        (root/'result.json').write_text(json.dumps(record, indent=2)+'\\n')\n        volume.commit()\n    return record\n\n@app.function(image=modal.Image.from_id('im-MZqnw8UUhUxovTFl16mxln'),\n              cpu=4, memory=16384, timeout=420, retries=0, max_containers=1,\n              scaledown_window=2, volumes={'/results': volume})\ndef legacy_cpu():\n    import json\n    from scripts.modal import kernels\n    volume.reload()\n    manifest = json.loads(kernels.MANIFEST.read_text())\n    assert manifest['sources'] == kernels._source_hashes()\n    assert manifest['source_identities'] == kernels.SOURCE_IDENTITIES\n    with kernels._run_context('v41-reviewfix-20261026-legacycpu', 'cpu', 360, resource='cpu') as (root, record, deadline):\n        tests = tuple(kernels.TEST_MODULES[name] for name in ('cache_format','pack','backend','compressor_store')) + (kernels.TEST_MODULES['pool']+'::TestRemnantPool',)\n        record['tests'] = tests\n        environment = kernels._cpu_preflight_environment(root)\n        kernels._run_pytest(tests, root, 'legacy', deadline, environment=environment)\n    return record\n\n@app.local_entrypoint()\ndef main(runtime_only: bool = False):\n    import json\n    result=legacy_cpu.remote() if runtime_only else check.remote()\n    print(json.dumps(result, indent=2))\n    if result['status'] != 'passed':\n        raise RuntimeError('Scoped CPU style/registry checks failed')\n"
+    },
+    "attempts": [
+      {
+        "run_id": "v41-reviewfix-20261026-a",
+        "app_id": "ap-zNfyKaNmp952L6ePGqCavZ",
+        "status": "cpu_preflight_failed",
+        "reason": "Child vendor Python cannot import injected Modal SDK",
+        "gpu_allocated": false,
+        "source_parent": "cc1b9a8552004bf5bcb2091a24ed011e62f18e2d",
+        "command": "modal run scripts/modal/kernels.py::validate_kernels --run-id v41-reviewfix-20261026-a --sanitizer --sanitizer-order memcheck,racecheck,synccheck --max-seconds 5340"
+      },
+      {
+        "run_id": "v41-reviewfix-20261026-b",
+        "app_id": "ap-nIywTHLvoWIX0d6iUR5Ik3",
+        "status": "stopped_during_preparation",
+        "reason": "Review found helper would overwrite proposed PYTHONPATH correction",
+        "gpu_allocated": false,
+        "source_parent": "984e888d8839b25c42be520abcdecf109e29ae7f",
+        "command": "modal run scripts/modal/kernels.py::validate_kernels --run-id v41-reviewfix-20261026-b --sanitizer --sanitizer-order memcheck,racecheck,synccheck --max-seconds 5340"
+      },
+      {
+        "run_id": "v41-reviewfix-20261026-c",
+        "app_id": "ap-YFMJVzknontjROL0JtON0I",
+        "status": "cpu_preflight_failed",
+        "reason": "Injected SDK dependencies absent in child vendor Python",
+        "gpu_allocated": false,
+        "source_parent": "b6ea22f65f0d42584e8626665f6cfa2e5e741729",
+        "command": "modal run scripts/modal/kernels.py::validate_kernels --run-id v41-reviewfix-20261026-c --sanitizer --sanitizer-order memcheck,racecheck,synccheck --max-seconds 5340"
+      },
+      {
+        "run_id": "v41-reviewfix-20261026-d",
+        "app_id": "ap-vJfGNxJr1BdMxIjfxXCoDd",
+        "status": "cancelled_on_local_client_disconnect",
+        "receipt": {
+          "status": "failed",
+          "action": "validation",
+          "model_load": false,
+          "validation_suite": "v41-fp4",
+          "coverage": {
+            "validation": [
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]"
+            ],
+            "sanitizer": [
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks"
+            ]
+          },
+          "sanitizer": true,
+          "sanitizer_order": [
+            "memcheck",
+            "racecheck",
+            "synccheck"
+          ],
+          "sanitizer_results": {
+            "synccheck": {
+              "status": "not_run"
+            },
+            "racecheck": {
+              "status": "not_run"
+            },
+            "memcheck": {
+              "status": "not_run"
+            }
+          },
+          "sanitizer_tool": {
+            "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+            "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+            "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+            "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+            "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+          },
+          "gpu": "NVIDIA H100 80GB HBM3",
+          "loaded_extensions": [
+            "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so",
+            "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so"
+          ],
+          "platform_timeout_seconds": 5400,
+          "allocation": {
+            "direct_workspace_peak_bytes": 20492288,
+            "direct_workspace_case": "B8/S1/H128/K512 plus K64 SWA, page128",
+            "status": "passed",
+            "modes": [
+              {
+                "mode": "Native",
+                "groups": {
+                  "swa": 467251200,
+                  "global_kv": 472891392,
+                  "indexer": 111646208,
+                  "compressor_state": 270336
+                },
+                "prefill_workspace_bytes": 1048576,
+                "direct_workspace_bytes": 20492288,
+                "total_bytes": 1073600000,
+                "byte_budget": 1073741824,
+                "full_tokens": 656384,
+                "swa_tokens": 19712,
+                "reserved_page_bytes": 6346240
+              },
+              {
+                "mode": "Packed",
+                "groups": {
+                  "swa": 467251200,
+                  "global_kv": 448516096,
+                  "indexer": 136147968,
+                  "compressor_state": 270336
+                },
+                "prefill_workspace_bytes": 1048576,
+                "direct_workspace_bytes": 20492288,
+                "total_bytes": 1073726464,
+                "byte_budget": 1073741824,
+                "full_tokens": 800512,
+                "swa_tokens": 19712,
+                "reserved_page_bytes": 6280704
+              }
+            ],
+            "edges": [
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 0,
+                "storage_bytes": 73728
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 1,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 127,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 128,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 129,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 255,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 256,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 257,
+                "storage_bytes": 184320
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 0,
+                "storage_bytes": 73728
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 1,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 127,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 128,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 129,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 255,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 256,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 257,
+                "storage_bytes": 221184
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 0,
+                "storage_bytes": 57344
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 1,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 127,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 128,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 129,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 255,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 256,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 257,
+                "storage_bytes": 143360
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 0,
+                "storage_bytes": 57344
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 1,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 127,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 128,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 129,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 255,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 256,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 257,
+                "storage_bytes": 172032
+              }
+            ],
+            "scope": "model-free actual pool storage; no serving capacity claim",
+            "capacity_gain_percent": 21.957878315132607
+          },
+          "error": "InputCancellation('Input was cancelled by user')",
+          "gpu_function_seconds": 615.6325977729999
+        },
+        "ordinary_tests": 39,
+        "ordinary_seconds": 47.35,
+        "qualifies_sanitizers": false,
+        "source_parent": "2707db9afb073e92046dbda60b18e36f98d11acb",
+        "command": "modal run scripts/modal/kernels.py::validate_kernels --run-id v41-reviewfix-20261026-d --sanitizer --sanitizer-order memcheck,racecheck,synccheck --max-seconds 5340"
+      },
+      {
+        "run_id": "v41-reviewfix-20261026-e",
+        "app_id": "ap-SWDZ8OmOYrp7mPgenL0lLf",
+        "status": "stopped_after_complete_memcheck_and_racecheck",
+        "ordinary_tests": 39,
+        "ordinary_seconds": 50.6,
+        "receipt": {
+          "status": "failed",
+          "action": "validation",
+          "model_load": false,
+          "validation_suite": "v41-fp4",
+          "coverage": {
+            "validation": [
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]"
+            ],
+            "sanitizer": [
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks"
+            ]
+          },
+          "sanitizer": true,
+          "sanitizer_order": [
+            "memcheck",
+            "racecheck",
+            "synccheck"
+          ],
+          "sanitizer_results": {
+            "synccheck": {
+              "status": "not_run"
+            },
+            "racecheck": {
+              "status": "passed"
+            },
+            "memcheck": {
+              "status": "passed"
+            }
+          },
+          "sanitizer_tool": {
+            "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+            "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+            "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+            "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+            "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+          },
+          "gpu": "NVIDIA H100 80GB HBM3",
+          "loaded_extensions": [
+            "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so",
+            "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so"
+          ],
+          "platform_timeout_seconds": 5400,
+          "allocation": {
+            "direct_workspace_peak_bytes": 20492288,
+            "direct_workspace_case": "B8/S1/H128/K512 plus K64 SWA, page128",
+            "status": "passed",
+            "modes": [
+              {
+                "mode": "Native",
+                "groups": {
+                  "swa": 467251200,
+                  "global_kv": 472891392,
+                  "indexer": 111646208,
+                  "compressor_state": 270336
+                },
+                "prefill_workspace_bytes": 1048576,
+                "direct_workspace_bytes": 20492288,
+                "total_bytes": 1073600000,
+                "byte_budget": 1073741824,
+                "full_tokens": 656384,
+                "swa_tokens": 19712,
+                "reserved_page_bytes": 6346240
+              },
+              {
+                "mode": "Packed",
+                "groups": {
+                  "swa": 467251200,
+                  "global_kv": 448516096,
+                  "indexer": 136147968,
+                  "compressor_state": 270336
+                },
+                "prefill_workspace_bytes": 1048576,
+                "direct_workspace_bytes": 20492288,
+                "total_bytes": 1073726464,
+                "byte_budget": 1073741824,
+                "full_tokens": 800512,
+                "swa_tokens": 19712,
+                "reserved_page_bytes": 6280704
+              }
+            ],
+            "edges": [
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 0,
+                "storage_bytes": 73728
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 1,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 127,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 128,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 129,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 255,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 256,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 257,
+                "storage_bytes": 184320
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 0,
+                "storage_bytes": 73728
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 1,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 127,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 128,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 129,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 255,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 256,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 257,
+                "storage_bytes": 221184
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 0,
+                "storage_bytes": 57344
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 1,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 127,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 128,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 129,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 255,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 256,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 257,
+                "storage_bytes": 143360
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 0,
+                "storage_bytes": 57344
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 1,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 127,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 128,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 129,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 255,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 256,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 257,
+                "storage_bytes": 172032
+              }
+            ],
+            "scope": "model-free actual pool storage; no serving capacity claim",
+            "capacity_gain_percent": 21.957878315132607
+          },
+          "error": "KeyboardInterrupt()",
+          "gpu_function_seconds": 3266.914626212
+        },
+        "tools": {
+          "memcheck": {
+            "tests": 34,
+            "seconds": 1994.706,
+            "errors": 0
+          },
+          "racecheck": {
+            "tests": 34,
+            "seconds": 886.702,
+            "hazards": 0
+          }
+        },
+        "partial_synccheck": {
+          "status": "interrupted_not_qualified",
+          "completed_cases": 20,
+          "seconds": 298.16
+        },
+        "source_parent": "2707db9afb073e92046dbda60b18e36f98d11acb",
+        "command": "modal run --detach scripts/modal/kernels.py::validate_kernels --run-id v41-reviewfix-20261026-e --sanitizer --sanitizer-order memcheck,racecheck,synccheck --max-seconds 5340"
+      },
+      {
+        "run_id": "v41-reviewfix-20261026-f",
+        "app_id": "ap-oxN2IKdf3r5kmydKmb9tuQ",
+        "status": "stopped_after_complete_synccheck",
+        "inner_timeout_seconds": 2640,
+        "platform_timeout_seconds": 5400,
+        "order": [
+          "synccheck",
+          "racecheck",
+          "memcheck"
+        ],
+        "receipt": {
+          "status": "failed",
+          "action": "validation",
+          "model_load": false,
+          "validation_suite": "v41-fp4",
+          "coverage": {
+            "validation": [
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-64-topmag]",
+              "test/registered/attention/unittests/dsv4/test_remnant_flashmla_direct.py::TestRemnantFlashMLADirect::test_direct_matches_fused_adapter[kernel-512-8-128-bitmap-edges]"
+            ],
+            "sanitizer": [
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary",
+              "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks"
+            ]
+          },
+          "sanitizer": true,
+          "sanitizer_order": [
+            "synccheck",
+            "racecheck",
+            "memcheck"
+          ],
+          "sanitizer_results": {
+            "synccheck": {
+              "status": "passed"
+            },
+            "racecheck": {
+              "status": "not_run"
+            },
+            "memcheck": {
+              "status": "not_run"
+            }
+          },
+          "sanitizer_tool": {
+            "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+            "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+            "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+            "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+            "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+          },
+          "gpu": "NVIDIA H100 80GB HBM3",
+          "loaded_extensions": [
+            "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/flashmla_ops.cpython-312-x86_64-linux-gnu.so",
+            "/opt/sglang/lib/python3.12/site-packages/sgl_kernel/remnant_ops.cpython-312-x86_64-linux-gnu.so"
+          ],
+          "platform_timeout_seconds": 5400,
+          "allocation": {
+            "direct_workspace_peak_bytes": 20492288,
+            "direct_workspace_case": "B8/S1/H128/K512 plus K64 SWA, page128",
+            "status": "passed",
+            "modes": [
+              {
+                "mode": "Native",
+                "groups": {
+                  "swa": 467251200,
+                  "global_kv": 472891392,
+                  "indexer": 111646208,
+                  "compressor_state": 270336
+                },
+                "prefill_workspace_bytes": 1048576,
+                "direct_workspace_bytes": 20492288,
+                "total_bytes": 1073600000,
+                "byte_budget": 1073741824,
+                "full_tokens": 656384,
+                "swa_tokens": 19712,
+                "reserved_page_bytes": 6346240
+              },
+              {
+                "mode": "Packed",
+                "groups": {
+                  "swa": 467251200,
+                  "global_kv": 448516096,
+                  "indexer": 136147968,
+                  "compressor_state": 270336
+                },
+                "prefill_workspace_bytes": 1048576,
+                "direct_workspace_bytes": 20492288,
+                "total_bytes": 1073726464,
+                "byte_budget": 1073741824,
+                "full_tokens": 800512,
+                "swa_tokens": 19712,
+                "reserved_page_bytes": 6280704
+              }
+            ],
+            "edges": [
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 0,
+                "storage_bytes": 73728
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 1,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 127,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 128,
+                "storage_bytes": 110592
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 129,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 255,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 256,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 128,
+                "rows": 257,
+                "storage_bytes": 184320
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 0,
+                "storage_bytes": 73728
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 1,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 127,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 128,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 129,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 255,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 256,
+                "storage_bytes": 147456
+              },
+              {
+                "layout": "v41_fp4",
+                "page": 256,
+                "rows": 257,
+                "storage_bytes": 221184
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 0,
+                "storage_bytes": 57344
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 1,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 127,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 128,
+                "storage_bytes": 86016
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 129,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 255,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 256,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 128,
+                "rows": 257,
+                "storage_bytes": 143360
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 0,
+                "storage_bytes": 57344
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 1,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 127,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 128,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 129,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 255,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 256,
+                "storage_bytes": 114688
+              },
+              {
+                "layout": "v41_fp4_remnant",
+                "page": 256,
+                "rows": 257,
+                "storage_bytes": 172032
+              }
+            ],
+            "scope": "model-free actual pool storage; no serving capacity claim",
+            "capacity_gain_percent": 21.957878315132607
+          },
+          "error": "KeyboardInterrupt()",
+          "gpu_function_seconds": 1380.599831495
+        },
+        "tools": {
+          "synccheck": {
+            "tests": 34,
+            "seconds": 1083.71,
+            "errors": 0
+          }
+        },
+        "unused_racecheck": "Interrupted; no passing coverage claimed",
+        "source_parent": "2707db9afb073e92046dbda60b18e36f98d11acb",
+        "command": "modal run --detach scripts/modal/kernels.py::validate_kernels --run-id v41-reviewfix-20261026-f --sanitizer --sanitizer-order synccheck,racecheck,memcheck --max-seconds 2640"
+      },
+      {
+        "run_id": "v41-reviewfix-20261026-timing",
+        "app_id": "ap-j8qjMRA3bsaspYqaEVU7UT",
+        "status": "passed",
+        "cpu_preflight": {
+          "status": "passed",
+          "action": "preflight",
+          "model_load": false,
+          "qualification": {
+            "receipts": {
+              "v41-reviewfix-20261026-e": "da6b516cfb31cb46b6d0a2fd9c9297f6235e04fb5fe443aa84e8840828f02145",
+              "v41-reviewfix-20261026-f": "c870df6c3f31c9626985b385ca9b0d7b24892d5450bfa5511a5b1491e8f50c77"
+            },
+            "tools": [
+              "memcheck",
+              "racecheck",
+              "synccheck"
+            ],
+            "case_count_per_tool": 34,
+            "identity_sha256": "04f867999d8b3b307e864c0526272890e358591d835091f0cceb9fb550f944de"
+          },
+          "cpu_function_seconds": 16.205013953
+        },
+        "gpu_record": {
+          "status": "passed",
+          "action": "timing",
+          "model_load": false,
+          "qualification": {
+            "receipts": {
+              "v41-reviewfix-20261026-e": "da6b516cfb31cb46b6d0a2fd9c9297f6235e04fb5fe443aa84e8840828f02145",
+              "v41-reviewfix-20261026-f": "c870df6c3f31c9626985b385ca9b0d7b24892d5450bfa5511a5b1491e8f50c77"
+            },
+            "tools": [
+              "memcheck",
+              "racecheck",
+              "synccheck"
+            ],
+            "case_count_per_tool": 34,
+            "identity_sha256": "04f867999d8b3b307e864c0526272890e358591d835091f0cceb9fb550f944de"
+          },
+          "command": [
+            "/opt/sglang/bin/python",
+            "/sgl-workspace/sglang-remnant/benchmark/remnant/microbench.py",
+            "--native-library",
+            "/opt/remnant-native-store.so",
+            "--suite",
+            "v41-fp4-decode",
+            "--output",
+            "/results/microbench/v41-reviewfix-20261026-timing/timing/timing"
+          ],
+          "suite": "v41-fp4-decode",
+          "gpu_function_seconds": 64.093782749
+        },
+        "source_parent": "2707db9afb073e92046dbda60b18e36f98d11acb",
+        "command": "modal run --detach scripts/modal/kernels.py::benchmark_kernels --run-id v41-reviewfix-20261026-timing --suite v41-fp4-decode --qualification-runs v41-reviewfix-20261026-e,v41-reviewfix-20261026-f"
+      }
+    ],
+    "allocation": {
+      "direct_workspace_peak_bytes": 20492288,
+      "direct_workspace_case": "B8/S1/H128/K512 plus K64 SWA, page128",
+      "status": "passed",
+      "modes": [
+        {
+          "mode": "Native",
+          "groups": {
+            "swa": 467251200,
+            "global_kv": 472891392,
+            "indexer": 111646208,
+            "compressor_state": 270336
+          },
+          "prefill_workspace_bytes": 1048576,
+          "direct_workspace_bytes": 20492288,
+          "total_bytes": 1073600000,
+          "byte_budget": 1073741824,
+          "full_tokens": 656384,
+          "swa_tokens": 19712,
+          "reserved_page_bytes": 6346240
+        },
+        {
+          "mode": "Packed",
+          "groups": {
+            "swa": 467251200,
+            "global_kv": 448516096,
+            "indexer": 136147968,
+            "compressor_state": 270336
+          },
+          "prefill_workspace_bytes": 1048576,
+          "direct_workspace_bytes": 20492288,
+          "total_bytes": 1073726464,
+          "byte_budget": 1073741824,
+          "full_tokens": 800512,
+          "swa_tokens": 19712,
+          "reserved_page_bytes": 6280704
+        }
+      ],
+      "edges": [
+        {
+          "layout": "v41_fp4",
+          "page": 128,
+          "rows": 0,
+          "storage_bytes": 73728
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 128,
+          "rows": 1,
+          "storage_bytes": 110592
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 128,
+          "rows": 127,
+          "storage_bytes": 110592
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 128,
+          "rows": 128,
+          "storage_bytes": 110592
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 128,
+          "rows": 129,
+          "storage_bytes": 147456
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 128,
+          "rows": 255,
+          "storage_bytes": 147456
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 128,
+          "rows": 256,
+          "storage_bytes": 147456
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 128,
+          "rows": 257,
+          "storage_bytes": 184320
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 256,
+          "rows": 0,
+          "storage_bytes": 73728
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 256,
+          "rows": 1,
+          "storage_bytes": 147456
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 256,
+          "rows": 127,
+          "storage_bytes": 147456
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 256,
+          "rows": 128,
+          "storage_bytes": 147456
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 256,
+          "rows": 129,
+          "storage_bytes": 147456
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 256,
+          "rows": 255,
+          "storage_bytes": 147456
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 256,
+          "rows": 256,
+          "storage_bytes": 147456
+        },
+        {
+          "layout": "v41_fp4",
+          "page": 256,
+          "rows": 257,
+          "storage_bytes": 221184
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 128,
+          "rows": 0,
+          "storage_bytes": 57344
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 128,
+          "rows": 1,
+          "storage_bytes": 86016
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 128,
+          "rows": 127,
+          "storage_bytes": 86016
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 128,
+          "rows": 128,
+          "storage_bytes": 86016
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 128,
+          "rows": 129,
+          "storage_bytes": 114688
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 128,
+          "rows": 255,
+          "storage_bytes": 114688
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 128,
+          "rows": 256,
+          "storage_bytes": 114688
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 128,
+          "rows": 257,
+          "storage_bytes": 143360
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 256,
+          "rows": 0,
+          "storage_bytes": 57344
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 256,
+          "rows": 1,
+          "storage_bytes": 114688
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 256,
+          "rows": 127,
+          "storage_bytes": 114688
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 256,
+          "rows": 128,
+          "storage_bytes": 114688
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 256,
+          "rows": 129,
+          "storage_bytes": 114688
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 256,
+          "rows": 255,
+          "storage_bytes": 114688
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 256,
+          "rows": 256,
+          "storage_bytes": 114688
+        },
+        {
+          "layout": "v41_fp4_remnant",
+          "page": 256,
+          "rows": 257,
+          "storage_bytes": 172032
+        }
+      ],
+      "scope": "model-free actual pool storage; no serving capacity claim",
+      "capacity_gain_percent": 21.957878315132607
+    },
+    "budget": {
+      "authorized_followup_usd": 20,
+      "reserve_usd": 2,
+      "work_ceiling_usd": 18,
+      "account": "peroace360",
+      "phase_baseline_compute_usd": 13.73409128,
+      "review_fix_start_compute_usd": 21.43365249,
+      "latest_observed_compute_usd": 28.38463023,
+      "latest_observed_phase_cost_usd": 14.65053895,
+      "billing_lag": true,
+      "failed_cpu_report": [
+        {
+          "objectId": "ap-YFMJVzknontjROL0JtON0I",
+          "description": "remnant-kernel-dev",
+          "environmentName": "main",
+          "interval": "2026-10-26T13:00:00Z",
+          "cost": "0.18543472",
+          "costByResource": {
+            "Network Egress": "0.00000074",
+            "Memory": "0.07478346",
+            "CPU": "0.11065052"
+          }
+        },
+        {
+          "objectId": "ap-zNfyKaNmp952L6ePGqCavZ",
+          "description": "remnant-kernel-dev",
+          "environmentName": "main",
+          "interval": "2026-10-26T13:00:00Z",
+          "cost": "0.17949331",
+          "costByResource": {
+            "Network Egress": "0.00001066",
+            "Memory": "0.06020435",
+            "CPU": "0.11927829"
+          }
+        }
+      ],
+      "latest_snapshot": {
+        "startTimestamp": "2026-10-01T00:00:00Z",
+        "endTimestamp": "2026-11-01T00:00:00Z",
+        "meteredCost": "38.11208061",
+        "billedCost": "0.00000000",
+        "meteredCostBreakdown": {
+          "Ephemeral Apps": "28.38463023",
+          "LLM Tokens": "0.00000000",
+          "Volumes": "9.73193627",
+          "Network Egress": "0.00014434"
+        },
+        "adjustments": {
+          "Free Storage": "-9.73193627",
+          "Plan Cost": "0.00000000",
+          "Credits": "-28.38000000",
+          "Reservation Adjustment": "-0.00000000",
+          "Network Egress Allowance": "-0.00014434"
+        }
+      },
+      "conservative_peak_observed_compute_usd": 28.601401,
+      "conservative_peak_phase_cost_usd": 14.86730972,
+      "all_task_allocations_stopped": true,
+      "initial_review_fix_projected_work_cap_usd": 9.5
+    },
+    "review": {
+      "status": "no_remaining_source_findings",
+      "scope": [
+        "numerical constants and token-level formatting equivalence",
+        "persistent alignment and page geometry",
+        "prefill policy and unsupported combinations",
+        "receipt failure and identity boundaries",
+        "CPU build-context orchestration"
+      ],
+      "execution": "Read-only independent source review; Modal owns executable checks",
+      "artifact_review": "Complete e memcheck/racecheck XML: 34 unique child-free matching IDs, zero errors/failures/skips; expected final sanitizer summaries. d/e/legacy manifests byte-identical SHA256 6766ad1e588d94970814d566cbdd8cd7ff7701ae0151df7bcf313db50618ebb5. Partial sync correctly excluded.",
+      "final_artifact_review": "No unresolved finding. All ten unique v3 cases, 20 paths, 600 samples and all three complete 34-case tools; manifests, case IDs, CPU/GPU qualification proofs and receipt SHA256 values match. Paired randomized timing uses the same producer/query/SWA/selections/sink and an unpruned dense Native baseline. Independent descriptive aggregate recomputation agrees."
+    },
+    "limitations": [
+      "Model-free only; no weights/full-model/serving/quality qualification",
+      "Inherited BF16 prefill scratch scales with full compressed history; fixed fixture does not establish serving capacity",
+      "H20/SM100/distributed extensions remain unqualified",
+      "GitHub accelerator CI skipped without run-ci; broader whole-file lint remains red, focused Modal checks passed"
+    ],
+    "rollback": "Select --dsv41-main-kv-cache-format auto or restore recorded baseline pins",
+    "decision": "Keep experimental opt-in candidate: allocator benefit confirmed; no uniform latency benefit or production promotion.",
+    "qualification": {
+      "receipts": {
+        "v41-reviewfix-20261026-e": "da6b516cfb31cb46b6d0a2fd9c9297f6235e04fb5fe443aa84e8840828f02145",
+        "v41-reviewfix-20261026-f": "c870df6c3f31c9626985b385ca9b0d7b24892d5450bfa5511a5b1491e8f50c77"
+      },
+      "tools": [
+        "memcheck",
+        "racecheck",
+        "synccheck"
+      ],
+      "case_count_per_tool": 34,
+      "identity_sha256": "04f867999d8b3b307e864c0526272890e358591d835091f0cceb9fb550f944de"
+    },
+    "timing": {
+      "record": "runs/v41-reviewfix-20261026-timing/timing.json",
+      "summary_csv": "runs/v41-reviewfix-20261026-timing/summary.csv",
+      "raw_csv_volume_path": "microbench/v41-reviewfix-20261026-timing/timing/timing.csv",
+      "matrix_cases": 10,
+      "paths": 20,
+      "samples": 600,
+      "summary": {
+        "cases": [
+          {
+            "name": "v41_h64_b8_k512_swa128_p256_g256",
+            "page": 256,
+            "batch": 8,
+            "native_us": 71.83399486541748,
+            "packed_us": 71.2871675491333,
+            "native_p95_us": 72.51550626754761,
+            "packed_p95_us": 71.91065645217896,
+            "delta_percent": -0.761237513392754,
+            "samples_native": 30,
+            "samples_packed": 30
+          },
+          {
+            "name": "v41_h64_b16_k512_swa128_p256_g256",
+            "page": 256,
+            "batch": 16,
+            "native_us": 100.20900313059488,
+            "packed_us": 102.5210771560669,
+            "native_p95_us": 101.50572776794434,
+            "packed_p95_us": 103.80971097946167,
+            "delta_percent": 2.30725179698561,
+            "samples_native": 30,
+            "samples_packed": 30
+          },
+          {
+            "name": "v41_h64_b24_k512_swa128_p256_g256",
+            "page": 256,
+            "batch": 24,
+            "native_us": 129.87757905324298,
+            "packed_us": 132.18177032470703,
+            "native_p95_us": 131.45759630203247,
+            "packed_p95_us": 133.53051424026492,
+            "delta_percent": 1.7741255174763104,
+            "samples_native": 30,
+            "samples_packed": 30
+          },
+          {
+            "name": "v41_h64_b28_k512_swa128_p256_g256",
+            "page": 256,
+            "batch": 28,
+            "native_us": 157.9859094619751,
+            "packed_us": 162.2092800140381,
+            "native_p95_us": 159.88073682785034,
+            "packed_p95_us": 164.05896472930908,
+            "delta_percent": 2.673257739532442,
+            "samples_native": 30,
+            "samples_packed": 30
+          },
+          {
+            "name": "v41_h64_b32_k512_swa128_p256_g256",
+            "page": 256,
+            "batch": 32,
+            "native_us": 158.9468584060669,
+            "packed_us": 163.1723950703939,
+            "native_p95_us": 161.76851081848145,
+            "packed_p95_us": 165.5887842178345,
+            "delta_percent": 2.6584587494846046,
+            "samples_native": 30,
+            "samples_packed": 30
+          },
+          {
+            "name": "v41_h64_b8_k512_swa128_p256_g128",
+            "page": 128,
+            "batch": 8,
+            "native_us": 71.7676477432251,
+            "packed_us": 71.35020796457927,
+            "native_p95_us": 72.45684909820557,
+            "packed_p95_us": 72.00284671783447,
+            "delta_percent": -0.581654536232501,
+            "samples_native": 30,
+            "samples_packed": 30
+          },
+          {
+            "name": "v41_h64_b16_k512_swa128_p256_g128",
+            "page": 128,
+            "batch": 16,
+            "native_us": 100.11817614237467,
+            "packed_us": 101.5330769220988,
+            "native_p95_us": 101.3184185028076,
+            "packed_p95_us": 102.67792081832886,
+            "delta_percent": 1.4132306782257409,
+            "samples_native": 30,
+            "samples_packed": 30
+          },
+          {
+            "name": "v41_h64_b24_k512_swa128_p256_g128",
+            "page": 128,
+            "batch": 24,
+            "native_us": 129.88932291666666,
+            "packed_us": 132.33496570587158,
+            "native_p95_us": 132.11908769607544,
+            "packed_p95_us": 134.4210114479065,
+            "delta_percent": 1.8828666854888265,
+            "samples_native": 30,
+            "samples_packed": 30
+          },
+          {
+            "name": "v41_h64_b28_k512_swa128_p256_g128",
+            "page": 128,
+            "batch": 28,
+            "native_us": 157.8527037302653,
+            "packed_us": 162.12750879923502,
+            "native_p95_us": 159.83734798431396,
+            "packed_p95_us": 163.998646736145,
+            "delta_percent": 2.708097465517212,
+            "samples_native": 30,
+            "samples_packed": 30
+          },
+          {
+            "name": "v41_h64_b32_k512_swa128_p256_g128",
+            "page": 128,
+            "batch": 32,
+            "native_us": 167.1301867167155,
+            "packed_us": 165.42256037394208,
+            "native_p95_us": 168.14648056030273,
+            "packed_p95_us": 166.4408655166626,
+            "delta_percent": -1.021734239828176,
+            "samples_native": 30,
+            "samples_packed": 30
+          }
+        ],
+        "summary": {
+          "256": 1.722129652220472,
+          "128": 0.8698479183199215,
+          "overall": 1.2950924178812384,
+          "best_delta_percent": -1.021734239828176,
+          "worst_delta_percent": 2.708097465517212
+        }
+      },
+      "protocol": "remnant-v41-fp4-decode-v3",
+      "matrix_sha256": "a7f99082dff46dbb26e996b1410c86cb189428b0ab6364ac26f9d812df76fd5d",
+      "interpretation": "Descriptive warm synthetic CUDA graph timings; p95 is across 30 samples, each averaging 100 replays. No repeatability or serving speedup claim."
+    },
+    "reproduction": {
+      "working_tree": "Use a clean checkout of parent 2707db9afb073e92046dbda60b18e36f98d11acb with its recorded fork pins; later parent changes only record evidence and clarify a comment. Modal execution requires its own authorization/budget.",
+      "environment": {
+        "MODAL_PROFILE": "peroace360",
+        "REMNANT_INTEGRATION": "v0.5.22",
+        "REMNANT_VALIDATION_SUITE": "v41-fp4",
+        "REMNANT_VALIDATION_TIMEOUT_S": "5400",
+        "REMNANT_FLASHMLA_SOURCE_OVERRIDE": "<canonical-worktree>/third_party/flashmla-v0.5.22"
+      },
+      "commands": [
+        "modal run --detach scripts/modal/kernels.py::validate_kernels --run-id v41-reviewfix-20261026-e --sanitizer --sanitizer-order memcheck,racecheck,synccheck --max-seconds 5340",
+        "modal app stop --yes ap-SWDZ8OmOYrp7mPgenL0lLf  # after complete clean memcheck/racecheck receipts are committed",
+        "modal run --detach scripts/modal/kernels.py::validate_kernels --run-id v41-reviewfix-20261026-f --sanitizer --sanitizer-order synccheck,racecheck,memcheck --max-seconds 2640",
+        "modal app stop --yes ap-oxN2IKdf3r5kmydKmb9tuQ  # after complete clean synccheck receipt is committed",
+        "modal run --detach scripts/modal/kernels.py::benchmark_kernels --run-id v41-reviewfix-20261026-timing --suite v41-fp4-decode --qualification-runs v41-reviewfix-20261026-e,v41-reviewfix-20261026-f"
+      ],
+      "note": "These are the actual historical IDs. A new run must choose new unique IDs and its returned app IDs; never overwrite receipts. CPU-only invocation source and exact commands are archived under cpu."
+    },
+    "checksums": {
+      "validation-e/result.json": "da6b516cfb31cb46b6d0a2fd9c9297f6235e04fb5fe443aa84e8840828f02145",
+      "validation-e/memcheck.xml": "8c5613c7a9f5426a7da4412ed21f1264111e57024525e7d9811073ee508eaf48",
+      "validation-e/memcheck.log": "e4ad30766fa9d49313bef6227801372cd5ab1b749d11cb7ca4bc95b0071b63e3",
+      "validation-e/racecheck.xml": "e0e1c399b9dbe726858701828db65eb3e215f930bd613a77eaed60ccdc070a67",
+      "validation-e/racecheck.log": "7184e4c295d8c4be2eaf5cc21f565cca66175378b93b7a2a50ba8c4d72f1d6f4",
+      "validation-f/result.json": "c870df6c3f31c9626985b385ca9b0d7b24892d5450bfa5511a5b1491e8f50c77",
+      "validation-f/synccheck.xml": "c975c80457385c83d0012f8c50128ee06a30f77eeb1346f644d772a84f03cb73",
+      "validation-f/synccheck.log": "ee1d8b998b47a03bc579d4dcb90ea471145523cfd2b9c07acaa7d4e51b738e35",
+      "timing/preflight/result.json": "662f4c74f2fcc047bc780ce7e3909c906e2e09172890635c4f080e1b1ddcf4ca",
+      "timing/timing/result.json": "efd0fb5687348eadd3932aa9c44ce40bb86caf2ecb6e66651bf310bcf0ccb554",
+      "timing/timing/timing.json": "c09c2c091eb4d8595869ec68388d669b74da3c427c7f43b73048e9e857b01296",
+      "timing/timing/timing.csv": "03983774a87ea45c25303c8f278fbe080f3f7e14d543f9cf2114fa05a167c7f6"
+    },
+    "cleanup": {
+      "active": "Canonical fork implementations, maintained kernels.py runner, single experiment README and canonical qualification JSON",
+      "retired": "Task-local formatter/LFS/publication tools and the temporary CPU invocation are removed after publication; invocation source is archived in this JSON",
+      "raw_artifacts": "Modal remnant-stage2a-results volume; no model volumes mounted",
+      "baseline_dirty_files": "Preserved parent third_party/.DS_Store, CUTLASS .DS_Store and original worktree changes"
+    }
+  },
+  "current_milestone": "review_fixes"
+}
