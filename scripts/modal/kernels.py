@@ -19,7 +19,7 @@ with separate reconstruction/attention/complete stages and warm/rotating caches.
 GLM: REMNANT_INTEGRATION=v0.5.22 REMNANT_MODEL_FAMILY=glm53 selects the
 320-byte codec, config-only preparation and CPU SM90 compilation. validate_kernels
 requires --model-family glm53 and --stage numerical|sanitizer|corrective. Stages
-share the caller's aggregate $15 ledger; a stage does not grant another budget.
+share the caller's authorized aggregate ledger; a stage grants no new budget.
 Set REMNANT_VALIDATION_SUITE=v41-fp4 for scoped model-free SM90 FP4 validation.
 CPU build/preflight precedes H100; Modal caches source/binaries. Authorization required.
 Limits are caps, not ETAs; no weights/retries. Results: remnant-stage2a-results/microbench/<run-id>/<action>.
@@ -50,16 +50,15 @@ from pathlib import Path
 import modal
 
 from scripts.modal.kernel_qualification import QualificationContext
-from scripts.modal.kernel_qualification import (
-    check_glm_scope_audit as _check_glm_scope_audit,
-)
-from scripts.modal.kernel_qualification import qualification_run_ids, qualify_glm_timing
-from scripts.modal.qualification import (
-    check_sanitizer_report as _check_sanitizer_report,
-    qualify_fp4_runs,
-    read_pytest_report,
-    validate_run_id,
-)
+from scripts.modal.kernel_qualification import \
+    check_glm_scope_audit as _check_glm_scope_audit
+from scripts.modal.kernel_qualification import (qualification_run_ids,
+                                                qualify_glm_timing)
+from scripts.modal.qualification import check_fp4_scope_audit
+from scripts.modal.qualification import \
+    check_sanitizer_report as _check_sanitizer_report
+from scripts.modal.qualification import (qualify_fp4_runs, read_pytest_report,
+                                         validate_run_id)
 from scripts.model_profiles import model_profile
 from scripts.sources import check_sources, integration_profile
 
@@ -68,10 +67,12 @@ def _resolve_image_sources(
     model_family: str, environment: Mapping[str, str]
 ) -> tuple[str | None, str | None]:
     """Resolve mutually exclusive reuse/rebuild settings before image creation."""
-    if model_family != "glm53":
+    if model_family != "glm53" and environment.get("REMNANT_VALIDATION_SUITE") != "v41-fp4":
         return None, None
     compiled = environment.get("REMNANT_COMPILED_IMAGE") or None
     rebuild = environment.get("REMNANT_GLM_CPU_REBUILD_FROM") or None
+    if model_family != "glm53" and rebuild:
+        raise ValueError("REMNANT_GLM_CPU_REBUILD_FROM requires glm53")
     if compiled and rebuild:
         raise ValueError(
             "REMNANT_COMPILED_IMAGE and REMNANT_GLM_CPU_REBUILD_FROM are mutually "
@@ -110,6 +111,14 @@ if VALIDATION_SUITE not in ("v4", "v41-fp4") or (
     raise ValueError("REMNANT_VALIDATION_SUITE must be v4, or v41-fp4 with v0.5.22")
 if MODEL_FAMILY == "glm53" and VALIDATION_SUITE != "v4":
     raise ValueError("GLM cannot use a DeepSeek FP4 validation suite")
+
+# Match only production FP4 store/read and FlashMLA attention, including combine
+# and FP4 prefill used by graph tests. Independent reference kernels stay outside
+# this focused instrumentation; the default full qualification is unchanged.
+FP4_KERNEL_PATTERN = (
+    "(_store|_read|flash_fwd_splitkv_mla_fp8_sparse_kernel|"
+    "flash_fwd_mla_combine_kernel|sparse_attn_fwd_kernel)"
+)
 
 
 REMOTE_REPO = Path("/opt/flash-optimizations")
@@ -276,6 +285,27 @@ if VALIDATION_SUITE == "v41-fp4":
             "test_fp4_fragment_masks",
         )
     )
+
+V41_MERGE_SANITIZER = tuple(
+    TEST_ROOT + "test_remnant_fp4.py::" + name
+    for name in (
+        'test_fp4_store_and_reader[random-256-False]',
+        'test_fp4_store_and_reader[random-256-True]',
+        'test_fp4_store_and_reader[boundaries-128-False]',
+        'test_fp4_store_and_reader[boundaries-128-True]',
+        'test_fp4_direct[128-64-False]',
+        'test_fp4_direct[128-64-True]',
+        'test_fp4_direct[256-64-False]',
+        'test_fp4_direct[256-64-True]',
+        'test_fp4_graph_and_stream[64-False]',
+        'test_fp4_graph_and_stream[64-True]',
+        'test_fp4_compressor_boundary[False-1]',
+        'test_fp4_compressor_boundary[True-1]',
+        'test_fp4_compressor_boundary[False-2]',
+        'test_fp4_compressor_boundary[True-2]',
+        'test_fp4_fragment_masks[64]',
+    )
+)
 
 NCU_SECTIONS = [
     "SpeedOfLight",
@@ -472,7 +502,7 @@ def _build_image() -> None:
     build = BUILD_ROOT
     # This directory belongs solely to CPU preparation. A verified reused image
     # may contain prior reports; compiler caches live outside it and are retained.
-    if build.exists() and MODEL_FAMILY == "glm53" and (os.environ.get("REMNANT_COMPILED_IMAGE") or os.environ.get("REMNANT_GLM_CPU_REBUILD_FROM")):
+    if build.exists() and (os.environ.get("REMNANT_COMPILED_IMAGE") or os.environ.get("REMNANT_GLM_CPU_REBUILD_FROM")):
         shutil.rmtree(build)
     build.mkdir()
     if VALIDATION_SUITE == "v41-fp4":
@@ -533,7 +563,7 @@ def _build_image() -> None:
                 deadline,
             ),
         }
-    if MODEL_FAMILY == "glm53":
+    if MODEL_FAMILY == "glm53" or VALIDATION_SUITE == "v41-fp4":
         help_text = _run_command([SANITIZER, "--help"], build / "sanitizer-help.log", deadline)
         if any(option not in help_text for option in ("kernel-name", "racecheck-trace-sync")):
             raise RuntimeError("Qualified sanitizer lacks focused filter/synchronization audit")
@@ -599,14 +629,14 @@ def _build_image() -> None:
     if MODEL_FAMILY == "dsv4":
         # 3. Precompile the Native store using the fork's dependency-valid cache.
         from sglang.kernels.jit.utils.compile.cache import find_prebuilt
-        from sglang.kernels.ops.attention.dsv4.compress import (
-            _jit_compress_norm_rope_module,
-        )
+        from sglang.kernels.ops.attention.dsv4.compress import \
+            _jit_compress_norm_rope_module
 
         with override_jit_cuda_arch(9, 0, "a"):
             native_options = {}
             if INTEGRATION["version"] == "v0.5.22":
-                from sglang.kernels.ops.attention.dsv4.kv_layout import KVLayout
+                from sglang.kernels.ops.attention.dsv4.kv_layout import \
+                    KVLayout
 
                 native_options["layout"] = KVLayout.V4
             _jit_compress_norm_rope_module(
@@ -773,9 +803,33 @@ print('FP4 CPU SM90 precompilation passed')
         )
     if INTEGRATION["version"] != "v0.5.22":
         _check_profiler_tools(build, deadline)
+    fp4_scope_symbols = None
+    if VALIDATION_SUITE == "v41-fp4":
+        cached = {
+            path.stem: str(path)
+            for path in Path(os.environ["TRITON_CACHE_DIR"]).rglob("*.cubin")
+            if path.stem in ("_store", "_read")
+        }
+        if set(cached) != {"_store", "_read"}:
+            raise RuntimeError("FP4 focused filter lacks CPU-compiled store/read symbols")
+        flashmla = next(p for p in binaries if p.name.startswith("flashmla_ops"))
+        symbols = _run_command(
+            ["cuobjdump", "--dump-elf-symbols", str(flashmla)],
+            build / "fp4-symbols.log", deadline,
+        )
+        required = ("flash_fwd_splitkv_mla_fp8_sparse_kernel",
+                    "flash_fwd_mla_combine_kernel", "sparse_attn_fwd_kernel")
+        if any(name not in symbols for name in required):
+            raise RuntimeError("FP4 focused filter lacks compiled FlashMLA symbols")
+        fp4_scope_symbols = {
+            "filter": "regex=" + FP4_KERNEL_PATTERN, "triton_symbols": cached,
+            "flashmla_symbols": required,
+            "flashmla_symbol_log_sha256": hashlib.sha256(symbols.encode()).hexdigest(),
+        }
     # Profiler tools are not a correctness gate for the serving-image qualification.
     manifest = {
         "model_family": MODEL_FAMILY,
+        "fp4_scope_symbols": fp4_scope_symbols,
         "glm_compile": (json.loads(Path("/opt/remnant-glm-compile.json").read_text()) if MODEL_FAMILY == "glm53" else None),
         "validation_suite": VALIDATION_SUITE,
         "coverage": {
@@ -1151,7 +1205,6 @@ def _preflight_glm_timing(
     if phase in ("prefill", "prefill-small"):
         if qualification_runs:
             raise ValueError("Fresh prefill qualifies its selected cubins in the worker")
-        manifest = json.loads(MANIFEST.read_text())
         required_heads = (16, 8) if phase == "prefill" else (16,)
         for heads in required_heads:
             if phase == "prefill":
@@ -1468,8 +1521,8 @@ def validate_kernels(
         if cases:
             raise ValueError("--cases is only supported for the GLM corrective stage")
         selected_tests = VALIDATION_TESTS
-    if sanitizer_scope not in ("all", "glm-decode", "glm-merge"):
-        raise ValueError("sanitizer_scope must be all, glm-decode or glm-merge")
+    if sanitizer_scope not in ("all", "glm-decode", "glm-merge", "v41-merge"):
+        raise ValueError("sanitizer_scope must be all, glm-decode, glm-merge or v41-merge")
     if sanitizer_scope == "glm-decode" and (MODEL_FAMILY != "glm53" or stage != "corrective"
             or not sanitizer or set(selected_tests) != {GLM_TEST + "::test_packed_loader_bytes", GLM_DECODE_GRAPH}):
         raise ValueError("glm-decode sanitizer scope requires the exact focused decode tests")
@@ -1478,6 +1531,12 @@ def validate_kernels(
         or set(selected_tests) != set(GLM_MERGE_SANITIZER)
     ):
         raise ValueError("glm-merge sanitizer scope requires the exact loader/decode/prefill tests")
+    if sanitizer_scope == "v41-merge" and (
+        MODEL_FAMILY != "dsv4" or VALIDATION_SUITE != "v41-fp4"
+        or stage != "corrective" or not sanitizer
+        or set(selected_tests) != set(V41_MERGE_SANITIZER)
+    ):
+        raise ValueError("v41-merge requires the exact FP4 store/attention/graph/producer cases")
     sanitizer = sanitizer or stage == "sanitizer"
     if sanitizer_tools and sanitizer_order:
         raise ValueError("Use sanitizer_tools or sanitizer_order, not both")
@@ -1673,6 +1732,25 @@ def validate_kernels(
                 log_sha256=hashlib.sha256(audit_log.encode()).hexdigest(),
                 entrypoints=manifest["glm_compile"]["scope_symbol_audit"],
                 basis="Racecheck synchronization trace; other tools use completed tests, identical entrypoints and common filter contract")
+        if sanitizer and sanitizer_scope == "v41-merge":
+            symbols = manifest.get("fp4_scope_symbols")
+            if not symbols or symbols["filter"] != "regex=" + FP4_KERNEL_PATTERN:
+                raise RuntimeError("Missing CPU-verified FP4 instrumentation symbols")
+            audit_prefix = (
+                SANITIZER, "--tool", "racecheck", "--error-exitcode", "1",
+                "--kernel-name", "regex=flash_fwd_splitkv_mla_fp8_sparse_kernel",
+                "--racecheck-trace-sync", "yes",
+            )
+            _run_pytest((TEST_ROOT + "test_remnant_fp4.py::test_fp4_direct[128-64-True]",),
+                        root, "scope-audit", min(deadline, time.monotonic() + 180),
+                        prefix=audit_prefix)
+            audit_log = (root / "scope-audit.log").read_text()
+            check_fp4_scope_audit(audit_log, run_id)
+            record["scope_audit"] = {
+                "status": "passed", "symbols": symbols,
+                "log_sha256": hashlib.sha256(audit_log.encode()).hexdigest(),
+                "basis": "Positive Packed decode synchronization trace; store/read/prefill/combine names verified in CPU artifacts and common filter",
+            }
         if sanitizer:
             for tool in selected_tools:
                 # Commands use whole-second timeouts. Preserve the incomplete
@@ -1685,6 +1763,9 @@ def validate_kernels(
                     # One exact production CTA per bank; stock Native partial
                     # is the control. Full attention has its own numerical gate.
                     prefix += ("--kernel-name", "regex=glm_packed_(partial|bytes)", "--print-level", "info")
+                if sanitizer_scope == "v41-merge":
+                    prefix += ("--kernel-name", "regex=" + FP4_KERNEL_PATTERN,
+                               "--print-level", "info")
                 try:
                     tool_environment = dict(environment)
                     if sanitizer_scope in ("glm-decode", "glm-merge"):
@@ -1723,7 +1804,8 @@ def validate_kernels(
             all_tools_passed = all(result["status"] == "passed" for result in record["sanitizer_results"].values())
             focused = stage == "corrective" and set(selected_tests) == {
                 GLM_TEST + "::test_packed_loader_bytes", GLM_DECODE_GRAPH}
-            record["qualification_scope"] = "focused_merge" if sanitizer_scope == "glm-merge" else "focused_decode" if focused else stage
+            record["qualification_scope"] = "focused_fp4_merge" if sanitizer_scope == "v41-merge" else "focused_merge" if sanitizer_scope == "glm-merge" else "focused_decode" if focused else stage
+            record["focused_fp4_merge_qualification_complete"] = sanitizer_scope == "v41-merge" and all_tools_passed
             record["focused_merge_qualification_complete"] = sanitizer_scope == "glm-merge" and all_tools_passed
             record["focused_decode_qualification_complete"] = focused and all_tools_passed
             record["sanitizer_qualification_complete"] = all_tools_passed and stage != "corrective"

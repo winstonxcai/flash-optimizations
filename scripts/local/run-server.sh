@@ -79,6 +79,18 @@ case "${MODEL_FAMILY:-dsv4}" in
     args+=(--moe-runner-backend flashinfer_mxfp4
       --reasoning-parser deepseek-v4 --tool-call-parser deepseekv4)
     ;;
+  dsv41)
+    [ "${REMNANT_INTEGRATION:-v0.5.18}" = v0.5.22 ] || {
+      echo "V4.1 requires v0.5.22" >&2; exit 2;
+    }
+    [ -z "${HICACHE_RATIO:-}${C4_KEEP_COUNT:-}${C4_LAYER_KEEP_COUNTS:-}${STORE_IMPLEMENTATION:-}" ] || {
+      echo "V4.1 does not support HiCache or C4 codec overrides" >&2; exit 2;
+    }
+    args+=(--model-type llm --language-model-only
+      --moe-runner-backend flashinfer_mxfp4 --ep "$EP"
+      --dsv4-attn-backend flashmla
+      --reasoning-parser deepseek-v41 --tool-call-parser deepseekv41)
+    ;;
   glm53)
     [ -z "${HICACHE_RATIO:-}${C4_KEEP_COUNT:-}${C4_LAYER_KEEP_COUNTS:-}${STORE_IMPLEMENTATION:-}" ] || {
       echo "GLM Packed does not support HiCache or DeepSeek codec overrides" >&2; exit 2;
@@ -90,7 +102,13 @@ case "${MODEL_FAMILY:-dsv4}" in
       args+=(--reasoning-parser "$GLM_REASONING_PARSER")
     fi
     ;;
-  *) echo "MODEL_FAMILY must be dsv4 or glm53" >&2; exit 2 ;;
+  *) echo "MODEL_FAMILY must be dsv4, dsv41 or glm53" >&2; exit 2 ;;
+esac
+
+case "${DISABLE_FLASHINFER_AUTOTUNE:-0}" in
+  0) ;;
+  1) args+=(--disable-flashinfer-autotune) ;;
+  *) echo "DISABLE_FLASHINFER_AUTOTUNE must be 0 or 1" >&2; exit 2 ;;
 esac
 
 # The untouched v0.5.18 fork predates the generic selector. Its transport

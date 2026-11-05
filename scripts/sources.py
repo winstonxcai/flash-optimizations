@@ -196,6 +196,13 @@ def glm_compile_owner_digest(sglang: Path) -> str:
 def snapshot_glm_artifacts(sglang: str) -> None:
     """Called on the verified base BEFORE overlaying candidate test sources."""
     manifest = json.loads(Path("/opt/remnant-build.json").read_text())
+    binaries = manifest.get("binaries", {})
+    if not binaries:
+        raise RuntimeError("Compiled base manifest contains no binary identities")
+    for name, expected in {**binaries, **manifest.get("fp4_precompile_artifacts", {})}.items():
+        artifact = Path(name)
+        if not artifact.is_file() or hashlib.sha256(artifact.read_bytes()).hexdigest() != expected:
+            raise RuntimeError(f"Compiled base binary changed: {name}")
     # Qualified images built before the fork-owned artifact interface can still
     # supply unchanged AOT binaries, but must CPU-prepare their JIT artifacts.
     artifact_owner = Path(sglang) / "python/sglang/benchmark/remnant/glm_artifacts.py"

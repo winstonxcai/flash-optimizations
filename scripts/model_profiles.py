@@ -21,6 +21,22 @@ class ModelProfile:
 
 
 _PROFILES = {
+    "dsv41": ModelProfile(
+        repository="deepseek-ai/DeepSeek-V4.1-Flash-1017",
+        revision="1bae0e1088993b9b82de08f59de5be5a34e42170",
+        config_sha256="8be45ce0476004a3f529fd896115a4a2e800a129ad2d3ec05b16050f52e21879",
+        directory="DeepSeek-V4.1-Flash-1017",
+        volume="deepseek-v4-1-flash-1017",
+        shards=48,
+        checkpoint_bytes=510_296_708_312,
+        metadata_files=(
+            "config.json",
+            "model.safetensors.index.json",
+            "tokenizer.json",
+            "tokenizer_config.json",
+        ),
+        integrations=("v0.5.22",),
+    ),
     "dsv4": ModelProfile(
         repository="deepseek-ai/DeepSeek-V4-Flash-0731",
         revision="7872f01b1d1fe23eabc4c98b48bffcef5a386062",

@@ -15,6 +15,17 @@ from pathlib import Path
 from typing import Any
 
 TOOLS = frozenset({"memcheck", "racecheck", "synccheck"})
+
+
+def check_fp4_scope_audit(log: str, identity: str) -> None:
+    """Positive Packed decode synchronization trace, separate from zero errors."""
+    check_sanitizer_report(log, "racecheck")
+    if "flash_fwd_splitkv_mla_fp8_sparse_kernel" not in log or not re.search(
+        r"(?i)(block|cta|barrier)", log
+    ):
+        raise RuntimeError(f"Missing positive FP4 synchronization trace: {identity}")
+
+
 FP4_CASE_COUNT = 34
 IDENTITY_FIELDS = (
     "validation_suite",

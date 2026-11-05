@@ -14,9 +14,10 @@ budget ledger; [decode.csv](decode.csv) contains every case and raw sample.
 |---|---|---|
 | Optimized decode, 48 cases | Complete; +0.6829% for 16 heads, +2.5192% for eight | SGLang `246ee03c1ad5`, parent `8aea70ae58a9` |
 | Latest focused H100 review | Direct numerical/graph and Adapter >2 GiB numerical checks passed, with all three sanitizer tools | SGLang `9185c6d25115`; run IDs in ledger |
-| Current review fixes | CPU checks; expanded integration GPU test not run | Current parent pin; ledger `current_review` |
+| Current combined GLM/V4.1 candidate | CPU checks passed; GLM 175 numerical/integration tests and nine smoke tests passed on H100 | Parent `18107f8`, SGLang `e0d6d50`; unchanged GLM content qualified on `250415b`/`80d6a47` |
 | Earlier unoptimized attention, 128 cases | Incomplete: 56 cases; memcheck incomplete | [Historical attention CSV](attention.csv) |
-| Broad instrumentation / serving | Unverified | No model weights or serving run |
+| Historical full-checkpoint serving smoke | Native and Direct passed on four H200s | Run `glm53-h200-tp4-final-answer-20261104`; source-bound record below |
+| Combined-candidate focused instrumentation / serving | GLM loader, four decode and both prefill variants pass all three tools; V4.1 and serving pending | Fallback `winstoncai233`; ledger `ds41_integration` |
 
 Ten optimized decode cases favor Direct; case means range from -3.5576% to
 +8.6594%. No case reaches 2×. The timing Function took 136.084 seconds including
@@ -38,8 +39,8 @@ relabel those source-bound results as fresh qualification.
 ## Implementation and ownership
 
 The maintained branch is `glm53-flash-packed` in the parent and SGLang fork.
-Only the v0.5.22 SGLang integration changes; FlashMLA and both v0.5.18 pins remain
-unchanged. See [the fork file map](../../../third_party/README.md).
+The combined candidate uses V4.1 FlashMLA `4e72722671d8`; both v0.5.18 pins
+remain unchanged. GLM runtime and kernels remain in the v0.5.22 SGLang fork. See [the fork file map](../../../third_party/README.md).
 
 | Responsibility | Owner |
 |---|---|
@@ -92,7 +93,7 @@ and identities and are not eligible to resume across changed code.
 
 ## Checks and reproduction
 
-The next step is the existing local CPU entry points, requiring no allocation:
+Reproduce the local CPU checks with these existing entry points:
 
 ```bash
 python -m unittest scripts.modal.tests
@@ -123,7 +124,8 @@ hybrid pool and public prefill/decode dispatch for Adapter and Direct. It checks
 nonidentity physical row placement, second-layer mapping, current-token writes,
 duplicates and invalids against independently reconstructed Packed input. Index
 selection and page-table transforms are outside this test. This expanded GPU
-test has not run. Broad qualification, model quality, serving capacity and
+test passed in the combined candidate's 175-test H100 run. Broad qualification,
+model quality, serving capacity and
 H20 execution remain unverified. See the newer prefill results below and the
 [full-checkpoint H200 smoke](../../../third_party/README.md#full-model-h200-smoke-test).
 
@@ -224,11 +226,13 @@ validation status, source identities and eventual receipts. Historical runs and
 the original worktree's unstaged ledger are preserved. The 236 unrelated replay
 capture additions and replay-only sweep are excluded from the resulting PR diff.
 
-Next step: finish both integration/suite CPU regressions and final independent
-review, prepare verified CPU images, then run focused one-H100 qualification and
-the bounded Native/Direct four-H200 smoke. No new timing or prefill promotion is
-part of this merge. Pending gates remain pending until source-bound evidence is
-exported; Native remains the serving default.
+Both integration/suite CPU regressions and independent reviews passed. GLM
+numerical, allocation, graph and focused three-tool checks passed on H100. The
+V4.1 allocation fixture correction is test-only and now checks the production
+selector/sizing on CPU before allocation. Its corrected GPU check and focused
+tools precede the bounded Native/Direct four-H200 smoke on the fallback account.
+No new timing or prefill promotion is part of this merge. Pending gates remain
+pending until source-bound evidence is exported; Native remains the default.
 
 The merge-only GLM sanitizer group uses `--stage corrective --sanitizer
 --sanitizer-scope glm-merge` with the exact `GLM_MERGE_SANITIZER` cases from the
@@ -236,3 +240,39 @@ maintained runner. It instruments the byte loader, four decode partial variants
 and both 64-row prefill head variants, retaining the Packed filter/source audit.
 It never replaces broad timing-qualification requirements. V4.1 corrective cases
 are allowlisted; default full 34-case qualification is unchanged.
+
+
+### Parallel serving follow-up
+
+The requested serving scope is now four independent workers: GLM Native/Direct
+on `winstoncai233`, and V4.1-Flash-1017 Native/Direct beside its cached checkpoint
+on `winstoncai`. Each worker owns four H200s, one server process group and a
+mode-specific result directory. The controller must own exactly two submissions
+per account; `max_containers=2` alone does not bound separate ephemeral apps.
+
+Both models use TP4/EP4, an 8K context, four requests, 16,384 token slots,
+decode graphs at 1/2/4, offline weights and the Python radix tree. GLM keeps its
+2,048-token prefill chunk. V4.1 uses page256/chunk256, explicit FlashMLA,
+FlashInfer MXFP4 and V4.1 parsers; disable FlashInfer autotuning and eager
+DeepGEMM precompilation for this functional smoke. MHC arithmetic is preserved.
+No model-quality or serving-performance claim follows from this short request.
+
+Use the existing `scripts/modal/serve.py::prepare_serving_smoke` CPU entry point,
+then `::smoke_serving --run-id <unique-pair-id> --mode native|direct`, with
+`REMNANT_INTEGRATION=v0.5.22`, the selected `REMNANT_MODEL_FAMILY=glm53|dsv41`
+and the CPU-verified `REMNANT_COMPILED_IMAGE`. The public dispatcher validates
+inputs and weights before scheduling. Parallel controllers use the same worker,
+with bounded ownership, deadlines and cancellation; no alternate server harness.
+
+The $20 phase cap and $3 reserve still apply after category rebalancing. Complete
+image admission and the aggregate worst-case launch projection before reserving
+GPUs. No four-way GPU smoke has started. GLM historical cold startup does not
+establish an independent Direct cold-start time; V4.1's old larger-workload
+startup likewise does not prove completion within the new bound.
+
+Focused `v41-merge` instrumentation retains all 15 selected numerical fixtures
+and all three tools, while filtering to CPU-verified FP4 store/read, FlashMLA
+decode/prefill and combine symbols. A positive Packed synchronization audit is
+required. It excludes framework/reference kernels and never satisfies the
+unchanged full 34-case timing qualification. The interrupted unfiltered attempt
+remains in the aggregate ledger with its entire allocation charged.

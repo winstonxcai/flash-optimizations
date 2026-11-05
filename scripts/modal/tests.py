@@ -2276,7 +2276,7 @@ class GlmLauncherTests(unittest.TestCase):
                 function("fixture", model_family="glm53")
             run.assert_not_called()
 
-    def test_glm_local_launcher_resolves_tp_ep_and_gpu_count(self):
+    def test_glm_and_v41_local_launcher_resolves_tp_ep_and_gpu_count(self):
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary)
             command = path / "sglang"
@@ -2306,39 +2306,59 @@ class GlmLauncherTests(unittest.TestCase):
             ):
                 base.pop(name, None)
             script = str(kernels.REPO_ROOT / "scripts/local/run-server.sh")
-            for tp in (4, 8):
-                for mode in ("native", "direct"):
-                    with self.subTest(tp=tp, mode=mode):
-                        result = subprocess.run(
-                            [
-                                "bash",
-                                script,
-                                mode,
-                                "/config-only",
-                                "127.0.0.1",
-                                "30212",
-                            ],
-                            env={**base, "TP": str(tp)},
-                            capture_output=True,
-                            text=True,
-                            check=True,
-                            timeout=10,
-                        )
-                        args = json.loads(result.stdout)
-                        for flag, expected in (
-                            ("--model-type", "llm"),
-                            ("--max-total-tokens", "16384"),
-                            ("--tp", str(tp)),
-                            ("--ep", str(tp)),
-                            ("--kv-cache-dtype", "fp8_e4m3"),
-                            ("--dsa-prefill-backend", "tilelang"),
-                            ("--dsa-decode-backend", "tilelang"),
-                            ("--kv-cache-format", mode),
-                            ("--moe-runner-backend", "deep_gemm"),
-                        ):
-                            self.assertEqual(args[args.index(flag) + 1], expected)
-                        self.assertNotIn("--dsv4-c4-cache-format", args)
-                        self.assertIn("--language-model-only", args)
+            for family in ("glm53", "dsv41"):
+                for tp in (4, 8):
+                    for mode in ("native", "direct"):
+                        with self.subTest(tp=tp, mode=mode):
+                            result = subprocess.run(
+                                [
+                                    "bash",
+                                    script,
+                                    mode,
+                                    "/config-only",
+                                    "127.0.0.1",
+                                    "30212",
+                                ],
+                                env={**base, "TP": str(tp), "MODEL_FAMILY": family},
+                                capture_output=True,
+                                text=True,
+                                check=True,
+                                timeout=10,
+                            )
+                            args = json.loads(result.stdout)
+                            for flag, expected in (
+                                ("--model-type", "llm"),
+                                ("--max-total-tokens", "16384"),
+                                ("--tp", str(tp)),
+                                ("--ep", str(tp)),
+                                ("--kv-cache-dtype", "fp8_e4m3"),
+                                ("--kv-cache-format", mode),
+                                (
+                                    "--moe-runner-backend",
+                                    "deep_gemm"
+                                    if family == "glm53"
+                                    else "flashinfer_mxfp4",
+                                ),
+                            ):
+                                self.assertEqual(args[args.index(flag) + 1], expected)
+                            if family == "glm53":
+                                self.assertEqual(
+                                    args[args.index("--dsa-prefill-backend") + 1],
+                                    "tilelang",
+                                )
+                                self.assertEqual(
+                                    args[args.index("--dsa-decode-backend") + 1],
+                                    "tilelang",
+                                )
+                            else:
+                                for flag, value in (
+                                    ("--dsv4-attn-backend", "flashmla"),
+                                    ("--reasoning-parser", "deepseek-v41"),
+                                    ("--tool-call-parser", "deepseekv41"),
+                                ):
+                                    self.assertEqual(args[args.index(flag) + 1], value)
+                            self.assertNotIn("--dsv4-c4-cache-format", args)
+                            self.assertIn("--language-model-only", args)
             for changes, error in (
                 ({"TP": "4", "EP": "8"}, "positive divisor"),
                 ({"TP": "8", "GPUS": "0,1,2,3"}, "visible GPUs"),
@@ -2498,7 +2518,20 @@ class GLMCPURebuildTests(unittest.TestCase):
             root = Path(tmp)
             base = root / "base.json"
             output = root / "snapshot.json"
-            base.write_text(json.dumps({"glm_compile": {"tilelang": []}}))
+            import hashlib
+
+            binary = root / "qualified.so"
+            binary.write_bytes(b"qualified artifact")
+            base.write_text(
+                json.dumps(
+                    {
+                        "glm_compile": {"tilelang": []},
+                        "binaries": {
+                            str(binary): hashlib.sha256(binary.read_bytes()).hexdigest()
+                        },
+                    }
+                )
+            )
 
             def mapped(path):
                 if str(path) == "/opt/remnant-build.json":
@@ -2522,8 +2555,16 @@ class GLMCPURebuildTests(unittest.TestCase):
                 sources.glm_compile_owner_digest(root),
             )
 
+            binary.write_bytes(b"changed artifact")
+            with patch.object(sources, "Path", side_effect=mapped):
+                with self.assertRaisesRegex(
+                    RuntimeError, "Compiled base binary changed"
+                ):
+                    sources.snapshot_glm_artifacts(str(root))
+
     def test_format_transition_checks_raw_hashes_ast_and_formatter(self):
         import hashlib
+
         from scripts.sources import verify_glm_formatting
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -2534,7 +2575,8 @@ class GLMCPURebuildTests(unittest.TestCase):
                 path.parent.mkdir(parents=True, exist_ok=True)
             old_py, new_py = b"x=1\n", b"x = 1\n"
             old_cpp, new_cpp = b"int x=1;\n", b"int x = 1;\n"
-            sha = lambda data: hashlib.sha256(data).hexdigest()
+            def sha(data):
+                return hashlib.sha256(data).hexdigest()
             proof = dict(
                 schema="remnant-glm-format-transition-v1",
                 ast_python_minor=list(sys.version_info[:2]),
@@ -2658,6 +2700,7 @@ class GLMCPURebuildTests(unittest.TestCase):
 
     def test_base_identity_and_artifacts(self):
         import hashlib
+
         from scripts import sources
 
         real_path = Path
@@ -2724,6 +2767,7 @@ class GLMAttentionProtocolTests(unittest.TestCase):
 
     def test_qualification_import_needs_no_historical_git_objects(self):
         import importlib
+
         from scripts.modal import kernel_qualification
 
         with patch("subprocess.check_output", side_effect=AssertionError("no Git at import")):
@@ -2757,6 +2801,7 @@ class GLMAttentionProtocolTests(unittest.TestCase):
 
     def test_sanitizer_count_cannot_replace_required_case_identities(self):
         import xml.etree.ElementTree as ET
+
         # Construct independent fixtures instead of relying on ignored artifacts.
         names = ['test_producer_reconstruction', 'test_native_fp8_conversion',
                  'test_allocator_accounting', 'test_invalid_attention', 'test_partial_outputs',
@@ -2798,11 +2843,13 @@ class GLMAttentionProtocolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             manifest = dict(glm_compile=dict(triton=[], tilelang=[], attention_scale=0.0625), sanitizer={'binary_sha256':'tool'})
-            manifest_path = root / 'manifest.json'; manifest_path.write_text(json.dumps(manifest))
+            manifest_path = root / 'manifest.json'
+            manifest_path.write_text(json.dumps(manifest))
             original = qualification.required_glm_sanitizer_cases(historical=True)
             focused = qualification.required_glm_sanitizer_cases(historical=False) - original
             def write_group(run, tool, names, interrupted=False):
-                folder = root / 'microbench' / run / 'validation'; folder.mkdir(parents=True)
+                folder = root / 'microbench' / run / 'validation'
+                folder.mkdir(parents=True)
                 (folder / 'build-manifest.json').write_text(json.dumps(manifest))
                 (folder / 'result.json').write_text(json.dumps(dict(model_family='glm53', status='failed' if interrupted else 'passed', runtime_hashes={'kernel':'same'}, sanitizer_results={tool:{'status':'failed' if interrupted else 'passed'}})))
                 log = ('KeyboardInterrupt\n' if interrupted else '') + ('========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)\n' if tool=='racecheck' else '========= ERROR SUMMARY: 0 errors\n')
@@ -2814,7 +2861,8 @@ class GLMAttentionProtocolTests(unittest.TestCase):
                         dimensions = tuple(map(int,name.split('[')[1][:-1].split('-')))
                         geometry = dict(zip(('heads','banks','queries','forced_inner'),dimensions), warmup_calls=1,measured_warmup_calls=10,actual_warmup_calls_per_mode=dimensions[1])
                         ET.SubElement(ET.SubElement(node,'properties'),'property',name='probe_geometry',value=json.dumps(geometry))
-                if interrupted: ET.SubElement(suite, 'testcase', time='0.001')  # pytest interrupted-node placeholder
+                if interrupted:
+                    ET.SubElement(suite, 'testcase', time='0.001')  # pytest interrupted-node placeholder
                 ET.ElementTree(suite).write(folder / f'{tool}.xml')
                 if interrupted:
                     note = dict(schema='remnant-glm-sanitizer-checkpoint-v1',run_id=run,tool=tool,action='intentional SIGINT to owned pytest')
@@ -2841,7 +2889,8 @@ class GLMAttentionProtocolTests(unittest.TestCase):
                 self.assertFalse(exploratory['missing']['racecheck'])
                 self.assertFalse(exploratory['missing']['synccheck'])
                 note = interrupted / 'racecheck-coverage-checkpoint.json'
-                saved = note.read_text(); note.unlink()
+                saved = note.read_text()
+                note.unlink()
                 with self.assertRaisesRegex(RuntimeError,'missing sanitizer gates'):
                     kernels._glm_timing_qualification(ids)
                 note.write_text(saved)
@@ -3007,76 +3056,338 @@ class FP4PreflightTests(unittest.TestCase):
 class SharedModelContractsTests(unittest.TestCase):
     def test_profiles_are_pure_and_preserve_assets(self):
         from scripts.model_profiles import model_profile
-        for family in ("dsv4", "glm53"):
+
+        for family in ("dsv4", "dsv41", "glm53"):
             profile = model_profile(family, "v0.5.22")
             self.assertIn(profile.revision, profile.config_url)
             self.assertEqual(len(profile.config_sha256), 64)
-        self.assertEqual(model_profile("glm53", "v0.5.22").checkpoint_bytes, 328337455672)
+        self.assertEqual(
+            model_profile("glm53", "v0.5.22").checkpoint_bytes, 328337455672
+        )
         self.assertEqual(model_profile("glm53", "v0.5.22").volume, "glm53-flash")
-        for family, version in (("glm53", "v0.5.18"), ("unknown", "v0.5.22")):
+        for family, version in (
+            ("glm53", "v0.5.18"),
+            ("dsv41", "v0.5.18"),
+            ("unknown", "v0.5.22"),
+        ):
             with self.assertRaises(ValueError):
                 model_profile(family, version)
 
+    def test_fp4_focused_scope_has_positive_instrumentation_and_no_full_gate(self):
+        from scripts.modal.qualification import check_fp4_scope_audit
+
+        summary = (
+            "========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)\n"
+        )
+        with self.assertRaises(RuntimeError):
+            check_fp4_scope_audit(summary, "empty")
+        check_fp4_scope_audit(
+            summary + "flash_fwd_splitkv_mla_fp8_sparse_kernel CTA barrier", "covered"
+        )
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        with (
+            patch.object(kernels, "MODEL_FAMILY", "dsv4"),
+            patch.object(kernels, "VALIDATION_SUITE", "v41-fp4"),
+            patch.object(kernels, "_run_context") as run,
+        ):
+            with self.assertRaisesRegex(ValueError, "exact FP4"):
+                function(
+                    "wrong",
+                    stage="corrective",
+                    sanitizer=True,
+                    sanitizer_scope="v41-merge",
+                    cases=kernels.V41_MERGE_SANITIZER[0],
+                )
+            run.assert_not_called()
+        self.assertEqual(len(kernels.V41_MERGE_SANITIZER), 15)
+        self.assertEqual(len(set(kernels.V41_MERGE_SANITIZER)), 15)
+        self.assertEqual(
+            kernels._resolve_image_sources(
+                "dsv4",
+                {
+                    "REMNANT_VALIDATION_SUITE": "v41-fp4",
+                    "REMNANT_COMPILED_IMAGE": "verified",
+                },
+            ),
+            ("verified", None),
+        )
+        with self.assertRaisesRegex(ValueError, "requires glm53"):
+            kernels._resolve_image_sources(
+                "dsv4",
+                {
+                    "REMNANT_VALIDATION_SUITE": "v41-fp4",
+                    "REMNANT_GLM_CPU_REBUILD_FROM": "wrong",
+                },
+            )
+
+    def test_parallel_smoke_validates_before_scheduling(self):
+        from scripts.modal import serve
+
+        for family, mode in (
+            ("dsv4", "native"),
+            ("glm53", "adapter"),
+            ("dsv41", "packed"),
+        ):
+            with (
+                patch.object(serve, "MODEL_FAMILY", family),
+                patch.object(serve.prepare_serving_smoke, "remote") as prepare,
+                patch.object(serve._smoke_serving_worker, "remote") as worker,
+            ):
+                with self.assertRaises(ValueError):
+                    serve.smoke_serving("fixture", mode)
+                prepare.assert_not_called()
+                worker.assert_not_called()
+
+    def test_v41_resolved_smoke_settings_require_backend_and_tuning(self):
+        from scripts.modal import serve
+
+        settings = dict(
+            kv_cache_format="direct",
+            tp_size=4,
+            ep_size=4,
+            kv_cache_dtype="fp8_e4m3",
+            language_model_only=True,
+            context_length=8192,
+            max_running_requests=4,
+            chunked_prefill_size=256,
+            max_total_num_tokens=16384,
+            dsv4_attn_backend="flashmla",
+            disable_flashinfer_autotune=True,
+            reasoning_parser="deepseek-v41",
+            tool_call_parser="deepseekv41",
+            cuda_graph_config={"decode": {"backend": "full", "bs": [1, 2, 4]}},
+        )
+        for change, succeeds in (
+            ({}, True),
+            ({"kv_cache_format": "native"}, False),
+            ({"dsv4_attn_backend": "auto"}, False),
+            ({"disable_flashinfer_autotune": False}, False),
+        ):
+            with patch.object(
+                serve.urllib.request,
+                "urlopen",
+                return_value=io.BytesIO(json.dumps({**settings, **change}).encode()),
+            ):
+                if succeeds:
+                    self.assertEqual(
+                        serve._smoke_settings(
+                            "30211", "direct", serve.time.monotonic() + 10, "dsv41"
+                        ),
+                        settings,
+                    )
+                else:
+                    with self.assertRaises(RuntimeError):
+                        serve._smoke_settings(
+                            "30211", "direct", serve.time.monotonic() + 10, "dsv41"
+                        )
+
+    def test_single_mode_smoke_owns_only_requested_mode_and_result_directory(self):
+        from contextlib import contextmanager
+
+        from scripts.modal import serve
+
+        with tempfile.TemporaryDirectory() as tmp:
+            for family in ("glm53", "dsv41"):
+                for mode in ("native", "direct"):
+                    exited = []
+
+                    @contextmanager
+                    def boot(environment, log, deadline):
+                        log.write_text(
+                            "\n".join(
+                                f"[2026-11-05 12:00:00 TP{rank} EP{rank}] {marker}"
+                                for rank in range(4)
+                                for marker in (
+                                    "Load weight end.",
+                                    "Capture target decode CUDA graph end.",
+                                )
+                            )
+                        )
+                        try:
+                            yield
+                        finally:
+                            exited.append(True)
+
+                    with (
+                        patch.object(serve, "MODEL_FAMILY", family),
+                        patch.object(serve, "RESULTS_ROOT", Path(tmp)),
+                        patch.object(
+                            serve, "_check_serving_smoke_image", return_value={}
+                        ),
+                        patch.object(
+                            serve, "_check_serving_checkpoint", return_value={}
+                        ),
+                        patch.object(
+                            serve.subprocess,
+                            "check_output",
+                            return_value="NVIDIA H200\n" * 4,
+                        ),
+                        patch.object(
+                            serve, "_running_serving_server", side_effect=boot
+                        ),
+                        patch.object(serve, "_smoke_settings", return_value={}),
+                        patch.object(serve, "_smoke_chat_request", return_value={}),
+                        patch.object(serve.results_volume, "commit"),
+                        patch("builtins.print"),
+                    ):
+                        result = serve._run_serving_smoke(
+                            "shared-pair",
+                            mode,
+                            allocation_seconds=serve._serving_smoke_profile(
+                                family
+                            ).mode_seconds
+                            + 60,
+                            artifact_mode=mode,
+                        )
+                        self.assertEqual(set(result["mode_results"]), {mode})
+                        self.assertEqual(
+                            result["mode_results"][mode]["status"], "passed"
+                        )
+                        self.assertEqual(exited, [True])
+                for mode in ("native", "direct"):
+                    artifact = (
+                        Path(tmp)
+                        / (family + "-serving")
+                        / "shared-pair"
+                        / mode
+                        / "result.json"
+                    )
+                    self.assertEqual(
+                        set(json.loads(artifact.read_text())["mode_results"]), {mode}
+                    )
+
     def test_shared_report_parsing_and_new_raw_identity(self):
         import hashlib
-        from scripts.modal.qualification import read_pytest_report, validate_run_id, verify_sanitizer_artifacts
+
+        from scripts.modal.qualification import (read_pytest_report,
+                                                 validate_run_id,
+                                                 verify_sanitizer_artifacts)
+
         for name in ("../bad", "a/b", "", "a" * 129):
             with self.assertRaises(ValueError):
                 validate_run_id(name)
         validate_run_id("good-run_1")
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            (root / "memcheck.xml").write_text('<testsuite tests="1"><testcase classname="unit" name="case"><properties><property name="shape" value="8"/></properties></testcase></testsuite>')
-            (root / "memcheck.log").write_text('========= ERROR SUMMARY: 0 errors\n')
+            (root / "memcheck.xml").write_text(
+                '<testsuite tests="1"><testcase classname="unit" name="case"><properties><property name="shape" value="8"/></properties></testcase></testsuite>'
+            )
+            (root / "memcheck.log").write_text("========= ERROR SUMMARY: 0 errors\n")
             cases, counts = read_pytest_report(root / "memcheck.xml")
             self.assertEqual(counts, dict(tests=1, errors=0, failures=0, skipped=0))
             self.assertEqual(cases[0].find("properties/property").get("value"), "8")
-            state = {"report_schema": "remnant-sanitizer-raw-v1", **{f"{s}_sha256": hashlib.sha256((root / f"memcheck.{s}").read_bytes()).hexdigest() for s in ("log", "xml")}}
+            state = {
+                "report_schema": "remnant-sanitizer-raw-v1",
+                **{
+                    f"{s}_sha256": hashlib.sha256(
+                        (root / f"memcheck.{s}").read_bytes()
+                    ).hexdigest()
+                    for s in ("log", "xml")
+                },
+            }
             verify_sanitizer_artifacts(root, "memcheck", state)
-            (root / "memcheck.log").write_text('changed')
+            (root / "memcheck.log").write_text("changed")
             with self.assertRaisesRegex(RuntimeError, "raw report changed"):
                 verify_sanitizer_artifacts(root, "memcheck", state)
 
     def test_glm_smoke_requires_all_rank_progress_and_resolved_mode(self):
         from scripts.modal import serve
-        rows = [f"[2026-11-04 13:53:46 TP{rank} EP{rank}] {marker}" for rank in range(4) for marker in ("Load weight end.", "Capture target decode CUDA graph end.")]
+
+        rows = [
+            f"[2026-11-04 13:53:46 TP{rank} EP{rank}] {marker}"
+            for rank in range(4)
+            for marker in ("Load weight end.", "Capture target decode CUDA graph end.")
+        ]
         stages = serve._glm_smoke_stages("\n".join(rows))
         for event in ("weight_load_complete", "graph_capture_complete"):
-            self.assertEqual({s["rank"] for s in stages if s["event"] == event}, set(range(4)))
-        settings = dict(kv_cache_format="direct", tp_size=4, ep_size=4, kv_cache_dtype="fp8_e4m3", dsa_prefill_backend="tilelang", dsa_decode_backend="tilelang", language_model_only=True, context_length=8192, max_running_requests=4, chunked_prefill_size=2048, max_total_num_tokens=16384, cuda_graph_config={"decode":{"backend":"full","bs":[1,2,4]}})
+            self.assertEqual(
+                {s["rank"] for s in stages if s["event"] == event}, set(range(4))
+            )
+        settings = dict(
+            kv_cache_format="direct",
+            tp_size=4,
+            ep_size=4,
+            kv_cache_dtype="fp8_e4m3",
+            dsa_prefill_backend="tilelang",
+            dsa_decode_backend="tilelang",
+            language_model_only=True,
+            context_length=8192,
+            max_running_requests=4,
+            chunked_prefill_size=2048,
+            max_total_num_tokens=16384,
+            cuda_graph_config={"decode": {"backend": "full", "bs": [1, 2, 4]}},
+        )
         response = io.BytesIO(json.dumps(settings).encode())
         with patch.object(serve.urllib.request, "urlopen", return_value=response):
-            self.assertEqual(serve._glm_smoke_settings("30211", "direct", serve.time.monotonic()+10), settings)
+            self.assertEqual(
+                serve._glm_smoke_settings(
+                    "30211", "direct", serve.time.monotonic() + 10
+                ),
+                settings,
+            )
         response = io.BytesIO(json.dumps(settings).encode())
-        with patch.object(serve.urllib.request, "urlopen", return_value=response), self.assertRaisesRegex(RuntimeError, "kv_cache_format"):
-            serve._glm_smoke_settings("30211", "native", serve.time.monotonic()+10)
+        with (
+            patch.object(serve.urllib.request, "urlopen", return_value=response),
+            self.assertRaisesRegex(RuntimeError, "kv_cache_format"),
+        ):
+            serve._glm_smoke_settings("30211", "native", serve.time.monotonic() + 10)
 
     def test_ambiguous_sanitizers_fail_before_run_context(self):
         function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
         with patch.object(kernels, "_run_context") as context:
             with self.assertRaises(ValueError):
-                function("ambiguous", sanitizer=True, sanitizer_tools="memcheck", sanitizer_order="memcheck,racecheck,synccheck")
+                function(
+                    "ambiguous",
+                    sanitizer=True,
+                    sanitizer_tools="memcheck",
+                    sanitizer_order="memcheck,racecheck,synccheck",
+                )
             context.assert_not_called()
 
     def test_merge_sanitizer_scope_and_fp4_allowlist_fail_before_execution(self):
         function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
-        with patch.object(kernels, "MODEL_FAMILY", "glm53"), patch.object(kernels, "_run_context") as context:
+        with (
+            patch.object(kernels, "MODEL_FAMILY", "glm53"),
+            patch.object(kernels, "_run_context") as context,
+        ):
             with self.assertRaisesRegex(ValueError, "exact loader/decode/prefill"):
-                function("merge-scope", model_family="glm53", stage="corrective", sanitizer=True, sanitizer_scope="glm-merge", cases=kernels.GLM_MERGE_SANITIZER[0])
+                function(
+                    "merge-scope",
+                    model_family="glm53",
+                    stage="corrective",
+                    sanitizer=True,
+                    sanitizer_scope="glm-merge",
+                    cases=kernels.GLM_MERGE_SANITIZER[0],
+                )
             context.assert_not_called()
-        with patch.object(kernels, "MODEL_FAMILY", "dsv4"), patch.object(kernels, "VALIDATION_SUITE", "v41-fp4"), patch.object(kernels, "_run_context") as context:
+        with (
+            patch.object(kernels, "MODEL_FAMILY", "dsv4"),
+            patch.object(kernels, "VALIDATION_SUITE", "v41-fp4"),
+            patch.object(kernels, "_run_context") as context,
+        ):
             with self.assertRaisesRegex(ValueError, "allowlisted"):
-                function("fp4-case", stage="corrective", cases=kernels.TEST_ROOT+"test_remnant_fp4.py::test_not_owned")
+                function(
+                    "fp4-case",
+                    stage="corrective",
+                    cases=kernels.TEST_ROOT + "test_remnant_fp4.py::test_not_owned",
+                )
             context.assert_not_called()
 
     def test_cpu_preflight_does_not_commit_gpu_cache(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            manifest = root / "manifest.json"; manifest.write_text('{}')
-            with patch.object(kernels, "MANIFEST", manifest), patch.object(kernels, "RESULTS_ROOT", root), patch.object(kernels, "results_volume"), patch.object(kernels, "triton_volume") as cache:
+            manifest = root / "manifest.json"
+            manifest.write_text("{}")
+            with (
+                patch.object(kernels, "MANIFEST", manifest),
+                patch.object(kernels, "RESULTS_ROOT", root),
+                patch.object(kernels, "results_volume"),
+                patch.object(kernels, "triton_volume") as cache,
+            ):
                 with kernels._run_context("cpu", "preflight", 1, resource="cpu"):
                     pass
                 cache.commit.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
