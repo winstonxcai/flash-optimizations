@@ -13,6 +13,15 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Parent follow-up from `c0e59ec`, SGLang `e0d6d500d6dc` / FlashMLA
+  `4e72722671d8`: add independent Native/Direct serving workers for GLM and
+  V4.1-Flash-1017, pinned metadata, per-mode artifact ownership, and CPU binary/
+  cache admission. Full parent CPU checks: 116 passed under each integration.
+  Preserve all model/kernel ABIs. The focused V4.1 audit remains unqualified
+  after an internal sanitizer exception; broaden its filter consistently and
+  install the submitting SDK explicitly for legacy CPU image builders.
+  No new four-way serving result or broad sanitizer completion is claimed.
+
 - Integration candidate from parent `8a3d5b2` + V4.1 `d385c1c`; combined SGLang
   `e0d6d500d6dc` (descends from `6667e5d` and `c470887`) / FlashMLA
   `4e72722671d8`: merge both model implementations and replace public model-specific

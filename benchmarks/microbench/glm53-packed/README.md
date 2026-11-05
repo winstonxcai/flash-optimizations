@@ -276,3 +276,11 @@ decode/prefill and combine symbols. A positive Packed synchronization audit is
 required. It excludes framework/reference kernels and never satisfies the
 unchanged full 34-case timing qualification. The interrupted unfiltered attempt
 remains in the aggregate ledger with its entire allocation charged.
+
+The first narrow decode synchronization audit failed with an internal sanitizer
+hardware exception surfacing during Adapter prefill. Its 15 uninstrumented
+fixtures passed; no sanitizer tool qualified. The audit now uses the same full
+production-kernel filter as the three tool runs. This is a coverage correction,
+not proof that the exception was a checker defect. Preserve the failed run.
+Kernel images explicitly install the submitting Modal SDK, matching the serving
+runner, so older image builders supply its dependencies before CPU tests.

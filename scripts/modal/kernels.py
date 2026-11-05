@@ -464,6 +464,19 @@ def _reuse_glm_cpu_artifacts(build: Path, deadline: float, binding_requirements:
         artifact_reuse="Verified unchanged compiled sources and compile owners; harness-only overlay")
     MANIFEST.write_text(json.dumps(previous,indent=2)+"\n")
     return True
+
+
+def _fp4_sanitizer_prefix(tool: str, *, trace: bool = False) -> tuple[str, ...]:
+    """Audit and tool runs cover the same production kernels in a mixed test."""
+    if tool not in ("memcheck", "racecheck", "synccheck") or (trace and tool != "racecheck"):
+        raise ValueError("Invalid FP4 sanitizer tool/trace selection")
+    prefix = (
+        SANITIZER, "--tool", tool, "--error-exitcode", "1",
+        "--kernel-name", "regex=" + FP4_KERNEL_PATTERN, "--print-level", "info",
+    )
+    return prefix + (("--racecheck-trace-sync", "yes") if trace else ())
+
+
 def _validation_sanitizer_order(value: str) -> tuple[str, ...]:
     """Prioritize pending tools without permitting missing/duplicate tools."""
     if not value:
@@ -1037,7 +1050,9 @@ else:
     )
 
 kernel_image = (
-    kernel_base.env(
+    # Legacy image builders inject the SDK without its Python dependencies.
+    # Install the submitting version before CPU launcher tests import Modal.
+    kernel_base.pip_install(f"modal=={modal.__version__}").env(
         {
             "REMNANT_VALIDATION_SUITE": VALIDATION_SUITE,
             "REMNANT_INTEGRATION": INTEGRATION["version"],
@@ -1736,11 +1751,7 @@ def validate_kernels(
             symbols = manifest.get("fp4_scope_symbols")
             if not symbols or symbols["filter"] != "regex=" + FP4_KERNEL_PATTERN:
                 raise RuntimeError("Missing CPU-verified FP4 instrumentation symbols")
-            audit_prefix = (
-                SANITIZER, "--tool", "racecheck", "--error-exitcode", "1",
-                "--kernel-name", "regex=flash_fwd_splitkv_mla_fp8_sparse_kernel",
-                "--racecheck-trace-sync", "yes",
-            )
+            audit_prefix = _fp4_sanitizer_prefix("racecheck", trace=True)
             _run_pytest((TEST_ROOT + "test_remnant_fp4.py::test_fp4_direct[128-64-True]",),
                         root, "scope-audit", min(deadline, time.monotonic() + 180),
                         prefix=audit_prefix)
@@ -1764,8 +1775,7 @@ def validate_kernels(
                     # is the control. Full attention has its own numerical gate.
                     prefix += ("--kernel-name", "regex=glm_packed_(partial|bytes)", "--print-level", "info")
                 if sanitizer_scope == "v41-merge":
-                    prefix += ("--kernel-name", "regex=" + FP4_KERNEL_PATTERN,
-                               "--print-level", "info")
+                    prefix = _fp4_sanitizer_prefix(tool)
                 try:
                     tool_environment = dict(environment)
                     if sanitizer_scope in ("glm-decode", "glm-merge"):

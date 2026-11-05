@@ -206,7 +206,10 @@ def check_sanitizer_report(output: str, tool: str) -> None:
     ]
     if (
         summaries != [expected]
-        or any(r.startswith(("Warning:", "Error:")) for r in records)
+        or any(
+            r.startswith(("Warning:", "Error:")) or "Internal Sanitizer Error" in r
+            for r in records
+        )
         or "terminated before first instrumented API call" in output
     ):
         raise RuntimeError(f"Incomplete sanitizer evidence {tool}")

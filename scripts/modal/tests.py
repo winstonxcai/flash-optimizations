@@ -1285,7 +1285,8 @@ class LauncherTests(unittest.TestCase):
 from unittest.mock import patch
 from pathlib import Path
 import modal
-with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')), \\
+with patch.object(modal.Image, 'pip_install', autospec=True, side_effect=modal.Image.pip_install) as dependencies, \\
+     patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')), \\
      patch.object(modal.Function, 'spawn', side_effect=AssertionError('launch')), \\
      patch.object(modal.Image, 'from_dockerfile', wraps=modal.Image.from_dockerfile) as recipe:
     from scripts.modal import serve, kernels
@@ -1293,6 +1294,7 @@ with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')
     assert Path(recipe.call_args.args[0]).name == expected
     assert recipe.call_args.kwargs['build_args']['REMNANT_INTEGRATION'] == serve.INTEGRATION['version']
     assert 'benchmark_serving' in serve.app.registered_functions
+    assert any('modal==' + modal.__version__ in call.args for call in dependencies.call_args_list)
     assert {'_benchmark_worker', '_preflight_fp4_timing', 'profile_kernels', 'validate_kernels'} <= set(kernels.app.registered_functions)
     expected_order = ('synccheck', 'racecheck', 'memcheck') if serve.INTEGRATION['version'] == 'v0.5.22' else ('memcheck', 'racecheck', 'synccheck')
     assert kernels.SANITIZER_ORDER == expected_order
@@ -3099,6 +3101,17 @@ class SharedModelContractsTests(unittest.TestCase):
                     cases=kernels.V41_MERGE_SANITIZER[0],
                 )
             run.assert_not_called()
+        import re
+        for tool, trace in (("memcheck", False), ("synccheck", False), ("racecheck", False), ("racecheck", True)):
+            prefix = kernels._fp4_sanitizer_prefix(tool, trace=trace)
+            pattern = prefix[prefix.index("--kernel-name")+1].removeprefix("regex=")
+            for name in ("_store", "_read", "flash_fwd_splitkv_mla_fp8_sparse_kernel",
+                         "sparse_attn_fwd_kernel", "flash_fwd_mla_combine_kernel"):
+                self.assertIsNotNone(re.search(pattern, name))
+            self.assertIsNone(re.search(pattern, "reference_softmax_kernel"))
+        with self.assertRaises(RuntimeError):
+            from scripts.modal.qualification import check_sanitizer_report
+            check_sanitizer_report(summary + "========= Internal Sanitizer Error: failed\n", "racecheck")
         self.assertEqual(len(kernels.V41_MERGE_SANITIZER), 15)
         self.assertEqual(len(set(kernels.V41_MERGE_SANITIZER)), 15)
         self.assertEqual(
