@@ -14,13 +14,16 @@ records rather than this milestone log.
 ## Unreleased
 
 - Integration candidate from parent `8a3d5b2` + V4.1 `d385c1c`; combined SGLang
-  `80d6a473cb0a` (descends from `6667e5d` and `c470887`) / FlashMLA
+  `e0d6d500d6dc` (descends from `6667e5d` and `c470887`) / FlashMLA
   `4e72722671d8`: merge both model implementations and replace public model-specific
   selectors with `--kv-cache-format native|direct`. Preserve numerical kernels,
   persistent ABIs and v0.5.18 pins. Share pinned metadata, source verification,
   report parsing, launcher normalization/transport and pure timing statistics.
   Merge CPU and GPU validation is tracked separately in the existing GLM ledger;
   historical serving/timing records do not qualify this new source automatically.
+  CPU preparation now checks V4.1 Native/Direct allocation coefficients through
+  the production selector; shared fixture cases remove stale pre-migration labels.
+  This correction changes tests only, preserving all numerical/runtime content.
 
 - Measured parent `d3aa23f`, v0.5.22 SGLang `6667e5d` / FlashMLA
   `3eb8594`: qualify the opt-in 64-row Packed prefill candidate for the full
