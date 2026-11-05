@@ -1274,8 +1274,8 @@
     "serving": {
       "glm53_native": "passed",
       "glm53_direct": "passed_after_isolated_rerun",
-      "v41_native": "failed_before_KV_allocation;0.90profilecorrectionCPUtestedGPUunverified",
-      "v41_direct": "failed_before_KV_allocation;0.90profilecorrectionCPUtestedGPUunverified"
+      "v41_native": "passed in v41_parallel_serving",
+      "v41_direct": "passed in v41_parallel_serving"
     },
     "excluded_replay_capture_files": 236,
     "original_dirty_ledger_preserved": true,
@@ -3190,8 +3190,7 @@
       }
     ],
     "remaining_gates": [
-      "Resolve the failed full 15-case V4.1 racecheck. The isolated pass is diagnostic only.",
-      "Run V4.1 Native and Direct full-model serving smokes after the CPU-tested 0.90 memory-fraction correction."
+      "Resolve the failed full 15-case V4.1 racecheck. The isolated pass is diagnostic only."
     ],
     "acceptance": "Incomplete. Do not merge until the remaining gates pass or the user explicitly changes the acceptance contract.",
     "control_packet": {
@@ -3277,6 +3276,526 @@
         "raw_volume": "winstoncai233/remnant-stage2a-results/microbench/v41-failed-five-20261106/validation/control-packet.zip",
         "sha256": "6486bb11d90131643549c1cb86395c2586522227b627217d4d0e6cd834441117"
       }
+    },
+    "serving_followup": "Both V4.1 modes passed in the separately funded v41_parallel_serving phase; original failed attempts and costs retained."
+  },
+  "v41_parallel_serving": {
+    "objective": "Both V4.1 Native and Direct serving smokes pass, run concurrently.",
+    "status": "passed",
+    "author": "Winston Cai",
+    "budget": {
+      "authorized_usd": 15,
+      "routine_stop_usd": 12,
+      "reserve_usd": 3,
+      "cpu_max_usd": 0.5,
+      "accounted_usd": 6.679505949847327,
+      "prior_phases": "Retained separately in ds41_integration; no prior spending removed.",
+      "account": "winstoncai",
+      "baseline_compute_usd": 3.99178164,
+      "conservative_cpu_usd": 0.5,
+      "initial_pair_ceiling_usd": 7.937666666666667,
+      "initial_max_with_reserve_usd": 11.437666666666667,
+      "reported_compute_usd": 6.23529631,
+      "serving_accounted_usd": 6.179505949847327,
+      "spend_basis_usd": 6.679505949847327
+    },
+    "source_parent": "f720d20",
+    "sglang": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+    "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159",
+    "memory_fraction": 0.9,
+    "account": "winstoncai",
+    "compiled_base": "im-lElWlZcu8czVBPYD3HvYgZ",
+    "acceptance": [
+      "Both modes overlap in execution on independent four-H200 workers",
+      "All four ranks finish pinned checkpoint loading and decode graphs at batches 1/2/4",
+      "Requested native/direct format and V4.1 backend settings verified",
+      "Health HTTP200 and exact chat answer 1, 2, 3, 4, 5 with stop finish reason",
+      "Owned server/rank processes and GPU workers exit; raw evidence and all costs retained"
+    ],
+    "attempts": [
+      {
+        "run_id": "v41-native-direct-serving-20261106",
+        "model_family": "dsv41",
+        "mode": "native",
+        "account": "winstoncai",
+        "app_id": "ap-cSZV8X19J8DdSwNYL7tEgX",
+        "image": "im-SXCseSK7MhV0kyLb7TPdbJ",
+        "source_identities": {
+          "parent": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration",
+            "commit": "f720d200bb91b05900ae4aecff20bdfffa16d29b"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/sglang-v0.5.22",
+            "expected_commit": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+            "commit": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/flashmla-v0.5.22",
+            "expected_commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "checkpoint": {
+          "revision": "1bae0e1088993b9b82de08f59de5be5a34e42170",
+          "shards": 48,
+          "bytes": 510296708312,
+          "heads": 64,
+          "layers": 40,
+          "config_sha256": "8be45ce0476004a3f529fd896115a4a2e800a129ad2d3ec05b16050f52e21879"
+        },
+        "status": "passed",
+        "ready_seconds": 534.589300178,
+        "worker_seconds": 564.470689105,
+        "conservative_allocated_seconds": 601.9648540019989,
+        "conservative_cost_usd": 3.185464237411022,
+        "verified_settings": {
+          "kv_cache_format": "native",
+          "kv_cache_dtype": "fp8_e4m3",
+          "mem_fraction_static": 0.9,
+          "tp_size": 4,
+          "ep_size": 4,
+          "max_total_num_tokens": 16384,
+          "context_length": 8192,
+          "max_running_requests": 4,
+          "chunked_prefill_size": 256,
+          "dsv4_attn_backend": "flashmla",
+          "moe_runner_backend": "flashinfer_mxfp4",
+          "language_model_only": true
+        },
+        "chat": {
+          "http_status": 200,
+          "request": {
+            "model": "deepseek-v4-1-flash",
+            "messages": [
+              {
+                "role": "user",
+                "content": "Reply with exactly: 1, 2, 3, 4, 5"
+              }
+            ],
+            "chat_template_kwargs": {
+              "reasoning_effort": "low"
+            },
+            "temperature": 0,
+            "max_tokens": 256
+          },
+          "response": {
+            "id": "34aec9f7ebb44687afe1d659bd4dedda",
+            "object": "chat.completion",
+            "created": 1793907162,
+            "model": "deepseek-v4-1-flash",
+            "choices": [
+              {
+                "index": 0,
+                "message": {
+                  "role": "assistant",
+                  "content": "1, 2, 3, 4, 5",
+                  "reasoning_content": null
+                },
+                "logprobs": null,
+                "finish_reason": "stop",
+                "matched_stop": 1
+              }
+            ],
+            "usage": {
+              "prompt_tokens": 22,
+              "total_tokens": 36,
+              "completion_tokens": 14,
+              "prompt_tokens_details": null,
+              "reasoning_tokens": 0
+            },
+            "metadata": {
+              "weight_version": "default",
+              "weight_versions": [
+                {
+                  "version": "default",
+                  "start": 0,
+                  "end": 14
+                }
+              ]
+            }
+          }
+        },
+        "stages": [
+          {
+            "event": "weight_load_start",
+            "rank": 3,
+            "timestamp": "2026-11-05 19:25:12",
+            "log_line": "[2026-11-05 19:25:12 TP3 EP3] Load weight begin. avail mem=138.17 GB"
+          },
+          {
+            "event": "weight_load_start",
+            "rank": 1,
+            "timestamp": "2026-11-05 19:25:12",
+            "log_line": "[2026-11-05 19:25:12 TP1 EP1] Load weight begin. avail mem=137.93 GB"
+          },
+          {
+            "event": "weight_load_start",
+            "rank": 2,
+            "timestamp": "2026-11-05 19:25:12",
+            "log_line": "[2026-11-05 19:25:12 TP2 EP2] Load weight begin. avail mem=137.81 GB"
+          },
+          {
+            "event": "weight_load_start",
+            "rank": 0,
+            "timestamp": "2026-11-05 19:25:12",
+            "log_line": "[2026-11-05 19:25:12 TP0 EP0] Load weight begin. avail mem=137.98 GB"
+          },
+          {
+            "event": "weight_load_complete",
+            "rank": 1,
+            "timestamp": "2026-11-05 19:28:54",
+            "log_line": "[2026-11-05 19:28:54 TP1 EP1] Load weight end. elapsed=222.22 s, type=DeepseekV4ForCausalLM, quant=fp8, avail mem=18.82 GB, mem usage=119.12 GB."
+          },
+          {
+            "event": "weight_load_complete",
+            "rank": 2,
+            "timestamp": "2026-11-05 19:28:54",
+            "log_line": "[2026-11-05 19:28:54 TP2 EP2] Load weight end. elapsed=222.22 s, type=DeepseekV4ForCausalLM, quant=fp8, avail mem=18.70 GB, mem usage=119.12 GB."
+          },
+          {
+            "event": "weight_load_complete",
+            "rank": 0,
+            "timestamp": "2026-11-05 19:28:54",
+            "log_line": "[2026-11-05 19:28:54 TP0 EP0] Load weight end. elapsed=222.22 s, type=DeepseekV4ForCausalLM, quant=fp8, avail mem=18.87 GB, mem usage=119.12 GB."
+          },
+          {
+            "event": "weight_load_complete",
+            "rank": 3,
+            "timestamp": "2026-11-05 19:28:54",
+            "log_line": "[2026-11-05 19:28:54 TP3 EP3] Load weight end. elapsed=222.32 s, type=DeepseekV4ForCausalLM, quant=fp8, avail mem=19.05 GB, mem usage=119.12 GB."
+          },
+          {
+            "event": "graph_capture_start",
+            "rank": 0,
+            "timestamp": "2026-11-05 19:28:59",
+            "log_line": "[2026-11-05 19:28:59 TP0 EP0] Capture target decode CUDA graph begin. backend=full, num_tokens_per_req=1, avail mem=17.09 GB"
+          },
+          {
+            "event": "graph_capture_start",
+            "rank": 3,
+            "timestamp": "2026-11-05 19:28:59",
+            "log_line": "[2026-11-05 19:28:59 TP3 EP3] Capture target decode CUDA graph begin. backend=full, num_tokens_per_req=1, avail mem=17.47 GB"
+          },
+          {
+            "event": "graph_capture_start",
+            "rank": 1,
+            "timestamp": "2026-11-05 19:28:59",
+            "log_line": "[2026-11-05 19:28:59 TP1 EP1] Capture target decode CUDA graph begin. backend=full, num_tokens_per_req=1, avail mem=17.00 GB"
+          },
+          {
+            "event": "graph_capture_start",
+            "rank": 2,
+            "timestamp": "2026-11-05 19:28:59",
+            "log_line": "[2026-11-05 19:28:59 TP2 EP2] Capture target decode CUDA graph begin. backend=full, num_tokens_per_req=1, avail mem=16.88 GB"
+          },
+          {
+            "event": "graph_capture_complete",
+            "rank": 1,
+            "timestamp": "2026-11-05 19:32:17",
+            "log_line": "[2026-11-05 19:32:17 TP1 EP1] Capture target decode CUDA graph end. bs=[1, 2, 4], elapsed=198.09 s, mem usage=0.12 GB, avail mem=16.88 GB."
+          },
+          {
+            "event": "graph_capture_complete",
+            "rank": 2,
+            "timestamp": "2026-11-05 19:32:17",
+            "log_line": "[2026-11-05 19:32:17 TP2 EP2] Capture target decode CUDA graph end. bs=[1, 2, 4], elapsed=198.26 s, mem usage=0.12 GB, avail mem=16.76 GB."
+          },
+          {
+            "event": "graph_capture_complete",
+            "rank": 0,
+            "timestamp": "2026-11-05 19:32:17",
+            "log_line": "[2026-11-05 19:32:17 TP0 EP0] Capture target decode CUDA graph end. bs=[1, 2, 4], elapsed=198.27 s, mem usage=0.12 GB, avail mem=16.97 GB."
+          },
+          {
+            "event": "graph_capture_complete",
+            "rank": 3,
+            "timestamp": "2026-11-05 19:32:17",
+            "log_line": "[2026-11-05 19:32:17 TP3 EP3] Capture target decode CUDA graph end. bs=[1, 2, 4], elapsed=198.27 s, mem usage=0.12 GB, avail mem=17.35 GB."
+          }
+        ],
+        "raw_volume": "winstoncai/remnant-stage2a-results/dsv41-serving/v41-native-direct-serving-20261106/native",
+        "sha256": {
+          "result.json": "7f8e0507cf10934ca8922d245c4877081bd7edcd7f26f84f9dc57cd8c5cadcad",
+          "native.log": "a6431940dfd5ba37aae2c049aebcd4d1d12ea4abc5bd1d9f5f7adde7cb705c94"
+        },
+        "terminated_at": 1793907168.2276452
+      },
+      {
+        "run_id": "v41-native-direct-serving-20261106",
+        "model_family": "dsv41",
+        "mode": "direct",
+        "account": "winstoncai",
+        "app_id": "ap-cSZV8X19J8DdSwNYL7tEgX",
+        "image": "im-SXCseSK7MhV0kyLb7TPdbJ",
+        "source_identities": {
+          "parent": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration",
+            "commit": "f720d200bb91b05900ae4aecff20bdfffa16d29b"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/sglang-v0.5.22",
+            "expected_commit": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+            "commit": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/flashmla-v0.5.22",
+            "expected_commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "checkpoint": {
+          "revision": "1bae0e1088993b9b82de08f59de5be5a34e42170",
+          "shards": 48,
+          "bytes": 510296708312,
+          "heads": 64,
+          "layers": 40,
+          "config_sha256": "8be45ce0476004a3f529fd896115a4a2e800a129ad2d3ec05b16050f52e21879"
+        },
+        "status": "passed",
+        "ready_seconds": 497.56344855099996,
+        "worker_seconds": 526.495665766,
+        "conservative_allocated_seconds": 565.7912781238556,
+        "conservative_cost_usd": 2.9940417124363052,
+        "verified_settings": {
+          "kv_cache_format": "direct",
+          "kv_cache_dtype": "fp8_e4m3",
+          "mem_fraction_static": 0.9,
+          "tp_size": 4,
+          "ep_size": 4,
+          "max_total_num_tokens": 16384,
+          "context_length": 8192,
+          "max_running_requests": 4,
+          "chunked_prefill_size": 256,
+          "dsv4_attn_backend": "flashmla",
+          "moe_runner_backend": "flashinfer_mxfp4",
+          "language_model_only": true
+        },
+        "chat": {
+          "http_status": 200,
+          "request": {
+            "model": "deepseek-v4-1-flash",
+            "messages": [
+              {
+                "role": "user",
+                "content": "Reply with exactly: 1, 2, 3, 4, 5"
+              }
+            ],
+            "chat_template_kwargs": {
+              "reasoning_effort": "low"
+            },
+            "temperature": 0,
+            "max_tokens": 256
+          },
+          "response": {
+            "id": "09211f535fc74bd18fb61615dd111057",
+            "object": "chat.completion",
+            "created": 1793907124,
+            "model": "deepseek-v4-1-flash",
+            "choices": [
+              {
+                "index": 0,
+                "message": {
+                  "role": "assistant",
+                  "content": "1, 2, 3, 4, 5",
+                  "reasoning_content": null
+                },
+                "logprobs": null,
+                "finish_reason": "stop",
+                "matched_stop": 1
+              }
+            ],
+            "usage": {
+              "prompt_tokens": 22,
+              "total_tokens": 36,
+              "completion_tokens": 14,
+              "prompt_tokens_details": null,
+              "reasoning_tokens": 0
+            },
+            "metadata": {
+              "weight_version": "default",
+              "weight_versions": [
+                {
+                  "version": "default",
+                  "start": 0,
+                  "end": 14
+                }
+              ]
+            }
+          }
+        },
+        "stages": [
+          {
+            "event": "weight_load_start",
+            "rank": 1,
+            "timestamp": "2026-11-05 19:25:07",
+            "log_line": "[2026-11-05 19:25:07 TP1 EP1] Load weight begin. avail mem=137.93 GB"
+          },
+          {
+            "event": "weight_load_start",
+            "rank": 2,
+            "timestamp": "2026-11-05 19:25:07",
+            "log_line": "[2026-11-05 19:25:07 TP2 EP2] Load weight begin. avail mem=137.93 GB"
+          },
+          {
+            "event": "weight_load_start",
+            "rank": 3,
+            "timestamp": "2026-11-05 19:25:07",
+            "log_line": "[2026-11-05 19:25:07 TP3 EP3] Load weight begin. avail mem=138.17 GB"
+          },
+          {
+            "event": "weight_load_start",
+            "rank": 0,
+            "timestamp": "2026-11-05 19:25:07",
+            "log_line": "[2026-11-05 19:25:07 TP0 EP0] Load weight begin. avail mem=137.86 GB"
+          },
+          {
+            "event": "weight_load_complete",
+            "rank": 2,
+            "timestamp": "2026-11-05 19:28:29",
+            "log_line": "[2026-11-05 19:28:29 TP2 EP2] Load weight end. elapsed=201.65 s, type=DeepseekV4ForCausalLM, quant=fp8, avail mem=18.82 GB, mem usage=119.12 GB."
+          },
+          {
+            "event": "weight_load_complete",
+            "rank": 1,
+            "timestamp": "2026-11-05 19:28:29",
+            "log_line": "[2026-11-05 19:28:29 TP1 EP1] Load weight end. elapsed=202.24 s, type=DeepseekV4ForCausalLM, quant=fp8, avail mem=18.82 GB, mem usage=119.12 GB."
+          },
+          {
+            "event": "weight_load_complete",
+            "rank": 0,
+            "timestamp": "2026-11-05 19:28:29",
+            "log_line": "[2026-11-05 19:28:29 TP0 EP0] Load weight end. elapsed=201.67 s, type=DeepseekV4ForCausalLM, quant=fp8, avail mem=18.74 GB, mem usage=119.12 GB."
+          },
+          {
+            "event": "weight_load_complete",
+            "rank": 3,
+            "timestamp": "2026-11-05 19:28:29",
+            "log_line": "[2026-11-05 19:28:29 TP3 EP3] Load weight end. elapsed=201.97 s, type=DeepseekV4ForCausalLM, quant=fp8, avail mem=19.05 GB, mem usage=119.12 GB."
+          },
+          {
+            "event": "graph_capture_start",
+            "rank": 0,
+            "timestamp": "2026-11-05 19:28:35",
+            "log_line": "[2026-11-05 19:28:35 TP0 EP0] Capture target decode CUDA graph begin. backend=full, num_tokens_per_req=1, avail mem=16.97 GB"
+          },
+          {
+            "event": "graph_capture_start",
+            "rank": 3,
+            "timestamp": "2026-11-05 19:28:35",
+            "log_line": "[2026-11-05 19:28:35 TP3 EP3] Capture target decode CUDA graph begin. backend=full, num_tokens_per_req=1, avail mem=17.47 GB"
+          },
+          {
+            "event": "graph_capture_start",
+            "rank": 1,
+            "timestamp": "2026-11-05 19:28:35",
+            "log_line": "[2026-11-05 19:28:35 TP1 EP1] Capture target decode CUDA graph begin. backend=full, num_tokens_per_req=1, avail mem=17.00 GB"
+          },
+          {
+            "event": "graph_capture_start",
+            "rank": 2,
+            "timestamp": "2026-11-05 19:28:35",
+            "log_line": "[2026-11-05 19:28:35 TP2 EP2] Capture target decode CUDA graph begin. backend=full, num_tokens_per_req=1, avail mem=17.00 GB"
+          },
+          {
+            "event": "graph_capture_complete",
+            "rank": 3,
+            "timestamp": "2026-11-05 19:31:40",
+            "log_line": "[2026-11-05 19:31:40 TP3 EP3] Capture target decode CUDA graph end. bs=[1, 2, 4], elapsed=185.66 s, mem usage=0.12 GB, avail mem=17.35 GB."
+          },
+          {
+            "event": "graph_capture_complete",
+            "rank": 2,
+            "timestamp": "2026-11-05 19:31:40",
+            "log_line": "[2026-11-05 19:31:40 TP2 EP2] Capture target decode CUDA graph end. bs=[1, 2, 4], elapsed=185.67 s, mem usage=0.12 GB, avail mem=16.88 GB."
+          },
+          {
+            "event": "graph_capture_complete",
+            "rank": 1,
+            "timestamp": "2026-11-05 19:31:40",
+            "log_line": "[2026-11-05 19:31:40 TP1 EP1] Capture target decode CUDA graph end. bs=[1, 2, 4], elapsed=185.69 s, mem usage=0.12 GB, avail mem=16.88 GB."
+          },
+          {
+            "event": "graph_capture_complete",
+            "rank": 0,
+            "timestamp": "2026-11-05 19:31:40",
+            "log_line": "[2026-11-05 19:31:40 TP0 EP0] Capture target decode CUDA graph end. bs=[1, 2, 4], elapsed=185.71 s, mem usage=0.12 GB, avail mem=16.85 GB."
+          }
+        ],
+        "raw_volume": "winstoncai/remnant-stage2a-results/dsv41-serving/v41-native-direct-serving-20261106/direct",
+        "sha256": {
+          "direct.log": "b998bcb667d961c46d3e1da60b9d5bdd753532e4a9b7c33111274d04227e582d",
+          "result.json": "d1f6124ae4dac5c75563ab8895097984fddc30e70b14b19fb40ebabab1da67d9"
+        },
+        "terminated_at": 1793907130.631162
+      }
+    ],
+    "launch": {
+      "time": 1793906598.55233,
+      "source_parent": "f720d200bb91b05900ae4aecff20bdfffa16d29b",
+      "families": {
+        "dsv41": {
+          "account": "winstoncai",
+          "run_id": "v41-native-direct-serving-20261106",
+          "image": "im-SXCseSK7MhV0kyLb7TPdbJ",
+          "admission_sha256": "35083c17e5e19b20b82efffcd3247d69da52f104bc5d680a6e9e04c7d399bba3",
+          "modes": [
+            "native",
+            "direct"
+          ]
+        }
+      },
+      "worker_ceiling_usd": 7.937666666666667,
+      "routine_projection_usd": 8.437666666666667,
+      "reserve_usd": 3,
+      "resources_per_worker": {
+        "H200": 4,
+        "cpu": 8,
+        "memory_GiB": 64
+      },
+      "work_seconds_per_mode": 660,
+      "controller_seconds": 720,
+      "memory_fraction": 0.9
+    },
+    "acceptance_audit": {
+      "both_modes_passed": true,
+      "overlap_seconds": 526.4956583976746,
+      "same_image_and_checkpoint": true,
+      "all_four_ranks_loaded_and_captured": true,
+      "settings_health_exact_answer_and_stop_verified": true,
+      "owned_process_cleanup_completed": true,
+      "active_containers_after": []
+    },
+    "control_packet": {
+      "raw_volume": "winstoncai/remnant-stage2a-results/dsv41-serving/v41-native-direct-serving-20261106/control-packet.zip",
+      "sha256": "6a4358d566065fa96484ffd132009021cddb2a47d3fe083153a2825e5afe0ef4",
+      "remote_readback_verified": true
     }
   }
 }

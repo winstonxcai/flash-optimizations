@@ -547,7 +547,11 @@ GLM numerical/allocation/focused three-tool checks, and Native/Direct full-model
 smokes on four H200s. V4.1 passes 39 numerical/allocation cases and all 15 focused
 memcheck/synccheck cases. Full focused racecheck fails during Native C1 setup,
 before the FP4 store callback; an isolated synchronized case passes but does
-not resolve the batch failure. Both V4.1 serving attempts loaded weights, then
-rejected a 0.86 memory fraction. Their CPU-tested 0.90 profile correction needs
-GPU serving validation. These pending gates prevent complete merge acceptance;
+not resolve the batch failure. The first V4.1 serving attempts loaded weights,
+then rejected a 0.86 memory fraction. The corrected 0.90 profile subsequently
+passed Native and Direct smokes concurrently on four H200s per mode, using
+parent `f720d20` and image `im-SXCseSK7MhV0kyLb7TPdbJ`. Both loaded all ranks,
+captured decode graphs and returned the exact expected chat answer with `stop`.
+The separate $15 phase spent $6.24 reported / $6.68 conservatively accounted;
+all workers exited. The full-batch racecheck gap prevents complete merge acceptance;
 the historical 34-case qualification above does not qualify this merge.

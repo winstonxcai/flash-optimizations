@@ -13,6 +13,14 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Measured parent `f720d20`, SGLang `e0d6d500d6dc` / FlashMLA `4e72722671d8`:
+  V4.1 Native and Direct full-model serving smokes pass concurrently, each on
+  four H200s, with the corrected 0.90 memory fraction and bounded 16K pool.
+  All ranks load and capture batches 1/2/4; health/chat return 200 and the exact
+  expected answer with `stop`. New phase cost: $6.24 reported / $6.68 conservative
+  under its separate $15 cap. Workers stopped. Preserve earlier failed runs;
+  the full-batch racecheck issue remains separate and unresolved.
+
 - Runtime freeze parent `c23b32f`, SGLang `e0d6d500d6dc` / FlashMLA
   `4e72722671d8`: GLM Native and Direct full-model smokes pass on four H200s.
   V4.1 numerical/allocation (39 cases), memcheck and synccheck (15 cases each)

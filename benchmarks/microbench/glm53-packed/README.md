@@ -18,7 +18,7 @@ budget ledger; [decode.csv](decode.csv) contains every case and raw sample.
 | Earlier unoptimized attention, 128 cases | Incomplete: 56 cases; memcheck incomplete | [Historical attention CSV](attention.csv) |
 | Historical full-checkpoint serving smoke | Native and Direct passed on four H200s | Run `glm53-h200-tp4-final-answer-20261104`; source-bound record below |
 | Combined-candidate focused instrumentation | GLM passes all three tools; V4.1 memcheck/synccheck pass, full focused racecheck fails | Ledger `ds41_integration`; isolated Native diagnostic passes but does not qualify the failed matrix |
-| Combined-candidate full-model serving | GLM Native/Direct pass; both V4.1 modes stop before KV allocation | [Serving attempt summary](serving-smoke.csv); V4.1 memory correction is CPU-tested only |
+| Combined-candidate full-model serving | GLM and V4.1 Native/Direct pass; V4.1 modes ran concurrently after the memory correction | [Serving attempt summary](serving-smoke.csv); earlier failed attempts retained |
 
 Ten optimized decode cases favor Direct; case means range from -3.5576% to
 +8.6594%. No case reaches 2×. The timing Function took 136.084 seconds including
@@ -308,7 +308,7 @@ the first failing case passes unfiltered racecheck on a different H100 with
 `CUDA_LAUNCH_BLOCKING=1`. That changed context, filter and timing; it does not
 resolve or qualify the failed batch. No numerical kernel fix is justified yet.
 
-All allocations are released. Phase compute is $20.50 reported / $21.57
+At the initial merge-phase closeout, all allocations were released. Compute was $20.50 reported / $21.57
 conservatively accounted, with the $3 reserve intact and 70.67 H100 minutes
 accounted under the 75-minute cap. No further jobs are scheduled. Remaining
 gates are the full V4.1 racecheck failure and both corrected V4.1 serving smokes.
@@ -336,3 +336,30 @@ The approved extra $1 and ten H100 minutes raise the phase caps to $26 and
 $22.11 conservatively accounted** and **75.96 H100 minutes**. All workers are
 stopped. The original batch failure and corrected V4.1 serving gates remain
 pending.
+
+### Parallel V4.1 full-model serving
+
+The separately authorized $15 phase is recorded under `v41_parallel_serving` in
+the same JSON ledger. Run `v41-native-direct-serving-20261106` passed both modes
+concurrently on `winstoncai`, using image `im-SXCseSK7MhV0kyLb7TPdbJ`, parent
+`f720d20`, SGLang `e0d6d50` and FlashMLA `4e72722671d8`.
+
+| Mode | Start to healthy | Complete smoke, including shutdown | Result |
+|---|---:|---:|---|
+| Native | 534.59 s | 564.47 s | Passed |
+| Direct | 497.56 s | 526.50 s | Passed |
+
+Execution overlapped for 526.50 seconds. Each worker owned four H200s with
+TP4/EP4, activation dtype `auto`, FP8 KV, FlashMLA, MXFP4 experts, an 8K context, four
+requests, chunk256 and 16,384 token slots. Both servers reported memory fraction
+0.90. All four ranks completed loading the pinned 48-shard checkpoint and
+capturing decode graphs at batches 1/2/4. Health and chat returned HTTP 200;
+both answers were exactly `1, 2, 3, 4, 5`, with finish reason `stop`, 22 prompt
+tokens and 14 completion tokens. Owned server/rank processes and GPU workers
+exited; final account allocation checks were empty.
+
+This phase used $6.24 reported compute / $6.68 conservatively accounted, within
+its separate $15 cap and with the $3 reserve intact. Prior phase costs and
+failed smokes remain preserved. These are functional smoke durations, not an
+attention or serving performance comparison. The earlier full-batch racecheck
+failure remains unresolved; no new timing or quality qualification is implied.
