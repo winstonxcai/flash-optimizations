@@ -13,6 +13,15 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Serving follow-up from parent `a56cb7b`, with SGLang `e0d6d500d6dc` and
+  FlashMLA `4e72722671d8`: all four smoke workers loaded their checkpoints.
+  GLM Native passed; Direct captured graphs and became healthy, but its cold
+  chat request timed out. Both V4.1 modes stopped before KV allocation because
+  GLM's 0.86 static memory fraction is below V4.1's observed 0.864 minimum.
+  Give the smoke profile its own fraction (V4.1 0.90, GLM unchanged); the
+  environment regression and independent review pass. Corrective GPU checks
+  remain pending. Preserve the failed runs and all charges in the GLM ledger.
+
 - Parent follow-up from `c0e59ec`, SGLang `e0d6d500d6dc` / FlashMLA
   `4e72722671d8`: add independent Native/Direct serving workers for GLM and
   V4.1-Flash-1017, pinned metadata, per-mode artifact ownership, and CPU binary/

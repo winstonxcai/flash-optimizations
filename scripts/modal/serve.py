@@ -467,13 +467,22 @@ class ServingSmokeProfile:
     mode_seconds: int
     cpus: int
     memory_mib: int
+    memory_fraction: float
 
 
 _SERVING_SMOKES = {
-    "glm53": ServingSmokeProfile("glm53-flash", 2048, 540, 24, 196608),
+    "glm53": ServingSmokeProfile(
+        model_name="glm53-flash", chunk_size=2048, mode_seconds=540,
+        cpus=24, memory_mib=196608, memory_fraction=0.86,
+    ),
     # Page256 is also the minimum legal prefill chunk. It bounds MHC prewarm
     # while retaining the production arithmetic for this short text workload.
-    "dsv41": ServingSmokeProfile("deepseek-v4-1-flash", 256, 660, 8, 65536),
+    # The pinned V4.1 weights occupy 119.12 GiB per rank. The measured minimum
+    # static fraction is 0.864, so GLM's 0.86 cannot reach KV allocation.
+    "dsv41": ServingSmokeProfile(
+        model_name="deepseek-v4-1-flash", chunk_size=256, mode_seconds=660,
+        cpus=8, memory_mib=65536, memory_fraction=0.90,
+    ),
 }
 
 
@@ -824,7 +833,7 @@ def _run_serving_smoke(
         "MAX_TOTAL_TOKENS": "16384",
         # Build only the DeepGEMM shapes used by this small smoke workload.
         "SGLANG_JIT_DEEPGEMM_PRECOMPILE": "0",
-        "MEM_FRAC": "0.86",
+        "MEM_FRAC": str(profile.memory_fraction),
         # Readiness probes must not queue work during first-use JIT.
         "SGLANG_ENABLE_HEALTH_ENDPOINT_GENERATION": "0",
         # The verified kernel image does not bundle the optional Rust tree.

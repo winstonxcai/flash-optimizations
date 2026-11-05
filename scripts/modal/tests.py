@@ -3206,6 +3206,10 @@ class SharedModelContractsTests(unittest.TestCase):
 
                     @contextmanager
                     def boot(environment, log, deadline):
+                        self.assertEqual(
+                            float(environment["MEM_FRAC"]),
+                            {"glm53": 0.86, "dsv41": 0.90}[family],
+                        )
                         log.write_text(
                             "\n".join(
                                 f"[2026-11-05 12:00:00 TP{rank} EP{rank}] {marker}"
