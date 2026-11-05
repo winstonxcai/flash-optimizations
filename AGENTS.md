@@ -268,19 +268,28 @@ of existing files without a scoped request.
 
 ## Numerical and runtime contracts
 
-- Call the configurations **Native** and **Packed**. Native is the default;
-  Packed is selected by `--dsv4-c4-cache-format remnant`. Do not revive the
-  historical TopMag environment-variable bundle or stage-1 terminology.
-- Default Packed retains 256 of 512 coordinates: 256 FP8 value bytes, a
+- Call the configurations **Native** and **Packed**. Native is the default.
+  The v0.5.22 serving selector is `--kv-cache-format native|direct`; `direct`
+  selects the model's Packed storage and Direct reader. Maintained launchers
+  accept these two modes and translate them to the unchanged v0.5.18 interface
+  when that pair is selected. Adapter/reconstruction remain internal test and
+  benchmark inputs. Do not revive removed model-specific serving selectors,
+  the historical TopMag environment-variable bundle or stage-1 terminology.
+- DeepSeek V4 default Packed retains 256 of 512 coordinates: 256 FP8 value bytes, a
   64-byte bitmap and eight scale bytes (**328 bytes**). Triton supports startup
   per-C4-layer counts 64..448 in steps of 64, using `count + 72` logical bytes
   in separate value/bitmap/scale planes; 512 survivors are invalid. Non-256
   profiles require Triton store/reconstruction and no HiCache. Optimized CUDA
-  store/Direct and HiCache remain 256-only. Native C4 remains 584 logical bytes.
+  store/Direct and HiCache remain 256-only; serving rejects unsupported Direct
+  profiles before allocation. Native C4 remains 584 logical bytes. V4.1 uses
+  its existing FP4 global-cache paths (288-byte Native, 224-byte Packed); GLM
+  MLA uses 512-byte Native FP8 or 320-byte Packed records. Preserve each model's
+  companion pools and geometry.
   Configurable counts are not adaptive runtime budgets; new GPU profiles need
   H100 validation before production use.
-- Match the current producer's dtype and arithmetic. Its raw compressor
-  output and norm weights are FP32. Selection uses raw magnitudes, followed by
+- Match each model's producer dtype and arithmetic. DeepSeek V4's raw compressor
+  output and norm weights are FP32; GLM preserves its Native BF16 producer contract.
+  Selection uses raw magnitudes, followed by
   masking, RMSNorm, the prescribed BF16 rounding, and FP8 packing. Historical
   BF16-input store screens are not evidence of exact FP32 production parity.
 - Keep raw logical positions distinct from physical cache locations. Preserve

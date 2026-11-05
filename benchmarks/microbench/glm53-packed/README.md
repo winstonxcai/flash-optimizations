@@ -14,10 +14,11 @@ budget ledger; [decode.csv](decode.csv) contains every case and raw sample.
 |---|---|---|
 | Optimized decode, 48 cases | Complete; +0.6829% for 16 heads, +2.5192% for eight | SGLang `246ee03c1ad5`, parent `8aea70ae58a9` |
 | Latest focused H100 review | Direct numerical/graph and Adapter >2 GiB numerical checks passed, with all three sanitizer tools | SGLang `9185c6d25115`; run IDs in ledger |
-| Current combined GLM/V4.1 candidate | CPU checks passed; GLM 175 numerical/integration tests and nine smoke tests passed on H100 | Parent `18107f8`, SGLang `e0d6d50`; unchanged GLM content qualified on `250415b`/`80d6a47` |
+| Current combined GLM/V4.1 candidate | CPU checks passed; GLM 175 numerical/integration tests and nine smoke tests passed on H100 | Runtime freeze: parent `c23b32f`, SGLang `e0d6d50`; unchanged GLM content qualified on `250415b`/`80d6a47` |
 | Earlier unoptimized attention, 128 cases | Incomplete: 56 cases; memcheck incomplete | [Historical attention CSV](attention.csv) |
 | Historical full-checkpoint serving smoke | Native and Direct passed on four H200s | Run `glm53-h200-tp4-final-answer-20261104`; source-bound record below |
-| Combined-candidate focused instrumentation / serving | GLM loader, four decode and both prefill variants pass all three tools; V4.1 and serving pending | Fallback `winstoncai233`; ledger `ds41_integration` |
+| Combined-candidate focused instrumentation | GLM passes all three tools; V4.1 memcheck/synccheck pass, full focused racecheck fails | Ledger `ds41_integration`; isolated Native diagnostic passes but does not qualify the failed matrix |
+| Combined-candidate full-model serving | GLM Native/Direct pass; both V4.1 modes stop before KV allocation | [Serving attempt summary](serving-smoke.csv); V4.1 memory correction is CPU-tested only |
 
 Ten optimized decode cases favor Direct; case means range from -3.5576% to
 +8.6594%. No case reaches 2×. The timing Function took 136.084 seconds including
@@ -221,18 +222,19 @@ Rollback: select Native, or restore the pre-optimization SGLang pin `889edf56`.
 The isolated integration candidate merges both PR histories and exposes
 `--kv-cache-format native|direct` on v0.5.22. The untouched v0.5.18 pair keeps its
 recorded interface; shared launchers translate Native/Direct explicitly.
-`qualification.json` → `ds41_integration` owns this phase's new **$20** budget,
-validation status, source identities and eventual receipts. Historical runs and
+`qualification.json` → `ds41_integration` owns this phase's **$25** budget,
+including the approved $5 increase, validation status, source identities and receipts. Historical runs and
 the original worktree's unstaged ledger are preserved. The 236 unrelated replay
 capture additions and replay-only sweep are excluded from the resulting PR diff.
 
 Both integration/suite CPU regressions and independent reviews passed. GLM
 numerical, allocation, graph and focused three-tool checks passed on H100. The
 V4.1 allocation fixture correction is test-only and now checks the production
-selector/sizing on CPU before allocation. Its corrected GPU check and focused
-tools precede the bounded Native/Direct four-H200 smoke on the fallback account.
-No new timing or prefill promotion is part of this merge. Pending gates remain
-pending until source-bound evidence is exported; Native remains the default.
+selector/sizing on CPU before allocation; its 39 GPU numerical/allocation cases
+pass. The subsequent parallel-serving request reordered the earlier sequence:
+serving checks ran while the remaining V4.1 tools were pending. Final acceptance
+still requires all gates. No new timing or prefill promotion is part of this
+merge; Native remains the default.
 
 The merge-only GLM sanitizer group uses `--stage corrective --sanitizer
 --sanitizer-scope glm-merge` with the exact `GLM_MERGE_SANITIZER` cases from the
@@ -264,11 +266,22 @@ and the CPU-verified `REMNANT_COMPILED_IMAGE`. The public dispatcher validates
 inputs and weights before scheduling. Parallel controllers use the same worker,
 with bounded ownership, deadlines and cancellation; no alternate server harness.
 
-The $20 phase cap and $3 reserve still apply after category rebalancing. Complete
-image admission and the aggregate worst-case launch projection before reserving
-GPUs. No four-way GPU smoke has started. GLM historical cold startup does not
-establish an independent Direct cold-start time; V4.1's old larger-workload
-startup likewise does not prove completion within the new bound.
+The approved phase cap is $25, with a $22 routine stop and $3 protected reserve.
+All four initial workers ran in parallel after CPU admission and an aggregate
+cost check. GLM Native passed in 511.78 seconds. GLM Direct loaded and captured
+graphs, but its cold chat timed out; a lone rerun passed in 525.48 seconds.
+Both successful responses were exactly `1, 2, 3, 4, 5`, with finish reason `stop`.
+Native used parent `a56cb7b`; the Direct rerun used `c23b32f`. Both used SGLang
+`e0d6d50`, identical GLM settings and the same verified compiled base. These
+startup intervals are functional-smoke evidence, not a performance comparison.
+
+Both V4.1 modes loaded all 48 shards, occupying 119.12 GiB per rank, then rejected
+the inherited 0.86 memory fraction before KV allocation. Their observed minimum
+was 0.864. The committed profile uses 0.90 for V4.1 and retains 0.86 for GLM,
+with the 16,384-token bound unchanged. The four-mode environment regression and
+independent review pass; V4.1 allocation, graph capture and chat after this fix
+remain unverified. [serving-smoke.csv](serving-smoke.csv) is the flat summary of
+all five attempts; the JSON ledger owns their source, artifact and cost records.
 
 Focused `v41-merge` instrumentation retains all 15 selected numerical fixtures
 and all three tools, while filtering to CPU-verified FP4 store/read, FlashMLA
@@ -284,3 +297,21 @@ production-kernel filter as the three tool runs. This is a coverage correction,
 not proof that the exception was a checker defect. Preserve the failed run.
 Kernel images explicitly install the submitting Modal SDK, matching the serving
 runner, so older image builders supply its dependencies before CPU tests.
+
+The corrected full-pattern audit passes. All 15 focused V4.1 cases pass memcheck
+and synccheck. Full focused racecheck fails: ten cases pass, including both
+graph/stream cases, then Native ratio-1 compressor setup/projection reports an
+illegal address before its FP4 store callback. Four later failures are sticky
+context cascades. The checker reports an internal hardware exception and XID
+13/43; these do not establish a hardware or checker defect. An isolated rerun of
+the first failing case passes unfiltered racecheck on a different H100 with
+`CUDA_LAUNCH_BLOCKING=1`. That changed context, filter and timing; it does not
+resolve or qualify the failed batch. No numerical kernel fix is justified yet.
+
+All allocations are released. Phase compute is $20.50 reported / $21.57
+conservatively accounted, with the $3 reserve intact and 70.67 H100 minutes
+accounted under the 75-minute cap. No further jobs are scheduled. Remaining
+gates are the full V4.1 racecheck failure and both corrected V4.1 serving smokes.
+The two PRs remain unmerged and validation remains incomplete. Next use the
+maintained `serve.py::smoke_serving` entry point above after new authorization
+and fresh preflight; diagnose the race failure with existing fixtures first.

@@ -56,7 +56,7 @@ Review-fix integration: SGLang `c4708870`, FlashMLA `4e72722`, based on parent
 prefill policy, aligned cache base/page checks, named FP4 layouts and explicit
 fixed-matrix CLI validation. Parent qualification uses
 `scripts/modal/qualification.py` to reject failed tools, compare complete runtime
-identities and check receipts on CPU before GPU timing. These pins passed the fresh model-free numerical, graph/stream, allocator,
+identities and check receipts on CPU before GPU timing. Those V4.1 source identities passed the fresh model-free numerical, graph/stream, allocator,
 34-case/tool sanitizer and review gates using parent runner `2707db9`. The final
 v3 ten-case timing is complete; historical evidence is kept separate below.
 
@@ -537,7 +537,17 @@ verification by `scripts/sources.py`; pure report parsing by
 `scripts/modal/qualification.py`. Model-specific evidence policies remain
 separate. Shared numerical timing statistics live in the fork's `timing.py`.
 
-The current merge-validation status and $20 phase ledger are recorded in the
+The current merge-validation status and $25 phase ledger are recorded in the
 existing GLM [qualification record](../benchmarks/microbench/glm53-packed/qualification.json).
 Historical qualification and prefill parity misses stay bound to their measured
 sources. The 64-row prefill candidate remains benchmark-only.
+
+The combined runtime at parent `c23b32f` / SGLang `e0d6d50` passes CPU checks,
+GLM numerical/allocation/focused three-tool checks, and Native/Direct full-model
+smokes on four H200s. V4.1 passes 39 numerical/allocation cases and all 15 focused
+memcheck/synccheck cases. Full focused racecheck fails during Native C1 setup,
+before the FP4 store callback; an isolated synchronized case passes but does
+not resolve the batch failure. Both V4.1 serving attempts loaded weights, then
+rejected a 0.86 memory fraction. Their CPU-tested 0.90 profile correction needs
+GPU serving validation. These pending gates prevent complete merge acceptance;
+the historical 34-case qualification above does not qualify this merge.

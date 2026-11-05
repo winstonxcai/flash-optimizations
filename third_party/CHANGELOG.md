@@ -13,6 +13,16 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Runtime freeze parent `c23b32f`, SGLang `e0d6d500d6dc` / FlashMLA
+  `4e72722671d8`: GLM Native and Direct full-model smokes pass on four H200s.
+  V4.1 numerical/allocation (39 cases), memcheck and synccheck (15 cases each)
+  pass. Full focused racecheck fails in Native C1 setup/projection; the isolated
+  case passes under expanded instrumentation but the batch failure remains
+  unresolved. Both V4.1 serving modes require reruns after the CPU-tested memory
+  profile fix. All workers are stopped; compute is $20.50 reported / $21.57
+  conservatively accounted under the $25 phase cap, with its $3 reserve intact.
+  Keep merge acceptance pending; no numerical kernels or defaults changed.
+
 - Serving follow-up from parent `a56cb7b`, with SGLang `e0d6d500d6dc` and
   FlashMLA `4e72722671d8`: all four smoke workers loaded their checkpoints.
   GLM Native passed; Direct captured graphs and became healthy, but its cold
