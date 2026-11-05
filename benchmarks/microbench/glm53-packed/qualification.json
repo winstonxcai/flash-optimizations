@@ -1018,15 +1018,15 @@
     "sglang": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
     "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159",
     "budget": {
-      "authorized_usd": 25,
-      "routine_stop_usd": 22,
+      "authorized_usd": 26,
+      "routine_stop_usd": 23,
       "reserve_usd": 3,
       "cpu_cap_usd": 4.5,
-      "h100_cap_usd": 5.5,
+      "h100_cap_usd": 6.35,
       "serving_cap_usd": 15.228586666666668,
-      "h100_cap_minutes": 75,
+      "h100_cap_minutes": 85,
       "serving_cap_minutes": null,
-      "accounted_usd": 21.574639865248145,
+      "accounted_usd": 22.112108246683857,
       "launches": [],
       "accounts": {
         "caiw": {
@@ -1049,7 +1049,7 @@
           "cpu_hour_usd": 0.0473,
           "ram_gib_hour_usd": 0.008,
           "checkpoint_volume": "glm53-flash",
-          "latest_compute_usd": 19.72200908
+          "latest_compute_usd": 19.97642634
         },
         "winstoncai": {
           "baseline_month": "2026-11",
@@ -1063,9 +1063,9 @@
           "latest_compute_usd": 3.99178164
         }
       },
-      "reported_compute_delta_usd": 20.503894540000005,
-      "conservative_cpu_usd": 2.9,
-      "h100_minutes": 70.66658937136181,
+      "reported_compute_delta_usd": 20.7583118,
+      "conservative_cpu_usd": 3.05,
+      "h100_minutes": 75.95601940552243,
       "serving_minutes": 39.83869597911835,
       "billing_lag_policy": "Use the larger of conservative category accrual and refreshed compute delta; all prior attempts remain charged.",
       "rebalance_authorized": true,
@@ -1083,7 +1083,7 @@
         "dsv41": 720
       },
       "serving_accounted_usd": 13.498076638497988,
-      "launch_spend_basis_usd": 21.574639865248145,
+      "launch_spend_basis_usd": 22.112108246683857,
       "cpu_reconciliation": {
         "time": 1793898566.583539,
         "previous_forecast_usd": 3.3,
@@ -1106,9 +1106,9 @@
         "interrupted_basis": "data/modal/glm53-ds41-integration/v41-ds41-focused-tools-20261105t1452z/artifacts/validation",
         "note": "Only unused CPU forecast was released. All raw costs, snapshots, failed and interrupted attempts remain. The guaranteed GPU duration is a lower bound from worker receipts and the pytest-start-to-interruption interval, each at four CPUs and 32 GiB. Fresh aggregate compute remains a launch floor; the $2.90 accrual already includes up to $0.30 of remaining CPU preparation."
       },
-      "stopping_reason": "No remaining allocation can complete the full racecheck or V4.1 serving within the routine dollar and H100 time limits. The $3 reserve remains protected; no further GPU jobs are scheduled.",
+      "stopping_reason": "Requested five-case rerun completed; no further jobs scheduled.",
       "final_reconciliation": {
-        "time": 1793902026.302603,
+        "time": 1793905560.914783,
         "account_deltas": {
           "caiw": {
             "compute_baseline_usd": 28.82816891,
@@ -1118,8 +1118,8 @@
           },
           "winstoncai233": {
             "compute_baseline_usd": 3.85998491,
-            "compute_final_usd": 19.72200908,
-            "delta_usd": 15.86202417,
+            "compute_final_usd": 19.97642634,
+            "delta_usd": 16.11644143,
             "active_containers": 0
           },
           "winstoncai": {
@@ -1129,16 +1129,27 @@
             "active_containers": 0
           }
         },
-        "conservative_accrued_usd": 21.574639865248145,
-        "reported_compute_delta_usd": 20.503894540000005,
-        "larger_spend_basis_usd": 21.574639865248145,
-        "unspent_hard_cap_usd": 3.4253601347518554,
+        "conservative_accrued_usd": 22.112108246683857,
+        "reported_compute_delta_usd": 20.7583118,
+        "larger_spend_basis_usd": 22.112108246683857,
+        "unspent_hard_cap_usd": 3.8878917533161435,
         "protected_reserve_usd": 3,
         "all_allocations_released": true,
         "includes_all_failed_and_interrupted_attempts": true
       },
       "serving_minutes_definition": "Sum of conservative allocation intervals across five four-H200 workers; not elapsed wall time. GPU-minutes are four times this value.",
-      "serving_worker_minutes": 36.21783101725
+      "serving_worker_minutes": 36.21783101725,
+      "authorization_extensions": [
+        {
+          "time": 1793904110.378651,
+          "additional_usd": 1,
+          "additional_H100_minutes": 10,
+          "total_usd": 26,
+          "H100_cap_minutes": 85,
+          "reserve_usd": 3,
+          "scope": "Only the five previously failed cases; user explicitly approved."
+        }
+      ]
     },
     "cpu": {
       "fork_command": "python -m pytest benchmark/remnant/test_microbench.py test/registered/unit/test_glm5_mla_cache_format.py -q",
@@ -1241,6 +1252,22 @@
           "racecheck": "Zero hazards, errors and warnings.",
           "differences": "Fresh worker on a different physical H100, unfiltered framework coverage, and CUDA_LAUNCH_BLOCKING=1.",
           "limitation": "Does not resolve the failed batch or qualify the 15/34-case matrix."
+        },
+        "failed_five_rerun": {
+          "status": "passed",
+          "run_id": "v41-failed-five-20261106",
+          "numerical_tests": 5,
+          "racecheck_tests": 5,
+          "racecheck_seconds": 143.65,
+          "hazards": 0,
+          "errors": 0,
+          "warnings": 0,
+          "limitations": "Fresh worker, unfiltered framework coverage and CUDA_LAUNCH_BLOCKING=1. The earlier full-batch failure remains unresolved.",
+          "controller_outcome": "Local Connection._transport collection error; persisted successful worker result, exact XML cases and sanitizer log/hashes independently verified.",
+          "control_packet": {
+            "raw_volume": "winstoncai233/remnant-stage2a-results/microbench/v41-failed-five-20261106/validation/control-packet.zip",
+            "sha256": "6486bb11d90131643549c1cb86395c2586522227b627217d4d0e6cd834441117"
+          }
         }
       }
     },
@@ -2257,6 +2284,105 @@
         },
         "gpu_uuid": "GPU-9b4b9e97-f600-80bc-b147-3334a61deeee",
         "controller_log_sha256": "c13472a3b06d8ec25437611be001c551e8a06a6dd1ad18c428f4a091653b37f3"
+      },
+      {
+        "run_id": "v41-failed-five-20261106",
+        "account": "winstoncai233",
+        "status": "passed",
+        "diagnostic_only": true,
+        "controller_status": "failed",
+        "controller_error": "AttributeError(\"'Connection' object has no attribute '_transport'\")",
+        "app_id": "ap-sVCHYZBchcbyw7ZfIP2zcw",
+        "image": "im-ZG6Ev0fo6k34SAzzUyMYUX",
+        "source_identities": {
+          "flashmla": {
+            "commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "dirty": false,
+            "expected_commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "integration": "v0.5.22",
+            "override": false,
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/flashmla-v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "dirty": false,
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/flashmla-v0.5.22/csrc/cutlass"
+          },
+          "parent": {
+            "commit": "57e4abed9359241a47baf3832a9e7fb97b3ee8ea",
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration"
+          },
+          "sglang": {
+            "commit": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+            "dirty": false,
+            "expected_commit": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+            "integration": "v0.5.22",
+            "override": false,
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/sglang-v0.5.22"
+          }
+        },
+        "conservative_minutes": 5.289430034160614,
+        "gpu_function_seconds": 200.55271206100002,
+        "gpu_released": true,
+        "launch_arguments": {
+          "source": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration",
+          "image": "im-ZG6Ev0fo6k34SAzzUyMYUX",
+          "run_id": "v41-failed-five-20261106",
+          "work_seconds": 480,
+          "controller_seconds": 570,
+          "stage": "corrective",
+          "cases": "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-1],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-1],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-2],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-2],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks[64]",
+          "cases_json": "/tmp/glm53-failing-five/cases.json",
+          "scope": "all",
+          "tools": "racecheck",
+          "out": "data/modal/glm53-ds41-integration/failing-five-20261106/controller.json",
+          "launch_blocking": true
+        },
+        "sanitizer_results": {
+          "synccheck": {
+            "status": "not_run"
+          },
+          "racecheck": {
+            "status": "passed",
+            "report_schema": "remnant-sanitizer-raw-v1",
+            "log_sha256": "ee77170b86fb48e036e468c48cd1b6bc0f5e5b904d985d44c2f2e47fd52a1469",
+            "xml_sha256": "365329cf25601f39d6f1679e098a105b1ae27734239747c5870fb1689fb58948"
+          },
+          "memcheck": {
+            "status": "not_run"
+          }
+        },
+        "raw_volume": "winstoncai233/remnant-stage2a-results/microbench/v41-failed-five-20261106/validation",
+        "reports": {
+          "racecheck": {
+            "tests": 5,
+            "errors": 0,
+            "failures": 0,
+            "skipped": 0
+          },
+          "validation": {
+            "tests": 5,
+            "errors": 0,
+            "failures": 0,
+            "skipped": 0
+          }
+        },
+        "artifact_hashes": {
+          "model-config.json": "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023",
+          "validation.log": "943e8400d421fcb9fc8d5ee93f798463570fcba6e41777da926f5587106a237e",
+          "racecheck.xml": "365329cf25601f39d6f1679e098a105b1ae27734239747c5870fb1689fb58948",
+          "sanitizer-control-bindings-query.log": "a518617e603ae9e3659eecdf4257ea7eca94fb82a98faf99a78827514ec53fc4",
+          "result.json": "9c2235334f2250a1c4176c6f57f409afeca9da153fa9b7a238e1b2188241228e",
+          "sanitizer-version.log": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673",
+          "build-manifest.json": "a1a98e1c04be7bf5552aff7c3b5f9a4b133660b773f95105bdcd9031f22b0758",
+          "driver-version.log": "641baa7aef4714d620d9cb838ee74134559d52457e2f5803efc69bd52a40a065",
+          "sanitizer-control-empty.log": "fb8d9ea8d2be1a0fc356e4685eab89b230d089597899abc6f9cde9b1b6cc3900",
+          "sanitizer-control-bindings-import.log": "4806c657afdb0ef7bbbb2360916bf4ad14b5d2a0aac0e56710f31a9d1cfecc07",
+          "validation.xml": "b0f5e48c1d6e4fdb5879542275d52bd5e59a00000b04cbca54f9b8ffa1fd9e1c",
+          "racecheck.log": "ee77170b86fb48e036e468c48cd1b6bc0f5e5b904d985d44c2f2e47fd52a1469"
+        }
       }
     ],
     "publication_preflight": {
@@ -3078,6 +3204,79 @@
       "purpose": "Recover exact transient controllers, input selections, launch receipts, CPU preparation logs and billing/allocation snapshots without another active runner.",
       "remote_readback_verified": true
     },
-    "cleanup": "Transient controllers are archived by content hash in the verified remote control packet. Maintained serve.py/kernels.py entry points remain active; no alternate numerical runner was added. The isolated integration worktree is retained for review."
+    "cleanup": "Transient controllers are archived by content hash in the verified remote control packet. Maintained serve.py/kernels.py entry points remain active; no alternate numerical runner was added. The isolated integration worktree is retained for review.",
+    "failed_five_rerun": {
+      "status": "passed",
+      "preflight": {
+        "account": "winstoncai233",
+        "image": "im-ZG6Ev0fo6k34SAzzUyMYUX",
+        "source_identities": {
+          "flashmla": {
+            "commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "dirty": false,
+            "expected_commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "integration": "v0.5.22",
+            "override": false,
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/flashmla-v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "dirty": false,
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/flashmla-v0.5.22/csrc/cutlass"
+          },
+          "parent": {
+            "commit": "57e4abed9359241a47baf3832a9e7fb97b3ee8ea",
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration"
+          },
+          "sglang": {
+            "commit": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+            "dirty": false,
+            "expected_commit": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+            "integration": "v0.5.22",
+            "override": false,
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/sglang-v0.5.22"
+          }
+        },
+        "time": 1793904969.9739351,
+        "controller_sha256": "4f825d0c98c5676cc9f15f98679f08b53d934adb5ed46c536ba707a7592c1157",
+        "cases": [
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-1]",
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-1]",
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-2]",
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-2]",
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks[64]"
+        ],
+        "work_seconds": 480,
+        "function_timeout_seconds": 540,
+        "controller_seconds": 570,
+        "conservative_minutes": 10,
+        "projected_phase_usd": 22.457173198581476,
+        "reserve_usd": 3,
+        "aggregate_H100_max_minutes": 80.66658937136181,
+        "scope": "all",
+        "tools": [
+          "racecheck"
+        ],
+        "environment": {
+          "CUDA_LAUNCH_BLOCKING": "1"
+        },
+        "qualification": "Five-case diagnostic only. Prior full batch remains failed."
+      },
+      "run_id": "v41-failed-five-20261106",
+      "numerical_tests": 5,
+      "racecheck_tests": 5,
+      "racecheck_seconds": 143.65,
+      "hazards": 0,
+      "errors": 0,
+      "warnings": 0,
+      "limitations": "Fresh worker, unfiltered framework coverage and CUDA_LAUNCH_BLOCKING=1. The earlier full-batch failure remains unresolved.",
+      "controller_outcome": "Local Connection._transport collection error; persisted successful worker result, exact XML cases and sanitizer log/hashes independently verified.",
+      "control_packet": {
+        "raw_volume": "winstoncai233/remnant-stage2a-results/microbench/v41-failed-five-20261106/validation/control-packet.zip",
+        "sha256": "6486bb11d90131643549c1cb86395c2586522227b627217d4d0e6cd834441117"
+      }
+    }
   }
 }

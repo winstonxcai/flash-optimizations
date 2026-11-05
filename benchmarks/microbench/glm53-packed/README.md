@@ -222,8 +222,8 @@ Rollback: select Native, or restore the pre-optimization SGLang pin `889edf56`.
 The isolated integration candidate merges both PR histories and exposes
 `--kv-cache-format native|direct` on v0.5.22. The untouched v0.5.18 pair keeps its
 recorded interface; shared launchers translate Native/Direct explicitly.
-`qualification.json` → `ds41_integration` owns this phase's **$25** budget,
-including the approved $5 increase, validation status, source identities and receipts. Historical runs and
+`qualification.json` → `ds41_integration` owns this phase's **$26** budget,
+including the approved $5 and $1 increases, validation status, source identities and receipts. Historical runs and
 the original worktree's unstaged ledger are preserved. The 236 unrelated replay
 capture additions and replay-only sweep are excluded from the resulting PR diff.
 
@@ -266,7 +266,7 @@ and the CPU-verified `REMNANT_COMPILED_IMAGE`. The public dispatcher validates
 inputs and weights before scheduling. Parallel controllers use the same worker,
 with bounded ownership, deadlines and cancellation; no alternate server harness.
 
-The approved phase cap is $25, with a $22 routine stop and $3 protected reserve.
+The approved phase cap is $26, with a $23 routine stop and $3 protected reserve.
 All four initial workers ran in parallel after CPU admission and an aggregate
 cost check. GLM Native passed in 511.78 seconds. GLM Direct loaded and captured
 graphs, but its cold chat timed out; a lone rerun passed in 525.48 seconds.
@@ -315,3 +315,24 @@ gates are the full V4.1 racecheck failure and both corrected V4.1 serving smokes
 The two PRs remain unmerged and validation remains incomplete. Next use the
 maintained `serve.py::smoke_serving` entry point above after new authorization
 and fresh preflight; diagnose the race failure with existing fixtures first.
+
+
+### Five-case racecheck follow-up
+
+Run `v41-failed-five-20261106` selects only the four failed C1/C2 compressor
+cases and `test_fp4_fragment_masks[64]`. All five numerical checks passed in
+33.71 seconds; all five racecheck cases passed in **143.65 seconds**, with zero
+hazards, errors or warnings. This used a fresh H100, unfiltered framework
+instrumentation and `CUDA_LAUNCH_BLOCKING=1`, matching the isolated diagnostic.
+It does not resolve the earlier 15-case batch failure.
+
+The local controller hit a `Connection._transport` collection error after the
+worker completed. Persisted worker JSON, exact XML case identities, log hashes
+and the zero-hazard summary were verified independently; no GPU rerun was needed.
+Sources and input receipts are archived with the run. No kernel code changed.
+
+The approved extra $1 and ten H100 minutes raise the phase caps to $26 and
+85 minutes, retaining the $3 reserve. Updated totals are **$20.76 reported /
+$22.11 conservatively accounted** and **75.96 H100 minutes**. All workers are
+stopped. The original batch failure and corrected V4.1 serving gates remain
+pending.

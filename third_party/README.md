@@ -537,7 +537,7 @@ verification by `scripts/sources.py`; pure report parsing by
 `scripts/modal/qualification.py`. Model-specific evidence policies remain
 separate. Shared numerical timing statistics live in the fork's `timing.py`.
 
-The current merge-validation status and $25 phase ledger are recorded in the
+The current merge-validation status and $26 phase ledger are recorded in the
 existing GLM [qualification record](../benchmarks/microbench/glm53-packed/qualification.json).
 Historical qualification and prefill parity misses stay bound to their measured
 sources. The 64-row prefill candidate remains benchmark-only.
