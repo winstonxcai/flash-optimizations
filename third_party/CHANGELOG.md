@@ -14,7 +14,7 @@ records rather than this milestone log.
 ## Unreleased
 
 - Integration candidate from parent `8a3d5b2` + V4.1 `d385c1c`; combined SGLang
-  `d271262284f5` (descends from `6667e5d` and `c470887`) / FlashMLA
+  `80d6a473cb0a` (descends from `6667e5d` and `c470887`) / FlashMLA
   `4e72722671d8`: merge both model implementations and replace public model-specific
   selectors with `--kv-cache-format native|direct`. Preserve numerical kernels,
   persistent ABIs and v0.5.18 pins. Share pinned metadata, source verification,
