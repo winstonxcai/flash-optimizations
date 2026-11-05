@@ -229,3 +229,10 @@ review, prepare verified CPU images, then run focused one-H100 qualification and
 the bounded Native/Direct four-H200 smoke. No new timing or prefill promotion is
 part of this merge. Pending gates remain pending until source-bound evidence is
 exported; Native remains the serving default.
+
+The merge-only GLM sanitizer group uses `--stage corrective --sanitizer
+--sanitizer-scope glm-merge` with the exact `GLM_MERGE_SANITIZER` cases from the
+maintained runner. It instruments the byte loader, four decode partial variants
+and both 64-row prefill head variants, retaining the Packed filter/source audit.
+It never replaces broad timing-qualification requirements. V4.1 corrective cases
+are allowlisted; default full 34-case qualification is unchanged.

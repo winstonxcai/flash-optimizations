@@ -34,8 +34,8 @@ import importlib.util
 import json
 import os
 import re
-import shutil
 import shlex
+import shutil
 import signal
 import subprocess
 import sys
@@ -48,16 +48,19 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import modal
-from scripts.model_profiles import model_profile
-from scripts.modal.kernel_qualification import (
-    QualificationContext,
-    check_glm_scope_audit as _check_glm_scope_audit,
-    check_sanitizer_report as _check_sanitizer_report,
-    qualification_run_ids,
-    qualify_glm_timing,
-)
 
-from scripts.modal.qualification import qualify_fp4_runs, read_pytest_report, validate_run_id
+from scripts.modal.kernel_qualification import QualificationContext
+from scripts.modal.kernel_qualification import (
+    check_glm_scope_audit as _check_glm_scope_audit,
+)
+from scripts.modal.kernel_qualification import qualification_run_ids, qualify_glm_timing
+from scripts.modal.qualification import (
+    check_sanitizer_report as _check_sanitizer_report,
+    qualify_fp4_runs,
+    read_pytest_report,
+    validate_run_id,
+)
+from scripts.model_profiles import model_profile
 from scripts.sources import check_sources, integration_profile
 
 
@@ -94,6 +97,12 @@ GLM_SMOKE = (GLM_TEST + "::test_producer_reconstruction", GLM_TEST + "::test_nat
              GLM_TEST + "::test_attention[3-8-8]",
              GLM_TEST + "::test_changing_input_graph", GLM_TEST + "::test_production_backend_constructor")
 GLM_SANITIZER = (*GLM_SMOKE, GLM_TEST + "::test_attention[0-1-64]", GLM_TEST + "::test_pool_lifecycle")
+GLM_MERGE_SANITIZER = (
+    GLM_TEST + "::test_packed_loader_bytes", GLM_DECODE_PARTIAL,
+    GLM_TEST + "::test_prefill_partial_graph[64]",
+    GLM_TEST + "::test_prefill_partial_graph_h8",
+)
+
 VALIDATION_SUITE = os.environ.get("REMNANT_VALIDATION_SUITE", "v4")
 if VALIDATION_SUITE not in ("v4", "v41-fp4") or (
     VALIDATION_SUITE == "v41-fp4" and INTEGRATION["version"] != "v0.5.22"
@@ -1446,18 +1455,28 @@ def validate_kernels(
         if (
             (MODEL_FAMILY != "glm53" and VALIDATION_SUITE != "v41-fp4")
             or not cases
+            or len(set(selected_tests)) != len(selected_tests)
             or any(not case.startswith(owner + "::test_") for case in selected_tests)
         ):
             raise ValueError("Corrective cases must belong to the selected model's test module")
+        if MODEL_FAMILY != "glm53":
+            allowed = {"test_fp4_store_and_reader", "test_fp4_direct", "test_fp4_graph_and_stream", "test_fp4_compressor_boundary", "test_fp4_fragment_masks", "test_fp4_startup_contract", "test_fp4_backend_dispatch", "test_fp4_pool_allocations"}
+            if any(case.split("::", 1)[1].split("[", 1)[0] not in allowed for case in selected_tests):
+                raise ValueError("FP4 corrective cases must use an allowlisted test ID")
     else:
         if cases:
             raise ValueError("--cases is only supported for the GLM corrective stage")
         selected_tests = VALIDATION_TESTS
-    if sanitizer_scope not in ("all", "glm-decode"):
-        raise ValueError("sanitizer_scope must be all or glm-decode")
+    if sanitizer_scope not in ("all", "glm-decode", "glm-merge"):
+        raise ValueError("sanitizer_scope must be all, glm-decode or glm-merge")
     if sanitizer_scope == "glm-decode" and (MODEL_FAMILY != "glm53" or stage != "corrective"
             or not sanitizer or set(selected_tests) != {GLM_TEST + "::test_packed_loader_bytes", GLM_DECODE_GRAPH}):
         raise ValueError("glm-decode sanitizer scope requires the exact focused decode tests")
+    if sanitizer_scope == "glm-merge" and (
+        MODEL_FAMILY != "glm53" or stage != "corrective" or not sanitizer
+        or set(selected_tests) != set(GLM_MERGE_SANITIZER)
+    ):
+        raise ValueError("glm-merge sanitizer scope requires the exact loader/decode/prefill tests")
     sanitizer = sanitizer or stage == "sanitizer"
     if sanitizer_tools and sanitizer_order:
         raise ValueError("Use sanitizer_tools or sanitizer_order, not both")
@@ -1641,7 +1660,7 @@ def validate_kernels(
             ):
                 raise RuntimeError("Incomplete real-allocation coverage")
             record["allocation"] = allocation
-        if sanitizer and sanitizer_scope == "glm-decode":
+        if sanitizer and sanitizer_scope in ("glm-decode", "glm-merge"):
             audit_prefix = (SANITIZER, "--tool", "racecheck", "--error-exitcode", "1",
                             "--kernel-name", "regex=glm_packed_(partial|bytes)", "--racecheck-trace-sync", "yes")
             _run_pytest((GLM_TEST + "::test_packed_loader_bytes",), root, "scope-audit",
@@ -1660,19 +1679,19 @@ def validate_kernels(
                 if int(deadline - time.monotonic()) <= 0:
                     break
                 prefix = (SANITIZER, "--tool", tool, "--error-exitcode", "1")
-                if sanitizer_scope == "glm-decode":
+                if sanitizer_scope in ("glm-decode", "glm-merge"):
                     # Distinct Packed entrypoints include their inline helper.
                     # One exact production CTA per bank; stock Native partial
                     # is the control. Full attention has its own numerical gate.
                     prefix += ("--kernel-name", "regex=glm_packed_(partial|bytes)", "--print-level", "info")
                 try:
                     tool_environment = dict(environment)
-                    if sanitizer_scope == "glm-decode":
+                    if sanitizer_scope in ("glm-decode", "glm-merge"):
                         tool_environment["PYTEST_ADDOPTS"] = "--full-trace -o faulthandler_timeout=120"
                     _run_pytest((GLM_TEST + "::test_packed_loader_bytes", GLM_DECODE_PARTIAL) if sanitizer_scope == "glm-decode"
                                 else (selected_tests if stage == "corrective" else SANITIZER_TESTS),
                                 root, tool, deadline, prefix=prefix,
-                                environment=tool_environment if sanitizer_scope == "glm-decode" else None)
+                                environment=tool_environment if sanitizer_scope in ("glm-decode", "glm-merge") else None)
                 except TimeoutError:
                     # The boundary may expire between this loop and the command
                     # check. No process started; keep this tool marked not_run.
@@ -1703,7 +1722,8 @@ def validate_kernels(
             all_tools_passed = all(result["status"] == "passed" for result in record["sanitizer_results"].values())
             focused = stage == "corrective" and set(selected_tests) == {
                 GLM_TEST + "::test_packed_loader_bytes", GLM_DECODE_GRAPH}
-            record["qualification_scope"] = "focused_decode" if focused else stage
+            record["qualification_scope"] = "focused_merge" if sanitizer_scope == "glm-merge" else "focused_decode" if focused else stage
+            record["focused_merge_qualification_complete"] = sanitizer_scope == "glm-merge" and all_tools_passed
             record["focused_decode_qualification_complete"] = focused and all_tools_passed
             record["sanitizer_qualification_complete"] = all_tools_passed and stage != "corrective"
             if incomplete:

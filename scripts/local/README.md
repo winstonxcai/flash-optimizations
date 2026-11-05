@@ -925,3 +925,12 @@ modal run scripts/modal/kernels.py::validate_kernels --run-id <unique-id> --sani
 This runs the extended existing tests and sanitizer selections, including mixed
 layer graph replay and every supported store/reconstruction count. It is a
 validation gate; the unchanged timing matrix remains a 256-survivor comparison.
+
+
+For the merged v0.5.22 runtime use `serve.sh native` or `serve.sh direct`, which
+emit `--kv-cache-format native|direct`. Removed model-specific serving flags are
+unknown options. Shared launchers translate those same two modes to the unchanged
+v0.5.18 pin's original flags. Adapter/reconstruction selections are internal
+benchmark/test inputs. GLM uses `MODEL_FAMILY=glm53`, TileLang FP8 KV and a
+matching TP/EP/visible GPU assignment; `MAX_TOTAL_TOKENS` and
+`GLM_REASONING_PARSER` are transported unchanged through Docker.

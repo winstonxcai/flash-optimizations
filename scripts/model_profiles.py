@@ -41,8 +41,11 @@ _PROFILES = {
         shards=62,
         checkpoint_bytes=328_337_455_672,
         metadata_files=(
-            "config.json", "model.safetensors.index.json", "tokenizer.json",
-            "tokenizer_config.json", "chat_template.jinja",
+            "config.json",
+            "model.safetensors.index.json",
+            "tokenizer.json",
+            "tokenizer_config.json",
+            "chat_template.jinja",
         ),
         integrations=("v0.5.22",),
     ),

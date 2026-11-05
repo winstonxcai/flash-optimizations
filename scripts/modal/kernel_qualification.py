@@ -16,7 +16,9 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 
-from scripts.modal.qualification import check_sanitizer_report, read_pytest_report, validate_run_id, verify_sanitizer_artifacts
+from scripts.modal.qualification import (check_sanitizer_report,
+                                         read_pytest_report, validate_run_id,
+                                         verify_sanitizer_artifacts)
 
 GLM_BASELINE = "9e42a0d8886dd93944dc6b47ef3bffef4e033b5a"
 # SHA256 of each exact baseline blob under python/sglang; never current HEAD.

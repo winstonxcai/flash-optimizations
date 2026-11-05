@@ -146,11 +146,12 @@ def qualify_fp4_runs(
     }
 
 
-
 def validate_run_id(value: str, *, max_length: int = 128) -> None:
     """Validate one existing path-safe experiment identifier."""
-    if not isinstance(value, str) or not 1 <= len(value) <= max_length or not re.fullmatch(
-        r"[A-Za-z0-9][A-Za-z0-9_-]*", value
+    if (
+        not isinstance(value, str)
+        or not 1 <= len(value) <= max_length
+        or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", value)
     ):
         raise ValueError(f"Invalid experiment run ID: {value!r}")
 
@@ -173,7 +174,9 @@ def verify_sanitizer_artifacts(root: Path, tool: str, state: dict[str, Any]) -> 
         raise RuntimeError(f"Unknown sanitizer report schema: {tool}")
     for suffix in ("log", "xml"):
         path = root / f"{tool}.{suffix}"
-        if hashlib.sha256(path.read_bytes()).hexdigest() != state.get(f"{suffix}_sha256"):
+        if hashlib.sha256(path.read_bytes()).hexdigest() != state.get(
+            f"{suffix}_sha256"
+        ):
             raise RuntimeError(f"Sanitizer raw report changed: {tool}/{suffix}")
     check_sanitizer_report((root / f"{tool}.log").read_text(), tool)
 

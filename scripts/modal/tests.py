@@ -11,7 +11,6 @@ import io
 import json
 import os
 import runpy
-import shlex
 import signal
 import subprocess
 import sys
@@ -579,7 +578,7 @@ class LauncherTests(unittest.TestCase):
                     function("fixture", sanitizer=True)
             self.assertEqual([c.args[2] for c in run.call_args_list], ["validation", "synccheck"])
             self.assertEqual(record["sanitizer_results"], {
-                "synccheck": {"status": "passed"},
+                "synccheck": {"status": "passed", "report_schema": "remnant-sanitizer-raw-v1"},
                 "racecheck": {"status": "not_run"},
                 "memcheck": {"status": "not_run"},
             })
@@ -3038,11 +3037,36 @@ class SharedModelContractsTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "raw report changed"):
                 verify_sanitizer_artifacts(root, "memcheck", state)
 
+    def test_glm_smoke_requires_all_rank_progress_and_resolved_mode(self):
+        from scripts.modal import serve
+        rows = [f"[2026-11-04 13:53:46 TP{rank} EP{rank}] {marker}" for rank in range(4) for marker in ("Load weight end.", "Capture target decode CUDA graph end.")]
+        stages = serve._glm_smoke_stages("\n".join(rows))
+        for event in ("weight_load_complete", "graph_capture_complete"):
+            self.assertEqual({s["rank"] for s in stages if s["event"] == event}, set(range(4)))
+        settings = dict(kv_cache_format="direct", tp_size=4, ep_size=4, kv_cache_dtype="fp8_e4m3", dsa_prefill_backend="tilelang", dsa_decode_backend="tilelang", language_model_only=True, context_length=8192, max_running_requests=4, chunked_prefill_size=2048, max_total_num_tokens=16384, cuda_graph_config={"decode":{"backend":"full","bs":[1,2,4]}})
+        response = io.BytesIO(json.dumps(settings).encode())
+        with patch.object(serve.urllib.request, "urlopen", return_value=response):
+            self.assertEqual(serve._glm_smoke_settings("30211", "direct", serve.time.monotonic()+10), settings)
+        response = io.BytesIO(json.dumps(settings).encode())
+        with patch.object(serve.urllib.request, "urlopen", return_value=response), self.assertRaisesRegex(RuntimeError, "kv_cache_format"):
+            serve._glm_smoke_settings("30211", "native", serve.time.monotonic()+10)
+
     def test_ambiguous_sanitizers_fail_before_run_context(self):
         function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
         with patch.object(kernels, "_run_context") as context:
             with self.assertRaises(ValueError):
                 function("ambiguous", sanitizer=True, sanitizer_tools="memcheck", sanitizer_order="memcheck,racecheck,synccheck")
+            context.assert_not_called()
+
+    def test_merge_sanitizer_scope_and_fp4_allowlist_fail_before_execution(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        with patch.object(kernels, "MODEL_FAMILY", "glm53"), patch.object(kernels, "_run_context") as context:
+            with self.assertRaisesRegex(ValueError, "exact loader/decode/prefill"):
+                function("merge-scope", model_family="glm53", stage="corrective", sanitizer=True, sanitizer_scope="glm-merge", cases=kernels.GLM_MERGE_SANITIZER[0])
+            context.assert_not_called()
+        with patch.object(kernels, "MODEL_FAMILY", "dsv4"), patch.object(kernels, "VALIDATION_SUITE", "v41-fp4"), patch.object(kernels, "_run_context") as context:
+            with self.assertRaisesRegex(ValueError, "allowlisted"):
+                function("fp4-case", stage="corrective", cases=kernels.TEST_ROOT+"test_remnant_fp4.py::test_not_owned")
             context.assert_not_called()
 
     def test_cpu_preflight_does_not_commit_gpu_cache(self):

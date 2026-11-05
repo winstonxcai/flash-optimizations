@@ -1008,7 +1008,7 @@
     ]
   },
   "ds41_integration": {
-    "status": "cpu_validation_in_progress",
+    "status": "cpu_preparation_pending",
     "author": "Winston Cai",
     "candidate_worktree": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration",
     "parent_ancestors": [
@@ -1027,22 +1027,45 @@
       "h100_cap_minutes": 75,
       "serving_cap_minutes": 20,
       "accounted_usd": 0,
-      "launches": []
+      "launches": [],
+      "accounts": {
+        "caiw": {
+          "baseline_month": "2026-11",
+          "baseline_compute_usd": 28.82816891,
+          "baseline_gross_metered_usd": 32.80486824,
+          "active_containers": 0,
+          "h100_hour_usd": 3.95,
+          "h200_hour_usd": 4.54,
+          "cpu_hour_usd": 0.0473,
+          "ram_gib_hour_usd": 0.008
+        }
+      }
     },
     "cpu": {
       "fork_command": "python -m pytest benchmark/remnant/test_microbench.py test/registered/unit/test_glm5_mla_cache_format.py -q",
       "passed": 194,
       "gpu_skipped": 103,
       "test_inventory": "all 67 original top-level benchmark functions retained; one new statistics regression",
-      "parent": "pending"
+      "parent": {
+        "v0.5.18": "111 passed",
+        "v0.5.22": "111 passed",
+        "v41-fp4_qualification_preflight": "11 passed",
+        "new_focused_scope_and_boundary_checks": "passed"
+      }
     },
     "review": {
-      "runtime": "passed after fixes for V4.1 auto backend and None architectures",
-      "parent": "initial findings fixed; final review pending"
+      "runtime": "passed; corrected auto backend and architectures=None regressions",
+      "parent": "passed; includes dispatcher, receipts, metadata, smoke ownership and focused merge scope"
     },
     "h100": "pending",
     "serving": "pending",
     "excluded_replay_capture_files": 236,
-    "original_dirty_ledger_preserved": true
+    "original_dirty_ledger_preserved": true,
+    "preparation_strategy": "Fresh combined Dockerfile.v0.5.22 native compilation on caiw; V4.1 private image inaccessible. Reuse identical native image layers for the two CPU qualification recipes.",
+    "runtime_scope": {
+      "glm": "numerical/pool/allocation/public dispatch/graphs; packed bytes/decode h8,h16 inner1,2 + prefill tile64 h8,h16 under all3 tools",
+      "v41": "Native/Packed FP4, producer C1/C2, Direct pages128/256, allocations, graphs/streams; focused all3 tools",
+      "serving": "native then direct, four H200s,540 seconds/mode,1140 worker,1200 controller; exact answer and per-rank load/graph evidence"
+    }
   }
 }

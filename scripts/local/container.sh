@@ -114,4 +114,4 @@ case "$ACTION" in
     ;;
   *) echo "usage: $0 [prep|recreate|up|rebuild]" >&2; exit 2 ;;
 esac
-echo "== production image ready. serve with:  bash scripts/local/serve.sh <native|triton|kernel>"
+echo "== production image ready. serve with:  bash scripts/local/serve.sh <native|direct>"

@@ -37,8 +37,10 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import modal
-from scripts.sources import check_sources, integration_profile, verify_compiled_image_sources
+
 from scripts.model_profiles import model_profile
+from scripts.sources import (check_sources, integration_profile,
+                             verify_compiled_image_sources)
 
 INTEGRATION = integration_profile()
 
@@ -452,8 +454,10 @@ def _check_glm_serving_image() -> dict:
     build = Path("/opt/remnant-build.json")
     if not build.is_file() or not Path(GLM_SMOKE_PYTHON).is_file():
         raise RuntimeError("The verified GLM runtime or its build manifest is missing")
+    if "stubs" in os.environ.get("LD_LIBRARY_PATH", ""):
+        raise RuntimeError("CPU-only driver stubs must not enter the GPU runtime")
     config = json.loads(build.read_text())["model_config"]
-    if config["revision"] != MODEL_REVISION:
+    if config["revision"] != MODEL_REVISION or config["sha256"] != MODEL_PROFILE.config_sha256:
         raise RuntimeError("The compiled image and serving checkpoint revisions differ")
     return config
 
@@ -522,6 +526,62 @@ def _glm_chat_request(port: str, deadline: float) -> dict:
     return {"http_status": status, "request": payload, "response": body}
 
 
+def _glm_smoke_settings(port: str, mode: str, deadline: float) -> dict:
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise TimeoutError("No time remaining for GLM startup settings")
+    with urllib.request.urlopen(
+        f"http://127.0.0.1:{port}/server_info", timeout=min(10, remaining)
+    ) as response:
+        settings = json.load(response)
+    expected = {
+        "kv_cache_format": mode,
+        "tp_size": 4,
+        "ep_size": 4,
+        "kv_cache_dtype": "fp8_e4m3",
+        "dsa_prefill_backend": "tilelang",
+        "dsa_decode_backend": "tilelang",
+        "language_model_only": True,
+        "context_length": 8192,
+        "max_running_requests": 4,
+        "chunked_prefill_size": 2048,
+        "max_total_num_tokens": 16384,
+    }
+    for name, value in expected.items():
+        if settings.get(name) != value:
+            raise RuntimeError(
+                f"GLM startup {name}: expected {value!r}, got {settings.get(name)!r}"
+            )
+    graph = settings.get("cuda_graph_config", {}).get("decode", {})
+    if graph.get("backend") != "full" or graph.get("bs") != [1, 2, 4]:
+        raise RuntimeError(f"GLM decode graph settings changed: {graph}")
+    return settings
+
+
+def _glm_smoke_stages(log: str) -> list[dict]:
+    """Retain per-rank log timestamps; stage intervals overlap, never sum them."""
+    stages = []
+    events = (
+        ("weight_load_start", "Load weight begin"),
+        ("weight_load_complete", "Load weight end."),
+        ("pool_allocation", "KV Cache is allocated."),
+        ("graph_capture_start", "Capture target decode CUDA graph begin."),
+        ("graph_capture_complete", "Capture target decode CUDA graph end."),
+    )
+    for line in log.splitlines():
+        rank = re.search(r"\[([^\]]+) TP(\d+)(?: EP\d+)?\]", line)
+        if rank is None:
+            continue
+        for event, marker in events:
+            if marker in line:
+                stages.append(
+                    dict(
+                        event=event, rank=int(rank[2]), timestamp=rank[1], log_line=line
+                    )
+                )
+    return stages
+
+
 @app.function(
     image=server_image,
     gpu="H200:4",
@@ -531,7 +591,10 @@ def _glm_chat_request(port: str, deadline: float) -> dict:
     retries=0,
     max_containers=1,
     scaledown_window=2,
-    volumes={str(MODEL_ROOT): model_volume.read_only(), str(RESULTS_ROOT): results_volume},
+    volumes={
+        str(MODEL_ROOT): model_volume.read_only(),
+        str(RESULTS_ROOT): results_volume,
+    },
 )
 def smoke_glm_serving(run_id: str, modes: str = "native,direct") -> dict:
     """Boot the same pinned checkpoint in each mode and make a chat request."""
@@ -581,8 +644,10 @@ def smoke_glm_serving(run_id: str, modes: str = "native,direct") -> dict:
         "TRANSFORMERS_OFFLINE": "1",
         "GLM_REASONING_PARSER": "auto",
         "DECODE_CFG": json.dumps(
-            {"decode": {"backend": "full", "max_bs": 4, "bs": [1, 2, 4]},
-             "prefill": {"backend": "disabled"}}
+            {
+                "decode": {"backend": "full", "max_bs": 4, "bs": [1, 2, 4]},
+                "prefill": {"backend": "disabled"},
+            }
         ),
     }
     record["settings"] = settings
@@ -591,14 +656,20 @@ def smoke_glm_serving(run_id: str, modes: str = "native,direct") -> dict:
     record["started_at"] = time.time()
     for mode in selected:
         if worker_deadline - time.monotonic() < GLM_SMOKE_MODE_SECONDS + 30:
-            record["mode_results"][mode] = {"status": "pending", "error": "Insufficient time for full mode allowance and cleanup"}
+            record["mode_results"][mode] = {
+                "status": "pending",
+                "error": "Insufficient time for full mode allowance and cleanup",
+            }
             (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
             results_volume.commit()
             break
         start = time.monotonic()
         deadline = start + GLM_SMOKE_MODE_SECONDS
         log = root / f"{mode}.log"
-        result = record["mode_results"][mode] = {"status": "failed", "started_at": time.time()}
+        result = record["mode_results"][mode] = {
+            "status": "failed",
+            "started_at": time.time(),
+        }
         env = {
             **os.environ,
             **settings,
@@ -609,16 +680,32 @@ def smoke_glm_serving(run_id: str, modes: str = "native,direct") -> dict:
             print(f"Starting GLM {mode} on four H200s", flush=True)
             with _running_serving_server(env, log, deadline):
                 result["health_http_status"] = 200
+                result["healthy_at"] = time.time()
                 result["ready_seconds"] = time.monotonic() - start
+                result["resolved_settings"] = _glm_smoke_settings(
+                    env["PORT"], mode, deadline
+                )
                 result["chat_started_at"] = time.time()
                 result["chat"] = _glm_chat_request(env["PORT"], deadline)
                 result["chat_completed_at"] = time.time()
+            result["stages"] = _glm_smoke_stages(log.read_text(errors="replace"))
+            for event in ("weight_load_complete", "graph_capture_complete"):
+                ranks = {
+                    item["rank"] for item in result["stages"] if item["event"] == event
+                }
+                if ranks != {0, 1, 2, 3}:
+                    raise RuntimeError(f"Missing per-rank GLM {event}: {sorted(ranks)}")
             result["status"] = "passed"
         except (OSError, RuntimeError, ValueError) as exc:
             result["error"] = str(exc)
             if log.exists():
-                print("\n".join(log.read_text(errors="replace").splitlines()[-40:]), flush=True)
+                print(
+                    "\n".join(log.read_text(errors="replace").splitlines()[-40:]),
+                    flush=True,
+                )
         finally:
+            if log.is_file():
+                result["stages"] = _glm_smoke_stages(log.read_text(errors="replace"))
             result["terminated_at"] = time.time()
             result["worker_seconds"] = time.monotonic() - start
             (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")

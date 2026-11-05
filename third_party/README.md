@@ -401,7 +401,7 @@ Author: Winston Cai.
 
 Native remains the default. `--kv-cache-format direct` selects the 320-byte
 Packed MLA pool and TileLang Direct. Adapter remains an explicit internal test
-and benchmark input.
+and benchmark input. Packed requires the pinned GLM text
 geometry, FP8 KV and TileLang sparse attention. Startup rejects unsupported
 combinations before pool allocation, including a non-BF16 resolved `auto` dtype.
 
