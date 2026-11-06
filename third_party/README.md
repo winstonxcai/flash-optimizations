@@ -17,7 +17,7 @@ Folder suffixes identify the SGLang integration pair, not a FlashMLA release.
 |---|---|---|---|
 | `sglang-v0.5.18/` | `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` | `6687a7c` |
 | `flashmla-v0.5.18/` | `05e26647fe840b8baedae486c2d86d5ce4efeb7c` | `remnant/flashmla-v0518` | `97f3faa` |
-| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `ds41-flash-lswb-modal-local` | `fbd42fbf` |
+| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `ds41-flash-lswb-modal-local` | `26489ab0` |
 | `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `ds41-flash-packed` | `858bb1c` |
 
 Both FlashMLA checkouts pin CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`.
@@ -51,7 +51,7 @@ that an existing container's loaded binaries match; source changes need a rebuil
 
 ## Experimental V4.1 FP4 on SM90
 
-Upstream comparison candidate: SGLang `fbd42fbf`, FlashMLA `858bb1c` unchanged.
+Upstream comparison candidate: SGLang `26489ab0`, FlashMLA `858bb1c` unchanged.
 The v4 microbenchmark defines Native as the original upstream H100 auto
 FP8/BF16 path (584 bytes), built separately at FlashMLA `3620b63`; the previous
 custom dense FP4 control is now `dense_fp4` (288 bytes). Packed remains 224

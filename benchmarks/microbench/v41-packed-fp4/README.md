@@ -15,8 +15,11 @@ Native on H100? Protocol v4 adds upstream Native and renames the old control
 timing. Native consumes the same unpruned FP4-rounded producer values through
 the upstream FP8 store; each path is checked against its own independently
 decoded cache. Queries, physical selections, SWA and sink remain shared.
-Native follows the existing metadata ownership used by the serving backend;
-the custom FP4 paths retain their current scheduling behavior.
+Native follows SGLang's metadata reset after graph warmup: the captured
+standalone call includes the first use of each ratio's GPU schedule, attention
+and combine. Later layers in a model forward may reuse that ratio's schedule;
+this standalone first-use cost is not a model-wide average. The custom FP4
+paths retain their current per-call scheduling behavior.
 
 The Native control must be built separately from exact upstream FlashMLA
 `3620b63fc4ebe33950c50e1b7701b6607f44150e`, selected by SGLang v0.5.22, with
@@ -29,7 +32,7 @@ The original upstream `setup.py build_ext --inplace` builds a separate
 `flash_mla` package with `FLASH_MLA_DISABLE_SM100=1`, `MAX_JOBS=2`, and
 `NVCC_THREADS=1`. Only verified SM90a binaries qualify. No kernel source is
 rewritten. CPU preflight binds source, Python wrapper and binary hashes;
-timing keeps the control's normal scheduler ownership. This is an attention
+timing records the control's first-use schedule. This is an attention
 microbenchmark, not an end-to-end serving comparison.
 
 Acceptance requires CPU contracts/build preflight, numerical,
@@ -60,6 +63,28 @@ qualification. A bounded CPU-only inventory of cached image
 there is no reusable standalone `flash_mla` package. It stopped successfully.
 Fresh native build, all required sanitizer tools and final timing will exceed
 the remaining work allowance; do not launch the GPU phase without extending it.
+
+Six focused CPU contracts passed on Modal, including Native FP8 rounding/tail
+preservation, paired ratios, protocol/provenance rejection, unchanged V4 matrix
+and the actual Native callback receiving fresh metadata on each call. App
+`ap-0kO7GeNg8yuPC74oGbA1tU`, cached image
+`im-5xaIDft0ZH2Btx246EG12x`: `pytest -q benchmark/remnant/test_microbench.py -k
+'established_matrix_and_profile_coverage or paired_ratios_and_round_percentile
+or v41_native_reference or v41_three_path_ratios or v41_native_call or
+v41_fp4_matrix_and_timing_gate'` reported **6 passed**, with lint and syntax
+checks passing on Modal. Exact invocation, commands and content hashes are in
+`qualification.json`. The initial five-test attempt passed but its formatter
+export exceeded the log-line limit; the bounded chunked export rerun succeeded.
+Only task formatting was applied; unrelated formatting was preserved.
+
+CPU preflight app `ap-t6JxrQ4CWg4fQC3XW5y7Yp` was canceled during the vendor
+image pull before compilation. Static review found that SGLang's
+`on_after_cuda_graph_warmup` resets C1/C2 metadata, so the draft's warmed
+scheduler would have omitted first-use work from capture. The corrected
+callback and a regression test now preserve that boundary. No usable native
+build or GPU receipt came from the canceled app. Its reported cost was
+$0.00025346; all settled CPU attempts before the final check total $0.00282954,
+with the last six-test worker still subject to billing lag.
 
 Published branch: **`ds41-flash-packed`** in the parent, SGLang v0.5.22 and
 FlashMLA v0.5.22 repositories. It continues the completed local

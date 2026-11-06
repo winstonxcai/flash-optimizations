@@ -14,13 +14,13 @@ records rather than this milestone log.
 ## Unreleased
 
 - Upstream Native comparison candidate, based on parent `d2e3fcd`: SGLang
-  `fbd42fbf` / FlashMLA `858bb1ccac6f` unchanged. Protocol v4 compares upstream
+  `26489ab0` / FlashMLA `858bb1ccac6f` unchanged. Protocol v4 compares upstream
   H100 auto FP8/BF16 with custom dense FP4 and Packed, preserving the ten
   production geometry cases. A separately built original FlashMLA `3620b63`
   package is source/binary verified; the fork's earlier Native synchronization
   fixes cannot substitute for it. Add two graph/stream control fixtures to the
   required sanitizer matrix (38 cases/tool), retain all historical receipts,
-  and reject old protocols. Five focused Modal CPU tests, syntax and lint
+  and reject old protocols. Six focused Modal CPU tests, syntax and lint
   checks passed. Native build and GPU qualification/timing/review are pending;
   no new performance claim, runtime arithmetic change or serving run. Rollback
   omits the suite or restores the preceding SGLang pin `4f8fb091`.

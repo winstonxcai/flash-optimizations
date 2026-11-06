@@ -233,6 +233,7 @@ if VALIDATION_SUITE == "v41-fp4":
         "benchmark/remnant/test_microbench.py::test_v41_fp4_matrix_and_timing_gate",
         "benchmark/remnant/test_microbench.py::test_v41_native_reference_preserves_tail_and_rounds_fp8_ties",
         "benchmark/remnant/test_microbench.py::test_v41_three_path_ratios",
+        "benchmark/remnant/test_microbench.py::test_v41_native_call_does_not_reuse_warmup_metadata",
     )
     SANITIZER_TESTS = tuple(
         fp4_tests + "::" + name
