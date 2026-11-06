@@ -4297,7 +4297,7 @@
       "reproduction_invocation": "\"\"\"Temporary CPU inventory of the existing build image. Author: Winston Cai.\"\"\"\nimport json\nimport modal\n\napp = modal.App(\"remnant-native-control-inventory\")\nimage = modal.Image.from_id(\"im-MZqnw8UUhUxovTFl16mxln\")\ncode = \"\"\"\nimport importlib.metadata as metadata\nimport importlib.util\nimport json\nfrom pathlib import Path\nresult = {}\nfor name in ('flash_mla', 'sgl_kernel'):\n    spec = importlib.util.find_spec(name)\n    result[name] = None if spec is None else {'origin': spec.origin, 'paths': list(spec.submodule_search_locations or [])}\nfor name in ('flash-mla', 'sgl-kernel', 'sglang'):\n    try:\n        result[name + '_version'] = metadata.version(name)\n    except metadata.PackageNotFoundError:\n        result[name + '_version'] = None\nprint(json.dumps(result, indent=2))\n\"\"\"\nwith modal.enable_output(), app.run():\n    sandbox = modal.Sandbox.create(\"python3\", \"-c\", code, image=image, app=app,\n                                   cpu=1, memory=2048, timeout=90, block_network=True)\n    try:\n        print(json.dumps({'sandbox_id': sandbox.object_id, 'app_id': app.app_id}))\n        print(sandbox.stdout.read())\n        print(sandbox.stderr.read())\n        sandbox.wait()\n        if sandbox.returncode != 0:\n            raise RuntimeError(f\"Inventory failed: {sandbox.returncode}\")\n    finally:\n        sandbox.terminate(wait=True)\n"
     },
     "budget": {
-      "ceiling_usd": 20,
+      "ceiling_usd": 25,
       "reserve_usd": 2,
       "prior_conservative_phase_usd": 14.86730972,
       "prior_interrupted_build_usd": 0.04578652,
@@ -4306,12 +4306,14 @@
       "extension_request": {
         "ceiling_usd": 25,
         "reserve_usd": 2,
-        "status": "awaiting_user_reply",
-        "reason": "Full current-source qualification plus timing estimated about 6 USD; about 2.5 USD of work allowance remains"
+        "status": "approved_by_user",
+        "reason": "Full current-source qualification plus timing estimated about 6 USD; about 2.5 USD of work allowance remains",
+        "approved_reply": "Raise the ceiling to $25; keep the $2 reserve",
+        "approved_date": "2026-11-06"
       },
       "current_turn_compute_usd": "0.55659504",
       "conservative_phase_compute_usd": "15.46969128",
-      "remaining_work_usd": "2.53030872",
+      "remaining_work_usd": "7.53030872",
       "current_turn_billing": [
         {
           "object_id": "ap-0kO7GeNg8yuPC74oGbA1tU",
@@ -4369,7 +4371,8 @@
           "interval_start": "2026-11-06T00:00:00",
           "cost": "0.00021101"
         }
-      ]
+      ],
+      "work_ceiling_usd": 23
     },
     "pending": [
       "CPU native build/preflight",
@@ -4619,7 +4622,7 @@
       "function_cpu_core_per_second_usd": 1.31e-05,
       "function_memory_gib_per_second_usd": 2.22e-06
     },
-    "decision": "Unqualified candidate. Stop paid work pending budget decision; do not claim upstream Native performance or relabel historical results.",
+    "decision": "Resume authorized CPU preflight, strict GPU qualification and final timing within cumulative 25 USD ceiling; no model weights or serving.",
     "allocations_at_handoff": {
       "active": [],
       "all_task_apps_stopped": true,

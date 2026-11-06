@@ -3,6 +3,13 @@
 
 ## Upstream Native comparison — pending
 
+Budget continuation approved on 2026-11-06: **$25 cumulative ceiling**, retaining
+the **$2 reserve**. Conservative prior compute is $15.46969128, leaving
+**$7.53030872** for projected work. Continue with the 1,200-second CPU preflight,
+then one bounded H100 validation allocation (at most 5,000 work seconds) and the
+existing ten-case timing gate. Keep source commits frozen between qualification
+and timing. No weights, model volumes, serving, GPUQ or profiling are authorized.
+
 Native means the unchanged upstream `auto` path. On H100, that path uses V4
 FP8/BF16 cache records (584 logical bytes) and stock FlashMLA decode for V4.1.
 The previous v1–v3 measurements called our custom dense SM90 FP4 implementation
@@ -120,9 +127,8 @@ CPU preflight, GPU numerical/graph/stream/sanitizer checks, timing and independe
 review remain pending. **Rollback:** omit this benchmark suite; runtime `auto`
 retains its existing behavior, or restore prior SGLang pin `4f8fb091`.
 
-Further paid work is held for the pending budget decision. The proposed
-cumulative ceiling is $25 with the same $2 reserve; the existing ceiling remains
-$20 until approved. Full qualification and timing are estimated around $6 using
+The user approved raising the cumulative ceiling to $25 with the same $2 reserve.
+Full qualification and timing are estimated around $6 using
 the prior sanitizer durations and [current resource rates](https://modal.com/pricing).
 
 Handoff: this turn used **$0.55659504 compute**, including both build failures
