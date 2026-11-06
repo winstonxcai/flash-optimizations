@@ -61,8 +61,10 @@ REMOTE_REPO = Path("/opt/flash-optimizations")
 
 REPO_ROOT = Path(__file__).resolve().parents[2] if modal.is_local() else REMOTE_REPO
 if modal.is_local():
+    from scripts.build_lock import acquire_for_modal_cli
     from scripts.sources import check_sources
 
+    acquire_for_modal_cli(REPO_ROOT)
     source_override = os.environ.get("REMNANT_SGLANG_SOURCE_OVERRIDE")
     SOURCE_IDENTITIES = check_sources(
         REPO_ROOT, {"sglang": Path(source_override)} if source_override else None

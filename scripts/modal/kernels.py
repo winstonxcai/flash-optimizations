@@ -21,6 +21,11 @@ GLM: REMNANT_INTEGRATION=v0.5.22 REMNANT_MODEL_FAMILY=glm53 selects the
 requires --model-family glm53 and --stage numerical|sanitizer|corrective. Stages
 share the caller's authorized aggregate ledger; a stage grants no new budget.
 Set REMNANT_VALIDATION_SUITE=v41-fp4 for scoped model-free SM90 FP4 validation.
+validate_kernels --sanitizer runs memcheck, racecheck and synccheck (v0.5.22 order: synccheck,
+racecheck, memcheck). --sanitizer-tools a,b selects a subset, run in the order given (one tool
+per budgeted job). result.json then has sanitizer_qualification="partial" even when status is
+"passed"; only a passing run of all three tools records "complete".
+python3 scripts/validation_tier.py [--base origin/main] says which validation a diff needs.
 CPU build/preflight precedes H100; Modal caches source/binaries. Authorization required.
 Limits are caps, not ETAs; no weights/retries. Results: remnant-stage2a-results/microbench/<run-id>/<action>.
 Download: modal volume get remnant-stage2a-results microbench/<run-id> <local-dir>
@@ -136,8 +141,11 @@ FLASHMLA_SOURCE = Path(
 if not modal.is_local():
     SGLANG_SOURCE, FLASHMLA_SOURCE = SGLANG_ROOT, FLASHMLA_ROOT
 if modal.is_local():
+    from scripts.build_lock import acquire_for_modal_cli
     from scripts.sources import check_sources
 
+    # Hold the lock until this `modal run` exits so image inputs are not edited mid-build.
+    acquire_for_modal_cli(REPO_ROOT)
     if INTEGRATION["version"] == "v0.5.22" and any(
         actual.resolve() != (REPO_ROOT / INTEGRATION[name]).resolve()
         for name, actual in (("sglang", SGLANG_SOURCE), ("flashmla", FLASHMLA_SOURCE))
@@ -306,6 +314,25 @@ V41_MERGE_SANITIZER = tuple(
         'test_fp4_fragment_masks[64]',
     )
 )
+
+
+def _select_sanitizer_tools(spec: str, available: Sequence[str]) -> tuple[str, ...]:
+    """Resolve a comma-separated `--sanitizer-tools` value; empty selects every tool in order.
+
+    Each tool is a separate compute-sanitizer pass over the same case set, so a run
+    may cover a subset (for example one tool per budgeted job). The caller records
+    whether the selection was complete; a subset is never a full qualification.
+    """
+    if not spec.strip():
+        return tuple(available)
+    chosen = [name.strip() for name in spec.split(",")]
+    unknown = sorted(set(chosen) - set(available))
+    if unknown or "" in chosen or len(set(chosen)) != len(chosen):
+        raise ValueError(
+            f"sanitizer_tools must be distinct names from {', '.join(available)}; got {spec!r}"
+        )
+    return tuple(chosen)
+
 
 NCU_SECTIONS = [
     "SpeedOfLight",
@@ -1513,7 +1540,12 @@ def validate_kernels(
     model_family: str = "dsv4", stage: str = "numerical", cases: str = "", sanitizer_tools: str = "",
     sanitizer_scope: str = "all", sanitizer_order: str = "",
 ) -> str:
-    """Run existing GPU tests; skipped tests fail coverage. Optional three sanitizers."""
+    """Run existing GPU tests; skipped tests fail coverage.
+
+    A passing sanitizer subset records ``sanitizer_qualification=partial``.
+    The scope-specific qualification fields additionally require the full
+    selected test contract; focused coverage never qualifies the full suite.
+    """
     if model_family != MODEL_FAMILY:
         raise ValueError("--model-family must match REMNANT_MODEL_FAMILY used to prepare the image")
     if stage not in ("numerical", "sanitizer", "corrective"):
@@ -1559,7 +1591,7 @@ def validate_kernels(
         raise ValueError("sanitizer_order requires --sanitizer")
     selected_tools = (
         _validation_sanitizer_order(sanitizer_order) if sanitizer_order
-        else _selected_sanitizer_tools(sanitizer_tools, sanitizer, model_family)
+        else _selected_sanitizer_tools(sanitizer_tools, sanitizer)
     )
     tool_order = selected_tools
     maximum = min(VALIDATION_TIMEOUT_CAP_S - 60, VALIDATION_TIMEOUT_S - 60)
@@ -1584,8 +1616,11 @@ def validate_kernels(
             record["runtime_hashes"] = _glm_benchmark_contract().runtime_hashes(SGLANG_ROOT / "python/sglang")
         record["sanitizer_order"] = tool_order
         if sanitizer:
+            record["sanitizer_tools"] = list(selected_tools)
+            record["sanitizer_qualification"] = "incomplete"
             record["sanitizer_results"] = {
-                tool: {"status": "not_run"} for tool in SANITIZER_ORDER
+                tool: {"status": "not_run" if tool in selected_tools else "not_selected"}
+                for tool in SANITIZER_ORDER
             }
         if INTEGRATION["version"] == "v0.5.22":
             import torch
@@ -1823,6 +1858,9 @@ def validate_kernels(
                 raise RuntimeError(
                     f"Sanitizer qualification incomplete: {incomplete}; see tool logs"
                 )
+            record["sanitizer_qualification"] = (
+                "complete" if set(selected_tools) == set(SANITIZER_ORDER) else "partial"
+            )
     return str(root)
 
 
@@ -2182,13 +2220,10 @@ def _run_pytest(
 
 
 
-def _selected_sanitizer_tools(value: str, enabled: bool, family: str) -> tuple[str, ...]:
-    if value and (not enabled or (family != "glm53" and VALIDATION_SUITE != "v41-fp4")):
-        raise ValueError("--sanitizer-tools requires GLM or FP4 sanitizer validation")
-    tools = tuple(value.split(",")) if value else SANITIZER_ORDER
-    if not tools or len(set(tools)) != len(tools) or set(tools) - set(SANITIZER_ORDER):
-        raise ValueError("--sanitizer-tools must select unique memcheck,racecheck,synccheck")
-    return tools
+def _selected_sanitizer_tools(value: str, enabled: bool) -> tuple[str, ...]:
+    if value and not enabled:
+        raise ValueError("sanitizer_tools requires sanitizer=True")
+    return _select_sanitizer_tools(value, SANITIZER_ORDER)
 
 
 def _glm_benchmark_contract():

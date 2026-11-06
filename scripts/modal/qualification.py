@@ -106,7 +106,7 @@ def read_receipt(
     expected_ids = None
     for tool, state in states.items():
         status = state.get("status")
-        if status in {"not_run", "interrupted"}:
+        if status in {"not_run", "not_selected", "interrupted"}:
             continue
         if status != "passed":
             raise RuntimeError(

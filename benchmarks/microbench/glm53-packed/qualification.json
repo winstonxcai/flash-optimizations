@@ -3797,5 +3797,44 @@
       "sha256": "6a4358d566065fa96484ffd132009021cddb2a47d3fe083153a2825e5afe0ef4",
       "remote_readback_verified": true
     }
+  },
+  "main_publication": {
+    "requested": "2026-11-06",
+    "decision": "User authorized merging the combined GLM/V4.1 branches into main and retiring the superseded parent/SGLang V4.1 branches. FlashMLA explicitly unchanged.",
+    "integration_parents": [
+      "cbfeeba734672afe8b9cac9dcce23d1848775a4c",
+      "dac02058b567675653ed4da3fc86db5270ff9a81"
+    ],
+    "sglang": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+    "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159",
+    "resolution": [
+      "Preserve main build lock, split guidance, validation tier and sanitizer subset state reporting.",
+      "Teach both receipt readers that not_selected tools contribute no evidence; preserve all full/focused identity and coverage gates.",
+      "Retain all 110 main CPU tests and 236 historical transfer files; restore V4 replay tools/docs/tests and migrate public replay mode to Native/Direct.",
+      "Bind replay source freeze to launch-config.sh and reject non-V4 replay before external work."
+    ],
+    "cpu": {
+      "full_suite_per_integration": 155,
+      "full_suite_seconds": {
+        "v0.5.18": 85.74,
+        "v0.5.22": 82.877
+      },
+      "final_replay_suite_per_integration": 22,
+      "distinct_tests": 157,
+      "commands": [
+        "REMNANT_INTEGRATION=v0.5.18 python -m unittest scripts.modal.tests",
+        "REMNANT_INTEGRATION=v0.5.22 python -m unittest scripts.modal.tests",
+        "REMNANT_INTEGRATION=v0.5.18 python -m unittest scripts.modal.tests.LswbSweepTests",
+        "REMNANT_INTEGRATION=v0.5.22 python -m unittest scripts.modal.tests.LswbSweepTests"
+      ],
+      "environment": "Modal 1.5.4 Python3.11 with existing dependencies; local process inspection/loopback allowed; no Modal image builds, remote functions or GPUs."
+    },
+    "review": "Fresh-context review found an omitted-tool receipt regression; fixed with independent GLM/FP4 aggregation checks. Final narrow review: no findings.",
+    "limitations": [
+      "Original V4.1 full-batch racecheck failure remains unresolved; isolated five-case pass does not replace it.",
+      "No new image build or GPU validation; prior evidence remains bound to its original sources.",
+      "SGLang main is an ancestor of the combined source; its merge also imports the existing v0.5.22 upstream history."
+    ],
+    "rollback": "Native selection or recorded pre-integration pins; preserve merge parents and exact validation identities."
   }
 }

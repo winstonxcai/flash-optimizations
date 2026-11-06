@@ -122,7 +122,7 @@ def qualify_glm_timing(
         if old["sanitizer"]["binary_sha256"] != manifest["sanitizer"]["binary_sha256"]:
             raise RuntimeError(f"GLM sanitizer identity changed: {run_id}")
         for tool, status in result.get("sanitizer_results", {}).items():
-            if status.get("status") == "not_run":
+            if status.get("status") in {"not_run", "not_selected"}:
                 continue
             log = (root / f"{tool}.log").read_text()
             if status.get("status") != "passed":

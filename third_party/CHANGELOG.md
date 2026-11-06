@@ -13,6 +13,16 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Main integration from parent `cbfeeba` and main `dac0205`, retaining SGLang
+  `e0d6d500d6dc` / FlashMLA `4e72722671d8` and both v0.5.18 pins. Preserve main's
+  build locks, split guidance and validation tier; reconcile sanitizer subsets
+  with both receipt readers. Retain historical replay records and migrate the
+  V4 replay caller to Native/Direct, freezing its shared launch configuration.
+  CPU checks cover 157 distinct tests under both integration profiles (155 full
+  suite plus the final 22 replay checks); fresh-context review passed. No image
+  rebuild or GPU execution. User authorized publication with the original V4.1
+  full-batch racecheck failure still explicitly unresolved; FlashMLA unchanged.
+
 - Measured parent `f720d20`, SGLang `e0d6d500d6dc` / FlashMLA `4e72722671d8`:
   V4.1 Native and Direct full-model serving smokes pass concurrently, each on
   four H200s, with the corrected 0.90 memory fraction and bounded 16K pool.
