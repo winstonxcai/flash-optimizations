@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 TOOLS = frozenset({"memcheck", "racecheck", "synccheck"})
-FP4_CASE_COUNT = 36
+FP4_CASE_COUNT = 38
 IDENTITY_FIELDS = (
     "validation_suite",
     "integration",
@@ -34,6 +34,7 @@ IDENTITY_FIELDS = (
     "binary_architectures",
     "fp4_precompile_artifacts",
     "native_dtype",
+    "upstream_native_control",
     "binaries",
     "nvcc",
 )

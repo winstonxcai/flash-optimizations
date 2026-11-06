@@ -91,6 +91,40 @@ NATIVE_LIBRARY = Path("/opt/remnant-native-store.so")
 MANIFEST = Path("/opt/remnant-build.json")
 BUILD_ROOT = Path("/opt/remnant-build")
 SANITIZER_ROOT = Path("/opt/remnant-sanitizer")
+UPSTREAM_FLASHMLA_ROOT = Path("/opt/flashmla-upstream-native")
+NATIVE_CONTROL_MANIFEST = Path("/opt/remnant-native-control.json")
+UPSTREAM_FLASHMLA_SHA = "3620b63fc4ebe33950c50e1b7701b6607f44150e"
+if modal.is_local() and VALIDATION_SUITE == "v41-fp4":
+    value = os.environ.get("REMNANT_UPSTREAM_FLASHMLA_SOURCE")
+    if not value:
+        raise RuntimeError(
+            "V4.1 qualification requires REMNANT_UPSTREAM_FLASHMLA_SOURCE: "
+            f"a clean isolated checkout of {UPSTREAM_FLASHMLA_SHA} with pinned CUTLASS"
+        )
+    UPSTREAM_FLASHMLA_SOURCE = Path(value).resolve()
+    for path, expected in (
+        (UPSTREAM_FLASHMLA_SOURCE, UPSTREAM_FLASHMLA_SHA),
+        (
+            UPSTREAM_FLASHMLA_SOURCE / "csrc/cutlass",
+            "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+        ),
+    ):
+        actual = subprocess.check_output(
+            ["git", "-C", str(path), "rev-parse", "HEAD"], text=True, timeout=30
+        ).strip()
+        dirty = subprocess.check_output(
+            ["git", "-C", str(path), "status", "--porcelain", "--untracked-files=all"],
+            text=True,
+            timeout=30,
+        ).strip()
+        if actual != expected or dirty:
+            raise RuntimeError(
+                f"Native control source mismatch at {path}: expected {expected}, actual {actual}, dirty={bool(dirty)}"
+            )
+    SOURCE_IDENTITIES["upstream_native"] = {
+        "commit": UPSTREAM_FLASHMLA_SHA,
+        "path": str(UPSTREAM_FLASHMLA_SOURCE),
+    }
 SANITIZER = (
     str(SANITIZER_ROOT / "usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer")
     if INTEGRATION["version"] == "v0.5.22"
@@ -197,6 +231,8 @@ if VALIDATION_SUITE == "v41-fp4":
         fp4_tests + "::test_fp4_backend_dispatch",
         TEST_MODULES["cache_format"],
         "benchmark/remnant/test_microbench.py::test_v41_fp4_matrix_and_timing_gate",
+        "benchmark/remnant/test_microbench.py::test_v41_native_reference_preserves_tail_and_rounds_fp8_ties",
+        "benchmark/remnant/test_microbench.py::test_v41_three_path_ratios",
     )
     SANITIZER_TESTS = tuple(
         fp4_tests + "::" + name
@@ -209,6 +245,11 @@ if VALIDATION_SUITE == "v41-fp4":
             "test_fp4_fragment_masks",
         )
     )
+    native_tests = (
+        "benchmark/remnant/test_microbench.py::test_gpu_v41_upstream_native_comparison"
+    )
+    VALIDATION_TESTS += (native_tests,)
+    SANITIZER_TESTS += (native_tests,)
 
 NCU_SECTIONS = [
     "SpeedOfLight",
@@ -247,7 +288,10 @@ def _flashmla_ignored(path: Path) -> bool:
 
 def _source_hashes() -> dict[str, str]:
     hashes = {}
-    for label, root in (("sglang", SGLANG_ROOT), ("flashmla", FLASHMLA_ROOT)):
+    roots = [("sglang", SGLANG_ROOT), ("flashmla", FLASHMLA_ROOT)]
+    if VALIDATION_SUITE == "v41-fp4":
+        roots.append(("upstream_flashmla", UPSTREAM_FLASHMLA_ROOT))
+    for label, root in roots:
         digest = hashlib.sha256()
         for path in sorted(root.rglob("*")):
             relative = path.relative_to(root)
@@ -315,6 +359,64 @@ def _validation_sanitizer_order(value: str) -> tuple[str, ...]:
             "sanitizer_order must list memcheck,racecheck,synccheck exactly once"
         )
     return tools
+
+
+def _build_upstream_native_control(
+    build: Path, deadline: float, cpu_environment: dict[str, str]
+) -> None:
+    """Build the original selected upstream package on CPU. Author: Winston Cai.
+
+    Its public Python wrapper, scheduling, CUDA arithmetic and synchronization
+    stay unchanged. The upstream build flags select SM90a only; no SM100 target
+    or model is loaded. Keep this package separate from the fork's sgl_kernel.
+    """
+    environment = dict(cpu_environment)
+    environment.update(FLASH_MLA_DISABLE_SM100="1", MAX_JOBS="2", NVCC_THREADS="1")
+    _run_command(
+        [
+            sys.executable,
+            "-c",
+            "import os, runpy, sys; "
+            f"os.chdir({str(UPSTREAM_FLASHMLA_ROOT)!r}); "
+            "sys.argv=['setup.py', 'build_ext', '--inplace']; "
+            "runpy.run_path('setup.py', run_name='__main__')",
+        ],
+        build / "upstream-native-build.log",
+        deadline,
+        environment=environment,
+    )
+    matches = list((UPSTREAM_FLASHMLA_ROOT / "flash_mla").glob("cuda*.so"))
+    if len(matches) != 1:
+        raise RuntimeError(f"Upstream Native expected one cuda binary: {matches}")
+    binary = matches[0].resolve()
+    listing = _run_command(
+        ["cuobjdump", "--list-elf", str(binary)],
+        build / "upstream-native-architectures.log",
+        deadline,
+    )
+    architectures = sorted(set(re.findall(r"sm_[0-9]+[a-z]?", listing)))
+    if architectures != ["sm_90a"]:
+        raise RuntimeError(f"Upstream Native has unexpected targets: {architectures}")
+    python = UPSTREAM_FLASHMLA_ROOT / "flash_mla/flash_mla_interface.py"
+    NATIVE_CONTROL_MANIFEST.write_text(
+        json.dumps(
+            {
+                "source_commit": UPSTREAM_FLASHMLA_SHA,
+                "source_sha256": _source_hashes()["upstream_flashmla"],
+                "binary": str(binary),
+                "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
+                "python": str(python),
+                "python_sha256": hashlib.sha256(python.read_bytes()).hexdigest(),
+                "architectures": architectures,
+                "build_flags": {
+                    key: environment[key]
+                    for key in ("FLASH_MLA_DISABLE_SM100", "MAX_JOBS", "NVCC_THREADS")
+                },
+            },
+            indent=2,
+        )
+        + "\n"
+    )
 
 
 def _build_image() -> None:
@@ -421,6 +523,8 @@ def _build_image() -> None:
     aot = SGLANG_ROOT / "python/sglang/kernels/aot"
     # Content identity includes dirty submitted sources, not just Git commits.
     sources = _source_hashes()
+    if VALIDATION_SUITE == "v41-fp4":
+        _build_upstream_native_control(build, deadline, cpu_environment)
     # The v0.5.22 serving Dockerfile already compiled these exact extensions.
     if INTEGRATION["version"] == "v0.5.22":
         package = Path(sysconfig.get_paths()["purelib"]) / "sgl_kernel"
@@ -493,6 +597,23 @@ def _build_image() -> None:
         )
     shutil.copy2(libraries.pop(), NATIVE_LIBRARY)
     binaries.append(NATIVE_LIBRARY)
+    if VALIDATION_SUITE == "v41-fp4":
+        # Compile these after resolving the compressor library: the JIT cache
+        # now contains three valid modules rather than a single Native store.
+        from sglang.kernels.ops.attention.dsv4.attn import _jit_fused_store_module
+        from sglang.kernels.ops.attention.dsv4.kv_layout import KVLayout
+
+        with override_jit_cuda_arch(9, 0, "a"):
+            for page_size in (128, 256):
+                _jit_fused_store_module(
+                    "flashmla", torch.bfloat16, torch.int64, page_size, KVLayout.V4
+                )
+        for scope in {p.parent.parent for p in cache.rglob("*.so")}:
+            library = find_prebuilt(scope=scope, module_name=scope.parent.name)
+            if library is not None and library not in binaries:
+                binaries.append(library)
+        control = json.loads(NATIVE_CONTROL_MANIFEST.read_text())
+        binaries.append(Path(control["binary"]))
     binary_architectures = {}
     if INTEGRATION["version"] == "v0.5.22":
         for binary in binaries:
@@ -638,6 +759,11 @@ print('FP4 CPU SM90 precompilation passed')
             else {}
         ),
         "native_dtype": "float32",
+        "upstream_native_control": (
+            json.loads(NATIVE_CONTROL_MANIFEST.read_text())
+            if VALIDATION_SUITE == "v41-fp4"
+            else None
+        ),
         "cpu_import_driver_stub_sha256": hashlib.sha256(
             (build / "cpu-driver-stubs/libcuda.so.1").read_bytes()
         ).hexdigest(),
@@ -717,6 +843,14 @@ else:
         )
     )
 
+if VALIDATION_SUITE == "v41-fp4":
+    kernel_base = kernel_base.add_local_dir(
+        UPSTREAM_FLASHMLA_SOURCE if modal.is_local() else UPSTREAM_FLASHMLA_ROOT,
+        str(UPSTREAM_FLASHMLA_ROOT),
+        copy=True,
+        ignore=_ignore,
+    )
+
 kernel_image = (
     kernel_base.env(
         {
@@ -732,6 +866,7 @@ kernel_image = (
             + f"{SGLANG_ROOT / 'python'}:{REMOTE_REPO}",
             "PYTHONUNBUFFERED": "1",
             "PYTHONDONTWRITEBYTECODE": "1",
+            "REMNANT_NATIVE_CONTROL_MANIFEST": str(NATIVE_CONTROL_MANIFEST),
             "TORCH_CUDA_ARCH_LIST": "9.0",
             "SGLANG_JIT_CACHE_DIR": "/opt/remnant-jit",
             "REMNANT_FLASHMLA_SOURCE_DIR": str(FLASHMLA_ROOT),
@@ -796,6 +931,18 @@ _GPU = {
 # Public workflows.
 
 
+@app.function(image=kernel_image, cpu=1, memory=2048, timeout=60, retries=0)
+def preflight_kernels() -> dict:
+    """Return the completed CPU build identity without GPU allocation. Author: Winston Cai."""
+    manifest = json.loads(MANIFEST.read_text())
+    if manifest["sources"] != _source_hashes():
+        raise RuntimeError("CPU preflight source identity changed")
+    for path, expected in manifest["binaries"].items():
+        if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
+            raise RuntimeError(f"CPU preflight binary changed: {path}")
+    return {"status": "passed", "gpu": False, "manifest": manifest}
+
+
 def _fp4_timing_qualification(run_ids: str) -> dict:
     """Author: Winston Cai. Aggregate only complete tools with identical inputs."""
     current = json.loads(MANIFEST.read_text())
@@ -853,11 +1000,11 @@ def _dispatch_benchmark(
         if (
             VALIDATION_SUITE != "v41-fp4"
             or keep_count != 256
-            or modes not in ("", "native,kernel")
+            or modes not in ("", "native,dense_fp4,kernel")
             or prefill_reader != "split"
         ):
             raise ValueError(
-                "FP4 timing requires v41-fp4 qualification and Native/Packed Direct keep256"
+                "FP4 timing requires v41-fp4 qualification and upstream Native/custom dense FP4/Packed keep256"
             )
         preflight = _preflight_fp4_timing.remote(run_id, qualification_runs)
     elif qualification_runs:
@@ -908,10 +1055,10 @@ def _benchmark_worker(
         if (
             VALIDATION_SUITE != "v41-fp4"
             or keep_count != 256
-            or modes not in ("", "native,kernel")
+            or modes not in ("", "native,dense_fp4,kernel")
         ):
             raise ValueError(
-                "FP4 timing requires v41-fp4 qualification and Native/Packed keep256"
+                "FP4 timing requires upstream Native, custom dense FP4 and Packed keep256"
             )
         if prefill_reader != "split":
             raise ValueError("FP4 timing uses the Direct decode paths")
@@ -1467,6 +1614,8 @@ def _run_command(
     child_environment["PYTHONPATH"] = (
         "/opt/sglang-runtime-fixes:" if INTEGRATION["version"] == "v0.5.22" else ""
     ) + f"{SGLANG_ROOT / 'python'}:{REMOTE_REPO}"
+    if VALIDATION_SUITE == "v41-fp4":
+        child_environment["PYTHONPATH"] += f":{UPSTREAM_FLASHMLA_ROOT}"
     try:
         with output.open("w") as log:
             subprocess.run(

@@ -1,6 +1,66 @@
 <!-- Author: Winston Cai. -->
 # V4.1 Packed FP4 on H100
 
+## Upstream Native comparison — pending
+
+Native means the unchanged upstream `auto` path. On H100, that path uses V4
+FP8/BF16 cache records (584 logical bytes) and stock FlashMLA decode for V4.1.
+The previous v1–v3 measurements called our custom dense SM90 FP4 implementation
+"Native". Those historical labels and measurements are preserved below, but
+their ratios compare Packed against custom dense FP4, not upstream Native.
+
+Question: what is Packed's complete attention latency relative to upstream
+Native on H100? Protocol v4 adds upstream Native and renames the old control
+`dense_fp4`. Keep the existing ten production-geometry cases and paired graph
+timing. Native consumes the same unpruned FP4-rounded producer values through
+the upstream FP8 store; each path is checked against its own independently
+decoded cache. Queries, physical selections, SWA and sink remain shared.
+Native follows the existing metadata ownership used by the serving backend;
+the custom FP4 paths retain their current scheduling behavior.
+
+The Native control must be built separately from exact upstream FlashMLA
+`3620b63fc4ebe33950c50e1b7701b6607f44150e`, selected by SGLang v0.5.22, with
+CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`. The earlier pre-FP4
+`3eb8594` fork already changes Native synchronization and is not an unchanged
+upstream control. Its stock entry point cannot substitute for this baseline.
+The new source is an isolated clean checkout from the selected fork's existing
+Git objects, currently `/tmp/remnant-v41-native-upstream`; shared forks stay put.
+The original upstream `setup.py build_ext --inplace` builds a separate
+`flash_mla` package with `FLASH_MLA_DISABLE_SM100=1`, `MAX_JOBS=2`, and
+`NVCC_THREADS=1`. Only verified SM90a binaries qualify. No kernel source is
+rewritten. CPU preflight binds source, Python wrapper and binary hashes;
+timing keeps the control's normal scheduler ownership. This is an attention
+microbenchmark, not an end-to-end serving comparison.
+
+Acceptance requires CPU contracts/build preflight, numerical,
+graph/stream and strict sanitizer coverage, then final paired timing. Historical
+v3 receipts cannot qualify v4. Required sanitizer coverage is now 38 cases per
+tool: the prior 36 plus upstream comparisons for both global page sizes. Do not
+change kernel arithmetic to manufacture a
+baseline match. Stop on a failed identity/control/coverage gate or the existing
+cumulative budget ceiling. No v4 measurements exist yet.
+
+Next entry point (CPU only; no H100 allocation):
+
+```bash
+MODAL_PROFILE=peroace360 REMNANT_INTEGRATION=v0.5.22 \
+  REMNANT_VALIDATION_SUITE=v41-fp4 \
+  REMNANT_UPSTREAM_FLASHMLA_SOURCE=/tmp/remnant-v41-native-upstream \
+  modal run scripts/modal/kernels.py::preflight_kernels
+```
+
+Budget audit on 2026-11-06: carry forward the conservative $14.86730972 phase
+spend and add $0.04578652 for interrupted app `ap-pp99xYlWGFDaty71g9OCjp`.
+About $3.08690376 of the $18 work allowance remains before this turn's CPU
+checks. November's new billing period does not reset the cumulative ceiling.
+No competing allocations were present. The old app's logs are no longer
+available through `modal app logs`; no result receipt exists and it supplies no
+qualification. A bounded CPU-only inventory of cached image
+`im-MZqnw8UUhUxovTFl16mxln`, app `ap-vhh7mWndYQrfeIYqHUJuze`, confirmed
+there is no reusable standalone `flash_mla` package. It stopped successfully.
+Fresh native build, all required sanitizer tools and final timing will exceed
+the remaining work allowance; do not launch the GPU phase without extending it.
+
 Published branch: **`ds41-flash-packed`** in the parent, SGLang v0.5.22 and
 FlashMLA v0.5.22 repositories. It continues the completed local
 `codex/v41-packed-fp4` work; the original branches remain available. Exact

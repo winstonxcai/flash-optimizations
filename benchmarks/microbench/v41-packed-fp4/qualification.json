@@ -4181,5 +4181,134 @@
       "baseline_dirty_files": "Preserved parent third_party/.DS_Store, CUTLASS .DS_Store and original worktree changes"
     }
   },
-  "current_milestone": "review_fixes"
+  "current_milestone": "review_fixes",
+  "upstream_native_comparison": {
+    "status": "unqualified",
+    "protocol": "remnant-v41-fp4-decode-v4",
+    "candidate_sglang": "fbd42fbf",
+    "candidate_flashmla": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208",
+    "upstream_flashmla": "3620b63fc4ebe33950c50e1b7701b6607f44150e",
+    "cutlass": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "cpu": {
+      "commands": [
+        {
+          "argv": [
+            "isort",
+            "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py",
+            "scripts/modal/kernels.py",
+            "scripts/modal/qualification.py"
+          ],
+          "returncode": 0,
+          "stdout": "Fixing /work/third_party/sglang-v0.5.22/benchmark/remnant/microbench.py\nFixing /work/third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py\nFixing /work/scripts/modal/kernels.py\n",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "ruff",
+            "format",
+            "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py",
+            "scripts/modal/kernels.py",
+            "scripts/modal/qualification.py"
+          ],
+          "returncode": 0,
+          "stdout": "4 files reformatted, 2 files left unchanged\n",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "ruff",
+            "check",
+            "--select",
+            "F401,F821,F823,UP037",
+            "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py",
+            "scripts/modal/kernels.py",
+            "scripts/modal/qualification.py"
+          ],
+          "returncode": 0,
+          "stdout": "All checks passed!\n",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "python3",
+            "-m",
+            "compileall",
+            "-q",
+            "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py",
+            "scripts/modal/kernels.py",
+            "scripts/modal/qualification.py"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "python3",
+            "-m",
+            "pytest",
+            "-q",
+            "--disable-warnings",
+            "--tb=short",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "-k",
+            "established_matrix_and_profile_coverage or paired_ratios_and_round_percentile or v41_native_reference or v41_three_path_ratios or v41_fp4_matrix_and_timing_gate"
+          ],
+          "returncode": 0,
+          "stdout": ".....                                                                    [100%]\n5 passed, 176 deselected in 2.21s\n",
+          "stderr": ""
+        }
+      ],
+      "app_id": "ap-ARVqkOUWOhHrsptFiunH3I",
+      "sandbox_id": "sb-5H6WKyewsHUsobVluruAYc",
+      "image_id": "im-FbCAbXMyRvL14SXBO2K7Sc",
+      "returncode": 0,
+      "stderr": ""
+    },
+    "tested_formatted_copy_sha256": {
+      "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py": "b51ba44d2facbdd9141777a2a43c7a56c078e1ef9d6b9a1aff6222135f4d02fa",
+      "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py": "2c536e63ec6cae19df7e1a373ed9ae38ab7cf0d36acfe57ceb0ed546fe1b420c",
+      "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py": "8cfdec332eae3583e896989d6f2e70f023dd23311e3b2b8439a3d484f0046e80",
+      "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py": "cb8b7ff0d693961b3921d45f317823417e8d3ed20e7c8678bab14b7907a53f36",
+      "scripts/modal/kernels.py": "a0ef285c3a2c50c53eb0e9e1c9293ff6200a02a78de3f59e26f0fba66ebe62dc",
+      "scripts/modal/qualification.py": "e7085830fb69712b1c2bf87bb764d27972811b6a5ea5666129ca61aa75960a3a"
+    },
+    "cpu_reproduction_invocation": "\"\"\"Temporary invocation of existing CPU tests/formatters. Author: Winston Cai.\"\"\"\nimport json\nimport base64\nfrom pathlib import Path\n\nimport modal\n\nroot = Path('/Users/poohthewinnie/Documents/Programming/flash-optimizations')\nsglang = 'third_party/sglang-v0.5.22/'\nfiles = [\n    sglang + path for path in (\n        'benchmark/remnant/microbench.py', 'benchmark/remnant/test_microbench.py',\n        'python/sglang/benchmark/remnant/cases.py',\n        'python/sglang/benchmark/remnant/quantization.py',\n    )\n] + ['scripts/modal/kernels.py', 'scripts/modal/qualification.py']\nimage = modal.Image.from_id('im-MZqnw8UUhUxovTFl16mxln').pip_install('ruff==0.15.1', 'isort==7.0.0')\nfor path in files:\n    image = image.add_local_file(root / path, '/work/' + path, copy=True)\ncode = '''\nimport base64\nimport json\nfrom pathlib import Path\nimport subprocess\nfiles = FILES\ncommands = [\n    ['isort', *files], ['ruff', 'format', *files],\n    ['ruff', 'check', '--select', 'F401,F821,F823,UP037', *files],\n    ['python3', '-m', 'compileall', '-q', *files],\n    ['python3', '-m', 'pytest', '-q', '--disable-warnings', '--tb=short',\n     'third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py',\n     '-k', 'established_matrix_and_profile_coverage or paired_ratios_and_round_percentile or v41_native_reference or v41_three_path_ratios or v41_fp4_matrix_and_timing_gate'],\n]\nresults = []\nfor command in commands:\n    result = subprocess.run(command, cwd='/work', text=True, capture_output=True, timeout=120)\n    results.append({'argv': command, 'returncode': result.returncode, 'stdout': result.stdout, 'stderr': result.stderr})\n    if result.returncode:\n        break\nprint('REMNANT_CPU_RESULT=' + json.dumps({'commands': results}))\nfor path in files:\n    data = base64.b64encode(Path('/work', path).read_bytes()).decode()\n    for offset in range(0, len(data), 4096):\n        print('REMNANT_CPU_FILE=' + json.dumps([path, data[offset:offset+4096]]))\n'''.replace('FILES', repr(files))\napp = modal.App('remnant-v41-upstream-native-cpu')\nwith app.run():\n    sandbox = modal.Sandbox.create('python3', '-c', code, image=image, app=app,\n                                   cpu=1, memory=4096, timeout=240, block_network=True)\n    try:\n        raw = sandbox.stdout.read()\n        errors = sandbox.stderr.read()\n        sandbox.wait()\n        payload = json.JSONDecoder().raw_decode(raw.split('REMNANT_CPU_RESULT=', 1)[1])[0]\n        chunks = {}\n        for line in raw.splitlines():\n            if line.startswith('REMNANT_CPU_FILE='):\n                path, data = json.loads(line.split('=', 1)[1])\n                chunks.setdefault(path, []).append(data)\n        payload['files'] = {path: base64.b64decode(''.join(data)).decode() for path, data in chunks.items()}\n        payload.update(app_id=app.app_id, sandbox_id=sandbox.object_id, image_id=image.object_id,\n                       returncode=sandbox.returncode, stderr=errors)\n        Path('/tmp/remnant-v41-native-cpu-result.json').write_text(json.dumps(payload, indent=2))\n        print(json.dumps({key: value for key, value in payload.items() if key != 'files'}, indent=2))\n    finally:\n        sandbox.terminate(wait=True)\n",
+    "prior_cpu_attempt": {
+      "app_id": "ap-XRNJU0D1QHW9nQjZvi5S3Y",
+      "checks": "5 passed; lint and syntax passed",
+      "collection": "formatted-source export failed at the log line size limit; superseded by successful chunked export"
+    },
+    "inventory": {
+      "app_id": "ap-vhh7mWndYQrfeIYqHUJuze",
+      "result": "No standalone upstream flash_mla package in the cached image; stopped successfully"
+    },
+    "budget": {
+      "ceiling_usd": 20,
+      "reserve_usd": 2,
+      "prior_conservative_phase_usd": 14.86730972,
+      "prior_interrupted_build_usd": 0.04578652,
+      "remaining_before_cpu_usd": 3.08690376
+    },
+    "pending": [
+      "CPU native build/preflight",
+      "GPU numerical, graph and nondefault stream checks",
+      "38 cases per strict sanitizer tool",
+      "ten-case paired timing",
+      "independent review"
+    ],
+    "limitations": "No upstream Native latency result; historical v1-v3 Native labels mean custom dense FP4, not unchanged upstream."
+  }
 }
