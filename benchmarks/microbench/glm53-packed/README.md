@@ -1,5 +1,37 @@
 # GLM-5.3-Flash Packed
 
+## Pristine upstream TP4 decode comparison
+
+Question: what is production Packed Direct's complete attention-call overhead
+against the unchanged upstream v0.5.22 FP8 TileLang entry point? Protocol
+`remnant-glm-upstream-decode-v1` uses one H200, 16 local heads, batches
+1/8/16/24/32/64, tails 0/3 and warm/rotating buffers (24 cases). It reuses the
+existing fixtures and paired timing loop: seed 20261024, 30 balanced paired
+rounds, ten warmups and at least 100 calls per sample. Packing, selection,
+initialization and compilation are untimed. No weights or serving are involved.
+
+The baseline is the unedited attention module from upstream release commit
+`baa9befa381511cd4d56f83980951e5a45fffc6d`, imported separately from the fork's
+Native specialization. Its source and imported SGLang helper modules are
+verified before compilation and execution. Both paths share the same toolchain.
+The benchmark-only `glm_upstream.py` owns this provenance and CPU preparation;
+`glm_attention.py` remains the sole fixture, timing and result owner.
+
+Use the maintained entry point with `--model-family glm53 --suite
+glm-upstream-decode --phase decode`; the Modal image selection is
+`REMNANT_GLM_UPSTREAM_DECODE=1`. Production kernels and serving defaults stay
+unchanged. Acceptance requires all 24 cases, both paths, all 30 paired rounds,
+independent numerical checks and graph replay. Retain every performance miss.
+This result cannot complete the older 48/128-case protocols or establish
+unchanged-upstream full-model serving performance.
+
+The new phase has a $5 hard cap ($1 CPU, $3 H200 workers, $1 reserve); stop
+routine work at $4. CPU preparation and fresh-context review precede paid GPU
+work. Use one worker at a time, no automatic retries, and preserve partial runs.
+Source worktree: `data/source-snapshots/glm53-upstream-decode`, matching parent
+and SGLang branch `exp/glm53-flash/upstream-decode`. Record results and costs in
+the existing qualification ledger, separately from all prior authorizations.
+
 Author: Winston Cai.
 
 The cooperative Packed loader completed all **48 decode cases**, with 30 paired

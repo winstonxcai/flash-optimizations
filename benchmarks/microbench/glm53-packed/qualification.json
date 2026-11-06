@@ -3836,5 +3836,33 @@
       "SGLang main is an ancestor of the combined source; its merge also imports the existing v0.5.22 upstream history."
     ],
     "rollback": "Native selection or recorded pre-integration pins; preserve merge parents and exact validation identities."
+  },
+  "upstream_decode": {
+    "status": "implementation",
+    "protocol": "remnant-glm-upstream-decode-v1",
+    "author": "Winston Cai",
+    "starting_parent": "1b19ad9f9f629d8f389f0160571a58873480a02f",
+    "starting_sglang": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+    "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159",
+    "scope": "24 TP4 decode cases on one H200; pristine upstream attention module versus production Packed Direct; no serving or weights",
+    "budget": {
+      "authorized_usd": 5,
+      "cpu_max_usd": 1,
+      "gpu_max_usd": 3,
+      "reserve_usd": 1,
+      "routine_stop_usd": 4,
+      "accounted_usd": 0,
+      "prior_spending": "Preserved in all other phase records; this authorization is separate."
+    },
+    "worktree": "data/source-snapshots/glm53-upstream-decode",
+    "branch": "exp/glm53-flash/upstream-decode",
+    "attempts": [],
+    "sglang": "99499fb02c86a21e1d3cb0e73f892f1658ad46e3",
+    "cpu_checks": {
+      "fork": "134 passed, 103 skipped",
+      "parent_focused": "2 passed",
+      "fresh_context_review": "passed after three concrete preflight fixes",
+      "production_kernel_hashes_unchanged": true
+    }
   }
 }

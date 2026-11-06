@@ -13,6 +13,13 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Parent baseline `1b19ad9`, SGLang `99499fb02c86` / FlashMLA
+  `4e72722671d8`: add a source-verified pristine upstream FP8 attention baseline
+  and a separate 24-case TP4 decode protocol on one H200. Production kernels,
+  persistent formats and serving defaults are unchanged. Fork CPU contracts:
+  134 passed, 103 GPU skips; independent review passed. Paid preparation and
+  timing outcomes remain pending in the GLM ledger's new $5 phase.
+
 - Main integration from parent `cbfeeba` and main `dac0205`, retaining SGLang
   `e0d6d500d6dc` / FlashMLA `4e72722671d8` and both v0.5.18 pins. Preserve main's
   build locks, split guidance and validation tier; reconcile sanitizer subsets

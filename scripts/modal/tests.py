@@ -4159,5 +4159,98 @@ class ValidationTierTests(unittest.TestCase):
 
 
 
+
+
+
+class GLMUpstreamDecodeTests(unittest.TestCase):
+    """Upstream dispatch and source-bound evidence; no remote calls or CUDA."""
+
+    def test_public_dispatch_rejects_incompatible_scope_before_scheduling(self):
+        base = dict(run_id="upstream", keep_count=256, modes="", suite="glm-upstream-decode",
+                    prefill_reader="split", qualification_runs="qualified", model_family="glm53",
+                    phase="decode", max_seconds=180)
+        with (patch.object(kernels, "MODEL_FAMILY", "glm53"),
+              patch.object(kernels, "_UPSTREAM_DECODE", True),
+              patch.object(kernels, "_preflight_glm_timing") as preflight,
+              patch.object(kernels, "_benchmark_worker") as worker):
+            for changed in ({"phase": "all"}, {"modes": "native,direct"},
+                            {"packed_prefill_tile": 64}, {"allow_incomplete_qualification": True},
+                            {"max_seconds": 1}):
+                with self.subTest(changed=changed), self.assertRaises(ValueError):
+                    kernels._dispatch_benchmark(**{**base, **changed})
+            preflight.remote.assert_not_called()
+            worker.remote.assert_not_called()
+            preflight.remote.side_effect = RuntimeError("qualification failed")
+            with self.assertRaisesRegex(RuntimeError, "qualification failed"):
+                kernels._dispatch_benchmark(**base)
+            worker.remote.assert_not_called()
+            preflight.remote.side_effect = None
+            kernels._dispatch_benchmark(**base)
+            self.assertEqual(preflight.remote.call_args.kwargs, {"suite": "glm-upstream-decode"})
+            self.assertEqual(worker.remote.call_args.args[3], "glm-upstream-decode")
+
+    def test_reused_scope_allows_harness_changes_but_keeps_compiler_and_cache_identity(self):
+        import hashlib
+        import xml.etree.ElementTree as ET
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            folder = root / "microbench/fixture/validation"
+            folder.mkdir(parents=True)
+            variants = [dict(heads=h, inner=i, packed=p, cubin_sha256=f"cubin-{h}-{i}-{p}")
+                        for h in (8, 16) for i in (1, 2) for p in (False, True)]
+            manifest = dict(sources={"harness": "old"}, nvcc="compiler",
+                            glm_compile=dict(triton=[], tilelang=variants, attention_scale=.0625,
+                                             cache_files={"cached-direct": "same"},
+                                             scope_symbol_audit={"trace": "bound"}),
+                            sanitizer={"binary_sha256": "sanitizer"})
+            (folder / "build-manifest.json").write_text(json.dumps(manifest))
+            trace = ("glm_packed_bytes WarpSync CTA barrier\n"
+                     "========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)\n")
+            (folder / "scope-audit.log").write_text(trace)
+            result = dict(model_family="glm53", status="passed", runtime_hashes={"kernel": "same"},
+                          sanitizer_scope="glm-merge",
+                          sanitizer_results={t: {"status": "passed"} for t in kernels.SANITIZER_ORDER},
+                          scope_audit=dict(status="passed", filter="regex=glm_packed_(partial|bytes)",
+                                           log_sha256=hashlib.sha256(trace.encode()).hexdigest(),
+                                           entrypoints={"trace": "bound"}))
+            (folder / "result.json").write_text(json.dumps(result))
+            for tool in kernels.SANITIZER_ORDER:
+                (folder / f"{tool}.log").write_text(trace if tool == "racecheck" else "========= ERROR SUMMARY: 0 errors\n")
+                suite = ET.Element("testsuite")
+                for name in sorted(qualification.GLM_DECODE_REQUIRED | {
+                    "test_prefill_partial_graph[64]", "test_prefill_partial_graph_h8"
+                }):
+                    node = ET.SubElement(suite, "testcase", name=name,
+                                         classname="registered.attention.unittests.test_glm5_remnant")
+                    if name.startswith("test_decode_partial_graph["):
+                        h, i = map(int, name.split("[")[1][:-1].split("-"))
+                        props = ET.SubElement(node, "properties")
+                        for key, value in {
+                            "partial_cubins": {str(p): f"cubin-{h}-{i}-{p}" for p in (False, True)},
+                            "decode_geometry": dict(heads=h, inner=i, banks=2, queries=1, tails=[0,1,2,3],
+                                                    nondefault_stream=True, launched_partitions=1,
+                                                    binary_partitions=66 // i),
+                        }.items():
+                            ET.SubElement(props, "property", name=key, value=json.dumps(value))
+                ET.ElementTree(suite).write(folder / f"{tool}.xml")
+            current = copy.deepcopy(manifest)
+            current["sources"] = {"harness": "new"}
+            def qualify(candidate):
+                context = qualification.QualificationContext(root, candidate, {"kernel": "same"}, kernels.SANITIZER_ORDER)
+                return qualification.qualify_glm_timing("fixture", context=context, phase="upstream-decode")
+            self.assertEqual(qualify(current)["status"], "passed")
+            for change in ("compiler", "cache", "kernel"):
+                changed = copy.deepcopy(current)
+                if change == "compiler":
+                    changed["nvcc"] = "different"
+                elif change == "cache":
+                    changed["glm_compile"]["cache_files"] = {"different": "cache"}
+                else:
+                    changed["glm_compile"]["tilelang"][0]["cubin_sha256"] = "different"
+                with self.subTest(change=change), self.assertRaises(RuntimeError):
+                    qualify(changed)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -88,6 +88,9 @@ def _resolve_image_sources(
 
 INTEGRATION = integration_profile()
 MODEL_FAMILY = os.environ.get("REMNANT_MODEL_FAMILY", "dsv4")
+_UPSTREAM_DECODE = os.environ.get("REMNANT_GLM_UPSTREAM_DECODE") == "1"
+if _UPSTREAM_DECODE and MODEL_FAMILY != "glm53":
+    raise ValueError("Upstream decode requires REMNANT_MODEL_FAMILY=glm53")
 if MODEL_FAMILY not in ("dsv4", "glm53") or (MODEL_FAMILY == "glm53" and INTEGRATION["version"] != "v0.5.22"):
     raise ValueError("GLM validation requires REMNANT_INTEGRATION=v0.5.22")
 compiled_image_id, rebuild_image_id = _resolve_image_sources(MODEL_FAMILY, os.environ)
@@ -175,7 +178,7 @@ SANITIZER = (
 )
 # Preserve existing work caps; reserve time inside the outer timeout for cleanup.
 GPU_TIMEOUT_S = 3600
-CPU_BUILD_TIMEOUT_S = 900 if VALIDATION_SUITE == "v41-fp4" else 3600
+CPU_BUILD_TIMEOUT_S = 900 if _UPSTREAM_DECODE or VALIDATION_SUITE == "v41-fp4" else 3600
 VALIDATION_TIMEOUT_S = (
     int(os.environ.get("REMNANT_VALIDATION_TIMEOUT_S", "2700"))
     if INTEGRATION["version"] == "v0.5.22"
@@ -493,6 +496,28 @@ def _reuse_glm_cpu_artifacts(build: Path, deadline: float, binding_requirements:
     return True
 
 
+def _prepare_upstream_decode(build: Path, deadline: float) -> None:
+    """CPU-only delta compilation after verified reuse of production binaries."""
+    environment = _cpu_preflight_environment(build)
+    _run_command(
+        [sys.executable, "-m", "sglang.benchmark.remnant.glm_upstream"],
+        build / "upstream-sm90-compile.log", deadline, environment=environment,
+    )
+    _run_pytest(tuple(
+        GLM_BENCHMARK_CPU + "::" + name for name in (
+            "test_glm_upstream_decode_matrix_and_labels",
+            "test_glm_upstream_source_and_helper_provenance",
+            "test_glm_upstream_compile_artifacts_are_bound",
+            "test_glm_upstream_result_identity_and_csv",
+        )
+    ), build, "upstream-cpu-tests", deadline, environment=environment)
+    manifest = json.loads(MANIFEST.read_text())
+    manifest["upstream_compile"] = json.loads(
+        Path("/opt/remnant-glm-upstream-compile.json").read_text()
+    )
+    MANIFEST.write_text(json.dumps(manifest, indent=2) + "\n")
+
+
 def _fp4_sanitizer_prefix(tool: str, *, trace: bool = False) -> tuple[str, ...]:
     """Audit and tool runs cover the same production kernels in a mixed test."""
     if tool not in ("memcheck", "racecheck", "synccheck") or (trace and tool != "racecheck"):
@@ -573,6 +598,8 @@ def _build_image() -> None:
         else None
     )
     if MODEL_FAMILY == "glm53" and _reuse_glm_cpu_artifacts(build, deadline, binding_requirements):
+        if _UPSTREAM_DECODE:
+            _prepare_upstream_decode(build, deadline)
         return
     sanitizer_identity = None
     if INTEGRATION["version"] == "v0.5.22":
@@ -929,6 +956,8 @@ print('FP4 CPU SM90 precompilation passed')
         ),
     }
     MANIFEST.write_text(json.dumps(manifest, indent=2) + "\n")
+    if _UPSTREAM_DECODE:
+        _prepare_upstream_decode(build, deadline)
 
 
 def _check_profiler_tools(build: Path, deadline: float | None = None) -> None:
@@ -1076,6 +1105,20 @@ else:
         )
     )
 
+if _UPSTREAM_DECODE:
+    if modal.is_local():
+        source_path = SGLANG_SOURCE / "python/sglang/benchmark/remnant/glm_upstream.py"
+        spec = importlib.util.spec_from_file_location("remnant_upstream_prepare", source_path)
+        baseline = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(baseline)
+        export = REPO_ROOT / "data/producer-artifacts/glm-upstream-v0522"
+        baseline.prepare_source(SGLANG_SOURCE, export)
+        kernel_base = kernel_base.add_local_dir(export, baseline.IMAGE_SOURCE, copy=True)
+    kernel_base = kernel_base.env({
+        "REMNANT_GLM_UPSTREAM_DECODE": "1",
+        "REMNANT_GLM_UPSTREAM_SOURCE": "/opt/remnant-glm-upstream-v0522",
+    })
+
 kernel_image = (
     # Legacy image builders inject the SDK without its Python dependencies.
     # Install the submitting version before CPU launcher tests import Modal.
@@ -1184,6 +1227,8 @@ def prepare_kernels(model_family: str = "dsv4") -> None:
 
 _GLM_PREFILL_H200 = os.environ.get("REMNANT_GLM_PREFILL_H200") == "1"
 _GLM_PREFILL_TIMEOUT_S = 2400
+if _UPSTREAM_DECODE and _GLM_PREFILL_H200:
+    raise ValueError("Upstream decode and prefill image selection are exclusive")
 if _GLM_PREFILL_H200 and MODEL_FAMILY != "glm53":
     raise ValueError("REMNANT_GLM_PREFILL_H200 requires GLM")
 
@@ -1238,7 +1283,7 @@ def _preflight_fp4_timing(run_id: str, qualification_runs: str) -> dict:
 )
 def _preflight_glm_timing(
     run_id: str, qualification_runs: str, phase: str,
-    allow_incomplete: bool, resume_run: str,
+    allow_incomplete: bool, resume_run: str, suite: str = "glm-attention",
 ) -> dict | None:
     """Check existing GLM receipts before scheduling its GPU worker."""
     results_volume.reload()
@@ -1252,9 +1297,14 @@ def _preflight_glm_timing(
             if phase == "prefill":
                 _glm_prefill_variant(heads, 64)
         return None
+    if suite == "glm-upstream-decode":
+        from sglang.benchmark.remnant.glm_upstream import verify_compilation
+
+        verify_compilation(json.loads(MANIFEST.read_text()).get("upstream_compile", {}))
     with _run_context(run_id, "preflight", 120, resource="cpu") as (_, record, _):
         record["qualification"] = _glm_timing_qualification(
-            qualification_runs, allow_incomplete=allow_incomplete, phase=phase
+            qualification_runs, allow_incomplete=allow_incomplete,
+            phase="upstream-decode" if suite == "glm-upstream-decode" else phase
         )
     return record["qualification"]
 
@@ -1269,14 +1319,20 @@ def _dispatch_benchmark(
     if model_family != MODEL_FAMILY:
         raise ValueError("--model-family must match REMNANT_MODEL_FAMILY")
     preflight = None
+    upstream = suite == "glm-upstream-decode"
+    if upstream and (not _UPSTREAM_DECODE or model_family != "glm53" or phase != "decode"
+                     or packed_prefill_tile != 32 or allow_incomplete_qualification):
+        raise ValueError("Upstream suite requires its H200 image, GLM decode, production tile32 and qualification")
+    if _UPSTREAM_DECODE and not upstream:
+        raise ValueError("Upstream image requires suite glm-upstream-decode")
     if model_family == "glm53":
         if (
-            suite != "glm-attention" or modes not in ("", "native,direct")
+            suite not in ("glm-attention", "glm-upstream-decode") or modes not in ("", "upstream,direct" if upstream else "native,direct")
             or keep_count != 256 or prefill_reader != "split"
             or phase not in ("all", "decode", "prefill", "prefill-small")
         ):
             raise ValueError("GLM requires its attention suite and Native/Direct paths")
-        if (phase in ("prefill", "prefill-small")) != _GLM_PREFILL_H200:
+        if not upstream and (phase in ("prefill", "prefill-small")) != _GLM_PREFILL_H200:
             raise ValueError("GLM prefill scopes require the H200 image selection")
         if allow_incomplete_qualification and phase != "all":
             raise ValueError("This GLM scope requires qualification")
@@ -1286,7 +1342,8 @@ def _dispatch_benchmark(
         if not 60 <= max_seconds <= limit:
             raise ValueError(f"GLM timing max_seconds must be between 60 and {limit}")
         preflight = _preflight_glm_timing.remote(
-            run_id, qualification_runs, phase, allow_incomplete_qualification, resume_run
+            run_id, qualification_runs, phase, allow_incomplete_qualification, resume_run,
+            **({"suite": suite} if upstream else {}),
         )
     elif suite == "v41-fp4-decode":
         if (
@@ -1323,10 +1380,10 @@ def benchmark_kernels(
 
 @app.function(**{
     **_GPU,
-    "gpu": "H200" if _GLM_PREFILL_H200 else _GPU["gpu"],
+    "gpu": "H200" if _UPSTREAM_DECODE or _GLM_PREFILL_H200 else _GPU["gpu"],
     "image": kernel_image.env({"REMNANT_GLM_PREFILL_H200": "1"})
         if _GLM_PREFILL_H200 else kernel_image,
-    "timeout": _GLM_PREFILL_TIMEOUT_S if _GLM_PREFILL_H200
+    "timeout": 1320 if _UPSTREAM_DECODE else _GLM_PREFILL_TIMEOUT_S if _GLM_PREFILL_H200
         else (1200 if MODEL_FAMILY == "glm53" else 900),
     **({"cpu": 2, "memory": 16384} if VALIDATION_SUITE == "v41-fp4" else {}),
 })
@@ -1345,6 +1402,10 @@ def _benchmark_worker(
     """Validate and time the complete matrix for the selected survivor budget."""
     if model_family != MODEL_FAMILY:
         raise ValueError("--model-family must match REMNANT_MODEL_FAMILY")
+    upstream = suite == "glm-upstream-decode"
+    if upstream and (not _UPSTREAM_DECODE or model_family != "glm53" or phase != "decode"
+                     or packed_prefill_tile != 32 or allow_incomplete_qualification):
+        raise ValueError("Upstream suite requires its H200 image, GLM decode, production tile32 and qualification")
     prefill_h200 = phase in ("prefill", "prefill-small")
     if phase == "prefill":
         if model_family != "glm53" or packed_prefill_tile != 64:
@@ -1356,11 +1417,11 @@ def _benchmark_worker(
     if model_family == "glm53":
         if phase not in ("all", "decode", "prefill", "prefill-small"):
             raise ValueError("GLM phase must be all, decode, prefill, or prefill-small")
-        if prefill_h200 != _GLM_PREFILL_H200:
+        if not upstream and prefill_h200 != _GLM_PREFILL_H200:
             raise ValueError("GLM prefill scopes require REMNANT_GLM_PREFILL_H200=1")
         if (phase == "decode" or prefill_h200) and allow_incomplete_qualification:
             raise ValueError(f"{phase} timing requires qualification")
-        if suite != "glm-attention" or keep_count != 256 or modes not in ("", "native,direct") or prefill_reader != "split":
+        if suite not in ("glm-attention", "glm-upstream-decode") or keep_count != 256 or modes not in ("", "upstream,direct" if upstream else "native,direct") or prefill_reader != "split":
             raise ValueError("GLM timing requires --suite glm-attention and exactly native,direct")
         limit = _GLM_PREFILL_TIMEOUT_S - 60 if phase == "prefill" else 1140
         if not 60 <= max_seconds <= limit:
@@ -1377,13 +1438,13 @@ def _benchmark_worker(
                 _qualify_full_glm_prefill(root, record, deadline, resume_run)
             else:
                 record["qualification"] = _glm_timing_qualification(
-                    qualification_runs, allow_incomplete=allow_incomplete_qualification, phase=phase
+                    qualification_runs, allow_incomplete=allow_incomplete_qualification, phase="upstream-decode" if upstream else phase
                 )
             record["experiment_status"] = (
                 "unqualified" if record["qualification"]["status"] != "passed"
                 else "qualified"
             )
-            if not prefill_h200:
+            if not prefill_h200 and not upstream:
                 _run_pytest((GLM_DECODE_GRAPH if phase == "decode" else GLM_BENCHMARK_GRAPH,), root, "benchmark-graphs", deadline)
             argv = _benchmark_command("--model-family", "glm53", "--suite", suite,
                                       "--phase", phase, "--packed-prefill-tile", str(packed_prefill_tile),
@@ -1393,7 +1454,7 @@ def _benchmark_worker(
                 checkpoint = _glm_timing_checkpoint(resume_run)
                 argv += ["--resume", str(checkpoint)]
                 record["resume_run"] = resume_run
-            record.update(command=argv, modes=("native", "direct"), suite=suite)
+            record.update(command=argv, modes=("upstream", "direct") if upstream else ("native", "direct"), suite=suite)
             _run_command(argv, root / "timing.log", deadline)
             contract = _glm_benchmark_contract()
             first = json.loads((root / "timing.json").read_text())
