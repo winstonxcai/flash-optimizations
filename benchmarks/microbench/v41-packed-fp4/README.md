@@ -91,9 +91,50 @@ The committed-source CPU preflight (`7597930` / `26489ab0`), app
 separate upstream package reached 54/62 compilation steps before its remaining
 658-second deadline expired. No GPU was allocated. The bounded retry increases
 parallel compilation to four jobs on the same 16-CPU/64-GiB builder; source,
-arithmetic, toolchain and the 900-second outer build cap are unchanged. V4.1's
+arithmetic, toolchain and the initial 900-second outer build cap were unchanged. V4.1's
 GPU validation default is 5,400 seconds so the complete 38-case/tool matrix can
 run in one allocation; launching it still requires adequate remaining budget.
+
+The four-job retry, app `ap-g1saJgl1HC7PUrEG2esBhC` on frozen parent `2655739`
+and SGLang `26489ab0`, built the original upstream package (62/62 steps), verified
+SM90a-only binaries, passed its CPU import check, and collected all 43 ordinary
+GPU qualification cases. The Native binary SHA256 is
+`4a0369c3d28742b4745b451c6bf4d19d58a61c63d93289c6231e4c0e59669971`.
+The shared CPU deadline then interrupted the CPU test run after two tests.
+**Preflight failed; no GPU was allocated.** A 1,200-second CPU build cap is now
+prepared, retaining a 200-second cleanup/reporting allowance; it has not been
+rerun. The failed image is not a qualified artifact.
+
+Final focused checks used SGLang's actual `.isort.cfg`, cached Modal image
+`im-m8PLjs2g4OTkQGaY4z3GsG`, app `ap-eWIMVXuSpdOHI4DD6sM12V`: **6 passed**,
+syntax and scoped lint passed. SGLang `3c595a2b` differs from the frozen build
+source by a single import separator. Exact commands, source hashes, failures and
+the verified control manifest are retained in `qualification.json`.
+
+**Purpose:** measure Packed against unchanged upstream Native, retaining custom
+dense FP4 as a separate diagnostic. **Risk:** the new original control and
+fixtures have not passed GPU correctness or sanitizer checks. **Evidence:** six
+focused Modal CPU contracts pass; the upstream package builds and imports, with
+verified source/wrapper/binary hashes and SM90a target. **Limitations:** complete
+CPU preflight, GPU numerical/graph/stream/sanitizer checks, timing and independent
+review remain pending. **Rollback:** omit this benchmark suite; runtime `auto`
+retains its existing behavior, or restore prior SGLang pin `4f8fb091`.
+
+Further paid work is held for the pending budget decision. The proposed
+cumulative ceiling is $25 with the same $2 reserve; the existing ceiling remains
+$20 until approved. Full qualification and timing are estimated around $6 using
+the prior sanitizer durations and [current resource rates](https://modal.com/pricing).
+
+Handoff: this turn used **$0.55659504 compute**, including both build failures
+and the canceled preparation. Conservative cumulative phase compute is
+**$15.46969128**; **$2.53030872** remains for work while preserving the $2
+reserve. All task apps are stopped; GPU allocation/time is zero. Raw CPU logs
+and the control manifest are retained on `remnant-stage2a-results` at
+`microbench/v41-upstream-native-20261106-cpu`; `qualification.json` records
+their sizes and hashes. Temporary CPU invocation scripts were consolidated into
+that JSON reproduction record. The isolated upstream checkout stays active at
+`/tmp/remnant-v41-native-upstream` for the next authorized preflight; its cleanup
+is deferred until this comparison finishes.
 
 Published branch: **`ds41-flash-packed`** in the parent, SGLang v0.5.22 and
 FlashMLA v0.5.22 repositories. It continues the completed local

@@ -130,11 +130,16 @@ SANITIZER = (
     if INTEGRATION["version"] == "v0.5.22"
     else "compute-sanitizer"
 )
-# Preserve existing work caps; reserve time inside the outer timeout for cleanup.
+# Include the upstream control in CPU build time; reserve time for cleanup.
 GPU_TIMEOUT_S = 3600
-CPU_BUILD_TIMEOUT_S = 900 if VALIDATION_SUITE == "v41-fp4" else 3600
+CPU_BUILD_TIMEOUT_S = 1200 if VALIDATION_SUITE == "v41-fp4" else 3600
 VALIDATION_TIMEOUT_S = (
-    int(os.environ.get("REMNANT_VALIDATION_TIMEOUT_S", "5400" if VALIDATION_SUITE == "v41-fp4" else "2700"))
+    int(
+        os.environ.get(
+            "REMNANT_VALIDATION_TIMEOUT_S",
+            "5400" if VALIDATION_SUITE == "v41-fp4" else "2700",
+        )
+    )
     if INTEGRATION["version"] == "v0.5.22"
     else GPU_TIMEOUT_S
 )
@@ -373,8 +378,10 @@ def _build_upstream_native_control(
     """
     environment = dict(cpu_environment)
     environment.update(
-        FLASH_MLA_DISABLE_SM100="1", FLASH_MLA_DISABLE_SM90="0",
-        MAX_JOBS="4", NVCC_THREADS="1",
+        FLASH_MLA_DISABLE_SM100="1",
+        FLASH_MLA_DISABLE_SM90="0",
+        MAX_JOBS="4",
+        NVCC_THREADS="1",
     )
     _run_command(
         [
@@ -415,8 +422,10 @@ def _build_upstream_native_control(
                 "build_flags": {
                     key: environment[key]
                     for key in (
-                        "FLASH_MLA_DISABLE_SM100", "FLASH_MLA_DISABLE_SM90",
-                        "MAX_JOBS", "NVCC_THREADS",
+                        "FLASH_MLA_DISABLE_SM100",
+                        "FLASH_MLA_DISABLE_SM90",
+                        "MAX_JOBS",
+                        "NVCC_THREADS",
                     )
                 },
             },

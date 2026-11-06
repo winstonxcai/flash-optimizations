@@ -4185,7 +4185,7 @@
   "upstream_native_comparison": {
     "status": "unqualified",
     "protocol": "remnant-v41-fp4-decode-v4",
-    "candidate_sglang": "26489ab0",
+    "candidate_sglang": "3c595a2b",
     "candidate_flashmla": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208",
     "upstream_flashmla": "3620b63fc4ebe33950c50e1b7701b6607f44150e",
     "cutlass": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
@@ -4217,7 +4217,7 @@
             "scripts/modal/qualification.py"
           ],
           "returncode": 0,
-          "stdout": "4 files reformatted, 2 files left unchanged\n",
+          "stdout": "3 files reformatted, 3 files left unchanged\n",
           "stderr": ""
         },
         {
@@ -4267,25 +4267,25 @@
             "established_matrix_and_profile_coverage or paired_ratios_and_round_percentile or v41_native_reference or v41_three_path_ratios or v41_native_call or v41_fp4_matrix_and_timing_gate"
           ],
           "returncode": 0,
-          "stdout": "......                                                                   [100%]\n6 passed, 176 deselected in 3.28s\n",
+          "stdout": "......                                                                   [100%]\n6 passed, 176 deselected in 3.37s\n",
           "stderr": ""
         }
       ],
-      "app_id": "ap-0kO7GeNg8yuPC74oGbA1tU",
-      "sandbox_id": "sb-00OIsWsszhol4dC2HyKUpY",
-      "image_id": "im-5xaIDft0ZH2Btx246EG12x",
+      "app_id": "ap-eWIMVXuSpdOHI4DD6sM12V",
+      "sandbox_id": "sb-RFT5LivdRPRuQEjTa4uRFZ",
+      "image_id": "im-m8PLjs2g4OTkQGaY4z3GsG",
       "returncode": 0,
       "stderr": ""
     },
     "tested_formatted_copy_sha256": {
-      "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py": "3978ae008204fab56db557ab7e68013e9a2b9979dd912afdccb67b0c5c3bd697",
+      "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py": "3a1f4831fbe723be1f86df1a0efb104d45a31acd7558a56c46a219db490ec006",
       "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py": "60859911a295761b40ced0924f47a7a32c6b8d043b4bdcc07b478b8673593397",
       "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py": "b3a598f111d6a338b33632bd131c9be4a60e05fcf2d2a2d7d70a618746d560c4",
       "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py": "cb8b7ff0d693961b3921d45f317823417e8d3ed20e7c8678bab14b7907a53f36",
-      "scripts/modal/kernels.py": "859d88eb232dd8d8dd7a99786859e41c52d609d36733d0dcb0ac3bc1285df817",
+      "scripts/modal/kernels.py": "7042bf62896312e8a930874cd77f395d84917f10c8e7cd94f5e698148de8f922",
       "scripts/modal/qualification.py": "e7085830fb69712b1c2bf87bb764d27972811b6a5ea5666129ca61aa75960a3a"
     },
-    "cpu_reproduction_invocation": "\"\"\"Temporary invocation of existing CPU tests/formatters. Author: Winston Cai.\"\"\"\nimport json\nimport base64\nimport shutil\nimport tempfile\nfrom pathlib import Path\n\nimport modal\n\nroot = Path('/Users/poohthewinnie/Documents/Programming/flash-optimizations')\nsglang = 'third_party/sglang-v0.5.22/'\nfiles = [\n    sglang + path for path in (\n        'benchmark/remnant/microbench.py', 'benchmark/remnant/test_microbench.py',\n        'python/sglang/benchmark/remnant/cases.py',\n        'python/sglang/benchmark/remnant/quantization.py',\n    )\n] + ['scripts/modal/kernels.py', 'scripts/modal/qualification.py']\nimage = modal.Image.from_id('im-MZqnw8UUhUxovTFl16mxln').pip_install('ruff==0.15.1', 'isort==7.0.0')\ntemporary = tempfile.TemporaryDirectory(prefix='remnant-v41-native-cpu-input-')\nfor path in files:\n    target = Path(temporary.name, path)\n    target.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copyfile(root / path, target)\nimage = image.add_local_dir(temporary.name, '/work', copy=True)\ncode = '''\nimport base64\nimport json\nfrom pathlib import Path\nimport subprocess\nfiles = FILES\ncommands = [\n    ['isort', *files], ['ruff', 'format', *files],\n    ['ruff', 'check', '--select', 'F401,F821,F823,UP037', *files],\n    ['python3', '-m', 'compileall', '-q', *files],\n    ['python3', '-m', 'pytest', '-q', '--disable-warnings', '--tb=short',\n     'third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py',\n     '-k', 'established_matrix_and_profile_coverage or paired_ratios_and_round_percentile or v41_native_reference or v41_three_path_ratios or v41_native_call or v41_fp4_matrix_and_timing_gate'],\n]\nresults = []\nfor command in commands:\n    result = subprocess.run(command, cwd='/work', text=True, capture_output=True, timeout=120)\n    results.append({'argv': command, 'returncode': result.returncode, 'stdout': result.stdout, 'stderr': result.stderr})\n    if result.returncode:\n        break\nprint('REMNANT_CPU_RESULT=' + json.dumps({'commands': results}))\nfor path in files:\n    data = base64.b64encode(Path('/work', path).read_bytes()).decode()\n    for offset in range(0, len(data), 4096):\n        print('REMNANT_CPU_FILE=' + json.dumps([path, data[offset:offset+4096]]))\n'''.replace('FILES', repr(files))\napp = modal.App('remnant-v41-upstream-native-cpu')\nwith app.run():\n    sandbox = modal.Sandbox.create('python3', '-c', code, image=image, app=app,\n                                   cpu=1, memory=4096, timeout=240, block_network=True)\n    try:\n        raw = sandbox.stdout.read()\n        errors = sandbox.stderr.read()\n        sandbox.wait()\n        payload = json.JSONDecoder().raw_decode(raw.split('REMNANT_CPU_RESULT=', 1)[1])[0]\n        chunks = {}\n        for line in raw.splitlines():\n            if line.startswith('REMNANT_CPU_FILE='):\n                path, data = json.loads(line.split('=', 1)[1])\n                chunks.setdefault(path, []).append(data)\n        payload['files'] = {path: base64.b64decode(''.join(data)).decode() for path, data in chunks.items()}\n        payload.update(app_id=app.app_id, sandbox_id=sandbox.object_id, image_id=image.object_id,\n                       returncode=sandbox.returncode, stderr=errors)\n        Path('/tmp/remnant-v41-native-cpu-result.json').write_text(json.dumps(payload, indent=2))\n        print(json.dumps({key: value for key, value in payload.items() if key != 'files'}, indent=2))\n    finally:\n        sandbox.terminate(wait=True)\n        temporary.cleanup()\n",
+    "cpu_reproduction_invocation": "\"\"\"Temporary invocation of existing CPU tests/formatters. Author: Winston Cai.\"\"\"\nimport json\nimport base64\nimport shutil\nimport tempfile\nfrom pathlib import Path\n\nimport modal\n\nroot = Path('/Users/poohthewinnie/Documents/Programming/flash-optimizations')\nsglang = 'third_party/sglang-v0.5.22/'\nfiles = [\n    sglang + path for path in (\n        'benchmark/remnant/microbench.py', 'benchmark/remnant/test_microbench.py',\n        'python/sglang/benchmark/remnant/cases.py',\n        'python/sglang/benchmark/remnant/quantization.py',\n    )\n] + ['scripts/modal/kernels.py', 'scripts/modal/qualification.py']\nimage = modal.Image.from_id('im-MZqnw8UUhUxovTFl16mxln').pip_install('ruff==0.15.1', 'isort==7.0.0')\ntemporary = tempfile.TemporaryDirectory(prefix='remnant-v41-native-cpu-input-')\nfor path in files:\n    target = Path(temporary.name, path)\n    target.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copyfile(root / path, target)\nconfig = sglang + '.isort.cfg'\ntarget = Path(temporary.name, config)\ntarget.parent.mkdir(parents=True, exist_ok=True)\nshutil.copyfile(root / config, target)\nimage = image.add_local_dir(temporary.name, '/work', copy=True)\ncode = '''\nimport base64\nimport json\nfrom pathlib import Path\nimport subprocess\nfiles = FILES\ncommands = [\n    ['isort', *files], ['ruff', 'format', *files],\n    ['ruff', 'check', '--select', 'F401,F821,F823,UP037', *files],\n    ['python3', '-m', 'compileall', '-q', *files],\n    ['python3', '-m', 'pytest', '-q', '--disable-warnings', '--tb=short',\n     'third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py',\n     '-k', 'established_matrix_and_profile_coverage or paired_ratios_and_round_percentile or v41_native_reference or v41_three_path_ratios or v41_native_call or v41_fp4_matrix_and_timing_gate'],\n]\nresults = []\nfor command in commands:\n    result = subprocess.run(command, cwd='/work', text=True, capture_output=True, timeout=120)\n    results.append({'argv': command, 'returncode': result.returncode, 'stdout': result.stdout, 'stderr': result.stderr})\n    if result.returncode:\n        break\nprint('REMNANT_CPU_RESULT=' + json.dumps({'commands': results}))\nfor path in files:\n    data = base64.b64encode(Path('/work', path).read_bytes()).decode()\n    for offset in range(0, len(data), 4096):\n        print('REMNANT_CPU_FILE=' + json.dumps([path, data[offset:offset+4096]]))\n'''.replace('FILES', repr(files))\napp = modal.App('remnant-v41-upstream-native-cpu')\nwith app.run():\n    sandbox = modal.Sandbox.create('python3', '-c', code, image=image, app=app,\n                                   cpu=1, memory=4096, timeout=240, block_network=True)\n    try:\n        raw = sandbox.stdout.read()\n        errors = sandbox.stderr.read()\n        sandbox.wait()\n        payload = json.JSONDecoder().raw_decode(raw.split('REMNANT_CPU_RESULT=', 1)[1])[0]\n        chunks = {}\n        for line in raw.splitlines():\n            if line.startswith('REMNANT_CPU_FILE='):\n                path, data = json.loads(line.split('=', 1)[1])\n                chunks.setdefault(path, []).append(data)\n        payload['files'] = {path: base64.b64decode(''.join(data)).decode() for path, data in chunks.items()}\n        payload.update(app_id=app.app_id, sandbox_id=sandbox.object_id, image_id=image.object_id,\n                       returncode=sandbox.returncode, stderr=errors)\n        Path('/tmp/remnant-v41-native-cpu-result.json').write_text(json.dumps(payload, indent=2))\n        print(json.dumps({key: value for key, value in payload.items() if key != 'files'}, indent=2))\n    finally:\n        sandbox.terminate(wait=True)\n        temporary.cleanup()\n",
     "prior_cpu_attempt": {
       "app_id": "ap-XRNJU0D1QHW9nQjZvi5S3Y",
       "checks": "5 passed; lint and syntax passed",
@@ -4301,7 +4301,74 @@
       "prior_conservative_phase_usd": 14.86730972,
       "prior_interrupted_build_usd": 0.04578652,
       "remaining_before_cpu_usd": 3.08690376,
-      "current_turn_settled_cpu_usd_before_final_check": 0.00282954
+      "current_turn_settled_cpu_usd_before_final_check": 0.00282954,
+      "extension_request": {
+        "ceiling_usd": 25,
+        "reserve_usd": 2,
+        "status": "awaiting_user_reply",
+        "reason": "Full current-source qualification plus timing estimated about 6 USD; about 2.5 USD of work allowance remains"
+      },
+      "current_turn_compute_usd": "0.55659504",
+      "conservative_phase_compute_usd": "15.46969128",
+      "remaining_work_usd": "2.53030872",
+      "current_turn_billing": [
+        {
+          "object_id": "ap-0kO7GeNg8yuPC74oGbA1tU",
+          "description": "remnant-v41-upstream-native-cpu",
+          "environment": "main",
+          "interval_start": "2026-11-06T00:00:00",
+          "cost": "0.00095969"
+        },
+        {
+          "object_id": "ap-3aCCm3gJHFSFoiQ4KTQFH5",
+          "description": "remnant-kernel-dev",
+          "environment": "main",
+          "interval_start": "2026-11-06T00:00:00",
+          "cost": "0.29592454"
+        },
+        {
+          "object_id": "ap-ARVqkOUWOhHrsptFiunH3I",
+          "description": "remnant-v41-upstream-native-cpu",
+          "environment": "main",
+          "interval_start": "2026-11-06T00:00:00",
+          "cost": "0.00052868"
+        },
+        {
+          "object_id": "ap-XRNJU0D1QHW9nQjZvi5S3Y",
+          "description": "remnant-v41-upstream-native-cpu",
+          "environment": "main",
+          "interval_start": "2026-11-06T00:00:00",
+          "cost": "0.00183639"
+        },
+        {
+          "object_id": "ap-eWIMVXuSpdOHI4DD6sM12V",
+          "description": "remnant-v41-upstream-native-cpu",
+          "environment": "main",
+          "interval_start": "2026-11-06T00:00:00",
+          "cost": "0.00055515"
+        },
+        {
+          "object_id": "ap-g1saJgl1HC7PUrEG2esBhC",
+          "description": "remnant-kernel-dev",
+          "environment": "main",
+          "interval_start": "2026-11-06T00:00:00",
+          "cost": "0.25632612"
+        },
+        {
+          "object_id": "ap-t6JxrQ4CWg4fQC3XW5y7Yp",
+          "description": "remnant-kernel-dev",
+          "environment": "main",
+          "interval_start": "2026-11-06T00:00:00",
+          "cost": "0.00025346"
+        },
+        {
+          "object_id": "ap-vhh7mWndYQrfeIYqHUJuze",
+          "description": "remnant-native-control-inventory",
+          "environment": "main",
+          "interval_start": "2026-11-06T00:00:00",
+          "cost": "0.00021101"
+        }
+      ]
     },
     "pending": [
       "CPU native build/preflight",
@@ -4421,8 +4488,167 @@
         "nvcc_threads": 1,
         "error": "subprocess.TimeoutExpired: upstream-native-build timed out after 657.999972207 seconds",
         "last_compilation": "sm90/decode/sparse/instantiations/v32_persistent_h64.cu",
-        "command": "MODAL_PROFILE=peroace360 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_UPSTREAM_FLASHMLA_SOURCE=/tmp/remnant-v41-native-upstream modal run scripts/modal/kernels.py::preflight_kernels"
+        "command": "MODAL_PROFILE=peroace360 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_UPSTREAM_FLASHMLA_SOURCE=/tmp/remnant-v41-native-upstream modal run scripts/modal/kernels.py::preflight_kernels",
+        "metered_cost_usd": 0.29592454
+      },
+      {
+        "app_id": "ap-g1saJgl1HC7PUrEG2esBhC",
+        "parent_commit": "2655739",
+        "sglang": "26489ab0",
+        "current_sglang_difference": "3c595a2b adds one import separator; no arithmetic or fixture behavior change",
+        "status": "failed_total_cpu_deadline_no_gpu",
+        "image": "im-CpF4Qa2NczY8sWiwgmFfGX",
+        "upstream_build": "62/62 steps; binary and wrapper hashes verified; original SM90a control imported successfully",
+        "collection": "43 GPU qualification cases collected on CPU in 55.63 seconds",
+        "remaining_gate_failure": "CPU pytest was interrupted by the shared build deadline after two tests; CPU test gate and remaining collections did not complete",
+        "remedy": "Increase outer CPU build cap from 900 to 1200 seconds; retain 200 seconds for cleanup and reporting. Prepared, not rerun.",
+        "max_jobs": 4,
+        "gpu_allocations": 0,
+        "control_manifest": {
+          "source_commit": "3620b63fc4ebe33950c50e1b7701b6607f44150e",
+          "source_sha256": "5a29e72bcea53f389736b48b60d7c72907d8f2a762083d1bb5e59cd348cad7d0",
+          "binary_sha256": "4a0369c3d28742b4745b451c6bf4d19d58a61c63d93289c6231e4c0e59669971",
+          "python_sha256": "68516b8e7350ef72282443d737daa81381e5ce07b7bcc889ddbb92a6eb4a1db7",
+          "architectures": [
+            "sm_90a"
+          ],
+          "build_flags": {
+            "FLASH_MLA_DISABLE_SM100": "1",
+            "FLASH_MLA_DISABLE_SM90": "0",
+            "MAX_JOBS": "4",
+            "NVCC_THREADS": "1"
+          }
+        },
+        "metered_cost_usd": 0.25632612
       }
-    ]
+    ],
+    "cpu_formatted_prior": {
+      "commands": [
+        {
+          "argv": [
+            "isort",
+            "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py",
+            "scripts/modal/kernels.py",
+            "scripts/modal/qualification.py"
+          ],
+          "returncode": 0,
+          "stdout": "Fixing /work/third_party/sglang-v0.5.22/benchmark/remnant/microbench.py\nFixing /work/scripts/modal/kernels.py\n",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "ruff",
+            "format",
+            "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py",
+            "scripts/modal/kernels.py",
+            "scripts/modal/qualification.py"
+          ],
+          "returncode": 0,
+          "stdout": "4 files reformatted, 2 files left unchanged\n",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "ruff",
+            "check",
+            "--select",
+            "F401,F821,F823,UP037",
+            "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py",
+            "scripts/modal/kernels.py",
+            "scripts/modal/qualification.py"
+          ],
+          "returncode": 0,
+          "stdout": "All checks passed!\n",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "python3",
+            "-m",
+            "compileall",
+            "-q",
+            "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py",
+            "scripts/modal/kernels.py",
+            "scripts/modal/qualification.py"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "python3",
+            "-m",
+            "pytest",
+            "-q",
+            "--disable-warnings",
+            "--tb=short",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "-k",
+            "established_matrix_and_profile_coverage or paired_ratios_and_round_percentile or v41_native_reference or v41_three_path_ratios or v41_native_call or v41_fp4_matrix_and_timing_gate"
+          ],
+          "returncode": 0,
+          "stdout": "......                                                                   [100%]\n6 passed, 176 deselected in 3.28s\n",
+          "stderr": ""
+        }
+      ],
+      "app_id": "ap-0kO7GeNg8yuPC74oGbA1tU",
+      "sandbox_id": "sb-00OIsWsszhol4dC2HyKUpY",
+      "image_id": "im-5xaIDft0ZH2Btx246EG12x",
+      "returncode": 0,
+      "stderr": ""
+    },
+    "formatting_configuration": "SGLang .isort.cfg copied alongside sources; only task formatting applied",
+    "pricing_reference": {
+      "url": "https://modal.com/pricing",
+      "checked": "2026-11-06",
+      "h100_per_second_usd": 0.001097,
+      "function_cpu_core_per_second_usd": 1.31e-05,
+      "function_memory_gib_per_second_usd": 2.22e-06
+    },
+    "decision": "Unqualified candidate. Stop paid work pending budget decision; do not claim upstream Native performance or relabel historical results.",
+    "allocations_at_handoff": {
+      "active": [],
+      "all_task_apps_stopped": true,
+      "gpu_time_seconds": 0
+    },
+    "cpu_raw_artifacts": {
+      "volume": "remnant-stage2a-results",
+      "path": "microbench/v41-upstream-native-20261106-cpu",
+      "files": {
+        "cancelled-preflight.log": {
+          "bytes": 7666,
+          "sha256": "56f0967ef5773624ed1cc1f86285aeb5b4677760eede69e030012592d5a9dd77"
+        },
+        "focused-cpu-checks.log": {
+          "bytes": 3129,
+          "sha256": "2eb77ff8f2d72ded167411ae8172b9accc788207190755fb7297ef3f299ba95a"
+        },
+        "preflight-two-jobs.log": {
+          "bytes": 68311,
+          "sha256": "67caf0137774e7f79ee373d3530933508e7d741dbcb1557c638d5cb6e7c9a10f"
+        },
+        "preflight-four-jobs.log": {
+          "bytes": 11588,
+          "sha256": "0086ce277dcf5b2a7db850e0af51a932b31e65c4443e250ab60c02319320556c"
+        },
+        "control-manifest.json": {
+          "bytes": 506,
+          "sha256": "a8c44b2733f036237bc803ceb5334d9fd7f194e1ab08bbddd71e68c5a00496b9"
+        }
+      }
+    }
   }
 }
