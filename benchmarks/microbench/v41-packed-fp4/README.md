@@ -1,146 +1,129 @@
 <!-- Author: Winston Cai. -->
 # V4.1 Packed FP4 on H100
 
-## Upstream Native comparison — pending
+## Upstream Native comparison — blocked by synchronization failure
 
-Budget continuation approved on 2026-11-06: **$25 cumulative ceiling**, retaining
-the **$2 reserve**. Conservative prior compute is $15.46969128, leaving
-**$7.53030872** for projected work. Continue with the 1,200-second CPU preflight,
-then one bounded H100 validation allocation (at most 5,000 work seconds) and the
-existing ten-case timing gate. Keep source commits frozen between qualification
-and timing. No weights, model volumes, serving, GPUQ or profiling are authorized.
+**Outcome:** the unchanged upstream Native control passes the ordinary numerical
+checks but fails strict synchronization checking. No v4 timing was launched, and
+there is no qualified latency comparison against unchanged Native yet. The
+historical v1–v3 ratios below compare Packed with our custom dense FP4 kernel.
 
-Native means the unchanged upstream `auto` path. On H100, that path uses V4
-FP8/BF16 cache records (584 logical bytes) and stock FlashMLA decode for V4.1.
-The previous v1–v3 measurements called our custom dense SM90 FP4 implementation
-"Native". Those historical labels and measurements are preserved below, but
-their ratios compare Packed against custom dense FP4, not upstream Native.
+Question: what is Packed's complete attention latency relative to unchanged
+upstream Native on H100? Protocol v4 separates three paths:
 
-Question: what is Packed's complete attention latency relative to upstream
-Native on H100? Protocol v4 adds upstream Native and renames the old control
-`dense_fp4`. Keep the existing ten production-geometry cases and paired graph
-timing. Native consumes the same unpruned FP4-rounded producer values through
-the upstream FP8 store; each path is checked against its own independently
-decoded cache. Queries, physical selections, SWA and sink remain shared.
-Native follows SGLang's metadata reset after graph warmup: the captured
-standalone call includes the first use of each ratio's GPU schedule, attention
-and combine. Later layers in a model forward may reuse that ratio's schedule;
-this standalone first-use cost is not a model-wide average. The custom FP4
-paths retain their current per-call scheduling behavior.
+| Path | Implementation | Logical global record |
+|---|---|---:|
+| Native | Original upstream H100 `auto` FP8/BF16 |584 B|
+| `dense_fp4` | Custom dense software FP4 Direct diagnostic |288 B|
+| Packed (`kernel`) | Packed FP4 Direct |224 B|
 
-The Native control must be built separately from exact upstream FlashMLA
+Native is built separately from FlashMLA
 `3620b63fc4ebe33950c50e1b7701b6607f44150e`, selected by SGLang v0.5.22, with
-CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`. The earlier pre-FP4
-`3eb8594` fork already changes Native synchronization and is not an unchanged
-upstream control. Its stock entry point cannot substitute for this baseline.
-The new source is an isolated clean checkout from the selected fork's existing
-Git objects, currently `/tmp/remnant-v41-native-upstream`; shared forks stay put.
-The original upstream `setup.py build_ext --inplace` builds a separate
-`flash_mla` package with `FLASH_MLA_DISABLE_SM100=1`, `FLASH_MLA_DISABLE_SM90=0`, `MAX_JOBS=4`, and
-`NVCC_THREADS=1`. Only verified SM90a binaries qualify. No kernel source is
-rewritten. CPU preflight binds source, Python wrapper and binary hashes;
-timing records the control's first-use schedule. This is an attention
-microbenchmark, not an end-to-end serving comparison.
+CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`. The fork already contains
+Native synchronization fixes and cannot substitute for this original control.
+CPU builds preserve upstream source, wrapper, scheduling and arithmetic, using
+`FLASH_MLA_DISABLE_SM100=1`, `FLASH_MLA_DISABLE_SM90=0`, `MAX_JOBS=4` and
+`NVCC_THREADS=1`. Manifest verification confirms SM90a-only binaries.
 
-Acceptance requires CPU contracts/build preflight, numerical,
-graph/stream and strict sanitizer coverage, then final paired timing. Historical
-v3 receipts cannot qualify v4. Required sanitizer coverage is now 38 cases per
-tool: the prior 36 plus upstream comparisons for both global page sizes. Do not
-change kernel arithmetic to manufacture a
-baseline match. Stop on a failed identity/control/coverage gate or the existing
-cumulative budget ceiling. No v4 measurements exist yet.
+The ten production-geometry cases remain H64, Q1/K512, SWA window128/page256,
+C1/global-page256 or C2/global-page128, and batches 8/16/24/28/32. Queries,
+selections, SWA and sink are shared. Native stores the same unpruned FP4-rounded
+producer values through the upstream H100 FP8 store. Each path has its own
+independent decoded-cache reference. Native's captured standalone call includes
+first-use GPU scheduling, following SGLang's post-warmup metadata reset; later
+layers can reuse a ratio's schedule, so this is not a model-wide average.
 
-Next entry point (CPU only; no H100 allocation):
+Frozen validation sources: parent **`7e913f5fbe05b09d3d00d45110b1aa22d69a69c6`**,
+SGLang **`3c595a2b70b9c6d9e45843d5884acc3ea5c3322c`**, FlashMLA
+**`858bb1ccac6fa2c552c7bfc1ecea1dacd4800208`**. Both forks were clean and
+matched parent pins. Manifest SHA256:
+`84e78a849fcfd2db9743b4fac37305f9236dcdece686f83a33463d0356743842`.
+Original Native binary SHA256:
+`a9a73f98b01b170629847da67870868c23e56f2f163d6f6690a5281f978c220a`.
+The evidence commit changes documentation only; these identities remain the
+executed sources.
+
+| Gate | Result |
+|---|---|
+| Modal CPU build/precompile/preflight |Passed: 27 tests + 15 subtests, 171.88 s; sources, imports, binary hashes and SM90a targets verified before H100|
+| Ordinary H100 numerical/graph/stream/regression |43 passed, 47.67 s; includes original Native on both global page sizes|
+| Physical allocation fixture |Passed for custom dense FP4 versus Packed; does not measure upstream Native capacity|
+| Strict synccheck |Failed: 4,192 errors; no complete XML; 36 preceding custom-path cases completed before the first upstream control|
+| Strict racecheck |Interrupted on stop after 7/38 cases; unqualified|
+| Strict memcheck |Not run|
+| Independent fresh review |Pending|
+| Final ten-case timing |Not run; blocked by the failed synchronization gate|
+
+The sanitizer reports `Barrier error detected. Divergent thread(s) in block.`
+in the original H64 SM90 sparse kernel, at
+`cutlass::arch::NamedBarrier::arrive_and_wait_internal` (`barrier.h:286`), called
+from upstream `sm90/decode/sparse/splitkv_mla.cuh:418`. Host frames identify the
+separate upstream `cuda.cpython-312-x86_64-linux-gnu.so`. The first 36 pytest
+progress marks precede this failure; collection order identifies the first
+upstream Native comparison (global page128). This case attribution is inferred
+because the failed process produced no complete synccheck XML. Only 100 errors
+were printed; 4,092 were suppressed. Ordinary numerical passes do not override
+this failure. The baseline remains unchanged, and no tolerances or gates were
+relaxed.
+
+The allocator fixture's historical label `Native` means custom dense FP4:
+656384 versus 800512 tokens (+21.96%) at the same 1 GiB budget. It is not a
+capacity measurement against upstream `auto`. Likewise, the 584-to-224-byte
+logical record comparison is separate from full allocator/serving capacity.
+
+Executed commands (one H100, no automatic retries):
 
 ```bash
-MODAL_PROFILE=peroace360 REMNANT_INTEGRATION=v0.5.22 \
-  REMNANT_VALIDATION_SUITE=v41-fp4 \
-  REMNANT_UPSTREAM_FLASHMLA_SOURCE=/tmp/remnant-v41-native-upstream \
-  modal run scripts/modal/kernels.py::preflight_kernels
+export MODAL_PROFILE=peroace360 REMNANT_INTEGRATION=v0.5.22
+export REMNANT_VALIDATION_SUITE=v41-fp4
+export REMNANT_UPSTREAM_FLASHMLA_SOURCE=/tmp/remnant-v41-native-upstream
+modal run scripts/modal/kernels.py::preflight_kernels
+modal run scripts/modal/kernels.py::validate_kernels \
+  --run-id v41-upstream-native-20261106-a --sanitizer \
+  --sanitizer-order synccheck,racecheck,memcheck --max-seconds 5000
+modal app stop --yes ap-G1IvP0SRm3PgcypwsALP6s
 ```
 
-Budget audit on 2026-11-06: carry forward the conservative $14.86730972 phase
-spend and add $0.04578652 for interrupted app `ap-pp99xYlWGFDaty71g9OCjp`.
-About $3.08690376 of the $18 work allowance remains before this turn's CPU
-checks. November's new billing period does not reset the cumulative ceiling.
-No competing allocations were present. The old app's logs are no longer
-available through `modal app logs`; no result receipt exists and it supplies no
-qualification. A bounded CPU-only inventory of cached image
-`im-MZqnw8UUhUxovTFl16mxln`, app `ap-vhh7mWndYQrfeIYqHUJuze`, confirmed
-there is no reusable standalone `flash_mla` package. It stopped successfully.
-Fresh native build, all required sanitizer tools and final timing will exceed
-the remaining work allowance; do not launch the GPU phase without extending it.
+Successful CPU app `ap-aPTqaH1sTVezb91Hb0nDhT` produced verified image
+`im-ev6fT7rDhSeuaU95l2p7zb`. GPU app `ap-G1IvP0SRm3PgcypwsALP6s` used an
+H100 80GB HBM3, driver 610.57.04, 2 CPU cores and 16 GiB RAM, with a 5,000 s
+work limit inside the 5,400 s platform cap. It ran for 2004.40 function seconds.
+The runner began racecheck after the synccheck failure; the app was then stopped
+explicitly. Stop exited successfully and `modal container list --json` returned
+`[]`. No timing allocation followed.
 
-Six focused CPU contracts passed on Modal, including Native FP8 rounding/tail
-preservation, paired ratios, protocol/provenance rejection, unchanged V4 matrix
-and the actual Native callback receiving fresh metadata on each call. App
-`ap-0kO7GeNg8yuPC74oGbA1tU`, cached image
-`im-5xaIDft0ZH2Btx246EG12x`: `pytest -q benchmark/remnant/test_microbench.py -k
-'established_matrix_and_profile_coverage or paired_ratios_and_round_percentile
-or v41_native_reference or v41_three_path_ratios or v41_native_call or
-v41_fp4_matrix_and_timing_gate'` reported **6 passed**, with lint and syntax
-checks passing on Modal. Exact invocation, commands and content hashes are in
-`qualification.json`. The initial five-test attempt passed but its formatter
-export exceeded the log-line limit; the bounded chunked export rerun succeeded.
-Only task formatting was applied; unrelated formatting was preserved.
+Canonical volume: `remnant-stage2a-results`. All 37 validation/build artifacts
+(1,514,781 bytes), including the failed log, partial racecheck XML and complete
+ordinary/CPU XML, are retained at
+`microbench/v41-upstream-native-20261106-a/validation/`. Names, sizes and SHA256s
+are in [qualification.json](qualification.json). Earlier CPU attempts and the
+successful preflight console are retained under
+`microbench/v41-upstream-native-20261106-cpu/`; their failures remain recorded.
+No raw tensors, binaries or new source harness were added to Git.
 
-CPU preflight app `ap-t6JxrQ4CWg4fQC3XW5y7Yp` was canceled during the vendor
-image pull before compilation. Static review found that SGLang's
-`on_after_cuda_graph_warmup` resets C1/C2 metadata, so the draft's warmed
-scheduler would have omitted first-use work from capture. The corrected
-callback and a regression test now preserve that boundary. No usable native
-build or GPU receipt came from the canceled app. Its reported cost was
-$0.00025346; all settled CPU attempts before the final check total $0.00282954,
-with the last six-test worker still subject to billing lag.
+The approved cumulative ceiling is **$25**, with **$2 reserved** and at most
+**$23 projected work**. Carry-forward compute was $15.46969128. This continuation
+adds $0.35721953 CPU and $2.32274730 GPU-run compute, yielding conservative
+cumulative **$18.14965811** and **$4.85034189 remaining work allowance** before
+billing revisions. November's billing reset and free credits do not reset the
+ceiling. No profile settings were changed, and no weights, model volumes,
+serving, GPUQ, SM100 execution or profiling were used.
 
-The committed-source CPU preflight (`7597930` / `26489ab0`), app
-`ap-3aCCm3gJHFSFoiQ4KTQFH5`, built both fork extensions successfully. The
-separate upstream package reached 54/62 compilation steps before its remaining
-658-second deadline expired. No GPU was allocated. The bounded retry increases
-parallel compilation to four jobs on the same 16-CPU/64-GiB builder; source,
-arithmetic, toolchain and the initial 900-second outer build cap were unchanged. V4.1's
-GPU validation default is 5,400 seconds so the complete 38-case/tool matrix can
-run in one allocation; launching it still requires adequate remaining budget.
+**Purpose:** establish a truthful upstream Native comparison. **Risk:** original
+Native fails the required synchronization gate. **Evidence:** complete CPU and
+ordinary GPU passes plus the source-bound failed sanitizer log. **Limitations:**
+no qualified v4 timing, complete sanitizer matrix, independent fresh review,
+full-model quality or serving-capacity claim. **Rollback:** omit this benchmark
+suite; runtime `auto` remains unchanged, or restore SGLang `4f8fb091`.
 
-The four-job retry, app `ap-g1saJgl1HC7PUrEG2esBhC` on frozen parent `2655739`
-and SGLang `26489ab0`, built the original upstream package (62/62 steps), verified
-SM90a-only binaries, passed its CPU import check, and collected all 43 ordinary
-GPU qualification cases. The Native binary SHA256 is
-`4a0369c3d28742b4745b451c6bf4d19d58a61c63d93289c6231e4c0e59669971`.
-The shared CPU deadline then interrupted the CPU test run after two tests.
-**Preflight failed; no GPU was allocated.** A 1,200-second CPU build cap is now
-prepared, retaining a 200-second cleanup/reporting allowance; it has not been
-rerun. The failed image is not a qualified artifact.
-
-Final focused checks used SGLang's actual `.isort.cfg`, cached Modal image
-`im-m8PLjs2g4OTkQGaY4z3GsG`, app `ap-eWIMVXuSpdOHI4DD6sM12V`: **6 passed**,
-syntax and scoped lint passed. SGLang `3c595a2b` differs from the frozen build
-source by a single import separator. Exact commands, source hashes, failures and
-the verified control manifest are retained in `qualification.json`.
-
-**Purpose:** measure Packed against unchanged upstream Native, retaining custom
-dense FP4 as a separate diagnostic. **Risk:** the new original control and
-fixtures have not passed GPU correctness or sanitizer checks. **Evidence:** six
-focused Modal CPU contracts pass; the upstream package builds and imports, with
-verified source/wrapper/binary hashes and SM90a target. **Limitations:** complete
-CPU preflight, GPU numerical/graph/stream/sanitizer checks, timing and independent
-review remain pending. **Rollback:** omit this benchmark suite; runtime `auto`
-retains its existing behavior, or restore prior SGLang pin `4f8fb091`.
-
-The user approved raising the cumulative ceiling to $25 with the same $2 reserve.
-Full qualification and timing are estimated around $6 using
-the prior sanitizer durations and [current resource rates](https://modal.com/pricing).
-
-Handoff: this turn used **$0.55659504 compute**, including both build failures
-and the canceled preparation. Conservative cumulative phase compute is
-**$15.46969128**; **$2.53030872** remains for work while preserving the $2
-reserve. All task apps are stopped; GPU allocation/time is zero. Raw CPU logs
-and the control manifest are retained on `remnant-stage2a-results` at
-`microbench/v41-upstream-native-20261106-cpu`; `qualification.json` records
-their sizes and hashes. Temporary CPU invocation scripts were consolidated into
-that JSON reproduction record. The isolated upstream checkout stays active at
-`/tmp/remnant-v41-native-upstream` for the next authorized preflight; its cleanup
-is deferred until this comparison finishes.
+Next step: review the original upstream barrier failure and agree how to handle
+that baseline before more GPU work. A synchronization-fixed control needs a
+separate name; it cannot become unchanged Native. Keep the canonical runner and
+independent references. The isolated original checkout at
+`/tmp/remnant-v41-native-upstream` remains active for reproduction; its cleanup
+is deferred while this comparison is blocked. Local raw downloads are removed
+after recording their hashes; canonical remote evidence remains. No kernel,
+runtime, pin or push change was made during this continuation.
 
 Published branch: **`ds41-flash-packed`** in the parent, SGLang v0.5.22 and
 FlashMLA v0.5.22 repositories. It continues the completed local

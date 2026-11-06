@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "passed_model_free_correctness_and_timing",
+  "status": "historical_pass_current_upstream_native_comparison_unqualified",
   "experiment": "V4.1 Packed FP4 SM90 engineering validation",
   "model_load": false,
   "budget": {
@@ -4183,9 +4183,9 @@
   },
   "current_milestone": "review_fixes",
   "upstream_native_comparison": {
-    "status": "unqualified",
+    "status": "unqualified_upstream_native_synccheck_failure",
     "protocol": "remnant-v41-fp4-decode-v4",
-    "candidate_sglang": "3c595a2b",
+    "candidate_sglang": "3c595a2b70b9c6d9e45843d5884acc3ea5c3322c",
     "candidate_flashmla": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208",
     "upstream_flashmla": "3620b63fc4ebe33950c50e1b7701b6607f44150e",
     "cutlass": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
@@ -4301,8 +4301,6 @@
       "reserve_usd": 2,
       "prior_conservative_phase_usd": 14.86730972,
       "prior_interrupted_build_usd": 0.04578652,
-      "remaining_before_cpu_usd": 3.08690376,
-      "current_turn_settled_cpu_usd_before_final_check": 0.00282954,
       "extension_request": {
         "ceiling_usd": 25,
         "reserve_usd": 2,
@@ -4311,10 +4309,28 @@
         "approved_reply": "Raise the ceiling to $25; keep the $2 reserve",
         "approved_date": "2026-11-06"
       },
-      "current_turn_compute_usd": "0.55659504",
-      "conservative_phase_compute_usd": "15.46969128",
-      "remaining_work_usd": "7.53030872",
-      "current_turn_billing": [
+      "conservative_phase_compute_usd": "18.14965811",
+      "remaining_work_usd": "4.85034189",
+      "work_ceiling_usd": 23,
+      "max_projected_work_usd": 23,
+      "conservative_phase_before_this_continuation_usd": "15.46969128",
+      "continuation_cpu_preflight_usd": "0.35721953",
+      "continuation_gpu_validation_usd": "2.32274730",
+      "continuation_compute_usd": "2.67996683",
+      "billing_lag": true,
+      "continuation_billing": [
+        {
+          "app_id": "ap-aPTqaH1sTVezb91Hb0nDhT",
+          "cost_usd": "0.35721953"
+        },
+        {
+          "app_id": "ap-G1IvP0SRm3PgcypwsALP6s",
+          "cost_usd": "2.32274730"
+        }
+      ],
+      "preparation_settled_cpu_usd_before_final_check": 0.00282954,
+      "preparation_compute_usd": "0.55659504",
+      "preparation_billing": [
         {
           "object_id": "ap-0kO7GeNg8yuPC74oGbA1tU",
           "description": "remnant-v41-upstream-native-cpu",
@@ -4372,7 +4388,7 @@
           "cost": "0.00021101"
         }
       ],
-      "work_ceiling_usd": 23
+      "remaining_work_before_preparation_under_20_usd": 3.08690376
     },
     "pending": [
       "CPU native build/preflight",
@@ -4622,11 +4638,12 @@
       "function_cpu_core_per_second_usd": 1.31e-05,
       "function_memory_gib_per_second_usd": 2.22e-06
     },
-    "decision": "Resume authorized CPU preflight, strict GPU qualification and final timing within cumulative 25 USD ceiling; no model weights or serving.",
+    "decision": "Stop unqualified after unchanged upstream Native synccheck failure. Preserve the original source and historical measurements; do not patch or relabel the baseline, relax sanitizer gates, or launch timing.",
     "allocations_at_handoff": {
-      "active": [],
-      "all_task_apps_stopped": true,
-      "gpu_time_seconds": 0
+      "active_containers": [],
+      "confirmation": "modal container list --json returned []; own app stop --yes exited 0",
+      "all_task_gpu_allocations_stopped": true,
+      "gpu_function_seconds": 2004.395015139
     },
     "cpu_raw_artifacts": {
       "volume": "remnant-stage2a-results",
@@ -4651,9 +4668,287 @@
         "control-manifest.json": {
           "bytes": 506,
           "sha256": "a8c44b2733f036237bc803ceb5334d9fd7f194e1ab08bbddd71e68c5a00496b9"
+        },
+        "preflight-1200.log": {
+          "bytes": 57130,
+          "sha256": "a65ff6c136714d3968aa0d03298dd18dd491f30912ef9010f4b1f496a08e716f"
         }
       },
-      "upload_status": "uploaded; remote listing verified file names and sizes"
+      "upload_status": "Earlier files remotely listed; successful 1200-second preflight console upload acknowledged by Modal CLI"
+    },
+    "candidate_parent": "7e913f5fbe05b09d3d00d45110b1aa22d69a69c6",
+    "completed_cpu_preflight": {
+      "app_id": "ap-aPTqaH1sTVezb91Hb0nDhT",
+      "status": "passed",
+      "image_id": "im-ev6fT7rDhSeuaU95l2p7zb",
+      "compiled_base_image": "im-lpbCUXtT6SYbppGBtDYhFa",
+      "native_extensions_built_on": "Modal CPU image-build workers",
+      "outer_timeout_seconds": 1200,
+      "work_timeout_seconds": 1000,
+      "tests_passed": 27,
+      "subtests_passed": 15,
+      "warnings": 23,
+      "pytest_seconds": 171.88,
+      "gpu_tests_collected": 43,
+      "sanitizer_cases_collected_per_tool": 38,
+      "manifest_sha256": "84e78a849fcfd2db9743b4fac37305f9236dcdece686f83a33463d0356743842",
+      "upstream_native_control": {
+        "source_commit": "3620b63fc4ebe33950c50e1b7701b6607f44150e",
+        "source_sha256": "5a29e72bcea53f389736b48b60d7c72907d8f2a762083d1bb5e59cd348cad7d0",
+        "binary": "/opt/flashmla-upstream-native/flash_mla/cuda.cpython-312-x86_64-linux-gnu.so",
+        "binary_sha256": "a9a73f98b01b170629847da67870868c23e56f2f163d6f6690a5281f978c220a",
+        "python": "/opt/flashmla-upstream-native/flash_mla/flash_mla_interface.py",
+        "python_sha256": "68516b8e7350ef72282443d737daa81381e5ce07b7bcc889ddbb92a6eb4a1db7",
+        "architectures": [
+          "sm_90a"
+        ],
+        "build_flags": {
+          "FLASH_MLA_DISABLE_SM100": "1",
+          "FLASH_MLA_DISABLE_SM90": "0",
+          "MAX_JOBS": "4",
+          "NVCC_THREADS": "1"
+        }
+      },
+      "command": "MODAL_PROFILE=peroace360 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_UPSTREAM_FLASHMLA_SOURCE=/tmp/remnant-v41-native-upstream modal run scripts/modal/kernels.py::preflight_kernels",
+      "console_log_volume_path": "microbench/v41-upstream-native-20261106-cpu/preflight-1200.log",
+      "console_log_sha256": "a65ff6c136714d3968aa0d03298dd18dd491f30912ef9010f4b1f496a08e716f"
+    },
+    "gpu_validation": {
+      "run_id": "v41-upstream-native-20261106-a",
+      "app_id": "ap-G1IvP0SRm3PgcypwsALP6s",
+      "container_id": "ta-01M6QRFS4XHQC8JM94QP9MHNGR",
+      "profile": "peroace360",
+      "gpu": "NVIDIA H100 80GB HBM3",
+      "driver_version": "610.57.04",
+      "cpu_cores": 2,
+      "memory_gib": 16,
+      "platform_timeout_seconds": 5400,
+      "work_timeout_seconds": 5000,
+      "function_seconds": 2004.395015139,
+      "ordinary_tests": {
+        "passed": 43,
+        "failed": 0,
+        "warnings": 21,
+        "seconds": 47.67,
+        "xml_sha256": "9b33ceff104a2f0645070791211fac6b98a0b79c93c87bb5d5645e2f79add759"
+      },
+      "allocation": {
+        "status": "passed",
+        "baseline": "custom dense FP4, not upstream auto FP8/BF16",
+        "capacity_gain_percent": 21.957878315132607,
+        "serving_capacity_verified": false
+      },
+      "sanitizers": {
+        "synccheck": {
+          "status": "failed",
+          "required_cases": 38,
+          "preceding_cases_completed": 36,
+          "complete_xml_exists": false,
+          "error_summary_count": 4192,
+          "errors_printed": 100,
+          "errors_suppressed": 4092,
+          "diagnostic": "Barrier error detected. Divergent thread(s) in block.",
+          "reported_at": "cutlass::arch::NamedBarrier::arrive_and_wait_internal, barrier.h:286; upstream sm90/decode/sparse/splitkv_mla.cuh:418",
+          "kernel": "sm90::decode::sparse::KernelTemplate<(ModelType)1, (int)64>",
+          "host_binary": "cuda.cpython-312-x86_64-linux-gnu.so (separately verified original upstream package)",
+          "case_inference": "First upstream Native comparison [128], inferred from the 36 preceding pytest progress marks and collection order; no complete XML was produced.",
+          "qualification": "failed; preceding progress marks do not qualify partial coverage"
+        },
+        "racecheck": {
+          "status": "interrupted",
+          "completed_cases": 7,
+          "required_cases": 38,
+          "seconds": 85.7,
+          "reason": "Own app stopped after synccheck failure; not qualified"
+        },
+        "memcheck": {
+          "status": "not_run",
+          "required_cases": 38
+        }
+      },
+      "command": "MODAL_PROFILE=peroace360 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_UPSTREAM_FLASHMLA_SOURCE=/tmp/remnant-v41-native-upstream modal run scripts/modal/kernels.py::validate_kernels --run-id v41-upstream-native-20261106-a --sanitizer --sanitizer-order synccheck,racecheck,memcheck --max-seconds 5000",
+      "stop_command": "MODAL_PROFILE=peroace360 modal app stop --yes ap-G1IvP0SRm3PgcypwsALP6s",
+      "stop_exit_code": 0,
+      "result_status": "failed",
+      "result_error": "KeyboardInterrupt()"
+    },
+    "raw_gpu_artifacts": {
+      "volume": "remnant-stage2a-results",
+      "path": "microbench/v41-upstream-native-20261106-a/validation",
+      "files": {
+        "racecheck.log": {
+          "bytes": 418,
+          "sha256": "ed2259612ae0ba00ae6c0076521765e43bf0192dae4f58e33545b0823597d3e8"
+        },
+        "result.json": {
+          "bytes": 13093,
+          "sha256": "c7f906027a91637a5293fe6a5a0c2c0dbad1dc53dc8bc8f5001de37d0d0b6ab5"
+        },
+        "racecheck.xml": {
+          "bytes": 1245,
+          "sha256": "74bc5374fb33f615af0274944a60c02a4ec284254c32584f70e34e74f46b53e9"
+        },
+        "synccheck.log": {
+          "bytes": 1187699,
+          "sha256": "00fbbc47433be4962d063b4ae6077f493d2acd4641947e3b16e3b627196d3197"
+        },
+        "validation.log": {
+          "bytes": 193,
+          "sha256": "088125d3fd64729ff4cb516fdf415f4244078cb7e38da7a705e44b4cac39003f"
+        },
+        "validation.xml": {
+          "bytes": 6031,
+          "sha256": "9b33ceff104a2f0645070791211fac6b98a0b79c93c87bb5d5645e2f79add759"
+        },
+        "allocation.json": {
+          "bytes": 4710,
+          "sha256": "6fcb6bf0cdf3f2b80337f731c0d2fd65f0d2144ee253553e4d3f24dc2e4798c0"
+        },
+        "sanitizer-version.log": {
+          "bytes": 125,
+          "sha256": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673"
+        },
+        "sanitizer-control-empty.log": {
+          "bytes": 124,
+          "sha256": "fb8d9ea8d2be1a0fc356e4685eab89b230d089597899abc6f9cde9b1b6cc3900"
+        },
+        "sanitizer-control-bindings-query.log": {
+          "bytes": 139,
+          "sha256": "a518617e603ae9e3659eecdf4257ea7eca94fb82a98faf99a78827514ec53fc4"
+        },
+        "sanitizer-control-bindings-import.log": {
+          "bytes": 240,
+          "sha256": "4806c657afdb0ef7bbbb2360916bf4ad14b5d2a0aac0e56710f31a9d1cfecc07"
+        },
+        "model-config.json": {
+          "bytes": 1888,
+          "sha256": "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023"
+        },
+        "driver-version.log": {
+          "bytes": 54,
+          "sha256": "641baa7aef4714d620d9cb838ee74134559d52457e2f5803efc69bd52a40a065"
+        },
+        "cpu-preflight/upstream-native-build.log": {
+          "bytes": 228037,
+          "sha256": "fb1e548dca762494a0651e731ba9edfc20cc2f719c44aa57148ec4401e9ce3e3"
+        },
+        "cpu-preflight/upstream-native-architectures.log": {
+          "bytes": 2562,
+          "sha256": "352fad12253d99f74790cb04f4b37f0bfdcfb8efcbfb41f6f42cd9836ac5dd42"
+        },
+        "cpu-preflight/sgl_kernel_jit_dpsk_v4_store_flashmla_bf16_t_int64_t_256_V4_true.so.architectures.log": {
+          "bytes": 95,
+          "sha256": "62a58373cf811992a7212069d4c2b1462d5ca90231275e7bb100fa66fcf86a37"
+        },
+        "cpu-preflight/sgl_kernel_jit_dpsk_v4_store_flashmla_bf16_t_int64_t_128_V4_true.so.architectures.log": {
+          "bytes": 95,
+          "sha256": "fffb65eeb447a42e6159ed65f3a27a104c4d32156a5124af300c9b1e1346f44c"
+        },
+        "cpu-preflight/sgl_kernel_jit_dpsk_v4_fused_norm_rope_v2_fp32_t_512_64_64_0_false_V4_true.so.architectures.log": {
+          "bytes": 105,
+          "sha256": "4eb685fff5f7f192d09de967027b61c9c3da6e99fe0310c037d81a28921438b3"
+        },
+        "cpu-preflight/sanitizer-version.log": {
+          "bytes": 125,
+          "sha256": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673"
+        },
+        "cpu-preflight/sanitizer-extract.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "cpu-preflight/sanitizer-collection.log": {
+          "bytes": 3610,
+          "sha256": "a1a4350d3b8ab81b3868b487be403452a58921a49bbee33e5d3bafee5b9a286c"
+        },
+        "cpu-preflight/remnant_ops.cpython-312-x86_64-linux-gnu.so.architectures.log": {
+          "bytes": 70,
+          "sha256": "48127697569bc605f8e446d1b6c954aae0ae9ee636b0699e4bfb0f677ad679a9"
+        },
+        "cpu-preflight/remnant-native-store.so.architectures.log": {
+          "bytes": 51,
+          "sha256": "890f8fc3b6ca5a8a5765d3d2111c3f4cee284903daaf75fc70eab8afabc2ed61"
+        },
+        "cpu-preflight/qualification-tests.log": {
+          "bytes": 2534,
+          "sha256": "89ad5e8295739497e20d7ccb40b9bd8932963bde7c4e1c030584e8aad7f63e55"
+        },
+        "cpu-preflight/prefill-imports.log": {
+          "bytes": 478,
+          "sha256": "976b9fc1a6daa9b4c7b742e80cc18ee6bca69f556fb25275007483104978f3ac"
+        },
+        "cpu-preflight/nvcc.log": {
+          "bytes": 211,
+          "sha256": "fc7ce0c80d28ed925fd490dc4e3915ce620fcf115f965189688c6f049243aad5"
+        },
+        "cpu-preflight/imports.log": {
+          "bytes": 506,
+          "sha256": "3c631aebdcf6ac09dab568e56332b6ed0b71cafe1a1c38bdc715f1bf7e3e8c64"
+        },
+        "cpu-preflight/fp4-precompile.log": {
+          "bytes": 448,
+          "sha256": "d33a945f1bf85e63ebc2dc3318c143e3652ffd88461dc44c6ef20dfb8941b880"
+        },
+        "cpu-preflight/fp4-benchmark-imports.log": {
+          "bytes": 509,
+          "sha256": "ab49313e59ffca1a4e58144d8fbb36825576bd02870ee4619c1d093789c52c91"
+        },
+        "cpu-preflight/flashmla_ops.cpython-312-x86_64-linux-gnu.so.architectures.log": {
+          "bytes": 1743,
+          "sha256": "335d24f88bbc3a4b8ffdab9f57203e6c679e2951d8794444ba1cce1e1871e654"
+        },
+        "cpu-preflight/cuda.cpython-312-x86_64-linux-gnu.so.architectures.log": {
+          "bytes": 2562,
+          "sha256": "352fad12253d99f74790cb04f4b37f0bfdcfb8efcbfb41f6f42cd9836ac5dd42"
+        },
+        "cpu-preflight/cpu-tests.xml": {
+          "bytes": 4077,
+          "sha256": "85e266998cf748ed4b2f2a779d51fa7b83a398f67a93e1ef481c0bd47ad34836"
+        },
+        "cpu-preflight/cpu-tests.log": {
+          "bytes": 209,
+          "sha256": "23f4b91e13b7e914e28523896e1707ca5dd145ac51d255f37b91b1657d0b7ef3"
+        },
+        "cpu-preflight/collection.log": {
+          "bytes": 4174,
+          "sha256": "e21bf4a29fd2a21398b1f8f20eb9d32e51d83bb8a4be01486cbebc6c1d2610bd"
+        },
+        "cpu-preflight/benchmark-collection.log": {
+          "bytes": 17435,
+          "sha256": "bf69e96ecb7f9420588918114c722ad4e6ce7eb71e64971dd3338ec42e17bd32"
+        },
+        "cpu-preflight/base-imports.log": {
+          "bytes": 490,
+          "sha256": "f1399efdd581336843265027192957a36020e50ef1340ac2081cb3ff8f350252"
+        },
+        "build-manifest.json": {
+          "bytes": 28696,
+          "sha256": "84e78a849fcfd2db9743b4fac37305f9236dcdece686f83a33463d0356743842"
+        }
+      },
+      "collection": "37 files downloaded and hashed; 1514781 bytes; no tensors or binaries added to Git"
+    },
+    "timing": {
+      "status": "not_run",
+      "reason": "Required original Native synchronization gate failed; no timing allocation or new v4 latency measurement",
+      "required_cases": 10,
+      "required_paths": [
+        "native",
+        "dense_fp4",
+        "kernel"
+      ]
+    },
+    "independent_review": {
+      "status": "pending",
+      "note": "No fresh independent review completed for this comparison; no qualification or production promotion claimed."
+    },
+    "next_step": "Review the original Native barrier failure and agree a baseline/acceptance policy before further GPU work. A synchronization-fixed control must have a separate name and cannot be called unchanged Native.",
+    "cleanup": {
+      "retained": "Canonical benchmark code and independent references; exact original Native source at /tmp/remnant-v41-native-upstream for reproduction; all raw evidence in existing Modal volume prefixes",
+      "consolidated": "Current question, outcome, commands and budget in this README/JSON; historical CPU attempts remain in this JSON and Git",
+      "local_raw_downloads": "Remove after evidence commit; canonical remote copies remain",
+      "source_cleanup_deferred": "Isolated upstream checkout remains active because the comparison is blocked rather than completed",
+      "code_or_pin_changes_this_continuation": false,
+      "pushed": false
     }
   }
 }

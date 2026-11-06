@@ -13,6 +13,19 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Upstream Native validation from parent `7e913f5fbe05`, SGLang
+  `3c595a2b70b9` / FlashMLA `858bb1ccac6f` (unchanged): Modal CPU build/precompile
+  and 27 tests + 15 subtests passed, then 43 ordinary H100 cases passed. Original
+  FlashMLA `3620b63` failed strict synccheck with 4,192 divergent-thread barrier
+  errors at upstream sparse decode `splitkv_mla.cuh:418`. The preceding 36
+  custom-path cases completed, but no complete synccheck XML exists. The app was
+  stopped; partial racecheck (7/38) is unqualified, memcheck/timing are not run.
+  Original Native and the failed evidence are preserved; no latency claim or gate
+  waiver. All containers stopped, conservative cumulative compute $18.15 under
+  the approved $25 ceiling with $2 reserve. Independent fresh review remains
+  pending. Evidence-only continuation; no runtime/kernel/pin changes or push.
+  Rollback omits the benchmark suite or restores SGLang `4f8fb091`.
+
 - Upstream Native comparison candidate, based on parent `d2e3fcd`: SGLang
   `3c595a2b` / FlashMLA `858bb1ccac6f` unchanged. Protocol v4 compares upstream
   H100 auto FP8/BF16 with custom dense FP4 and Packed, preserving the ten

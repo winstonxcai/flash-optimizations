@@ -57,11 +57,19 @@ FP8/BF16 path (584 bytes), built separately at FlashMLA `3620b63`; the previous
 custom dense FP4 control is now `dense_fp4` (288 bytes). Packed remains 224
 bytes. Prior v1–v3 ratios and allocator fixtures used the custom dense FP4
 control and do not measure upstream Native. CPU matrix, ratios and rounding
-contracts passed. The original control built and imported on CPU, but complete
-CPU preflight timed out; GPU numerical/graph/stream/sanitizer checks, final
-timing and independent review remain pending. No runtime or kernel arithmetic
-changes. Source/binary identities bind the separate control to the new receipts;
-the required sanitizer matrix adds both global page sizes (38 cases/tool).
+contracts passed. On frozen parent `7e913f5`, the completed Modal CPU preflight
+passed 27 tests + 15 subtests, followed by 43 ordinary H100 numerical/graph/stream
+cases. Strict synccheck then reported 4,192 divergent-thread barrier errors in
+the original upstream H64 sparse kernel (`splitkv_mla.cuh:418`); no complete
+synccheck XML was produced. Racecheck was interrupted after 7/38 cases, memcheck
+was not run, and timing stayed blocked. This comparison is unqualified;
+independent fresh review is also pending. The baseline remains unchanged.
+No runtime or kernel arithmetic changes. Source/binary identities bind the
+separate control to the new receipts; the required sanitizer matrix includes
+both global page sizes (38 cases/tool). All task containers are stopped;
+conservative cumulative compute is $18.15 under the approved $25 ceiling,
+retaining the $2 reserve. Prior allocator results compare custom dense FP4
+against Packed, not upstream `auto`.
 See the single [experiment record](../benchmarks/microbench/v41-packed-fp4/README.md).
 Rollback omits the timing suite or restores SGLang `4f8fb091`; runtime `auto`
 continues to select its existing path.
