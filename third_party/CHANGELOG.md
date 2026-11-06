@@ -17,8 +17,12 @@ records rather than this milestone log.
   `4e72722671d8`: add a source-verified pristine upstream FP8 attention baseline
   and a separate 24-case TP4 decode protocol on one H200. Production kernels,
   persistent formats and serving defaults are unchanged. Fork CPU contracts:
-  134 passed, 103 GPU skips; independent review passed. Paid preparation and
-  timing outcomes remain pending in the GLM ledger's new $5 phase.
+  134 passed, 103 GPU skips; parent 159 full checks and three corrective checks
+  passed; independent review passed. Measured parent `5acc209` completed all 24
+  cases with +1.28947% batch-weighted overhead (range -1.97922% to +6.12250%).
+  Numerical/graph gates pass; matching H100 focus evidence is reused. All
+  workers stopped. $0.45247 reported / $0.78581 conservative under the separate
+  $5 cap, including the diagnosed and corrected CPU-only preparation failure.
 
 - Main integration from parent `cbfeeba` and main `dac0205`, retaining SGLang
   `e0d6d500d6dc` / FlashMLA `4e72722671d8` and both v0.5.18 pins. Preserve main's

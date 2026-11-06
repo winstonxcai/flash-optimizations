@@ -560,3 +560,8 @@ The upstream-decode experiment adds only benchmark/provenance code. It loads
 the exact upstream v0.5.22 attention module alongside production Direct on one
 H200, with 16-head TP4 geometry and 24 decode cases. It does not establish
 full-model serving performance. See the GLM experiment README and ledger.
+
+The source-pinned 24-case upstream decode comparison passed on H200: Direct
+adds +1.28947% batch-weighted complete-call overhead, with all numerical and
+changing-input graph checks passed. These are attention-only results; see the
+[per-case table](../benchmarks/microbench/glm53-packed/README.md#completed-upstream-decode-result).

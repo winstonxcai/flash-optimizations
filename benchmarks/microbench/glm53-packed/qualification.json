@@ -3838,7 +3838,7 @@
     "rollback": "Native selection or recorded pre-integration pins; preserve merge parents and exact validation identities."
   },
   "upstream_decode": {
-    "status": "implementation",
+    "status": "passed",
     "protocol": "remnant-glm-upstream-decode-v1",
     "author": "Winston Cai",
     "starting_parent": "1b19ad9f9f629d8f389f0160571a58873480a02f",
@@ -3851,10 +3851,17 @@
       "gpu_max_usd": 3,
       "reserve_usd": 1,
       "routine_stop_usd": 4,
-      "accounted_usd": 0.2,
+      "accounted_usd": 0.7858039981877009,
       "prior_spending": "Preserved in all other phase records; this authorization is separate.",
-      "reported_compute_usd": 0.10216386,
-      "cpu_accounted_usd": 0.2
+      "reported_compute_usd": 0.45247396,
+      "cpu_accounted_usd": 0.4,
+      "reported_total_metered_delta_usd": 0.4500012,
+      "gpu_accounted_usd": 0.3858039981877009,
+      "remaining_to_hard_cap_usd": 4.214196001812299,
+      "reserve_intact": true,
+      "account": "winstoncai233",
+      "baseline_compute_usd": "19.55681139",
+      "final_compute_usd": "20.00928535"
     },
     "worktree": "data/source-snapshots/glm53-upstream-decode",
     "branch": "exp/glm53-flash/upstream-decode",
@@ -3872,16 +3879,462 @@
         "gpu_allocated": false,
         "diagnosis": "Driver-stub directory already owned by the reuse preflight. Give upstream delta compilation its own build/upstream directory. Regression and narrow review required before retry.",
         "artifacts": "data/modal/glm53-upstream-decode/cpu"
+      },
+      {
+        "stage": "cpu-preparation",
+        "status": "passed",
+        "account": "winstoncai233",
+        "app_id": "ap-3hoQV44sP59AkZ3Gz70rEL",
+        "source_parent": "5acc2097388692a722f9f732bebdeab3996f6c16",
+        "image": "im-E77qOCLcBadvS16nBehz0W",
+        "controller_seconds": 406.617516040802,
+        "gpu_allocated": false,
+        "artifacts": "data/modal/glm53-upstream-decode/cpu-corrective"
+      },
+      {
+        "stage": "paired-decode",
+        "status": "passed",
+        "run_id": "glm53-upstream-decode-20261106T065615Z",
+        "account": "winstoncai233",
+        "app_id": "ap-zy60PgMLUqdILkYmRdejiT",
+        "gpu_function_seconds": 105.933772082,
+        "controller_seconds": 278.6035451889038,
+        "gpu_conservative_usd": 0.3858039981877009,
+        "coverage": "24 cases, both paths, 30 paired rounds, strict numerical and graph gates passed"
       }
     ],
     "sglang": "99499fb02c86a21e1d3cb0e73f892f1658ad46e3",
     "cpu_checks": {
-      "fork": "134 passed, 103 skipped",
+      "fork": "134 passed, 103 GPU skips",
       "parent_focused": "2 passed",
       "fresh_context_review": "passed after three concrete preflight fixes",
       "production_kernel_hashes_unchanged": true,
-      "parent": "159 passed in 86.502 seconds",
-      "ownership_correction": "3 focused tests passed"
+      "parent": "159 full-suite tests passed; three focused ownership/dispatch/qualification checks passed after the CPU-only correction",
+      "ownership_correction": "3 focused tests passed",
+      "result_reconciliation": "Strict complete-record validation passed locally under Python 3.12.5; no tolerance or statistic comparison was relaxed. Python 3.11 differs in the final floating-point sum and is not the reconciliation environment.",
+      "local_environment_interruption": "Initial broad checks ran out of local disk space; retained checkouts were made storage-sharing copies without changing bytes, both pinned integration pairs initialized, and the final suites passed."
+    },
+    "decision": "Complete scoped comparison; keep benchmark and provenance checks. Performance is descriptive; no serving or model-quality claim.",
+    "source_parent": "5acc2097388692a722f9f732bebdeab3996f6c16",
+    "image": "im-E77qOCLcBadvS16nBehz0W",
+    "upstream": {
+      "commit": "baa9befa381511cd4d56f83980951e5a45fffc6d",
+      "files": {
+        "kernels/ops/attention/dsa/tilelang_kernel.py": "3d288dc04676b304e1a4d1a44703a8281762ebe789ca7cdd745b0c80fcac591e",
+        "kernels/ops/quantization/fp8_kernel.py": "f5b428f2cb51b7707b19dd7b55e9ef61818a5f99b1cb382cd5e811429dd46806",
+        "srt/utils/__init__.py": "d4c887ce6d68fb14d2f870c50dabc621da1c67a85823e8c8cf704392865963c8",
+        "srt/utils/common.py": "5423d1bb153e72852306934ab56ee0b3eccab8b3ec6395dc9da0fea79f7e74da"
+      },
+      "scope": "attention-module"
+    },
+    "runtime_hashes": {
+      "kernels/ops/attention/dsa/tilelang_kernel.py": "2a4254889463f882f073d7e1a54311d0802e8e82e66bf1377a7b3edfc00d0875",
+      "kernels/jit/include/sgl_kernel/glm_packed_decode.cuh": "9394e536d914826f6654474f798bd5c24ab864c4de4dcdd6b90cb4b3fe96181f",
+      "srt/remnant/glm.py": "50565426fe36070791743987cf41d177081874c9a52d9bfa6f30805b7ae307aa",
+      "srt/remnant/glm_pool.py": "cfc36ad197037879867417df91e8cfb91f128fa24bc1cbfa88ae89eeae4e301d",
+      "srt/remnant/reference.py": "6231ec9622623643eba8ab50d714f9433cd13672be927030c4070ae05452021e",
+      "srt/layers/layernorm.py": "98072d836e0c77312058521ee1015c80177b2c370da7408fd066eec61015ff21"
+    },
+    "qualification": {
+      "status": "passed",
+      "scope": "Reused matching focused H100 byte-loader/decode sanitizer evidence; fresh H200 full-fixture numerics and changing-input graph replay. Broad qualification remains separate.",
+      "runs": [
+        "glm53-ds41-fallback-tools-20261105t1338z"
+      ],
+      "tools": [
+        "synccheck",
+        "racecheck",
+        "memcheck"
+      ],
+      "raw_receipt_sha256": "b3af95a043870e07271310e846fc6829a79dc0f73f9b2e2c26e457aabd06f83b"
+    },
+    "timing": {
+      "run_id": "glm53-upstream-decode-20261106T065615Z",
+      "protocol": "remnant-glm-upstream-decode-v1",
+      "account": "winstoncai233",
+      "app_id": "ap-zy60PgMLUqdILkYmRdejiT",
+      "device": "NVIDIA H200",
+      "cases": 24,
+      "rounds": 30,
+      "paths": [
+        "upstream",
+        "direct"
+      ],
+      "summary": {
+        "batch_weighted_overhead_percent": 1.2894701620661335,
+        "by_heads": {
+          "16": 1.2894701620661335,
+          "8": null
+        },
+        "completed_cases": 24,
+        "unacceptable_2x_cases": []
+      },
+      "case_results": [
+        {
+          "case": "decode_h16_q1_t0_independent_warm",
+          "batch": 1,
+          "tails": 0,
+          "cache_policy": "warm",
+          "upstream_mean_us": 20.355199972788494,
+          "direct_mean_us": 21.020597219467163,
+          "paired_overhead_percent": 3.268939671365212,
+          "paired_ratio_mean": 1.0326893967136521,
+          "paired_ratio_median": 1.0323265201200025,
+          "paired_ratio_p95": 1.0344888620880512
+        },
+        {
+          "case": "decode_h16_q1_t0_independent_rotating",
+          "batch": 1,
+          "tails": 0,
+          "cache_policy": "rotating",
+          "upstream_mean_us": 20.18094091629529,
+          "direct_mean_us": 20.125103943912066,
+          "paired_overhead_percent": -0.2766708172818988,
+          "paired_ratio_mean": 0.997233291827181,
+          "paired_ratio_median": 0.9972436993250183,
+          "paired_ratio_p95": 0.99798338708778
+        },
+        {
+          "case": "decode_h16_q1_t3_independent_warm",
+          "batch": 1,
+          "tails": 3,
+          "cache_policy": "warm",
+          "upstream_mean_us": 20.26298650105794,
+          "direct_mean_us": 20.966367880503338,
+          "paired_overhead_percent": 3.471304627985372,
+          "paired_ratio_mean": 1.0347130462798537,
+          "paired_ratio_median": 1.0349082390168496,
+          "paired_ratio_p95": 1.0355943014071043
+        },
+        {
+          "case": "decode_h16_q1_t3_independent_rotating",
+          "batch": 1,
+          "tails": 3,
+          "cache_policy": "rotating",
+          "upstream_mean_us": 19.869433343410492,
+          "direct_mean_us": 19.94788878493839,
+          "paired_overhead_percent": 0.39486189250859116,
+          "paired_ratio_mean": 1.003948618925086,
+          "paired_ratio_median": 1.0037832762169,
+          "paired_ratio_p95": 1.0048994511789908
+        },
+        {
+          "case": "decode_h16_q8_t0_independent_warm",
+          "batch": 8,
+          "tails": 0,
+          "cache_policy": "warm",
+          "upstream_mean_us": 23.138858556747437,
+          "direct_mean_us": 24.555477380752563,
+          "paired_overhead_percent": 6.122498450337988,
+          "paired_ratio_mean": 1.0612249845033799,
+          "paired_ratio_median": 1.060985821256553,
+          "paired_ratio_p95": 1.06622139796128
+        },
+        {
+          "case": "decode_h16_q8_t0_independent_rotating",
+          "batch": 8,
+          "tails": 0,
+          "cache_policy": "rotating",
+          "upstream_mean_us": 22.645184119542442,
+          "direct_mean_us": 23.63544535636902,
+          "paired_overhead_percent": 4.372969319757658,
+          "paired_ratio_mean": 1.0437296931975766,
+          "paired_ratio_median": 1.043636784305833,
+          "paired_ratio_p95": 1.0452851405524497
+        },
+        {
+          "case": "decode_h16_q8_t3_independent_warm",
+          "batch": 8,
+          "tails": 3,
+          "cache_policy": "warm",
+          "upstream_mean_us": 23.143359978993733,
+          "direct_mean_us": 24.351231892903645,
+          "paired_overhead_percent": 5.219289060097121,
+          "paired_ratio_mean": 1.0521928906009712,
+          "paired_ratio_median": 1.0523366950102169,
+          "paired_ratio_p95": 1.0542516431051776
+        },
+        {
+          "case": "decode_h16_q8_t3_independent_rotating",
+          "batch": 8,
+          "tails": 3,
+          "cache_policy": "rotating",
+          "upstream_mean_us": 22.772515614827473,
+          "direct_mean_us": 23.85877337720659,
+          "paired_overhead_percent": 4.770390379884026,
+          "paired_ratio_mean": 1.0477039037988403,
+          "paired_ratio_median": 1.048139289733772,
+          "paired_ratio_p95": 1.0495399668853775
+        },
+        {
+          "case": "decode_h16_q16_t0_independent_warm",
+          "batch": 16,
+          "tails": 0,
+          "cache_policy": "warm",
+          "upstream_mean_us": 34.846336126327515,
+          "direct_mean_us": 36.11378129323323,
+          "paired_overhead_percent": 3.6375211568961063,
+          "paired_ratio_mean": 1.036375211568961,
+          "paired_ratio_median": 1.036145626424677,
+          "paired_ratio_p95": 1.0391896882493923
+        },
+        {
+          "case": "decode_h16_q16_t0_independent_rotating",
+          "batch": 16,
+          "tails": 0,
+          "cache_policy": "rotating",
+          "upstream_mean_us": 35.701948709976975,
+          "direct_mean_us": 36.23790779174903,
+          "paired_overhead_percent": 1.5012308209157998,
+          "paired_ratio_mean": 1.015012308209158,
+          "paired_ratio_median": 1.0149819889372123,
+          "paired_ratio_p95": 1.016387688760354
+        },
+        {
+          "case": "decode_h16_q16_t3_independent_warm",
+          "batch": 16,
+          "tails": 3,
+          "cache_policy": "warm",
+          "upstream_mean_us": 34.94332798322042,
+          "direct_mean_us": 35.98798934618632,
+          "paired_overhead_percent": 2.9896204137962012,
+          "paired_ratio_mean": 1.029896204137962,
+          "paired_ratio_median": 1.0299748181866897,
+          "paired_ratio_p95": 1.0314760981810716
+        },
+        {
+          "case": "decode_h16_q16_t3_independent_rotating",
+          "batch": 16,
+          "tails": 3,
+          "cache_policy": "rotating",
+          "upstream_mean_us": 35.68151114899435,
+          "direct_mean_us": 36.21000485655702,
+          "paired_overhead_percent": 1.4811668664914013,
+          "paired_ratio_mean": 1.014811668664914,
+          "paired_ratio_median": 1.0149233634587391,
+          "paired_ratio_p95": 1.0159196032991376
+        },
+        {
+          "case": "decode_h16_q24_t0_independent_warm",
+          "batch": 24,
+          "tails": 0,
+          "cache_policy": "warm",
+          "upstream_mean_us": 49.210613091786705,
+          "direct_mean_us": 48.23633050918579,
+          "paired_overhead_percent": -1.97921615706792,
+          "paired_ratio_mean": 0.9802078384293208,
+          "paired_ratio_median": 0.9806645427465221,
+          "paired_ratio_p95": 0.9822676785384619
+        },
+        {
+          "case": "decode_h16_q24_t0_independent_rotating",
+          "batch": 24,
+          "tails": 0,
+          "cache_policy": "rotating",
+          "upstream_mean_us": 48.54658797935203,
+          "direct_mean_us": 48.677856981018444,
+          "paired_overhead_percent": 0.2704343397107234,
+          "paired_ratio_mean": 1.0027043433971072,
+          "paired_ratio_median": 1.0027239257284966,
+          "paired_ratio_p95": 1.0043539718281382
+        },
+        {
+          "case": "decode_h16_q24_t3_independent_warm",
+          "batch": 24,
+          "tails": 3,
+          "cache_policy": "warm",
+          "upstream_mean_us": 48.62378613154093,
+          "direct_mean_us": 48.42195177078247,
+          "paired_overhead_percent": -0.41383877955402104,
+          "paired_ratio_mean": 0.9958616122044598,
+          "paired_ratio_median": 0.9962164852093169,
+          "paired_ratio_p95": 1.002138931992942
+        },
+        {
+          "case": "decode_h16_q24_t3_independent_rotating",
+          "batch": 24,
+          "tails": 3,
+          "cache_policy": "rotating",
+          "upstream_mean_us": 48.629528131240455,
+          "direct_mean_us": 48.74080006892865,
+          "paired_overhead_percent": 0.2290476811037223,
+          "paired_ratio_mean": 1.0022904768110372,
+          "paired_ratio_median": 1.0023982494334516,
+          "paired_ratio_p95": 1.0046420101740767
+        },
+        {
+          "case": "decode_h16_q32_t0_independent_warm",
+          "batch": 32,
+          "tails": 0,
+          "cache_policy": "warm",
+          "upstream_mean_us": 64.24604765574138,
+          "direct_mean_us": 63.117653687795,
+          "paired_overhead_percent": -1.7556450383986122,
+          "paired_ratio_mean": 0.9824435496160139,
+          "paired_ratio_median": 0.9817137129584114,
+          "paired_ratio_p95": 0.9887258606748505
+        },
+        {
+          "case": "decode_h16_q32_t0_independent_rotating",
+          "batch": 32,
+          "tails": 0,
+          "cache_policy": "rotating",
+          "upstream_mean_us": 62.391974888150656,
+          "direct_mean_us": 62.22946515159001,
+          "paired_overhead_percent": -0.2601445180312578,
+          "paired_ratio_mean": 0.9973985548196874,
+          "paired_ratio_median": 0.9977533881221807,
+          "paired_ratio_p95": 0.9996765482871193
+        },
+        {
+          "case": "decode_h16_q32_t3_independent_warm",
+          "batch": 32,
+          "tails": 3,
+          "cache_policy": "warm",
+          "upstream_mean_us": 64.16635735829672,
+          "direct_mean_us": 62.957930405934654,
+          "paired_overhead_percent": -1.8828720032827428,
+          "paired_ratio_mean": 0.9811712799671726,
+          "paired_ratio_median": 0.98128527738105,
+          "paired_ratio_p95": 0.9841307254628755
+        },
+        {
+          "case": "decode_h16_q32_t3_independent_rotating",
+          "batch": 32,
+          "tails": 3,
+          "cache_policy": "rotating",
+          "upstream_mean_us": 62.415215704176155,
+          "direct_mean_us": 62.302525682387014,
+          "paired_overhead_percent": -0.18046903671563586,
+          "paired_ratio_mean": 0.9981953096328436,
+          "paired_ratio_median": 0.9978488318240007,
+          "paired_ratio_p95": 1.0016380702276804
+        },
+        {
+          "case": "decode_h16_q64_t0_independent_warm",
+          "batch": 64,
+          "tails": 0,
+          "cache_policy": "warm",
+          "upstream_mean_us": 118.07420794169109,
+          "direct_mean_us": 120.64600594838461,
+          "paired_overhead_percent": 2.1784969810844546,
+          "paired_ratio_mean": 1.0217849698108445,
+          "paired_ratio_median": 1.0224610657510143,
+          "paired_ratio_p95": 1.0250957599745558
+        },
+        {
+          "case": "decode_h16_q64_t0_independent_rotating",
+          "batch": 64,
+          "tails": 0,
+          "cache_policy": "rotating",
+          "upstream_mean_us": 116.36472384134929,
+          "direct_mean_us": 119.09698136647542,
+          "paired_overhead_percent": 2.3480496582609867,
+          "paired_ratio_mean": 1.0234804965826099,
+          "paired_ratio_median": 1.0236191510046035,
+          "paired_ratio_p95": 1.0246906258193296
+        },
+        {
+          "case": "decode_h16_q64_t3_independent_warm",
+          "batch": 64,
+          "tails": 3,
+          "cache_policy": "warm",
+          "upstream_mean_us": 117.92113018035889,
+          "direct_mean_us": 120.87112522125244,
+          "paired_overhead_percent": 2.5018183847680175,
+          "paired_ratio_mean": 1.0250181838476802,
+          "paired_ratio_median": 1.0252171220950252,
+          "paired_ratio_p95": 1.0272165204481751
+        },
+        {
+          "case": "decode_h16_q64_t3_independent_rotating",
+          "batch": 64,
+          "tails": 3,
+          "cache_policy": "rotating",
+          "upstream_mean_us": 116.60943311803481,
+          "direct_mean_us": 119.33448423747143,
+          "paired_overhead_percent": 2.336922192740576,
+          "paired_ratio_mean": 1.0233692219274058,
+          "paired_ratio_median": 1.0234670987329995,
+          "paired_ratio_p95": 1.024234295025385
+        }
+      ],
+      "source_hashes": {
+        "kernels/ops/attention/dsa/tilelang_kernel.py": "2a4254889463f882f073d7e1a54311d0802e8e82e66bf1377a7b3edfc00d0875",
+        "kernels/jit/include/sgl_kernel/glm_packed_decode.cuh": "9394e536d914826f6654474f798bd5c24ab864c4de4dcdd6b90cb4b3fe96181f",
+        "srt/remnant/glm.py": "50565426fe36070791743987cf41d177081874c9a52d9bfa6f30805b7ae307aa",
+        "srt/remnant/glm_pool.py": "cfc36ad197037879867417df91e8cfb91f128fa24bc1cbfa88ae89eeae4e301d",
+        "srt/remnant/reference.py": "6231ec9622623643eba8ab50d714f9433cd13672be927030c4070ae05452021e",
+        "srt/layers/layernorm.py": "98072d836e0c77312058521ee1015c80177b2c370da7408fd066eec61015ff21",
+        "benchmark/remnant/glm_attention.py": "03ea78f53054a2dbdd5467637f2f2e086b9d8ad1eb5ae27dd50684363fc77022",
+        "benchmark/remnant/glm_upstream.py": "a12d3ca1126288bee354571201f1d7cd7ce0a8796db7b2391d848ab5f56026dc",
+        "benchmark/remnant/timing.py": "d5eb5ad54f12a5261e8e302556fcb478dcf5e030fcc7d044c53287f755f00414",
+        "benchmark/remnant/cases.py": "4fbfb416feeca30ba9afbb672ebbfe3b9efb02fba2afc549fc55978234bf143e",
+        "srt/remnant/config.py": "c45544d93a02558488515e5fa78c0af397f9b1f49e6e9c8bd844ca3b645d2d8f",
+        "srt/remnant/glm_config.py": "02e372a2d00f0bbb24d7b6bb3b7abce3fdee31b6408797424ea420008058fbbd",
+        "srt/remnant/bitmap.py": "1dabf144f65a6f224fd7a5d383f9d0244d4c658b2205290e68f794251b9f8aec"
+      },
+      "gpu_function_seconds": 105.933772082,
+      "controller_seconds": 278.6035451889038,
+      "raw_volume": "winstoncai233/remnant-stage2a-results/microbench/glm53-upstream-decode-20261106T065615Z",
+      "artifacts": {
+        "timing/timing.json": "ce274d8a1212fc145b1ba7b8af6624e922ea3deb894e11831944721400ddf4ff",
+        "timing/result.json": "0903cc6b8d118de3ee632615bd9782ca0befd9415b1cf3e9584a61af9e77cc73",
+        "timing/build-manifest.json": "0f92b22fc3609fb08eee0101f73e476fa2158842c2b061adf055dd0a5dbec0e1",
+        "timing/timing.csv": "6995bd8b6c71fe2435d102df983f2e293cd472c73857cf781cda4719768590e0",
+        "timing/timing.log": "1b15ebf0b2e4512647809e138855b3128be187a5455f634b09f09ad1e1a24e18",
+        "preflight/result.json": "b3af95a043870e07271310e846fc6829a79dc0f73f9b2e2c26e457aabd06f83b",
+        "preflight/build-manifest.json": "0f92b22fc3609fb08eee0101f73e476fa2158842c2b061adf055dd0a5dbec0e1"
+      },
+      "flat_csv": "benchmarks/microbench/glm53-packed/upstream-decode.csv",
+      "command": [
+        "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+        "run",
+        "scripts/modal/kernels.py::benchmark_kernels",
+        "--run-id",
+        "glm53-upstream-decode-20261106T065615Z",
+        "--model-family",
+        "glm53",
+        "--suite",
+        "glm-upstream-decode",
+        "--phase",
+        "decode",
+        "--qualification-runs",
+        "glm53-ds41-fallback-tools-20261105t1338z",
+        "--max-seconds",
+        "1140"
+      ],
+      "environment": {
+        "MODAL_PROFILE": "winstoncai233",
+        "REMNANT_INTEGRATION": "v0.5.22",
+        "REMNANT_MODEL_FAMILY": "glm53",
+        "REMNANT_COMPILED_IMAGE": "im-ATvDNjul45xrVyyGaGAgOJ",
+        "REMNANT_GLM_UPSTREAM_DECODE": "1"
+      }
+    },
+    "native_cubin_comparison": [
+      {
+        "inner": 1,
+        "upstream_cubin_sha256": "e2c07ac17ccfccf22cbe0cc42e332c2f70423d0909fcb76fb32d2425006a7d90",
+        "fork_native_cubin_sha256": "e2c07ac17ccfccf22cbe0cc42e332c2f70423d0909fcb76fb32d2425006a7d90"
+      },
+      {
+        "inner": 2,
+        "upstream_cubin_sha256": "03a284c8afd4449ceacb834df3aedb1acbc6a3a523da4588f6e15a8dd70d8cdd",
+        "fork_native_cubin_sha256": "835c906da250f7ebab05daf872a2ebf81cc4018eea9cebe0e5bbe811ce2f5689"
+      }
+    ],
+    "cleanup": {
+      "active_containers": [],
+      "flashmla_unchanged": true,
+      "no_push": true
+    },
+    "control_packet": {
+      "raw_volume": "winstoncai233/remnant-stage2a-results/microbench/glm53-upstream-decode-20261106T065615Z/control-packet.zip",
+      "sha256": "8294ea6422a68d32cff73f9a4c0325e16507b9c8f93dce0ffadfdd6adf4288a6",
+      "bytes": 265834,
+      "readback_verified": true,
+      "contents": "Raw CPU/GPU records, pristine upstream module and license, canonical phase snapshot, and recoverable parent/SGLang source patches."
     }
   }
 }

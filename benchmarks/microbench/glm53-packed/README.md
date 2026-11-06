@@ -32,6 +32,82 @@ Source worktree: `data/source-snapshots/glm53-upstream-decode`, matching parent
 and SGLang branch `exp/glm53-flash/upstream-decode`. Record results and costs in
 the existing qualification ledger, separately from all prior authorizations.
 
+### Completed upstream decode result
+
+Run `glm53-upstream-decode-20261106T065615Z` passed all **24 cases**, both paths
+and all **30 paired rounds** on one H200. Measured sources: parent `5acc209`,
+SGLang `99499fb02c86`, unchanged FlashMLA `4e72722671d8`; prepared image
+`im-E77qOCLcBadvS16nBehz0W`.
+
+**Batch-weighted overhead: +1.28947%.** Seven cases favor Direct; the range is
+−1.97922% to +6.12250%, with no 2× outliers. These are descriptive complete
+attention-call results, not distributed execution or full-model serving.
+Packing and selection remain untimed. Native uses all 512 latent coordinates;
+Direct uses the production 320-byte Packed records.
+
+Every fixture bank passed exact Packed bytes, independent numerical checks and
+changing-input graph replay. Numerical tolerances remain `atol=rtol=0.02`.
+Matching focused H100 sanitizer evidence was reused by runtime/cubin/toolchain
+identity; no fresh H200 sanitizer or broad qualification is claimed.
+
+The GPU Function took **105.934 seconds** including fixture validation and
+measurement; the complete launch took **278.604 seconds** including image
+resolution and CPU receipt preflight. All workers stopped. This phase used
+**$0.45247 reported compute / $0.78581 conservatively accounted**, including the
+failed CPU attempt, beneath the new $5 cap with its $1 reserve intact.
+
+The [flat CSV](upstream-decode.csv) retains all raw samples, statistics and
+fixture identities. The canonical ledger's `upstream_decode` entry records
+commands, source/artifact identities, per-case results, failures and costs. Raw
+JSON, manifests and logs remain in `winstoncai233/remnant-stage2a-results` under
+`microbench/glm53-upstream-decode-20261106T065615Z`. Reconcile the exact saved
+statistics with Python 3.12, matching the image; Python 3.11's float summation
+can differ in the final bits. No comparison was relaxed.
+
+Times below are means per complete call. Changes are means of paired ratios.
+
+| Batch | Tails | Cache | Upstream µs | Direct µs | Paired change |
+|---:|---:|---|---:|---:|---:|
+| 1 | 0 | warm | 20.355 | 21.021 | +3.27% |
+| 1 | 0 | rotating | 20.181 | 20.125 | -0.28% |
+| 1 | 3 | warm | 20.263 | 20.966 | +3.47% |
+| 1 | 3 | rotating | 19.869 | 19.948 | +0.39% |
+| 8 | 0 | warm | 23.139 | 24.555 | +6.12% |
+| 8 | 0 | rotating | 22.645 | 23.635 | +4.37% |
+| 8 | 3 | warm | 23.143 | 24.351 | +5.22% |
+| 8 | 3 | rotating | 22.773 | 23.859 | +4.77% |
+| 16 | 0 | warm | 34.846 | 36.114 | +3.64% |
+| 16 | 0 | rotating | 35.702 | 36.238 | +1.50% |
+| 16 | 3 | warm | 34.943 | 35.988 | +2.99% |
+| 16 | 3 | rotating | 35.682 | 36.210 | +1.48% |
+| 24 | 0 | warm | 49.211 | 48.236 | -1.98% |
+| 24 | 0 | rotating | 48.547 | 48.678 | +0.27% |
+| 24 | 3 | warm | 48.624 | 48.422 | -0.41% |
+| 24 | 3 | rotating | 48.630 | 48.741 | +0.23% |
+| 32 | 0 | warm | 64.246 | 63.118 | -1.76% |
+| 32 | 0 | rotating | 62.392 | 62.229 | -0.26% |
+| 32 | 3 | warm | 64.166 | 62.958 | -1.88% |
+| 32 | 3 | rotating | 62.415 | 62.303 | -0.18% |
+| 64 | 0 | warm | 118.074 | 120.646 | +2.18% |
+| 64 | 0 | rotating | 116.365 | 119.097 | +2.35% |
+| 64 | 3 | warm | 117.921 | 120.871 | +2.50% |
+| 64 | 3 | rotating | 116.609 | 119.334 | +2.34% |
+
+Reproduction uses the maintained preparation and benchmark dispatchers, with
+fresh source, artifact, spend and allocation checks before any paid launch:
+
+```sh
+export REMNANT_INTEGRATION=v0.5.22 REMNANT_MODEL_FAMILY=glm53
+export REMNANT_GLM_UPSTREAM_DECODE=1
+export REMNANT_COMPILED_IMAGE=<verified-matching-base-image>
+modal run scripts/modal/kernels.py::prepare_kernels --model-family glm53
+modal run scripts/modal/kernels.py::benchmark_kernels \
+  --model-family glm53 --suite glm-upstream-decode --phase decode \
+  --qualification-runs <matching-source-bound-receipt-id> \
+  --run-id <unique-run-id> --max-seconds 1140
+```
+
+
 Author: Winston Cai.
 
 The cooperative Packed loader completed all **48 decode cases**, with 30 paired
