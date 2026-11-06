@@ -4293,7 +4293,8 @@
     },
     "inventory": {
       "app_id": "ap-vhh7mWndYQrfeIYqHUJuze",
-      "result": "No standalone upstream flash_mla package in the cached image; stopped successfully"
+      "result": "No standalone upstream flash_mla package in the cached image; stopped successfully",
+      "reproduction_invocation": "\"\"\"Temporary CPU inventory of the existing build image. Author: Winston Cai.\"\"\"\nimport json\nimport modal\n\napp = modal.App(\"remnant-native-control-inventory\")\nimage = modal.Image.from_id(\"im-MZqnw8UUhUxovTFl16mxln\")\ncode = \"\"\"\nimport importlib.metadata as metadata\nimport importlib.util\nimport json\nfrom pathlib import Path\nresult = {}\nfor name in ('flash_mla', 'sgl_kernel'):\n    spec = importlib.util.find_spec(name)\n    result[name] = None if spec is None else {'origin': spec.origin, 'paths': list(spec.submodule_search_locations or [])}\nfor name in ('flash-mla', 'sgl-kernel', 'sglang'):\n    try:\n        result[name + '_version'] = metadata.version(name)\n    except metadata.PackageNotFoundError:\n        result[name + '_version'] = None\nprint(json.dumps(result, indent=2))\n\"\"\"\nwith modal.enable_output(), app.run():\n    sandbox = modal.Sandbox.create(\"python3\", \"-c\", code, image=image, app=app,\n                                   cpu=1, memory=2048, timeout=90, block_network=True)\n    try:\n        print(json.dumps({'sandbox_id': sandbox.object_id, 'app_id': app.app_id}))\n        print(sandbox.stdout.read())\n        print(sandbox.stderr.read())\n        sandbox.wait()\n        if sandbox.returncode != 0:\n            raise RuntimeError(f\"Inventory failed: {sandbox.returncode}\")\n    finally:\n        sandbox.terminate(wait=True)\n"
     },
     "budget": {
       "ceiling_usd": 20,
@@ -4648,7 +4649,8 @@
           "bytes": 506,
           "sha256": "a8c44b2733f036237bc803ceb5334d9fd7f194e1ab08bbddd71e68c5a00496b9"
         }
-      }
+      },
+      "upload_status": "uploaded; remote listing verified file names and sizes"
     }
   }
 }
