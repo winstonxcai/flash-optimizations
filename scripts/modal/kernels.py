@@ -498,6 +498,10 @@ def _reuse_glm_cpu_artifacts(build: Path, deadline: float, binding_requirements:
 
 def _prepare_upstream_decode(build: Path, deadline: float) -> None:
     """CPU-only delta compilation after verified reuse of production binaries."""
+    # The reuse preflight already owns build/cpu-driver-stubs. Give the
+    # additional baseline compilation a separate scratch directory.
+    build = build / "upstream"
+    build.mkdir()
     environment = _cpu_preflight_environment(build)
     _run_command(
         [sys.executable, "-m", "sglang.benchmark.remnant.glm_upstream"],

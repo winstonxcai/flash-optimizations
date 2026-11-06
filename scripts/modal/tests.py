@@ -4189,6 +4189,26 @@ class GLMUpstreamDecodeTests(unittest.TestCase):
             self.assertEqual(preflight.remote.call_args.kwargs, {"suite": "glm-upstream-decode"})
             self.assertEqual(worker.remote.call_args.args[3], "glm-upstream-decode")
 
+    def test_upstream_cpu_delta_owns_its_driver_stub_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            build = Path(directory)
+            (build / "cpu-driver-stubs").mkdir()
+            manifest = build / "manifest.json"
+            manifest.write_text("{}")
+
+            def environment(work):
+                (work / "cpu-driver-stubs").mkdir()
+                return {"driver": str(work)}
+
+            with (patch.object(kernels, "_cpu_preflight_environment", side_effect=environment) as prepare,
+                  patch.object(kernels, "_run_command"), patch.object(kernels, "_run_pytest"),
+                  patch.object(kernels, "MANIFEST", manifest), patch.object(kernels, "Path") as paths):
+                paths.return_value.read_text.return_value = '{"baseline": "compiled"}'
+                kernels._prepare_upstream_decode(build, 100)
+            self.assertEqual(prepare.call_args.args[0], build / "upstream")
+            self.assertTrue((build / "cpu-driver-stubs").is_dir())
+            self.assertEqual(json.loads(manifest.read_text())["upstream_compile"], {"baseline": "compiled"})
+
     def test_reused_scope_allows_harness_changes_but_keeps_compiler_and_cache_identity(self):
         import hashlib
         import xml.etree.ElementTree as ET

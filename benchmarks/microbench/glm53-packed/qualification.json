@@ -3851,18 +3851,37 @@
       "gpu_max_usd": 3,
       "reserve_usd": 1,
       "routine_stop_usd": 4,
-      "accounted_usd": 0,
-      "prior_spending": "Preserved in all other phase records; this authorization is separate."
+      "accounted_usd": 0.2,
+      "prior_spending": "Preserved in all other phase records; this authorization is separate.",
+      "reported_compute_usd": 0.10216386,
+      "cpu_accounted_usd": 0.2
     },
     "worktree": "data/source-snapshots/glm53-upstream-decode",
     "branch": "exp/glm53-flash/upstream-decode",
-    "attempts": [],
+    "attempts": [
+      {
+        "stage": "cpu-preparation",
+        "status": "failed",
+        "app_id": "ap-8lGuRz4FzCciNnpicYzYfp",
+        "source_parent": "042b89a313763076d865f43eb9349d601afec5c6",
+        "failed_image": "im-h4Ch4OLk7EpEQoVCxNzzx7",
+        "account": "winstoncai233",
+        "elapsed_controller_seconds": 464.86756706237793,
+        "compute_delta_usd": 0.10216386,
+        "conservative_usd": 0.2,
+        "gpu_allocated": false,
+        "diagnosis": "Driver-stub directory already owned by the reuse preflight. Give upstream delta compilation its own build/upstream directory. Regression and narrow review required before retry.",
+        "artifacts": "data/modal/glm53-upstream-decode/cpu"
+      }
+    ],
     "sglang": "99499fb02c86a21e1d3cb0e73f892f1658ad46e3",
     "cpu_checks": {
       "fork": "134 passed, 103 skipped",
       "parent_focused": "2 passed",
       "fresh_context_review": "passed after three concrete preflight fixes",
-      "production_kernel_hashes_unchanged": true
+      "production_kernel_hashes_unchanged": true,
+      "parent": "159 passed in 86.502 seconds",
+      "ownership_correction": "3 focused tests passed"
     }
   }
 }
