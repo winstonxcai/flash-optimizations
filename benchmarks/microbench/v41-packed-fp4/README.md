@@ -29,7 +29,7 @@ upstream control. Its stock entry point cannot substitute for this baseline.
 The new source is an isolated clean checkout from the selected fork's existing
 Git objects, currently `/tmp/remnant-v41-native-upstream`; shared forks stay put.
 The original upstream `setup.py build_ext --inplace` builds a separate
-`flash_mla` package with `FLASH_MLA_DISABLE_SM100=1`, `MAX_JOBS=2`, and
+`flash_mla` package with `FLASH_MLA_DISABLE_SM100=1`, `FLASH_MLA_DISABLE_SM90=0`, `MAX_JOBS=4`, and
 `NVCC_THREADS=1`. Only verified SM90a binaries qualify. No kernel source is
 rewritten. CPU preflight binds source, Python wrapper and binary hashes;
 timing records the control's first-use schedule. This is an attention
@@ -85,6 +85,15 @@ callback and a regression test now preserve that boundary. No usable native
 build or GPU receipt came from the canceled app. Its reported cost was
 $0.00025346; all settled CPU attempts before the final check total $0.00282954,
 with the last six-test worker still subject to billing lag.
+
+The committed-source CPU preflight (`7597930` / `26489ab0`), app
+`ap-3aCCm3gJHFSFoiQ4KTQFH5`, built both fork extensions successfully. The
+separate upstream package reached 54/62 compilation steps before its remaining
+658-second deadline expired. No GPU was allocated. The bounded retry increases
+parallel compilation to four jobs on the same 16-CPU/64-GiB builder; source,
+arithmetic, toolchain and the 900-second outer build cap are unchanged. V4.1's
+GPU validation default is 5,400 seconds so the complete 38-case/tool matrix can
+run in one allocation; launching it still requires adequate remaining budget.
 
 Published branch: **`ds41-flash-packed`** in the parent, SGLang v0.5.22 and
 FlashMLA v0.5.22 repositories. It continues the completed local

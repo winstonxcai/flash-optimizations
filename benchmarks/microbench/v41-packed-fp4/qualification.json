@@ -4407,6 +4407,22 @@
       "stop_command": "MODAL_PROFILE=peroace360 modal app stop ap-t6JxrQ4CWg4fQC3XW5y7Yp --yes",
       "last_stage": "vendor image registry pull",
       "metered_cost_usd": 0.00025346
-    }
+    },
+    "native_build_attempts": [
+      {
+        "app_id": "ap-3aCCm3gJHFSFoiQ4KTQFH5",
+        "parent_commit": "7597930",
+        "sglang": "26489ab0",
+        "status": "failed_cpu_preflight_no_gpu",
+        "reason": "Native upstream setup.py build_ext hit the remaining CPU deadline after 658 seconds at 54/62 steps",
+        "image": "im-j5NIbyrD9M2qCVKA4o7eGz",
+        "fork_extensions": "built successfully on CPU",
+        "max_jobs": 2,
+        "nvcc_threads": 1,
+        "error": "subprocess.TimeoutExpired: upstream-native-build timed out after 657.999972207 seconds",
+        "last_compilation": "sm90/decode/sparse/instantiations/v32_persistent_h64.cu",
+        "command": "MODAL_PROFILE=peroace360 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_UPSTREAM_FLASHMLA_SOURCE=/tmp/remnant-v41-native-upstream modal run scripts/modal/kernels.py::preflight_kernels"
+      }
+    ]
   }
 }
