@@ -76,8 +76,13 @@ if [ "$integration" = v0.5.22 ]; then
 fi
 test -f "$server_args"
 test -f "$fields"
-grep -q _configure_dsv4_c4_cache_format "$server_args"
-grep -q dsv4_c4_cache_implementation "$fields"
+if [ "$integration" = v0.5.22 ]; then
+  grep -q _configure_cache_format "$server_args"
+  grep -q kv_cache_format "$fields"
+else
+  grep -q _configure_dsv4_c4_cache_format "$server_args"
+  grep -q dsv4_c4_cache_implementation "$fields"
+fi
 BASH
 }
 
@@ -109,4 +114,4 @@ case "$ACTION" in
     ;;
   *) echo "usage: $0 [prep|recreate|up|rebuild]" >&2; exit 2 ;;
 esac
-echo "== production image ready. serve with:  bash scripts/local/serve.sh <native|triton|kernel>"
+echo "== production image ready. serve with:  bash scripts/local/serve.sh <native|direct>"

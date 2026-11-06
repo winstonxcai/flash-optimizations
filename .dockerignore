@@ -15,6 +15,7 @@ log/
 writeup/
 xkv/
 **/__pycache__/
+**/.pytest_cache/
 *.pyc
 
 # remnant runtime artifacts + regenerable datasets (see .gitignore)

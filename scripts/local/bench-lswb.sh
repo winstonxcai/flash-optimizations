@@ -3,7 +3,7 @@
 # bench-lswb.sh <tag> [port] [concurrency] [duration_s] [nsys_windows]
 # Author: Winston Cai.
 #   LongSWE-Bench replay client against an ALREADY-RUNNING server (bring it
-#   up first with serve.sh native|packed). Replays 4,916 recorded Claude
+#   up first with serve.sh native|direct). Replays 4,916 recorded Claude
 #   business conversations (~144k prompt tok/req, short decodes) over OpenAI
 #   SSE for a fixed window -- a prefix-reuse workload that shows whether the
 #   larger packed KV pool retains more shared prefixes (device cache hits).

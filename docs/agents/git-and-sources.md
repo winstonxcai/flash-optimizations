@@ -77,7 +77,7 @@ and variant, for example `glm53-flash`.
 - Do not edit any file copied into a Modal image while a build or prepare step
   is running; Modal rejects the build with "modified during build process".
   Image inputs are `scripts/modal/`, `scripts/local/`, `scripts/sources.py`,
-  `scripts/build_lock.py`, `third_party/`, `Dockerfile*` and `.dockerignore`.
+  `scripts/model_profiles.py`, `scripts/build_lock.py`, `third_party/`, `Dockerfile*` and `.dockerignore`.
 - The launcher writes `.modal-build.lock` at the repository root for the whole
   lifetime of the `modal run`/`modal deploy` process (the image builds lazily,
   after import), so the lock also spans the GPU run and refuses a second Modal

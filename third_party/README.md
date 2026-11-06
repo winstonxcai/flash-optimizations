@@ -17,8 +17,8 @@ Folder suffixes identify the SGLang integration pair, not a FlashMLA release.
 |---|---|---|---|
 | `sglang-v0.5.18/` | `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` | `6687a7c` |
 | `flashmla-v0.5.18/` | `05e26647fe840b8baedae486c2d86d5ce4efeb7c` | `remnant/flashmla-v0518` | `97f3faa` |
-| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `remnant/v0.5.22` | `7856615` |
-| `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `remnant/flashmla-v0522` | `3eb8594` |
+| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `main` (combined GLM/V4.1 history) | `e0d6d500d6dc` |
+| `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `ds41-flash-packed` | `4e72722671d8` |
 
 Both FlashMLA checkouts pin CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`.
 The default remains v0.5.18; `REMNANT_INTEGRATION=v0.5.22` selects the other pair.
@@ -36,7 +36,7 @@ git -C third_party/flashmla-v0.5.18 rev-parse HEAD
 ```
 
 Ordinary builds require each fork's HEAD to equal its parent pin and both forks
-to be clean, including untracked files. Follow the root [source safeguards](../AGENTS.md#git-and-source-ownership)
+to be clean, including untracked files. Follow the root [source safeguards](../docs/agents/git-and-sources.md)
 when synchronizing; never discard or stash work automatically. Approved source
 overrides must record both commits and submitted-content hashes.
 
@@ -48,6 +48,79 @@ checkouts, including dirty worktrees. Their commits, expected pins, dirty state,
 content hashes and nested-source identities are retained in the build manifest.
 Ordinary serving does not accept these overrides. A source check does not prove
 that an existing container's loaded binaries match; source changes need a rebuild.
+
+## Experimental V4.1 FP4 on SM90
+
+Review-fix integration: SGLang `c4708870`, FlashMLA `4e72722`, based on parent
+`af12dd9`. The current pins add effective Q8KV8 override rejection, retained
+prefill policy, aligned cache base/page checks, named FP4 layouts and explicit
+fixed-matrix CLI validation. Parent qualification uses
+`scripts/modal/qualification.py` to reject failed tools, compare complete runtime
+identities and check receipts on CPU before GPU timing. Those V4.1 source identities passed the fresh model-free numerical, graph/stream, allocator,
+34-case/tool sanitizer and review gates using parent runner `2707db9`. The final
+v3 ten-case timing is complete; historical evidence is kept separate below.
+
+Prefill still reconstructs the selected requests' full compressed history into
+an inherited BF16 scratch buffer. Its high-watermark allocation scales roughly
+as `1024 * (sum(floor(sequence_length/compression_ratio)) + SWA_union)` bytes
+per GPU. At C1, 32 requests of 128K need about 4 GiB before the SWA union and
+padding. The microbenchmark's small scratch fixture does not establish serving
+memory safety or concurrency capacity. This review does not redesign prefill.
+
+The isolated `ds41-flash-packed` candidate starts from parent
+`9419d0e18e1e7677c0e48b8e40ad54bbc30010ca`; the original integration/worktrees
+remain unchanged. Its original model-specific selector is replaced in the merged
+v0.5.22 interface by `--kv-cache-format native|direct`. Native always selects the
+existing FP4 global-cache path; Direct selects Packed FP4. Both require
+SM90 FlashMLA and V4.1 ratio-1/2 shared global caches; HiCache, distributed cache
+transfer, speculation/DSpark, replay and legacy layout overrides are rejected.
+
+- **Storage/producer ownership:** SGLang's `kernels/ops/attention/dsv4/fp4_cache.py`
+  owns software SM90 E2M1 packing and BF16 reconstruction. It takes normalized
+  BF16 rows, applies upstream RoPE/BF16 rounding, quantizes with per-16 E4M3
+  scales, then optionally retains the 256 largest dequantized magnitudes.
+  Ties retain lower coordinates; codes/scales are unchanged. Indexer input is
+  unpruned. Native is 288 bytes; Packed is 224 (128 codes + 64 bitmap + 32 scales).
+- **Runtime ownership:** grouped model args, the existing remnant configuration
+  boundary, `deepseek_v4_memory_pool.py`, `pool_configurator.py`, and
+  `deepseek_v4_backend.py` select layouts, budget physical reserved rows and
+  dispatch. Existing SWA storage and FP8 Remnant interfaces are retained.
+- **FP4 prefill ownership:** FlashMLA `sm90/prefill/sparse/phase1.cuh` has an
+  opt-in named-barrier policy and two FP4-only D512 instantiations. Separate
+  `fp4_sparse_prefill_fwd`/`flash_mla_fp4_sparse_fwd` entries serve reconstructed
+  BF16 caches and SWA-only layers in explicit FP4 modes. Stock/auto retain the
+  existing policy. SGLang owns AOT registration and explicit-mode dispatch.
+- **Direct ownership:** FlashMLA's separate `flash_mla_with_fp4_kvcache` entry
+  point and SM90 template specializations read global FP4 beside V4 SWA. Packed
+  data rows hold ascending survivors and eight MSB-first uint64 bitmap words;
+  even ranks occupy low nibbles. Pages store all data rows then all scale rows.
+  Scale lookup uses original coordinate groups. Global records already have
+  RoPE applied. SGLang's AOT CMake, extension registration and Python binding
+  expose the same contract without importing experiment code.
+- **Validation:** model-free fixtures extend the existing tests and Modal runner.
+  CPU native build/precompile passed before H100, along with 24 CPU tests +
+  15 subtests, six receipt/dispatch tests, 17 launcher regressions and 103 V4
+  CPU regressions + 45 subtests. Scoped style/registry checks passed. H100
+  validation passed 39 ordinary cases and 34/34 under each strict memcheck,
+  racecheck and synccheck tool, with zero errors/hazards. Independent source
+  and artifact review found no unresolved finding. Complete e/f tool receipts
+  match one runtime/source/binary identity; overall interruptions remain failed.
+- **Timing/allocation:** the fresh v3 H64/window128/SWA-page256 matrix has ten
+  cases across C1/page256 and C2/page128. Packed/Native geometric-mean latency
+  changes are +1.30% overall, +1.72% C1 and +0.87% C2 (range −1.02%..+2.71%).
+  These warm synthetic graph results establish no serving or repeatable speedup.
+  The fixed-cap 1 GiB allocator fixture again gains 21.96% token capacity;
+  global records shrink 22.22%. Historical v1 timing is separately retained.
+- **Scope/rollback:** experimental and opt-in; no weights, full-model loads,
+  serving, quality, H20, SM100 execution, GPUQ or profiling qualification.
+  Follow-up compute is conservatively about $14.87 before settlement, under
+  the $20 ceiling with its reserve intact. All task allocations are stopped.
+  Full-history prefill scratch scaling above remains a serving limitation.
+  Select `--kv-cache-format native` or restore recorded baseline pins to roll back.
+
+See the [single experiment record](../benchmarks/microbench/v41-packed-fp4/README.md)
+for exact sources, commands, all cases, costs, failed attempts and limitations.
+Broader GitHub lint/gating statuses are separate from these focused Modal gates.
 
 ## Parallel v0.5.22 integration
 
@@ -61,7 +134,8 @@ launcher options and benchmark defaults. The v0.5.22 pair is unchanged. Main's
 custom asynchronous-preparation controls remain v0.5.18-specific; v0.5.22 keeps
 upstream conversion offload, and unsupported opt-ins fail the CPU preflight.
 
-Target: 0731 on H100/SM90, **V4 584-byte logical Native layout**, not V4.1.
+Baseline target: 0731 on H100/SM90, **V4 584-byte logical Native layout**.
+The separate experimental V4.1 candidate above extends this baseline.
 
 | Area | Decision | Contract / adaptation |
 |---|---|---|
@@ -132,7 +206,8 @@ and hashes unchanged. Historical v0.5.18 performance is not v0.5.22 performance.
 ## Default v0.5.18 integration map
 
 Paths below are relative to the owning fork. Native is the default; Packed is
-selected by `--dsv4-c4-cache-format remnant`.
+selected by `--kv-cache-format direct` on v0.5.22 (the unchanged v0.5.18 pin uses
+`--dsv4-c4-cache-format remnant --dsv4-c4-cache-implementation kernel`).
 
 | Capability | Owner and entry point | Contract / checks |
 |---|---|---|
@@ -319,3 +394,164 @@ git log --oneline -- third_party/sglang-v0.5.18 third_party/flashmla-v0.5.18
 Use `git ls-tree <parent-commit> third_party/sglang-v0.5.18 third_party/flashmla-v0.5.18` to
 recover an integration's exact pair. Git history remains the detailed record;
 this guide and the changelog are its curated index.
+
+## GLM-5.3-Flash candidate (v0.5.22 only)
+
+Author: Winston Cai.
+
+Native remains the default. `--kv-cache-format direct` selects the 320-byte
+Packed MLA pool and TileLang Direct. Adapter remains an explicit internal test
+and benchmark input. Packed requires the pinned GLM text
+geometry, FP8 KV and TileLang sparse attention. Startup rejects unsupported
+combinations before pool allocation, including a non-BF16 resolved `auto` dtype.
+
+Eleven MLA layers own two persistent planes per slot: 256 raw E4M3 bytes and
+eight uint64 bitmap words (320 bytes). Selection precedes the existing RMSNorm;
+the producer writes once and the backend skips the ordinary KV write. The
+existing KDA, indexer, tail and allocator ownership remains unchanged. Adapter
+reconstructs into a shared 128-query workspace; Direct expands inside the
+TileLang KV tile and reuses it for QK and PV. Native arithmetic is retained.
+
+| Contract | Owner under `sglang-v0.5.22/python/` |
+|---|---|
+| Geometry and startup | `sglang/srt/remnant/glm_config.py` |
+| Producer and Adapter | `sglang/srt/remnant/glm.py` |
+| Persistent planes and lifecycle | `sglang/srt/remnant/glm_pool.py` |
+| Direct TileLang and loader | `sglang/kernels/ops/attention/dsa/tilelang_kernel.py`, `sglang/kernels/jit/include/sgl_kernel/glm_packed_decode.cuh` |
+| Fixtures and timing | `sglang/benchmark/remnant/glm_attention.py` |
+| CPU compile/artifact manifest | `sglang/benchmark/remnant/glm_artifacts.py` |
+
+The parent `scripts/modal/kernels.py` owns image preparation, execution and
+export; `scripts/modal/kernel_qualification.py` owns qualification policy.
+Set `REMNANT_INTEGRATION=v0.5.22` and `REMNANT_MODEL_FAMILY=glm53` to select
+GLM. `REMNANT_COMPILED_IMAGE` and `REMNANT_GLM_CPU_REBUILD_FROM` are mutually
+exclusive. Ordinary reuse checks remain strict; the explicit CPU rebuild can
+verify a limited, recorded formatting transition and retained AOT binaries.
+
+The attention benchmark uses `--model-family glm53 --suite glm-attention`;
+`--phase decode` runs 48 cases, while default `all` requires 128. Resume requires
+a complete verified build manifest plus matching source, artifact and fixture
+identities. Individual sanitizer-tool runs remain partial qualification.
+See [the experiment index](../benchmarks/microbench/glm53-packed/README.md) for
+commands, all cases, budget, source identities and historical evidence.
+
+Historical optimized decode at SGLang `246ee03c1ad5`: all 48 paired cases and
+30 rounds per case completed on one H100, with +1.6010% batch-weighted overhead.
+Focused Direct numerical/graph and three-tool checks, and Adapter >2 GiB
+numerical and three-tool checks, subsequently passed at `9185c6d25115`. These
+results qualify their recorded sources; they do not automatically qualify the
+current pin. The expanded producer/pool/public-dispatch GPU test has not run.
+Full-grid/combine sanitizer instrumentation, model quality and H20 execution
+remain unverified. The four-H200 text-only serving scope is recorded below.
+
+### Full prefill kernel comparison
+
+The opt-in 64-row Packed TileLang prefill candidate is exercised by the
+maintained GLM benchmark with `--phase prefill --packed-prefill-tile 64`. It
+uses two splits and reuses the unpacked latent tile in QK and PV. The H200
+suite completed 80 paired cases at both local head counts with focused
+sanitizers. Packed Direct was faster in 70 cases and missed the strict
+per-case parity criterion. The serving launcher uses its production dispatch.
+See the [GLM experiment guide](../benchmarks/microbench/glm53-packed/README.md)
+for reproduction and the source-bound evidence.
+
+### Full-model H200 smoke test
+
+The [SGLang cookbook](https://cookbook.sglang.io/autoregressive/GLM/GLM-5.3-Flash)
+uses TileLang DSA and DeepGEMM on H200. Its verified high-throughput recipe
+uses TP8/EP8 with BF16 KV. The Remnant smoke test uses TP4/EP4, FP8 E4M3 KV,
+text-only loading, an 8K context and decode graphs up to batch four. Native
+and Packed Direct use the same checkpoint and launcher settings. The smoke
+uses the Python radix-tree backend supplied by the verified image.
+
+From the parent worktree, with a Modal profile that can access the verified
+GLM image, run:
+
+```sh
+export REMNANT_INTEGRATION=v0.5.22 REMNANT_MODEL_FAMILY=glm53
+export REMNANT_COMPILED_IMAGE=<verified-cpu-built-image>
+modal run scripts/modal/serve.py::download_model
+modal run scripts/modal/serve.py::prepare_glm_serving
+modal run scripts/modal/serve.py::smoke_glm_serving --run-id <unique-run-id>
+```
+
+For a deliberate experiment against an uncommitted candidate, set
+`REMNANT_SGLANG_SOURCE_OVERRIDE` to its checkout. The runner records the
+source content hash and verifies the compiled-source digest before overlaying
+Python files. Ordinary launches still require exact clean pins.
+
+The checkpoint function downloads the pinned official FP8 weights once to
+`glm53-flash`. The CPU preflight verifies checkpoint receipts, shard bytes,
+the config hash and the LLM CLI. The four-H200 function mounts the checkpoint
+read-only and starts one loopback server at a time. Each mode must return HTTP
+200 from `/health` and a nonempty OpenAI-compatible chat completion. Logs and
+responses go to `remnant-stage2a-results/glm53-serving/<unique-run-id>`.
+
+The [four-H200 run](https://modal.com/apps/caiw/main/ap-kOVXUiAnMymNtwN0njkeOe)
+loaded all 62 official FP8 shards and captured decode graphs on every rank in
+both modes. Both returned HTTP 200 for `/health` and `/v1/chat/completions`.
+Each response contained `1, 2, 3, 4, 5` with finish reason `stop`. The tested
+Modal serving image is `im-VvBWmlcKXOGyVuHTE6kVxx` in `caiw`. It used an
+explicit source override with benchmark-only prefill edits alongside the
+serving fixes. The 64-row prefill experiment was outside this smoke scope.
+The [qualification record](../benchmarks/microbench/glm53-packed/qualification.json)
+contains the exact image and source identities, commands, response bodies,
+log hashes and costs. This was a single-request smoke per mode. Serving
+performance, capacity and multimodal behavior remain unverified.
+
+Rollback is Native format or the pre-optimization SGLang pin `889edf56`. The
+v0.5.22 FlashMLA pin and both v0.5.18 pins are unchanged.
+The fragment reconstruction follow-up stages Packed FP4 rows and prefix ranks
+once, reusing V4's fragment selectors with nibble adaptation. Producer geometry
+and persistent formats stay fixed. The maintained microbenchmark now includes
+`v41-fp4-decode`. Its active v3 matrix uses H64/SWA128 with 256-token SWA pages, batches
+8/16/24/28/32, and both C1/page256 and C2/page128 (ten cases), with
+actual captured-output checks and fresh dense Native FP4 controls. Timing is
+blocked until identical source/binary/tool receipts pass 34 cases per sanitizer.
+The prior source pins passed scoped model-free correctness and v1 timing.
+Fresh-context source/artifact review passed with no blocking findings. The v3
+fixture correction passed its two existing matrix/contract tests on Modal CPU
+(2 passed in 0.14 s) and changes no runtime/kernel code. Historical v1 measurements
+retain their original source identities. Fresh v3 GPU timing is recorded in the
+review-fix milestone; historical timing remains unchanged. V2 incorrectly equated
+the 128-token
+window with page128; the runtime factory requires page256. The measured
+allocator fixture and capacity prediction already used page256.
+
+
+## Combined serving interface
+
+On v0.5.22, `--kv-cache-format {native,direct}` replaces all model-specific
+format/reader selectors. Removed flags produce ordinary unknown-option errors.
+`direct` maps to Packed C4/FlashMLA for V4, Packed FP4/FlashMLA for V4.1, and
+Packed MLA/TileLang for GLM. Native is the default. Model family is resolved from
+loaded configuration and carried through spawned-worker publication; unsupported
+Direct models/profiles fail before pool allocation. Internal Adapter and Triton
+reconstruction fixtures retain their original benchmark mode names.
+
+The merge candidate is `fix/glm53-flash/ds41-integration` in parent and SGLang,
+with GLM/V4.1 published heads preserved as merge ancestors. Shared parent
+metadata is owned by `scripts/model_profiles.py`; launch normalization and named
+environment transport by `scripts/local/launch-config.sh`; compiled-image
+verification by `scripts/sources.py`; pure report parsing by
+`scripts/modal/qualification.py`. Model-specific evidence policies remain
+separate. Shared numerical timing statistics live in the fork's `timing.py`.
+
+The current merge-validation status and $26 phase ledger are recorded in the
+existing GLM [qualification record](../benchmarks/microbench/glm53-packed/qualification.json).
+Historical qualification and prefill parity misses stay bound to their measured
+sources. The 64-row prefill candidate remains benchmark-only.
+
+The combined runtime at parent `c23b32f` / SGLang `e0d6d50` passes CPU checks,
+GLM numerical/allocation/focused three-tool checks, and Native/Direct full-model
+smokes on four H200s. V4.1 passes 39 numerical/allocation cases and all 15 focused
+memcheck/synccheck cases. Full focused racecheck fails during Native C1 setup,
+before the FP4 store callback; an isolated synchronized case passes but does
+not resolve the batch failure. The first V4.1 serving attempts loaded weights,
+then rejected a 0.86 memory fraction. The corrected 0.90 profile subsequently
+passed Native and Direct smokes concurrently on four H200s per mode, using
+parent `f720d20` and image `im-SXCseSK7MhV0kyLb7TPdbJ`. Both loaded all ranks,
+captured decode graphs and returned the exact expected chat answer with `stop`.
+The separate $15 phase spent $6.24 reported / $6.68 conservatively accounted;
+all workers exited. The full-batch racecheck gap prevents complete merge acceptance;
+the historical 34-case qualification above does not qualify this merge.

@@ -18,17 +18,19 @@ v0.5.18 performance results do not describe v0.5.22.
 
 ## Understand the modes
 
-Native is the default. The two Packed paths use the same default 328-byte format.
+Native is the default. Serving accepts `native` and `direct`; the v0.5.22
+runtime exposes the same choices through `--kv-cache-format`.
 
 | Mode | Storage | Decode |
 |---|---|---|
-| `native` | Native | Stock FlashMLA |
-| `triton` | Packed | Reconstruct Native records, then stock FlashMLA |
-| `kernel` | Packed | Direct Packed attention |
+| `native` | Native | Stock FlashMLA / TileLang |
+| `direct` | Packed | Direct Packed attention |
 
-These are implementations, not different default pruning policies. Kernel remains
-256-only. Triton also supports fixed per-layer retention of 64–448 coordinates in
-steps of 64, without HiCache; these profiles need separate serving validation.
+For DeepSeek V4 the Packed record is 328 bytes; V4.1 uses its FP4 global-cache
+layout, and GLM uses its 320-byte FP8 MLA layout with TileLang. Adapter and
+reconstruction remain internal benchmark inputs. Direct supports 256 survivors;
+other retained-coordinate profiles require a supported Direct implementation
+before serving can accept them.
 
 ## Read first
 
@@ -74,7 +76,7 @@ select unused GPU IDs and ports. The container does not automatically start a se
 export REMNANT_INTEGRATION=v0.5.18      # v0.5.18 | v0.5.22; selects build and runtime
 export MODEL_PATH=/absolute/path/to/DeepSeek-V4-Flash-0731
 export GPUS=0,1,2,3 PORT=30212 MASTER_PORT=29638
-export MODE=native                    # native | triton | kernel
+export MODE=native                    # native | direct
 bash scripts/local/container.sh up      # builds the image if missing
 bash scripts/local/serve.sh "$MODE"
 curl -fsS --max-time 10 "http://127.0.0.1:$PORT/health"
@@ -123,8 +125,8 @@ modal run scripts/modal/serve.py::benchmark_serving --mode native
 
 [serve.py](scripts/modal/serve.py) owns server startup, cleanup and the same local
 benchmark client. Defaults: 32k input, 2,048 output, C8; override with
-`--input-tokens`, `--output-tokens`, `--concurrency`. Use `--mode kernel` or
-`--mode triton` for Packed. The default 60-minute work limit is not an ETA.
+`--input-tokens`, `--output-tokens`, `--concurrency`. Use `--mode direct` for
+Packed. The default 60-minute work limit is not an ETA.
 
 ## Make your first change
 

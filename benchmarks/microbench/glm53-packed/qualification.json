@@ -1,0 +1,3840 @@
+{
+  "schema_version": 2,
+  "author": "Winston Cai.",
+  "experiment": "glm53-packed",
+  "updated": "2026-10-27",
+  "status": "historical_decode_comparison_complete; current_review_cpu_checks_passed",
+  "decision": "Keep the cooperative loader and its source-bound 48-case result. Native remains the default. Current review fixes do not create new GPU or timing evidence.",
+  "model_config": {
+    "model": "zai-org/GLM-5.3-Flash",
+    "revision": "46a050bec13002ad29ee795c16e61cf4fa3c4a9c",
+    "sha256": "bb8f01c42cb92a52ca72e65afb4d5bd8d11aef083cd210e8de25dfb904f23e9f",
+    "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/resolve/46a050bec13002ad29ee795c16e61cf4fa3c4a9c/config.json"
+  },
+  "budget": {
+    "authorized_usd": 40,
+    "routine_cutoff_usd": 36.410829025143784,
+    "conservative_accrued_usd": 31.44063414108861,
+    "h100_seconds": 22008.206854434495,
+    "historical_conservative_usd": 19.410829025143784,
+    "optimized_phase": {
+      "authorized_usd": 20,
+      "routine_cutoff_usd": 17,
+      "cpu_cap_usd": 3,
+      "gpu_cap_usd": 14,
+      "reserve_usd": 3,
+      "h100_seconds_cap": 8100,
+      "conservative_usd": 12.029805115944834,
+      "cpu_usd": 1.5365644248367962,
+      "gpu_usd": 10.134505230615192,
+      "h100_seconds": 7990.2439207275165,
+      "conservative_overcount_usd": 0.358735460492845
+    },
+    "limit_changes": [
+      {
+        "date": "2026-10-26T14:54:42.492887+00:00",
+        "reason": "User approved 15 extra H100 minutes and an additional $5 for pending GPU validation and lint/CI cleanup",
+        "before": {
+          "authorized_usd": 15,
+          "routine_cutoff_usd": 12,
+          "cpu_cap_usd": 3,
+          "gpu_cap_usd": 9,
+          "reserve_usd": 3,
+          "h100_seconds_cap": 7200
+        },
+        "after": {
+          "authorized_usd": 20,
+          "routine_cutoff_usd": 17,
+          "cpu_cap_usd": 3,
+          "gpu_cap_usd": 14,
+          "reserve_usd": 3,
+          "h100_seconds_cap": 8100
+        }
+      }
+    ],
+    "new_review_compute_usd": 0,
+    "new_review_h100_seconds": 0,
+    "new_review_archive_upload_usd": 0,
+    "account": "caiw",
+    "latest_read_only_compute_usd": 24.02845307,
+    "latest_read_only_active_containers": 0,
+    "billing_note": "Compute excludes credits and pre-existing volume storage. Conservative historical charges remain controlling; complete account snapshots and failed attempts are in history."
+  },
+  "optimized_decode": {
+    "protocol": "remnant-glm-decode-v1",
+    "status": "complete_for_measured_source",
+    "run_id": "glm53-optimized-timing-20261026T092628Z",
+    "source": {
+      "parent": "8aea70ae58a9afc044842abbbdd976c1deafa2d5",
+      "sglang": "246ee03c1ad5e0b647383644039c32b8c71bf680",
+      "flashmla": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8"
+    },
+    "cases": 48,
+    "paired_rounds": 30,
+    "summary": {
+      "batch_weighted_overhead_percent": 1.6010379890577247,
+      "by_heads": {
+        "16": 0.6828707244567309,
+        "8": 2.5192052536587184
+      },
+      "completed_cases": 48,
+      "unacceptable_2x_cases": []
+    },
+    "flat_csv": "decode.csv",
+    "raw_record_pointer": "/optimized_decode_phase/timing/record in history.qualification_path",
+    "existing_remote_outputs": "caiw/remnant-stage2a-results/microbench/glm53-optimized-timing-20261026T092628Z/timing/",
+    "acceptance": {
+      "focused_loader_qualification": "passed",
+      "all_48_decode_cases": true,
+      "all_30_paired_rounds": true,
+      "soft_15_percent_goal": "met",
+      "native_code_and_cubins": "unchanged",
+      "broad_sanitizer_qualification": "incomplete",
+      "full_grid_combine_instrumentation": "unverified",
+      "weights_serving_quality_prefill_multi_gpu": "not evaluated",
+      "serving_default": "native",
+      "rollback_sglang": "889edf56b33226c80b17ddf3472c1206df62c3f0"
+    },
+    "cpu": {
+      "status": "passed",
+      "image_id": "im-WeZALFI55iddCz7CoH3aJn",
+      "variants": 32,
+      "gates_sha256": "13c22cb66cca756138eb1f644430e91103f71c153f655f3d138f7e372017f745",
+      "native": "source and cubins unchanged",
+      "popc_sites": 34,
+      "spills": 0,
+      "residency_blocks_per_sm": 2
+    },
+    "sanitizers": {
+      "synccheck": {
+        "status": "passed",
+        "run_id": "glm53-optimized-validation-20261026T085610Z",
+        "tests": 5,
+        "log_sha256": "ba5135499fa70da491acebc0261566d4eeb8a4a178d71c93efc265cf56dc1013",
+        "scope": "exact production one-CTA partials H8/H16 inner1/2 plus large-address byte probe; full-grid/combine uninstrumented"
+      },
+      "racecheck": {
+        "status": "passed",
+        "run_id": "glm53-optimized-validation-20261026T085610Z",
+        "tests": 5,
+        "log_sha256": "b8115659aabe95b1adaa416e846754bf4f41e6b70fd4082cb53a495f6f8f2895",
+        "scope": "exact production one-CTA partials H8/H16 inner1/2 plus large-address byte probe; full-grid/combine uninstrumented"
+      },
+      "memcheck": {
+        "status": "passed",
+        "run_id": "glm53-optimized-validation-20261026T091954Z",
+        "tests": 5,
+        "log_sha256": "8ee2e9efae6d81ae5aca88b124bdad6561b730c197ee841e1023eb777941b427",
+        "scope": "exact production one-CTA partials H8/H16 inner1/2 plus large-address byte probe; full-grid/combine uninstrumented"
+      }
+    }
+  },
+  "latest_historical_gpu_validation": {
+    "status": "focused_gpu_validation_passed",
+    "source": {
+      "parent": "0639722c102a9117518e6be968ad256d31d9d6c4",
+      "sglang": "9185c6d2511508ecf40e86101040bbc2dffb1135",
+      "flashmla": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+      "image": "im-PO9F017Jyq5riB4Ndegpi9"
+    },
+    "run_ids": [
+      "glm53-review-prepare-20261026T145910Z",
+      "glm53-review-direct-20261026T151034Z",
+      "glm53-review-adapter-20261026T152144Z",
+      "glm53-review-adapter-20261026T153225Z",
+      "glm53-review-adapter-20261026T153740Z"
+    ],
+    "results": [
+      {
+        "run_id": "glm53-review-direct-20261026T151034Z",
+        "status": "passed",
+        "gpu_function_seconds": 315.93819150999997,
+        "selected_tools": [
+          "synccheck",
+          "racecheck",
+          "memcheck"
+        ],
+        "result_sha256": "56707be58156e4105b435819073a8b408d3e048def43818b6ed0d9961ce7ad55",
+        "manifest_sha256": "d3a4771119e922d953caa626745037fb170f91cf3c72846edbcf2554bfe3ee07",
+        "remote_volume_path": "caiw/remnant-stage2a-results/microbench/glm53-review-direct-20261026T151034Z/validation"
+      },
+      {
+        "run_id": "glm53-review-adapter-20261026T152144Z",
+        "status": "failed",
+        "gpu_function_seconds": 108.497594941,
+        "selected_tools": [
+          "synccheck",
+          "racecheck",
+          "memcheck"
+        ],
+        "result_sha256": "a049a560c0933a6d844d097afe2b785f2aed69a2640d947630aaa123ec66fa0e",
+        "manifest_sha256": "d3a4771119e922d953caa626745037fb170f91cf3c72846edbcf2554bfe3ee07",
+        "remote_volume_path": "caiw/remnant-stage2a-results/microbench/glm53-review-adapter-20261026T152144Z/validation"
+      },
+      {
+        "run_id": "glm53-review-adapter-20261026T153225Z",
+        "status": "failed",
+        "gpu_function_seconds": 37.213382866,
+        "selected_tools": [
+          "racecheck",
+          "memcheck"
+        ],
+        "result_sha256": "c3051d3799fef954d9897b0510fa4ace61e6b0377d612d492d620afac6a4232d",
+        "manifest_sha256": "d3a4771119e922d953caa626745037fb170f91cf3c72846edbcf2554bfe3ee07",
+        "remote_volume_path": "caiw/remnant-stage2a-results/microbench/glm53-review-adapter-20261026T153225Z/validation"
+      },
+      {
+        "run_id": "glm53-review-adapter-20261026T153740Z",
+        "status": "passed",
+        "gpu_function_seconds": 116.305804415,
+        "selected_tools": [
+          "racecheck",
+          "memcheck"
+        ],
+        "result_sha256": "e755f0a64a07e0e1b6cda37c29213e59f45fc1f1736876e80546d650cdf2dad8",
+        "manifest_sha256": "d3a4771119e922d953caa626745037fb170f91cf3c72846edbcf2554bfe3ee07",
+        "remote_volume_path": "caiw/remnant-stage2a-results/microbench/glm53-review-adapter-20261026T153740Z/validation"
+      }
+    ],
+    "scope_limits": [
+      "Direct sanitizer instrumentation: byte probe and one production partial CTA per specialization; complete graph numerical checks run separately.",
+      "Adapter >2GiB regression is unfiltered under all three sanitizer tools, joined across identical source/artifact runs.",
+      "Broad/full-grid/combine instrumentation, serving, model quality, H20 qualification remain incomplete; no new timing."
+    ],
+    "ci": {
+      "lint": {
+        "run": 40352029193,
+        "head": "979839b0b160c2e545c116aebd04866495e541b8",
+        "conclusion": "success"
+      },
+      "run_ci_label": "created and applied",
+      "base_gate": "passed after explicit failed-job rerun",
+      "registered_self_hosted_runners": 0,
+      "base_cpu_failure": "Seven Remnant flags absent from server-arguments reference; fixed in documentation-only follow-up.",
+      "remaining": "Broad GPU CI queued without self-hosted runners; no full-CI success claim.",
+      "prior_lint": {
+        "run": 40344880119,
+        "head": "9185c6d2511508ecf40e86101040bbc2dffb1135",
+        "conclusion": "success"
+      },
+      "documentation_contract": "All table rows have four columns; seven new rows match actual source defaults and choices."
+    },
+    "applicability": "These results qualify the recorded source only. New source hashes require matching preparation/qualification; no automatic promotion."
+  },
+  "allocation": {
+    "status": "passed",
+    "tokens": 131072,
+    "requests": 32,
+    "tp": 8,
+    "context_length": 1048576,
+    "extra_context_rows": 4,
+    "modes": [
+      {
+        "mode": "native",
+        "tokens": 131072,
+        "backing_bytes": 3897341212,
+        "active_block_bytes": 3898396672,
+        "allocator_padding_bytes": 1055460,
+        "allocator_reserved_bytes": 3940548608,
+        "latent": 739639296,
+        "indexer": 47672064,
+        "tails": 765952,
+        "kda": 2970849312,
+        "workspace": 0,
+        "pointers": 88,
+        "request_metadata": 138414500
+      },
+      {
+        "mode": "adapter",
+        "tokens": 131072,
+        "backing_bytes": 3758388508,
+        "active_block_bytes": 3759443968,
+        "allocator_padding_bytes": 1055460,
+        "allocator_reserved_bytes": 3835691008,
+        "latent": 462274560,
+        "indexer": 47672064,
+        "tails": 765952,
+        "kda": 2970849312,
+        "workspace": 138412032,
+        "pointers": 88,
+        "request_metadata": 138414500
+      },
+      {
+        "mode": "direct",
+        "tokens": 131072,
+        "backing_bytes": 3619976476,
+        "active_block_bytes": 3621031936,
+        "allocator_padding_bytes": 1055460,
+        "allocator_reserved_bytes": 3697278976,
+        "latent": 462274560,
+        "indexer": 47672064,
+        "tails": 765952,
+        "kda": 2970849312,
+        "workspace": 0,
+        "pointers": 88,
+        "request_metadata": 138414500
+      }
+    ]
+  },
+  "capacity": {
+    "native_cell_bytes": 5995,
+    "packed_cell_bytes": 3883,
+    "projected_token_gain_percent": 54.39093484419264,
+    "projection_condition": "unchanged KDA reservation; asymptotic token cache budget; excludes fixed Adapter workspace and page rounding",
+    "measured_serving_capacity": false,
+    "measured_direct_saved_bytes_per_rank": 277364736,
+    "measured_adapter_saved_bytes_per_rank": 138952704
+  },
+  "earlier_full_attention": {
+    "status": "incomplete_unoptimized_historical",
+    "completed_cases": 56,
+    "required_cases": 128,
+    "qualification": "memcheck_incomplete",
+    "flat_csv": "attention.csv",
+    "raw_record_pointer": "/timing_phase/comparison in history.qualification_path"
+  },
+  "current_review": {
+    "base_parent": "ee509d1fbbdd823f527388d2ee763d370d65ad0a",
+    "base_sglang": "979839b0b160c2e545c116aebd04866495e541b8",
+    "sglang": "51744625288154ea36714434a3d2e46ae3f15047",
+    "flashmla": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+    "changes": [
+      "Reject conflicting compiled-image/rebuild settings before source checks or image construction.",
+      "Bind benchmark reference/config/statistics dependencies and verify cached artifacts on resume.",
+      "Reject non-BF16 resolved Packed activation dtype at startup; preserve Native.",
+      "Centralize host geometry constants; explain nibble/PRMT mapping without changing CUDA code tokens.",
+      "Extend actual producer, hybrid-pool and public-dispatch integration test.",
+      "Bound owned subprocess groups and terminate descendants on failure/interruption.",
+      "Validate derived timing statistics against raw samples.",
+      "Replace duplicated ledger/README payloads with compact decisions and immutable history references."
+    ],
+    "checks": [
+      {
+        "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/private/tmp/glm-validation-tools:python /opt/homebrew/bin/python3 -m pytest -p no:cacheprovider -q test/registered/unit/test_glm5_mla_cache_format.py benchmark/remnant/test_microbench.py",
+        "cwd": "third_party/sglang-v0.5.22",
+        "passed": 168,
+        "skipped_gpu": 103
+      },
+      {
+        "command": "pinned ruff check/format, isort, clang-format --dry-run --Werror, git diff --check",
+        "result": "passed",
+        "versions": {
+          "ruff": "0.15.1",
+          "isort": "7.0.0",
+          "clang-format": "20.1.7"
+        }
+      },
+      {
+        "command": "independent review of benchmark, runtime, parent, compact archive and budget",
+        "result": "passed; scope regression and unprepared fixture specializations corrected"
+      },
+      {
+        "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/private/tmp/glm-validation-tools:/Users/poohthewinnie/.local/share/uv/tools/modal/lib/python3.11/site-packages /opt/homebrew/bin/python3 -m unittest scripts.modal.tests",
+        "profile": "v0.5.18",
+        "passed": 116,
+        "seconds": 68.867
+      },
+      {
+        "command": "REMNANT_INTEGRATION=v0.5.22 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/private/tmp/glm-validation-tools:/Users/poohthewinnie/.local/share/uv/tools/modal/lib/python3.11/site-packages /opt/homebrew/bin/python3 -m unittest scripts.modal.tests",
+        "profile": "v0.5.22",
+        "passed": 116,
+        "seconds": 68.647
+      }
+    ],
+    "gpu": "not_run; expanded production integration test remains unverified",
+    "build": "not_run",
+    "kernel_comment_token_identity": "passed; noncomment CUDA token stream unchanged",
+    "timing_policy": "No new measurements or requalification claims.",
+    "parent_implementation": "0e3f94bb71995c72c02f1eab1083da13e306eb7e",
+    "integration_scope": "Synthetic physical selections via fused-topk; index selection and logical-to-physical page-table transform excluded."
+  },
+  "artifacts": {
+    "summary_csv": "decode.csv",
+    "historical_attention_csv": "attention.csv",
+    "allocation_csv": "allocation.csv",
+    "resource_csv": "resource-usage.csv",
+    "sass_csv": "sass-summary.csv",
+    "model_config": "model-config.json"
+  },
+  "history": {
+    "source_commit": "ee509d1fbbdd823f527388d2ee763d370d65ad0a",
+    "qualification_path": "benchmarks/microbench/glm53-packed/qualification.json",
+    "qualification_sha256": "0f6778f312a57d377d382c82effb9b02e091e2087587fe017fdbd570301f9c42",
+    "qualification_bytes": 2257149,
+    "readme_sha256": "088e2d57ca69dc2bf9f7045fa8ec631001ee715080cc090d0cecada2f51c0e7d",
+    "git_url": "https://github.com/winstonxcai/flash-optimizations/blob/ee509d1fbbdd823f527388d2ee763d370d65ad0a/benchmarks/microbench/glm53-packed/qualification.json",
+    "local_extracted_archive": "data/glm53-packed/ledger-archive-20261026T165850Z",
+    "local_index_sha256": "d3bb0e37b3903046734a1217944b9113ba40fb3c16f40a7d3a8431d454e4a578",
+    "local_files_verified": 67,
+    "recovery": "git show ee509d1fbbdd823f527388d2ee763d370d65ad0a:benchmarks/microbench/glm53-packed/qualification.json > qualification-history.json",
+    "external_archive_upload": "Not performed; automatic approval review rejected additional external disclosure. Existing Git commit and local archive verified byte-for-byte.",
+    "contents": "Complete original ledger and README, all raw samples, source/artifact manifests, commands, failures, per-account costs and revisions; 52 attempt records also extracted locally."
+  },
+  "limitations": [
+    "Broad/full-grid/combine sanitizer coverage incomplete.",
+    "New expanded producer/pool/public-dispatch GPU test not executed.",
+    "No checkpoint loading, serving capacity, quality, latency, multi-GPU or H20 qualification.",
+    "No optimized prefill timing; old 128-case experiment remains incomplete."
+  ],
+  "rollback": "Select Native cache format; optimized-loader baseline SGLang 889edf56b33226c80b17ddf3472c1206df62c3f0.",
+  "full_model_smoke": {
+    "status": "passed",
+    "decision": "Retain the serving startup fixes and the verified image. Native and Packed Direct both pass the four-H200 text-only full-checkpoint smoke.",
+    "run_id": "glm53-h200-tp4-final-answer-20261104",
+    "modal_profile": "caiw",
+    "serving_image": "im-VvBWmlcKXOGyVuHTE6kVxx",
+    "compiled_base_image": "im-VNWowCrHAn7IchjzCb3JkM",
+    "final_sglang_pin": "d748fe5e4ae74b76a103dbadb3d9cf85b4cfce0a",
+    "source_note": "The verified image used the recorded source override, including existing benchmark-only prefill edits. The new pin commits only the serving fixes. The production Packed decode dispatch was exercised.",
+    "official_guide": "https://cookbook.sglang.io/autoregressive/GLM/GLM-5.3-Flash",
+    "checkpoint_repository": "zai-org/GLM-5.3-Flash",
+    "checkpoint_volume": "glm53-flash",
+    "checkpoint_download_app": "ap-9UgvnU2XOq6Y9bmYqicHIq",
+    "cpu_preflight_app": "ap-P4aigzYBTItQhySv036DCp",
+    "serving_app": "ap-kOVXUiAnMymNtwN0njkeOe",
+    "commands": {
+      "download": "MODAL_PROFILE=caiw REMNANT_INTEGRATION=v0.5.22 REMNANT_MODEL_FAMILY=glm53 REMNANT_SGLANG_SOURCE_OVERRIDE=\"$PWD/third_party/sglang-v0.5.22\" REMNANT_COMPILED_IMAGE=im-VNWowCrHAn7IchjzCb3JkM modal run scripts/modal/serve.py::download_model",
+      "cpu_preflight": "MODAL_PROFILE=caiw REMNANT_INTEGRATION=v0.5.22 REMNANT_MODEL_FAMILY=glm53 REMNANT_SGLANG_SOURCE_OVERRIDE=\"$PWD/third_party/sglang-v0.5.22\" REMNANT_COMPILED_IMAGE=im-VNWowCrHAn7IchjzCb3JkM modal run scripts/modal/serve.py::prepare_glm_serving",
+      "smoke": "MODAL_PROFILE=caiw REMNANT_INTEGRATION=v0.5.22 REMNANT_MODEL_FAMILY=glm53 REMNANT_SGLANG_SOURCE_OVERRIDE=\"$PWD/third_party/sglang-v0.5.22\" REMNANT_COMPILED_IMAGE=im-VNWowCrHAn7IchjzCb3JkM modal run scripts/modal/serve.py::smoke_glm_serving --run-id glm53-h200-tp4-final-answer-20261104",
+      "export": "MODAL_PROFILE=caiw modal volume get remnant-stage2a-results glm53-serving/glm53-h200-tp4-final-answer-20261104 <local-output-dir>",
+      "billing": "MODAL_PROFILE=caiw modal billing summary --for 2026-11 --json",
+      "active_allocations": "MODAL_PROFILE=caiw modal container list"
+    },
+    "result_volume": "remnant-stage2a-results",
+    "result_path": "glm53-serving/glm53-h200-tp4-final-answer-20261104",
+    "export_sha256": {
+      "result.json": "50d74a40dc1d78a76638ea57d3bc725eef1129d616a00fae14dca1130db5f627",
+      "native.log": "be6e72e7095c3dd0d3ff5011bbf1304599458e64b543e0b2cbe69a2d32fb49c0",
+      "packed.log": "6ff4f2007e3836729bba47fe13bb069b2bdee33402b45cdf39ff63dae90963be"
+    },
+    "previous_attempts": [
+      {
+        "app": "ap-ZrY1msHLszjcqoOAdrDwRM",
+        "status": "checkpoint worker import failed"
+      },
+      {
+        "app": "ap-Zr0zFkY3FB57h9Qr57QTHX",
+        "status": "CPU CLI help imported GPU-only diffusion code"
+      },
+      {
+        "app": "ap-ll7X49TvrUBFscFawzd6K3",
+        "run_id": "glm53-h200-tp4-smoke-20261104",
+        "status": "GLM missing from text-only architecture allowlist"
+      },
+      {
+        "app": "ap-2K1oUe3w8WdUmUIVdGxax9",
+        "run_id": "glm53-h200-tp4-text-only-20261104",
+        "status": "weight load passed, stale cache-pool field blocked decode graph capture"
+      },
+      {
+        "app": "ap-GSErmiri6jid3pnGfNxlc9",
+        "run_id": "glm53-h200-tp4-forward-context-20261104",
+        "status": "Native graph capture passed, missing optional Rust radix tree blocked startup. Stopped during Packed loading."
+      },
+      {
+        "app": "ap-RKSNqUeAxFlx4UXGhldx2u",
+        "run_id": "glm53-h200-tp4-python-tree-20261104",
+        "status": "both modes returned HTTP 200, but exhausted the 32-token limit during reasoning"
+      }
+    ],
+    "cost": {
+      "authorized_usd": 60,
+      "month": "2026-11",
+      "workspace_gross_metered_baseline_usd": "11.50386751",
+      "workspace_gross_metered_after_usd": "26.81355577",
+      "gross_metered_delta_usd": "15.30968826",
+      "workspace_ephemeral_apps_after_usd": "25.19746344",
+      "workspace_volumes_after_usd": "1.44380919",
+      "workspace_egress_after_usd": "0.16974658",
+      "active_containers_after": 0,
+      "note": "Gross workspace delta includes CPU and GPU attempts, storage and egress, before credits. Billing can lag and the retained checkpoint can accrue storage."
+    },
+    "limitations": [
+      "One short request per mode on one four-H200 TP4/EP4 worker. Startup times include first-use compilation and different cache state.",
+      "No serving throughput, latency, capacity, multimodal, or model-quality qualification.",
+      "The experimental 64-row prefill tile was benchmark-only."
+    ],
+    "smoke": {
+      "checkpoint": {
+        "revision": "46a050bec13002ad29ee795c16e61cf4fa3c4a9c",
+        "shards": 62,
+        "bytes": 328337455672,
+        "heads": 64,
+        "layers": 45,
+        "config_sha256": "bb8f01c42cb92a52ca72e65afb4d5bd8d11aef083cd210e8de25dfb904f23e9f"
+      },
+      "sources": {
+        "parent": {
+          "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations",
+          "commit": "8a9a9397df90dcdea7d36ff99ba70ac04fc80d38"
+        },
+        "sglang": {
+          "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+          "expected_commit": "51744625288154ea36714434a3d2e46ae3f15047",
+          "commit": "51744625288154ea36714434a3d2e46ae3f15047",
+          "override": true,
+          "dirty": true,
+          "sha256": "5167964a5f4f20d2bc8db39322ac834c38d6cc6dba0988fce61a02fb7aa46d88",
+          "integration": "v0.5.22"
+        },
+        "flashmla/csrc/cutlass": {
+          "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22/csrc/cutlass",
+          "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "override": false,
+          "dirty": false
+        },
+        "flashmla": {
+          "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/flashmla-v0.5.22",
+          "expected_commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+          "commit": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+          "override": false,
+          "dirty": false,
+          "integration": "v0.5.22"
+        }
+      },
+      "launcher": "/opt/flash-optimizations/scripts/local/run-server.sh",
+      "model_path": "/models/GLM-5.3-Flash",
+      "compiled_image": "im-VNWowCrHAn7IchjzCb3JkM",
+      "gpus": [
+        "NVIDIA H200, 143771 MiB",
+        "NVIDIA H200, 143771 MiB",
+        "NVIDIA H200, 143771 MiB",
+        "NVIDIA H200, 143771 MiB"
+      ],
+      "mode_results": {
+        "native": {
+          "status": "passed",
+          "health_http_status": 200,
+          "ready_seconds": 397.457129303,
+          "chat": {
+            "http_status": 200,
+            "request": {
+              "model": "glm53-flash",
+              "messages": [
+                {
+                  "role": "user",
+                  "content": "Write the numbers one to five in order."
+                }
+              ],
+              "chat_template_kwargs": {
+                "reasoning_effort": "low"
+              },
+              "temperature": 0,
+              "max_tokens": 256
+            },
+            "response": {
+              "id": "4244934bf03f418d9c17533775b775a5",
+              "object": "chat.completion",
+              "created": 1793800688,
+              "model": "glm53-flash",
+              "choices": [
+                {
+                  "index": 0,
+                  "message": {
+                    "role": "assistant",
+                    "content": "1, 2, 3, 4, 5",
+                    "reasoning_content": null
+                  },
+                  "logprobs": null,
+                  "finish_reason": "stop",
+                  "matched_stop": 154827
+                }
+              ],
+              "usage": {
+                "prompt_tokens": 21,
+                "total_tokens": 36,
+                "completion_tokens": 15,
+                "prompt_tokens_details": null,
+                "reasoning_tokens": 1
+              },
+              "metadata": {
+                "weight_version": "default",
+                "weight_versions": [
+                  {
+                    "version": "default",
+                    "start": 0,
+                    "end": 15
+                  }
+                ]
+              }
+            }
+          },
+          "worker_seconds": 474.738915013
+        },
+        "packed": {
+          "status": "passed",
+          "health_http_status": 200,
+          "ready_seconds": 165.18281268100003,
+          "chat": {
+            "http_status": 200,
+            "request": {
+              "model": "glm53-flash",
+              "messages": [
+                {
+                  "role": "user",
+                  "content": "Write the numbers one to five in order."
+                }
+              ],
+              "chat_template_kwargs": {
+                "reasoning_effort": "low"
+              },
+              "temperature": 0,
+              "max_tokens": 256
+            },
+            "response": {
+              "id": "b4bde693a96b4dd8a770aaa5a88e1082",
+              "object": "chat.completion",
+              "created": 1793800865,
+              "model": "glm53-flash",
+              "choices": [
+                {
+                  "index": 0,
+                  "message": {
+                    "role": "assistant",
+                    "content": "1, 2, 3, 4, 5",
+                    "reasoning_content": null
+                  },
+                  "logprobs": null,
+                  "finish_reason": "stop",
+                  "matched_stop": 154827
+                }
+              ],
+              "usage": {
+                "prompt_tokens": 21,
+                "total_tokens": 36,
+                "completion_tokens": 15,
+                "prompt_tokens_details": null,
+                "reasoning_tokens": 1
+              },
+              "metadata": {
+                "weight_version": "default",
+                "weight_versions": [
+                  {
+                    "version": "default",
+                    "start": 0,
+                    "end": 15
+                  }
+                ]
+              }
+            }
+          },
+          "worker_seconds": 177.100810082
+        }
+      },
+      "settings": {
+        "MODEL_FAMILY": "glm53",
+        "MODEL_NAME": "glm53-flash",
+        "TP": "4",
+        "EP": "4",
+        "PORT": "30211",
+        "CTX_LEN": "8192",
+        "MAX_RUN": "4",
+        "CHUNK": "2048",
+        "MAX_TOTAL_TOKENS": "16384",
+        "SGLANG_JIT_DEEPGEMM_PRECOMPILE": "0",
+        "MEM_FRAC": "0.86",
+        "SGLANG_ENABLE_HEALTH_ENDPOINT_GENERATION": "0",
+        "SGLANG_UNIFIED_RADIX_TREE_CORE_BACKEND": "python",
+        "HF_HUB_OFFLINE": "1",
+        "TRANSFORMERS_OFFLINE": "1",
+        "GLM_REASONING_PARSER": "auto",
+        "DECODE_CFG": "{\"decode\": {\"backend\": \"full\", \"max_bs\": 4, \"bs\": [1, 2, 4]}, \"prefill\": {\"backend\": \"disabled\"}}"
+      }
+    }
+  },
+  "full_prefill": {
+    "protocol": "remnant-glm-prefill-v1",
+    "status": "qualified_timing_complete",
+    "decision": "Retain the benchmark-only 64-row candidate. Strict per-case parity missed, so the serving dispatch does not select it.",
+    "paired_parity": "missed",
+    "completed_cases": 80,
+    "paired_rounds_per_case": 30,
+    "seed": 20261024,
+    "direct_faster_cases": 70,
+    "per_query_size": {
+      "128": {
+        "cases": 16,
+        "direct_faster": 16,
+        "min_paired_median": 0.870402715116722,
+        "median_of_case_paired_medians": 0.9095979660058074,
+        "max_paired_median": 0.9828152175748965
+      },
+      "512": {
+        "cases": 16,
+        "direct_faster": 14,
+        "min_paired_median": 0.9091823962887898,
+        "median_of_case_paired_medians": 0.9369915316458473,
+        "max_paired_median": 1.0021914456330356
+      },
+      "1536": {
+        "cases": 16,
+        "direct_faster": 16,
+        "min_paired_median": 0.9306621432803354,
+        "median_of_case_paired_medians": 0.9639055941966201,
+        "max_paired_median": 0.9977853762360696
+      },
+      "4096": {
+        "cases": 16,
+        "direct_faster": 16,
+        "min_paired_median": 0.9287760274583703,
+        "median_of_case_paired_medians": 0.9629254013196322,
+        "max_paired_median": 0.9995348145987731
+      },
+      "8192": {
+        "cases": 16,
+        "direct_faster": 8,
+        "min_paired_median": 0.9382944541003517,
+        "median_of_case_paired_medians": 0.97348667023371,
+        "max_paired_median": 1.0111386626560646
+      }
+    },
+    "fastest": {
+      "case": "prefill_h8_q128_t3_independent_warm",
+      "median_native_ms": 0.15493455886840818,
+      "median_direct_ms": 0.13484560012817381,
+      "paired_median_direct_over_native": 0.870402715116722
+    },
+    "parity_misses": [
+      {
+        "case": "prefill_h8_q8192_t3_shared_rotating",
+        "median_native_ms": 7.8210033840603295,
+        "median_direct_ms": 7.907798767089844,
+        "paired_median_direct_over_native": 1.0111386626560646
+      },
+      {
+        "case": "prefill_h8_q8192_t3_shared_warm",
+        "median_native_ms": 7.883289184570312,
+        "median_direct_ms": 7.968683471679688,
+        "paired_median_direct_over_native": 1.0108310079708867
+      },
+      {
+        "case": "prefill_h8_q8192_t0_shared_rotating",
+        "median_native_ms": 7.905190811676233,
+        "median_direct_ms": 7.982814659066752,
+        "paired_median_direct_over_native": 1.0098281327657341
+      },
+      {
+        "case": "prefill_h8_q8192_t0_shared_warm",
+        "median_native_ms": 7.848282165527344,
+        "median_direct_ms": 7.924500732421875,
+        "paired_median_direct_over_native": 1.0097044973127627
+      },
+      {
+        "case": "prefill_h16_q8192_t0_shared_warm",
+        "median_native_ms": 8.084979553222656,
+        "median_direct_ms": 8.129476928710936,
+        "paired_median_direct_over_native": 1.0055109844415584
+      },
+      {
+        "case": "prefill_h16_q8192_t3_shared_rotating",
+        "median_native_ms": 8.08456336127387,
+        "median_direct_ms": 8.1233278910319,
+        "paired_median_direct_over_native": 1.004808079086151
+      },
+      {
+        "case": "prefill_h16_q8192_t0_shared_rotating",
+        "median_native_ms": 8.084773264774661,
+        "median_direct_ms": 8.12326195126488,
+        "paired_median_direct_over_native": 1.0047578116098732
+      },
+      {
+        "case": "prefill_h16_q8192_t3_shared_warm",
+        "median_native_ms": 8.085235900878907,
+        "median_direct_ms": 8.119301147460938,
+        "paired_median_direct_over_native": 1.0041426924685402
+      },
+      {
+        "case": "prefill_h8_q512_t0_shared_warm",
+        "median_native_ms": 0.5122776031494141,
+        "median_direct_ms": 0.5134527969360352,
+        "paired_median_direct_over_native": 1.0021914456330356
+      },
+      {
+        "case": "prefill_h8_q512_t3_shared_warm",
+        "median_native_ms": 0.5120639991760254,
+        "median_direct_ms": 0.5129982376098633,
+        "paired_median_direct_over_native": 1.001850526565991
+      }
+    ],
+    "cpu": {
+      "app": "ap-XQaiaX9meg0KqY7lve0nrx",
+      "base_image": "im-VNWowCrHAn7IchjzCb3JkM",
+      "image": "im-OoDLtduw24molSSF2ZCvQB",
+      "h200_image": "im-RNTNo2aeJKl1e9VarNWrpS",
+      "command": "modal run scripts/modal/kernels.py::prepare_kernels --model-family glm53",
+      "new_tilelang_variant": [
+        8,
+        17,
+        true,
+        64
+      ],
+      "unchanged_native_partial_cubins": 16,
+      "unchanged_packed_tile32_partial_cubins": 16,
+      "local_tests": {
+        "fork_benchmark": 50,
+        "modal_protocol_and_rebuild": 17
+      },
+      "independent_review": "Matrix and GPU call ownership reviewed. Physical indices and sorted row unions matched the pinned implementation across the 40 distinct prefill fixture definitions at two bank seeds."
+    },
+    "controller_environment": {
+      "MODAL_PROFILE": "caiw",
+      "REMNANT_INTEGRATION": "v0.5.22",
+      "REMNANT_MODEL_FAMILY": "glm53",
+      "REMNANT_GLM_PREFILL_H200": "1",
+      "REMNANT_SGLANG_SOURCE_OVERRIDE": "$PWD/third_party/sglang-v0.5.22",
+      "REMNANT_GLM_CPU_REBUILD_FROM": "im-VNWowCrHAn7IchjzCb3JkM",
+      "REMNANT_GLM_CPU_REBUILD_BASE_SGLANG": "51744625288154ea36714434a3d2e46ae3f15047"
+    },
+    "runs": [
+      {
+        "run_id": "glm53-prefill-full-20261104T173438Z",
+        "app": "ap-DUtmZAZDz95GFCYdHkFD3w",
+        "command": "modal run scripts/modal/kernels.py::benchmark_kernels --model-family glm53 --suite glm-attention --phase prefill --packed-prefill-tile 64 --run-id glm53-prefill-full-20261104T173438Z --max-seconds 2340",
+        "function_timeout_seconds": 2400,
+        "worker_seconds": 2338.96323137,
+        "accepted_cases": 78,
+        "status": "work deadline reached on case 79",
+        "timing_error": "TimeoutError('prefill_h8_q8192_t3_shared_warm: fixture/timing deadline reached')",
+        "worker_command": [
+          "/opt/sglang/bin/python",
+          "/sgl-workspace/sglang-remnant/benchmark/remnant/microbench.py",
+          "--model-family",
+          "glm53",
+          "--suite",
+          "glm-attention",
+          "--phase",
+          "prefill",
+          "--packed-prefill-tile",
+          "64",
+          "--output",
+          "/results/microbench/glm53-prefill-full-20261104T173438Z/timing/timing",
+          "--max-seconds",
+          "2011"
+        ]
+      },
+      {
+        "run_id": "glm53-prefill-full-resume-20261104T181617Z",
+        "app": "ap-a1cF59TZh6HijhAwykDtwo",
+        "command": "PYTHONPATH=$PWD python data/glm53-packed/full-prefill-20261104T173438Z/resume.py glm53-prefill-full-resume-20261104T181617Z glm53-prefill-full-20261104T173438Z",
+        "function_timeout_seconds": 360,
+        "work_deadline_seconds": 300,
+        "worker_seconds": 209.826931374,
+        "accepted_prefix_cases": 78,
+        "new_cases": 2,
+        "status": "passed",
+        "worker_command": [
+          "/opt/sglang/bin/python",
+          "/sgl-workspace/sglang-remnant/benchmark/remnant/microbench.py",
+          "--model-family",
+          "glm53",
+          "--suite",
+          "glm-attention",
+          "--phase",
+          "prefill",
+          "--packed-prefill-tile",
+          "64",
+          "--output",
+          "/results/microbench/glm53-prefill-full-resume-20261104T181617Z/timing/timing",
+          "--max-seconds",
+          "263",
+          "--resume",
+          "/results/microbench/glm53-prefill-full-20261104T173438Z/timing/timing.json"
+        ]
+      }
+    ],
+    "qualification": {
+      "status": "passed",
+      "by_heads": {
+        "16": {
+          "status": "passed",
+          "device": "NVIDIA H200",
+          "tile_rows": 64,
+          "inner_iter": 17,
+          "cubin_sha256": "e08e234f855f3e26f1a085da6876edd67689ee4de560d9759159f14f80b6f26e",
+          "source_sha256": "5d83d9105d74152c444786a362a738c926a38fbc3dbbbb3d02e87567d3870409",
+          "dynamic_shared": 51712,
+          "tools": {
+            "synccheck": {
+              "status": "passed",
+              "prefix": [
+                "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+                "--tool",
+                "synccheck",
+                "--error-exitcode",
+                "1",
+                "--kernel-name",
+                "regex=glm_packed_partial_kernel"
+              ],
+              "test": "test/registered/attention/unittests/test_glm5_remnant.py::test_prefill_partial_graph[64]",
+              "log_sha256": "a4464805a9cc7f81e42b4fafc4322f87f6bf6cb7db878b5e95c5947cb0c89803",
+              "report_sha256": "175c7eb6581e3bf3b7ee57426c3106a7194cefb04de7def7dd8d934044a6f8fd"
+            },
+            "racecheck": {
+              "status": "passed",
+              "prefix": [
+                "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+                "--tool",
+                "racecheck",
+                "--error-exitcode",
+                "1",
+                "--kernel-name",
+                "regex=glm_packed_partial_kernel"
+              ],
+              "test": "test/registered/attention/unittests/test_glm5_remnant.py::test_prefill_partial_graph[64]",
+              "log_sha256": "4b35d26de001c6946774f6771231f3b3d3023dc772dbacfd2098ef9ce6060817",
+              "report_sha256": "d4da256de03102dbdd1f283125a2431fd4884e7f8acb0b878a09ba6a82ceb903"
+            },
+            "memcheck": {
+              "status": "passed",
+              "prefix": [
+                "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+                "--tool",
+                "memcheck",
+                "--error-exitcode",
+                "1",
+                "--kernel-name",
+                "regex=glm_packed_partial_kernel"
+              ],
+              "test": "test/registered/attention/unittests/test_glm5_remnant.py::test_prefill_partial_graph[64]",
+              "log_sha256": "df05e016ef930de3b0ba412338bd2f2004f4ae5b105cdae1316cc704a4b1a0b4",
+              "report_sha256": "9aa2a3488718383eb08bdca97221085c1a298cc07d7440f9d5a839d8dfe15dfd"
+            }
+          }
+        },
+        "8": {
+          "status": "passed",
+          "device": "NVIDIA H200",
+          "tile_rows": 64,
+          "inner_iter": 17,
+          "cubin_sha256": "0f214c662eb2184d58b34296b85144d85754962dc72f24031037df2f24771fd3",
+          "source_sha256": "ac6f7949b414bb5ab22f3044d618e116d9faa5b4aeede8e0da327a101e4e5c77",
+          "dynamic_shared": 51712,
+          "tools": {
+            "synccheck": {
+              "status": "passed",
+              "prefix": [
+                "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+                "--tool",
+                "synccheck",
+                "--error-exitcode",
+                "1",
+                "--kernel-name",
+                "regex=glm_packed_partial_kernel"
+              ],
+              "test": "test/registered/attention/unittests/test_glm5_remnant.py::test_prefill_partial_graph_h8",
+              "log_sha256": "6116ec0188125a74592e2394ac40a66447134cfb42a6a503f4796dc3ee8494f1",
+              "report_sha256": "e78130fb8878337ffb3a404f54aed1a7310e646c3fac609254b71937ce707449"
+            },
+            "racecheck": {
+              "status": "passed",
+              "prefix": [
+                "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+                "--tool",
+                "racecheck",
+                "--error-exitcode",
+                "1",
+                "--kernel-name",
+                "regex=glm_packed_partial_kernel"
+              ],
+              "test": "test/registered/attention/unittests/test_glm5_remnant.py::test_prefill_partial_graph_h8",
+              "log_sha256": "c97e82f33a345e22b311e3332d0e1d86538339a4e8dc9e37e38e7d5248b8124d",
+              "report_sha256": "4c2e150d2a3946cd30e394ddb34d39643f95313e7ab61ea3bac3f26bc4b724b9"
+            },
+            "memcheck": {
+              "status": "passed",
+              "prefix": [
+                "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+                "--tool",
+                "memcheck",
+                "--error-exitcode",
+                "1",
+                "--kernel-name",
+                "regex=glm_packed_partial_kernel"
+              ],
+              "test": "test/registered/attention/unittests/test_glm5_remnant.py::test_prefill_partial_graph_h8",
+              "log_sha256": "7f2c7530716a91acde0fe17c4d61c1455236954b1863b1a33f312d07bc8d2775",
+              "report_sha256": "53f4355d9d4b9e377b7fab04f7a42ef963c4da4edfe865edb9f045aa5be6410b"
+            }
+          }
+        }
+      }
+    },
+    "scope": "Model-free complete attention calls on one H200. Focused sanitizer qualification covers the exact 64-row Packed partial cubin for each head geometry. It instruments one CTA per variant, with changing inputs and invalid indices. Full fixtures pass numerical and graph checks.",
+    "source": {
+      "measured_parent": "d3aa23f19e062eb5a6ffce85c8678a5105072944",
+      "measured_sglang": {
+        "path": "/Users/poohthewinnie/.codex/worktrees/glm53-packed/flash-optimizations/third_party/sglang-v0.5.22",
+        "expected_commit": "d748fe5e4ae74b76a103dbadb3d9cf85b4cfce0a",
+        "commit": "d748fe5e4ae74b76a103dbadb3d9cf85b4cfce0a",
+        "override": true,
+        "dirty": true,
+        "sha256": "fd07a1f67fae1fa4d2a46a098a266a64c51edde91319b36d52a9f1520ba3e694",
+        "integration": "v0.5.22"
+      },
+      "flashmla": "3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+      "committed_sglang": "6667e5d024f15995d0cf67c4c4145ea4aad31b1c",
+      "note": "Measured source was the exact recorded overlay. The final SGLang commit additionally initializes synthetic test fixture fields, with no change to timed code.",
+      "sglang_patch_sha256": "2d88df2d46763f9f8a3393d227761865037e187d083f0701c09982a80e2ff7a8",
+      "modal_patch_sha256": "e4f9f3d2cd18cca5ee105358b0baa3407e2b157c944412b8c771fefa1d6f8757"
+    },
+    "cost": {
+      "authorized_usd": 5,
+      "gross_workspace_baseline_usd": "26.81355577",
+      "after_cpu_usd": "26.95355655",
+      "after_first_run_usd": "30.50355655",
+      "gross_workspace_final_usd": "30.82355655",
+      "gross_workspace_delta_usd": "4.01000078",
+      "compute_meter_delta_usd": "4.01290264",
+      "conservative_accrued_usd": "4.02",
+      "remaining_against_conservative_usd": "0.98",
+      "gpu_hour_rate_including_worker_usd": "4.9852",
+      "active_containers_after": 0
+    },
+    "artifacts": {
+      "result_volume": "caiw/remnant-stage2a-results",
+      "checkpoint": "microbench/glm53-prefill-full-20261104T173438Z/timing",
+      "final": "microbench/glm53-prefill-full-resume-20261104T181617Z/timing",
+      "local_export": "data/glm53-packed/full-prefill-20261104T173438Z",
+      "final_manifest_sha256": "83acb3a3f948166079c4d26bc910572db194e56726601d06598aa9d64b6b7492",
+      "final_timing_sha256": "c24aebabaa7287d77791d2dfa4e700f3596523c95e7864b9c65a09b00bb4d683",
+      "final_csv_sha256": "b5f0e98da099fa3d9b4b60ae47b4ec8829f53300482aba46792a43d52de45f18",
+      "initial_timing_sha256": "1a5a8f17a2ad14f775724957ef9eaef95933e5f9c2ddc580df4b762fa89f2b1e"
+    },
+    "limitations": [
+      "Timing is descriptive for this model-free H200 matrix. Ten cases missed parity.",
+      "Focused sanitizer gates do not cover the full grid or combine.",
+      "The experiment does not establish serving latency, capacity or multi-GPU performance."
+    ]
+  },
+  "ds41_integration": {
+    "status": "implemented_validation_incomplete",
+    "author": "Winston Cai",
+    "candidate_worktree": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration",
+    "parent_ancestors": [
+      "8a3d5b223e7e4332bfba45a2fe34a2825b0111c9",
+      "d385c1c3a52229b86cebb62aeb86e4d26933946c"
+    ],
+    "sglang": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+    "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159",
+    "budget": {
+      "authorized_usd": 26,
+      "routine_stop_usd": 23,
+      "reserve_usd": 3,
+      "cpu_cap_usd": 4.5,
+      "h100_cap_usd": 6.35,
+      "serving_cap_usd": 15.228586666666668,
+      "h100_cap_minutes": 85,
+      "serving_cap_minutes": null,
+      "accounted_usd": 22.112108246683857,
+      "launches": [],
+      "accounts": {
+        "caiw": {
+          "baseline_month": "2026-11",
+          "baseline_compute_usd": 28.82816891,
+          "baseline_gross_metered_usd": 32.80486824,
+          "active_containers": 0,
+          "h100_hour_usd": 3.95,
+          "h200_hour_usd": 4.54,
+          "cpu_hour_usd": 0.0473,
+          "ram_gib_hour_usd": 0.008,
+          "latest_compute_usd": 29.95444163
+        },
+        "winstoncai233": {
+          "baseline_compute_usd": 3.85998491,
+          "baseline_month": "2026-11",
+          "active_containers": 0,
+          "h100_hour_usd": 3.95,
+          "h200_hour_usd": 4.54,
+          "cpu_hour_usd": 0.0473,
+          "ram_gib_hour_usd": 0.008,
+          "checkpoint_volume": "glm53-flash",
+          "latest_compute_usd": 19.97642634
+        },
+        "winstoncai": {
+          "baseline_month": "2026-11",
+          "baseline_compute_usd": 0.47618399,
+          "active_containers": 0,
+          "h100_hour_usd": 3.95,
+          "h200_hour_usd": 4.54,
+          "cpu_hour_usd": 0.0473,
+          "ram_gib_hour_usd": 0.008,
+          "checkpoint_volume": "deepseek-v4-1-flash-1017",
+          "latest_compute_usd": 3.99178164
+        }
+      },
+      "reported_compute_delta_usd": 20.7583118,
+      "conservative_cpu_usd": 3.05,
+      "h100_minutes": 75.95601940552243,
+      "serving_minutes": 39.83869597911835,
+      "billing_lag_policy": "Use the larger of conservative category accrual and refreshed compute delta; all prior attempts remain charged.",
+      "rebalance_authorized": true,
+      "rebalance_note": "Approved aggregate25/routine22/reserve3; four concurrent workers replace former single-pair7USD/20minute category. No reset of prior cost or H10075-minute cap. Each launch constrained by aggregate remaining cost.",
+      "additional_budget_request": {
+        "requested_total_usd": 25,
+        "status": "approved",
+        "approved_additional_usd": 5,
+        "reserve_usd": 3,
+        "time": 1793894967.127518,
+        "scope": "FourparallelGLM/V41NativeDirectworkersaftercompleteadmissionandfreshaggregateprojection; allpriorcostsretained"
+      },
+      "serving_controller_caps_seconds": {
+        "glm53": 600,
+        "dsv41": 720
+      },
+      "serving_accounted_usd": 13.498076638497988,
+      "launch_spend_basis_usd": 22.112108246683857,
+      "cpu_reconciliation": {
+        "time": 1793898566.583539,
+        "previous_forecast_usd": 3.3,
+        "reconciled_accrual_usd": 2.9,
+        "pre_serving_reported_compute_delta_usd": 5.300069300000003,
+        "guaranteed_H100_seconds": 2267.2658057639046,
+        "minimum_H100_cost_usd": 2.768079630414865,
+        "completed_CPU_cost_upper_bound_usd": 2.5319896695851383,
+        "remaining_CPU_preparation_max_usd": 0.3,
+        "basis_reports": [
+          "data/modal/glm53-ds41-integration/v41-ds41-numerical-20261105t1351z/artifacts/validation/result.json",
+          "data/modal/glm53-ds41-integration/v41-ds41-numerical-fixed-20261105t1424z/artifacts/validation/result.json",
+          "data/modal/glm53-ds41-integration/v41-ds41-complete-filter-tools-20261105t1621z/artifacts/validation/result.json",
+          "data/modal/glm53-ds41-integration/glm53-ds41-numerical-final-20261105t1238z/artifacts/validation/result.json",
+          "data/modal/glm53-ds41-integration/glm53-ds41-fallback-tools-20261105t1338z/artifacts/validation/result.json",
+          "data/modal/glm53-ds41-integration/glm53-ds41-numerical-20261105t1157z/artifacts/validation/result.json",
+          "data/modal/glm53-ds41-integration/v41-ds41-filtered-tools-20261105t1543z/artifacts/validation/result.json",
+          "data/modal/glm53-ds41-integration/glm53-ds41-fallback-numerical-20261105t1331z/artifacts/validation/result.json"
+        ],
+        "interrupted_basis": "data/modal/glm53-ds41-integration/v41-ds41-focused-tools-20261105t1452z/artifacts/validation",
+        "note": "Only unused CPU forecast was released. All raw costs, snapshots, failed and interrupted attempts remain. The guaranteed GPU duration is a lower bound from worker receipts and the pytest-start-to-interruption interval, each at four CPUs and 32 GiB. Fresh aggregate compute remains a launch floor; the $2.90 accrual already includes up to $0.30 of remaining CPU preparation."
+      },
+      "stopping_reason": "Requested five-case rerun completed; no further jobs scheduled.",
+      "final_reconciliation": {
+        "time": 1793905560.914783,
+        "account_deltas": {
+          "caiw": {
+            "compute_baseline_usd": 28.82816891,
+            "compute_final_usd": 29.95444163,
+            "delta_usd": 1.126272720000003,
+            "active_containers": 0
+          },
+          "winstoncai233": {
+            "compute_baseline_usd": 3.85998491,
+            "compute_final_usd": 19.97642634,
+            "delta_usd": 16.11644143,
+            "active_containers": 0
+          },
+          "winstoncai": {
+            "compute_baseline_usd": 0.47618399,
+            "compute_final_usd": 3.99178164,
+            "delta_usd": 3.51559765,
+            "active_containers": 0
+          }
+        },
+        "conservative_accrued_usd": 22.112108246683857,
+        "reported_compute_delta_usd": 20.7583118,
+        "larger_spend_basis_usd": 22.112108246683857,
+        "unspent_hard_cap_usd": 3.8878917533161435,
+        "protected_reserve_usd": 3,
+        "all_allocations_released": true,
+        "includes_all_failed_and_interrupted_attempts": true
+      },
+      "serving_minutes_definition": "Sum of conservative allocation intervals across five four-H200 workers; not elapsed wall time. GPU-minutes are four times this value.",
+      "serving_worker_minutes": 36.21783101725,
+      "authorization_extensions": [
+        {
+          "time": 1793904110.378651,
+          "additional_usd": 1,
+          "additional_H100_minutes": 10,
+          "total_usd": 26,
+          "H100_cap_minutes": 85,
+          "reserve_usd": 3,
+          "scope": "Only the five previously failed cases; user explicitly approved."
+        }
+      ]
+    },
+    "cpu": {
+      "fork_command": "python -m pytest benchmark/remnant/test_microbench.py test/registered/unit/test_glm5_mla_cache_format.py -q",
+      "passed": 195,
+      "gpu_skipped": 103,
+      "test_inventory": "All67 original top-level benchmark functions retained; shared-statistics and graph-metadata regressions added (69 total).",
+      "parent": {
+        "v0.5.18": "111 passed",
+        "v0.5.22": "111 passed",
+        "v41-fp4_qualification_preflight": "11 passed",
+        "new_focused_scope_and_boundary_checks": "passed",
+        "v0.5.22_final": "112 passed in70.400s; source52eabab; final subsequent parent-only change excludes pytest caches from build context",
+        "v0.5.18_final": "112 passed in72.267s",
+        "final_frozen": "116passedbothintegrationversions on a56cb7b",
+        "profile_memory_fix": "116 tests passed in 73.952 seconds. The four-mode environment regression passed in 0.541 seconds. Ruff, isort, and diff checks passed."
+      },
+      "new_graph_metadata_regression": "passed locally and in independent review",
+      "build_context_regression": "FilePatternMatcher excludes both root/nested pytest caches and retains actual GPU test source",
+      "fp4_allocation_regression": "Selected CPU startup contract now checks production Native356/178 and Direct292/146 byte coefficients before GPU allocation."
+    },
+    "review": {
+      "runtime": "passed; corrected auto backend and architectures=None regressions",
+      "parent": "passed; includes dispatcher, receipts, metadata, smoke ownership and focused merge scope",
+      "boundary_followup": "No blockers: d271262 fixture reaches actual V4 predicate; existing behavioral pool-guard regression covers identity forwarding and FP8 rejection. Real KVLayout enum CPU check accepted both FP4 and rejected all three FP8 layouts. C1/C2 compressor GPU parametrization already covers both FP4 layouts.",
+      "graph_metadata_followup": "Passed independent narrow review; CPU regression passed in0.04 seconds; no numerical, graph, kernel or tolerance changes.",
+      "fp4_fixture_followup": "Fresh independent review passed: CPU real selector/sizing, shared independent ABI table; all3 stale comparisons fixed, no runtime/kernel/tolerance change.",
+      "serving_memory_profile": "Independent review passed. V4.1 0.90 exceeds the observed 0.864 minimum; GLM stays at 0.86 and both retain the 16K pool bound. Corrected V4.1 GPU serving remains unverified.",
+      "race_failure": "Independent log/source review found the first failure during Native C1 setup/projection, before its store callback. Both graph cases passed; four later failures are sticky-context cascades. No source fix is justified yet.",
+      "evidence_closeout": "Independent raw XML/CSV, source attribution, artifact equivalence and cost review passed. Full racecheck remains failed; the isolated pass is diagnostic only. Serving allocation/worker minutes use separately defined sums."
+    },
+    "h100": {
+      "glm_numerical": "175+9 passed on final fallback artifacts",
+      "glm_focused_merge": "7cases pertool; all3tools and scopeaudit passed; raw log/XML hashes verified",
+      "glm_broad_sanitizers": "not qualified by these focused runs",
+      "v41": {
+        "numerical_allocation": "39 passed",
+        "focused_numerical": "15 passed",
+        "focused_tools": {
+          "synccheck": {
+            "status": "passed",
+            "run_id": "v41-ds41-complete-filter-tools-20261105t1621z",
+            "counts": {
+              "tests": 15,
+              "errors": 0,
+              "failures": 0,
+              "skipped": 0
+            },
+            "passed_cases": 15,
+            "log_sha256": "d90e1782768b6e9b46576632b09d5d9fe69b5dbe8011ac71261eba125f468c46",
+            "xml_sha256": "c9616fd34ef87c5e94f051e69bec9182626cabee72d768104943ea931b141e6d"
+          },
+          "memcheck": {
+            "status": "passed",
+            "run_id": "v41-ds41-remaining-tools-20261105t1727z",
+            "counts": {
+              "tests": 15,
+              "errors": 0,
+              "failures": 0,
+              "skipped": 0
+            },
+            "passed_cases": 15,
+            "log_sha256": "1bb3a301769ce750487e5bd14ebe0df49f1d400f96970affba0ce043726f1b10",
+            "xml_sha256": "5a54383f0317cb3416f56f392045f3ed9bcbf962ca235699ad83c7119acc49e7"
+          },
+          "racecheck": {
+            "status": "failed",
+            "run_id": "v41-ds41-remaining-tools-20261105t1727z",
+            "counts": {
+              "tests": 15,
+              "errors": 0,
+              "failures": 5,
+              "skipped": 0
+            },
+            "passed_cases": 10,
+            "log_sha256": "f6dd0c87be95f4f6d8ae643673eceff3ab7b6bcde205d92217c64c7ae54bcc87",
+            "xml_sha256": "e60bf5567407bc9c18e3114ec80df3571078d82eba6e73fc7b21f7062373edd5"
+          }
+        },
+        "focused_qualification_complete": false,
+        "broad_qualification_complete": false,
+        "artifact_equivalence_sha256": {
+          "sources": "5ac347aa349ab050cc42a999e69096bc1d550d13de3ce13d715b7178bb894e80",
+          "binaries": "aeba4c2549f66b179caca29996fb7f81ef27a2a5a6d532c6749c4a2ff4aa7237",
+          "fp4_precompile_artifacts": "2be259593b6c658ed417f296e2e5247fef7cd987db235d5f1f06dbc196c592ba",
+          "sanitizer": "45523f77181c4d8a8a9a3d270583854933f3e10bdcf333089430179fda9fea62"
+        },
+        "scope_audit_note": "The full production filter, FlashMLA symbols, sources, binaries, compiled artifact set and tool are unchanged. The audit selected different representative Triton paths from the identical artifact set. The strict 34-case receipt identity/policy remains unchanged.",
+        "race_failure": {
+          "first_case": "test_fp4_compressor_boundary[False-1]",
+          "surface": "test_remnant_fp4.py:876, torch.arange. Earlier Native BF16 projection was asynchronous; the FP4 store callback had not run.",
+          "passed_before_failure": 10,
+          "cascading_failures": 4,
+          "kind": "Internal Sanitizer Error and XID 13/43 MMU fault",
+          "root_cause": "Unresolved. No evidence justifies attributing this to faulty hardware, a checker defect, or a particular source instruction."
+        },
+        "isolated_diagnostic": {
+          "run_id": "v41-native-c1-diagnostic-20261105t1757z",
+          "status": "passed",
+          "cases": 1,
+          "racecheck": "Zero hazards, errors and warnings.",
+          "differences": "Fresh worker on a different physical H100, unfiltered framework coverage, and CUDA_LAUNCH_BLOCKING=1.",
+          "limitation": "Does not resolve the failed batch or qualify the 15/34-case matrix."
+        },
+        "failed_five_rerun": {
+          "status": "passed",
+          "run_id": "v41-failed-five-20261106",
+          "numerical_tests": 5,
+          "racecheck_tests": 5,
+          "racecheck_seconds": 143.65,
+          "hazards": 0,
+          "errors": 0,
+          "warnings": 0,
+          "limitations": "Fresh worker, unfiltered framework coverage and CUDA_LAUNCH_BLOCKING=1. The earlier full-batch failure remains unresolved.",
+          "controller_outcome": "Local Connection._transport collection error; persisted successful worker result, exact XML cases and sanitizer log/hashes independently verified.",
+          "control_packet": {
+            "raw_volume": "winstoncai233/remnant-stage2a-results/microbench/v41-failed-five-20261106/validation/control-packet.zip",
+            "sha256": "6486bb11d90131643549c1cb86395c2586522227b627217d4d0e6cd834441117"
+          }
+        }
+      }
+    },
+    "serving": {
+      "glm53_native": "passed",
+      "glm53_direct": "passed_after_isolated_rerun",
+      "v41_native": "passed in v41_parallel_serving",
+      "v41_direct": "passed in v41_parallel_serving"
+    },
+    "excluded_replay_capture_files": 236,
+    "original_dirty_ledger_preserved": true,
+    "preparation_strategy": "Fresh combined Dockerfile.v0.5.22 native compilation on caiw; V4.1 private image inaccessible. Reuse identical native image layers for the two CPU qualification recipes.",
+    "runtime_scope": {
+      "glm": "numerical/pool/allocation/public dispatch/graphs; packed bytes/decode h8,h16 inner1,2 + prefill tile64 h8,h16 under all3 tools",
+      "v41": "Native/Packed FP4, producer C1/C2, Direct pages128/256, allocations, graphs/streams; focused all3 tools",
+      "serving": "Four parallel GLM/V4.1 Native/Direct attempts, then one isolated GLM Direct rerun. Strict chat and per-rank load/graph checks are retained. The V4.1 memory correction is not GPU-qualified."
+    },
+    "source_freeze": {
+      "parent": "c23b32f6c0f79b966c88f0292554b0db4b83ad7c",
+      "sglang": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+      "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159"
+    },
+    "cpu_preparation": [
+      {
+        "run": "20261105-cpu-glm",
+        "app_id": "ap-6zI3z2hMD2dvehw15Wz57F",
+        "status": "passed",
+        "image": "im-X6lMtdDcXzp4CHNORZSYrC",
+        "parent": "164da45a04c6ac6d742bee6e21e95f29aef74489",
+        "sglang": "d2a99aa6c612757c9f618efecbdc8c1372c324dc",
+        "compiled_partials": 35,
+        "gpu_allocated": false,
+        "controller_log_sha256": "173fa80c9b9a0a126d77ecae5e7bb6c995a91d4e5305b71afa78cedd94422350"
+      },
+      {
+        "run": "20261105-cpu-v41",
+        "app_id": "ap-mgvkp9timOyGc8iLN9LqOF",
+        "status": "failed",
+        "reason": "Startup restriction fixture omitted architectures; model-family guard fired before intended HiSparse rejection. Runtime code unchanged. Corrected fixture in d271262.",
+        "cpu_pytest": "23 passed, 1 failed, 21 subtests passed",
+        "gpu_allocated": false,
+        "controller_log_sha256": "a1d4a07193e37c65ef7a0403bd54ca3db07189cd70852589e12ef1d0455974e3"
+      },
+      {
+        "run": "20261105-cpu-serving",
+        "app_id": "ap-tSPxx7K0knHdRyHUjGoNvs",
+        "status": "passed",
+        "checkpoint_revision": "46a050bec13002ad29ee795c16e61cf4fa3c4a9c",
+        "shards": 62,
+        "bytes": 328337455672,
+        "gpu_allocated": false,
+        "controller_log_sha256": "d8f6b35611a5a7f3e12ecf1e00e972c65ee9ba7d9507e02ae138ad9415065f27"
+      },
+      {
+        "run": "20261105-cpu-glm-corrective",
+        "app_id": "ap-sq18UMmvZ0GG67f3jM2UDl",
+        "status": "passed",
+        "compiled_base_image": "im-X6lMtdDcXzp4CHNORZSYrC",
+        "gpu_allocated": false,
+        "image": "im-kRJDqO5hlGgwgee1Kk7NdB",
+        "controller_log_sha256": "88e882d7a80a2fde466eb05e17e2e613fbe986e2959e125cc93b5f745d60dd21"
+      },
+      {
+        "run": "20261105-cpu-v41-corrective",
+        "app_id": "ap-IKlsj9iY6XpHKfldGGYKFv",
+        "status": "passed",
+        "gpu_allocated": false,
+        "image": "im-G3clJNDCZc9whvhv3GmSU3",
+        "cpu_pytest": "24 passed,21 subtests passed,153.69 seconds",
+        "controller_log_sha256": "460b4a7d21b9e937c4b92ccf7e91a35cca91554b71700351ebfd2d1eb2f4e568"
+      },
+      {
+        "run": "20261105-cpu-serving-corrective",
+        "app_id": "ap-m7gFtYBI7AZi9mJVarrMnD",
+        "status": "passed",
+        "image": "im-JBKWpMxMtJ2cEFoiVHkKLK",
+        "compiled_base_image": "im-kRJDqO5hlGgwgee1Kk7NdB",
+        "source_freeze": {
+          "parent": "0943cf524948b0df4ec2a41062e8cf7fc7ff0a64",
+          "sglang": "d271262284f5c7ffc509a7d17b22118974ed4d25",
+          "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159"
+        },
+        "shards": 62,
+        "bytes": 328337455672,
+        "gpu_allocated": false,
+        "controller_log_sha256": "cdf1dd9bf63ffb4647bc0f345f8c082f7e54d3948e724a64914725c4e825c232"
+      },
+      {
+        "run": "20261105-cpu-glm-graph-metadata",
+        "status": "passed",
+        "compiled_base_image": "im-kRJDqO5hlGgwgee1Kk7NdB",
+        "gpu_allocated": false,
+        "image": "im-rvD7sW83R5p8BwuDOiBtGl",
+        "app_id": "ap-X17WSsZbaj3fkOxLYtedzp",
+        "parent": "52eabab247fc90ef2058c2c7d98a70ba8bc0d9a2",
+        "controller_log_sha256": "c4b3a09ebc9d05b0a4f28a22b3e5d8527b8460ef1c91798ffa47b6c19eeae078"
+      },
+      {
+        "run": "20261105-cpu-v41-graph-metadata",
+        "app_id": "ap-OBSenCYkbHXHn6JJI6KdG8",
+        "status": "failed_before_image_build",
+        "reason": "Parallel local pytest changed a regenerable .pytest_cache during context upload. Fixed .dockerignore in250415b; no GPU allocation.",
+        "gpu_allocated": false,
+        "controller_log_sha256": "df9d42b67ea27c7ad452a567eaa16c53cdff1ebcd08b1611d658f0bf3919d5a6"
+      },
+      {
+        "run": "20261105-cpu-v41-final",
+        "status": "passed",
+        "gpu_allocated": false,
+        "image": "im-fxC6UF1yCCP3iwnI9bHIiR",
+        "app_id": "ap-re5psfqRthABIwOGRFEErJ",
+        "cpu_pytest": "24 passed,21 subtests passed,149.48 seconds",
+        "source_freeze": {
+          "parent": "250415b7b28338e93af07abb82a4cf1184e3900c",
+          "sglang": "80d6a473cb0ace7ab54e1e3809085912428350c9",
+          "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159"
+        }
+      },
+      {
+        "run": "20261105-cpu-glm-final",
+        "status": "passed",
+        "image": "im-pDRbuTYdRb146CyV7NvYPj",
+        "app_id": "ap-SFvZwgtEe9NwDDNRNNoOZi",
+        "compiled_base_image": "im-rvD7sW83R5p8BwuDOiBtGl",
+        "source_freeze": {
+          "parent": "250415b7b28338e93af07abb82a4cf1184e3900c",
+          "sglang": "80d6a473cb0ace7ab54e1e3809085912428350c9",
+          "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159"
+        },
+        "gpu_allocated": false,
+        "controller_log_sha256": "11755859536c179e97d97a819d01fef3d9d511f031eba90c3c275f9f243e7c3d"
+      },
+      {
+        "run": "20261105-cpu-serving-final",
+        "status": "passed",
+        "image": "im-qrp5tGdAekUJxzDmRVGWi2",
+        "app_id": "ap-0JfSiscrDI3j4zlCQ6lA8R",
+        "compiled_base_image": "im-rvD7sW83R5p8BwuDOiBtGl",
+        "source_freeze": {
+          "parent": "250415b7b28338e93af07abb82a4cf1184e3900c",
+          "sglang": "80d6a473cb0ace7ab54e1e3809085912428350c9",
+          "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159"
+        },
+        "shards": 62,
+        "bytes": 328337455672,
+        "gpu_allocated": false,
+        "controller_log_sha256": "4d848f62e29e1bf570677eeebef9d3d1240b15346d2546b65f4b081f2b0723bf"
+      },
+      {
+        "run": "20261105-fallback-cpu-glm",
+        "model": "glm53",
+        "status": "passed",
+        "account": "winstoncai233",
+        "app_id": "ap-Q2w7VYCKc9cRiuyPT3vzxO",
+        "image": "im-jm7lWAjIsfwzLYySK64qlQ",
+        "source_freeze": {
+          "parent": "250415b7b28338e93af07abb82a4cf1184e3900c",
+          "sglang": "80d6a473cb0ace7ab54e1e3809085912428350c9",
+          "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159"
+        },
+        "controller_log_sha256": "2bb51b0a291608f6d15798567d89c0792d94f7f991ec60d9da40e51162b9ed8b",
+        "gpu_allocated": false
+      },
+      {
+        "run": "20261105-fallback-cpu-v41",
+        "model": "v41-fp4",
+        "status": "image_save_failed",
+        "account": "winstoncai233",
+        "app_id": "ap-i5OebzpRZCfllnLeSyaixI",
+        "image": "im-y4GpNdUxHr7JcCMyddTDp8",
+        "source_freeze": {
+          "parent": "250415b7b28338e93af07abb82a4cf1184e3900c",
+          "sglang": "80d6a473cb0ace7ab54e1e3809085912428350c9",
+          "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159"
+        },
+        "controller_log_sha256": "e41c99adb26e0aab3bc79ac9a597f7cbee106a078c94327ae6dbfe823cab20f7",
+        "gpu_allocated": false,
+        "reason": "Image save read of base layer blob timed out; no source/test failure. Retrying cached recipe after diagnosis."
+      },
+      {
+        "run": "20261105-fallback-cpu-serving",
+        "model": "serving",
+        "status": "passed",
+        "account": "winstoncai233",
+        "app_id": "ap-gcquiDdvaWklhhkYPYXzbN",
+        "image": "im-h2Z6ygAD3Pr33Z3N8fUUqM",
+        "source_freeze": {
+          "parent": "250415b7b28338e93af07abb82a4cf1184e3900c",
+          "sglang": "80d6a473cb0ace7ab54e1e3809085912428350c9",
+          "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159"
+        },
+        "controller_log_sha256": "101dc62103ddb47eaeffe2e7f10d373074214dd03b70294e3507b1d2b9292ce6",
+        "gpu_allocated": false
+      },
+      {
+        "run": "20261105-fallback-cpu-v41-retry",
+        "status": "passed",
+        "account": "winstoncai233",
+        "image": "im-y4GpNdUxHr7JcCMyddTDp8",
+        "app_id": "ap-I4QMk65bsBGz0AlLtuK7OX",
+        "source_freeze": {
+          "parent": "250415b7b28338e93af07abb82a4cf1184e3900c",
+          "sglang": "80d6a473cb0ace7ab54e1e3809085912428350c9",
+          "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159"
+        },
+        "controller_log_sha256": "608fcf618fa490a908b5a8aad2812501b2f3bbd0a351c5bcde8a5268c38bd277",
+        "gpu_allocated": false
+      }
+    ],
+    "h100_attempts": [
+      {
+        "run_id": "glm53-ds41-numerical-20261105t1157z",
+        "app_id": "ap-8job2BC4KMXxXQbYUBe3ir",
+        "status": "failed",
+        "source": {
+          "parent": "0943cf524948b0df4ec2a41062e8cf7fc7ff0a64",
+          "sglang": "d271262284f5c7ffc509a7d17b22118974ed4d25",
+          "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159"
+        },
+        "smoke": "9 passed",
+        "numerical": "169 passed, 6 failed",
+        "failure": "Synthetic graph fixture omitted identity.inner_iter; all six failures were metadata KeyErrors after numerical/graph assertions. Fixed in80d6a47; production kernels/paths unchanged.",
+        "allocation": "passed; preserved allocation.json; run failed before runner reconciliation step",
+        "conservative_minutes": 2.8161245505,
+        "worker_seconds": 124.14911943899999,
+        "raw_volume": "caiw/remnant-stage2a-results/microbench/glm53-ds41-numerical-20261105t1157z/validation",
+        "gpu_released": true,
+        "controller_log_sha256": "ae9b91c0f5fe2749d98735aa5a95cad0316c58f447c6930650c011d6f3fbdc74"
+      },
+      {
+        "run_id": "glm53-ds41-numerical-final-20261105t1238z",
+        "status": "passed",
+        "app_id": "ap-bSBe5GLU4CTSDN0iw4GA0M",
+        "image": "im-pDRbuTYdRb146CyV7NvYPj",
+        "source": {
+          "parent": "250415b7b28338e93af07abb82a4cf1184e3900c",
+          "sglang": "80d6a473cb0ace7ab54e1e3809085912428350c9",
+          "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159"
+        },
+        "smoke": "9 passed",
+        "numerical": "175 passed",
+        "allocation": "Native/Adapter/Direct reconciled",
+        "conservative_minutes": 2.518695851167043,
+        "raw_volume": "caiw/remnant-stage2a-results/microbench/glm53-ds41-numerical-final-20261105t1238z/validation",
+        "result_sha256": "324581f7a2ef80694e568a578df410374280d6ddd909e7fde1b2b3c0587293b2",
+        "gpu_released": true,
+        "controller_log_sha256": "f92472d482d40683c6bb9311d55768b9e297e4c70613355d76386c7a62225acc"
+      },
+      {
+        "run_id": "glm53-ds41-sanitizers-20261105t1244z",
+        "status": "rejected_before_allocation",
+        "app_id": "ap-DIlftuHsPsao1PhBfwMebp",
+        "reason": "ResourceExhaustedError: workspace billing cycle spend limit reached",
+        "gpu_allocated": false,
+        "conservative_minutes": 0,
+        "controller_log_sha256": "7642e5e7fb332a103fe5506ccaa1974e26a8da28ed5bd952ed19b9d37a6f54fa"
+      },
+      {
+        "run_id": "glm53-ds41-fallback-numerical-20261105t1331z",
+        "account": "winstoncai233",
+        "model": "glm53",
+        "app_id": "ap-NrSkGkh7akuhW6KTFbLtud",
+        "status": "passed",
+        "image": "im-jm7lWAjIsfwzLYySK64qlQ",
+        "conservative_minutes": 2.678335988521576,
+        "raw_volume": "winstoncai233/remnant-stage2a-results/microbench/glm53-ds41-fallback-numerical-20261105t1331z/validation",
+        "gpu_released": true,
+        "reports": {
+          "smoke": {
+            "tests": 9,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "validation": {
+            "tests": 175,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        "artifact_hashes": {
+          "model-config.json": "bb8f01c42cb92a52ca72e65afb4d5bd8d11aef083cd210e8de25dfb904f23e9f",
+          "validation.log": "c05fdb853d74cebedb91de3698f70b5ef73a955f1f33b997ca8c3400deba8ade",
+          "result.json": "ef80fe2a5da68e6dff07f9f90ae912f8138f22df25597f5a2a5339aedc7b581f",
+          "build-manifest.json": "f2f9cf5212beb55916a84c4762a9f3c6acbdfd573c3cf4919986e4da020189b7",
+          "smoke.log": "5519e1d86ecc9884e44acfdbf1d8210a39693af0677ae52080459ae4f42aec2d",
+          "allocation.json": "17b18beaa860a57619789a84152a4b1ef975ac5de14398f55d0b5be2f4ee664d",
+          "smoke.xml": "e888812be876daaee57af9fe87960107afbefaa5d86d697c41da4875311d23e0",
+          "validation.xml": "ee0576193eff85835bcb7a5484a1bee025d5a1fd0312171b5ff6597834a50b95"
+        },
+        "runtime_hashes": {
+          "kernels/ops/attention/dsa/tilelang_kernel.py": "2a4254889463f882f073d7e1a54311d0802e8e82e66bf1377a7b3edfc00d0875",
+          "kernels/jit/include/sgl_kernel/glm_packed_decode.cuh": "9394e536d914826f6654474f798bd5c24ab864c4de4dcdd6b90cb4b3fe96181f",
+          "srt/remnant/glm.py": "50565426fe36070791743987cf41d177081874c9a52d9bfa6f30805b7ae307aa",
+          "srt/remnant/glm_pool.py": "cfc36ad197037879867417df91e8cfb91f128fa24bc1cbfa88ae89eeae4e301d",
+          "srt/remnant/reference.py": "6231ec9622623643eba8ab50d714f9433cd13672be927030c4070ae05452021e",
+          "srt/layers/layernorm.py": "98072d836e0c77312058521ee1015c80177b2c370da7408fd066eec61015ff21"
+        },
+        "sanitizer_tool": {
+          "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+          "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+          "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+          "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+          "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+        },
+        "sanitizer_scope": "all",
+        "selected_sanitizer_tools": [
+          "synccheck",
+          "racecheck",
+          "memcheck"
+        ],
+        "sanitizer_qualification_complete": false,
+        "allocation_modes": [
+          "native",
+          "adapter",
+          "direct"
+        ],
+        "controller_log_sha256": "e79aa3fea85e576575361da4475273ad3a977a13994b7dd290f13974ab0d5e87"
+      },
+      {
+        "run_id": "glm53-ds41-fallback-tools-20261105t1338z",
+        "account": "winstoncai233",
+        "model": "glm53",
+        "app_id": "ap-8olQV1iManVIMKipdP2akE",
+        "status": "passed",
+        "image": "im-jm7lWAjIsfwzLYySK64qlQ",
+        "conservative_minutes": 7.609312419096629,
+        "raw_volume": "winstoncai233/remnant-stage2a-results/microbench/glm53-ds41-fallback-tools-20261105t1338z/validation",
+        "gpu_released": true,
+        "reports": {
+          "scope-audit": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "racecheck": {
+            "tests": 7,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "corrective": {
+            "tests": 7,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "synccheck": {
+            "tests": 7,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "memcheck": {
+            "tests": 7,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        "artifact_hashes": {
+          "model-config.json": "bb8f01c42cb92a52ca72e65afb4d5bd8d11aef083cd210e8de25dfb904f23e9f",
+          "scope-audit.xml": "3a9440c4b6d4e71b4498e0ed6999847f72c25a24e310616ff549231772e6c79f",
+          "racecheck.xml": "1b34031b9780feb96fcf35c0199e7018216128f84ddd71ddd9ffbc334124f46a",
+          "sanitizer-control-bindings-query.log": "a518617e603ae9e3659eecdf4257ea7eca94fb82a98faf99a78827514ec53fc4",
+          "result.json": "d017925b518a5e3d590c0fa78857ab72579bf50be5e931661218f3f8eb02d289",
+          "corrective.xml": "130b047c327d97a4efa98038f5a5a0fd503f251667e93cd3e5f95a21054e162f",
+          "synccheck.xml": "0357974aad430518784443ad9c5907e30f1eaf105975c42301fee64171d15782",
+          "sanitizer-version.log": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673",
+          "build-manifest.json": "f2f9cf5212beb55916a84c4762a9f3c6acbdfd573c3cf4919986e4da020189b7",
+          "memcheck.xml": "c876e554072b2c1671bec80c52a983a08b096be4ff69d69885d30341890bc3b1",
+          "driver-version.log": "641baa7aef4714d620d9cb838ee74134559d52457e2f5803efc69bd52a40a065",
+          "sanitizer-control-empty.log": "fb8d9ea8d2be1a0fc356e4685eab89b230d089597899abc6f9cde9b1b6cc3900",
+          "memcheck.log": "a575d006a89a117a6b19a3d005361976cc8638e955af5de30e25acc07e2a1125",
+          "sanitizer-control-bindings-import.log": "4806c657afdb0ef7bbbb2360916bf4ad14b5d2a0aac0e56710f31a9d1cfecc07",
+          "scope-audit.log": "e9e49b109e037e2c27d01b69b7aec5a3a76c372efd7966419bd8476435bd25e2",
+          "racecheck.log": "a7dcb4a64a3401710c4ea1405539ae442d906c677feb9365ac13cc1e11eaa92a",
+          "corrective.log": "33252dc43d4f39a9d4c0c298087c56fcec97048d341da8110d808b25ef816800",
+          "synccheck.log": "d92174bb0fbd9e0c70f1614c7d62a09aa585c8e7051c6ea2a300e0ead10c85e4"
+        },
+        "launch_arguments": {
+          "source": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration",
+          "image": "im-jm7lWAjIsfwzLYySK64qlQ",
+          "run_id": "glm53-ds41-fallback-tools-20261105t1338z",
+          "work_seconds": 900,
+          "controller_seconds": 1020,
+          "stage": "corrective",
+          "cases": "test/registered/attention/unittests/test_glm5_remnant.py::test_packed_loader_bytes,test/registered/attention/unittests/test_glm5_remnant.py::test_decode_partial_graph,test/registered/attention/unittests/test_glm5_remnant.py::test_prefill_partial_graph[64],test/registered/attention/unittests/test_glm5_remnant.py::test_prefill_partial_graph_h8",
+          "scope": "glm-merge",
+          "tools": "synccheck,racecheck,memcheck",
+          "out": "data/modal/glm53-ds41-integration/glm53-ds41-fallback-tools-20261105t1338z/controller.json"
+        },
+        "controller_sha256": "47a3b825952c66c80fadf198fefef8c22472a12e9c46d6856890234b9f70d152",
+        "runtime_hashes": {
+          "kernels/ops/attention/dsa/tilelang_kernel.py": "2a4254889463f882f073d7e1a54311d0802e8e82e66bf1377a7b3edfc00d0875",
+          "kernels/jit/include/sgl_kernel/glm_packed_decode.cuh": "9394e536d914826f6654474f798bd5c24ab864c4de4dcdd6b90cb4b3fe96181f",
+          "srt/remnant/glm.py": "50565426fe36070791743987cf41d177081874c9a52d9bfa6f30805b7ae307aa",
+          "srt/remnant/glm_pool.py": "cfc36ad197037879867417df91e8cfb91f128fa24bc1cbfa88ae89eeae4e301d",
+          "srt/remnant/reference.py": "6231ec9622623643eba8ab50d714f9433cd13672be927030c4070ae05452021e",
+          "srt/layers/layernorm.py": "98072d836e0c77312058521ee1015c80177b2c370da7408fd066eec61015ff21"
+        },
+        "sanitizer_tool": {
+          "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+          "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+          "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+          "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+          "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+        },
+        "sanitizer_scope": "glm-merge",
+        "selected_sanitizer_tools": [
+          "synccheck",
+          "racecheck",
+          "memcheck"
+        ],
+        "sanitizer_results": {
+          "synccheck": {
+            "status": "passed",
+            "report_schema": "remnant-sanitizer-raw-v1",
+            "log_sha256": "d92174bb0fbd9e0c70f1614c7d62a09aa585c8e7051c6ea2a300e0ead10c85e4",
+            "xml_sha256": "0357974aad430518784443ad9c5907e30f1eaf105975c42301fee64171d15782"
+          },
+          "racecheck": {
+            "status": "passed",
+            "report_schema": "remnant-sanitizer-raw-v1",
+            "log_sha256": "a7dcb4a64a3401710c4ea1405539ae442d906c677feb9365ac13cc1e11eaa92a",
+            "xml_sha256": "1b34031b9780feb96fcf35c0199e7018216128f84ddd71ddd9ffbc334124f46a"
+          },
+          "memcheck": {
+            "status": "passed",
+            "report_schema": "remnant-sanitizer-raw-v1",
+            "log_sha256": "a575d006a89a117a6b19a3d005361976cc8638e955af5de30e25acc07e2a1125",
+            "xml_sha256": "c876e554072b2c1671bec80c52a983a08b096be4ff69d69885d30341890bc3b1"
+          }
+        },
+        "qualification_scope": "focused_merge",
+        "focused_merge_qualification_complete": true,
+        "sanitizer_qualification_complete": false,
+        "gpu_function_seconds": 408.959377969,
+        "controller_log_sha256": "dc588afb26acd86e350b3789282fc01ed116d751bff01349f7648f3f487156e4"
+      },
+      {
+        "run_id": "v41-ds41-numerical-20261105t1351z",
+        "account": "winstoncai233",
+        "model": "v41-fp4",
+        "app_id": "ap-Nz8zNM0yrpm2z2dyTqcMt3",
+        "status": "failed",
+        "image": "im-y4GpNdUxHr7JcCMyddTDp8",
+        "conservative_minutes": 2.0360414663950603,
+        "raw_volume": "winstoncai233/remnant-stage2a-results/microbench/v41-ds41-numerical-20261105t1351z/validation",
+        "gpu_released": true,
+        "reports": {
+          "validation": {
+            "tests": 39,
+            "failures": 1,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        "artifact_hashes": {
+          "model-config.json": "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023",
+          "validation.log": "9448092573622834271e98e86af10d78bf229660badabab2db8ed498345898ce",
+          "result.json": "b300d10b6360a703c4ca1052bf36b23d5f7355847323fd67956fd1ef0d1da382",
+          "build-manifest.json": "4448ff7718d43957c60268bdb2968d01b2928a92beb046ac2838f188143f2a17",
+          "validation.xml": "c5dfc4919a7cd7bc9c0e0d49d4fe66dc5d6c91822b4645b751a0e81c530b1c2e"
+        },
+        "launch_arguments": {
+          "source": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration",
+          "image": "im-y4GpNdUxHr7JcCMyddTDp8",
+          "run_id": "v41-ds41-numerical-20261105t1351z",
+          "work_seconds": 300,
+          "controller_seconds": 420,
+          "stage": "numerical",
+          "cases": "",
+          "scope": "all",
+          "tools": "",
+          "out": "data/modal/glm53-ds41-integration/v41-ds41-numerical-20261105t1351z/controller.json"
+        },
+        "controller_sha256": "47a3b825952c66c80fadf198fefef8c22472a12e9c46d6856890234b9f70d152",
+        "sanitizer_tool": {
+          "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+          "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+          "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+          "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+          "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+        },
+        "sanitizer_scope": "all",
+        "selected_sanitizer_tools": [
+          "synccheck",
+          "racecheck",
+          "memcheck"
+        ],
+        "sanitizer_qualification_complete": false,
+        "gpu_function_seconds": 80.91856523700001,
+        "controller_log_sha256": "2bf865db8001e07adf81a65e3835145c0d629ffac4c6a96372f2628ce1615d28"
+      },
+      {
+        "run_id": "v41-ds41-numerical-fixed-20261105t1424z",
+        "account": "winstoncai233",
+        "model": "v41-fp4",
+        "app_id": "ap-I3is5Cy3gsC6sIrbUTJEnt",
+        "status": "passed",
+        "image": "im-xsGknbp3QcXYjLsd4m6ewb",
+        "conservative_minutes": 1.8067570885022481,
+        "raw_volume": "winstoncai233/remnant-stage2a-results/microbench/v41-ds41-numerical-fixed-20261105t1424z/validation",
+        "gpu_released": true,
+        "reports": {
+          "validation": {
+            "tests": 39,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        "artifact_hashes": {
+          "model-config.json": "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023",
+          "validation.log": "2dbca941a05c1dcaf53856704d565fd1077e9c4822a31f433344b4b550599cbc",
+          "result.json": "e47807549bb60e2d9ababdc1603f8b775cdd0fe1cfd8f2624f1bb72bf45d5323",
+          "build-manifest.json": "54b6298cf6819144a4132bb2c9d27d59713bbfbe310d437e74acb8e3ff11db38",
+          "allocation.json": "6fcb6bf0cdf3f2b80337f731c0d2fd65f0d2144ee253553e4d3f24dc2e4798c0",
+          "validation.xml": "86f53a7c9013c872534724862cf193d6fe1e758f59642840e1d7da0113bcec63"
+        },
+        "launch_arguments": {
+          "source": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration",
+          "image": "im-xsGknbp3QcXYjLsd4m6ewb",
+          "run_id": "v41-ds41-numerical-fixed-20261105t1424z",
+          "work_seconds": 300,
+          "controller_seconds": 420,
+          "stage": "numerical",
+          "cases": "",
+          "scope": "all",
+          "tools": "",
+          "out": "data/modal/glm53-ds41-integration/v41-ds41-numerical-fixed-20261105t1424z/controller.json"
+        },
+        "controller_sha256": "47a3b825952c66c80fadf198fefef8c22472a12e9c46d6856890234b9f70d152",
+        "sanitizer_tool": {
+          "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+          "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+          "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+          "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+          "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+        },
+        "sanitizer_scope": "all",
+        "selected_sanitizer_tools": [
+          "synccheck",
+          "racecheck",
+          "memcheck"
+        ],
+        "sanitizer_qualification_complete": false,
+        "gpu_function_seconds": 64.20804663199999,
+        "allocation_modes": [
+          "Native",
+          "Packed"
+        ],
+        "controller_log_sha256": "f56426c11d206dfb2d40ee72dc588dcfd295959f4e384e77ce69e682298c0b98"
+      },
+      {
+        "run_id": "v41-ds41-focused-tools-20261105t1452z",
+        "account": "winstoncai233",
+        "app_id": "ap-kizBMgqcDj5CiMfUzfEt9r",
+        "image": "im-xsGknbp3QcXYjLsd4m6ewb",
+        "status": "interrupted",
+        "reason": "Diagnosed excessive unfiltered framework/reference instrumentation; five incomplete synccheck tests at stop, no tool qualified. Preserve actual15case uninstrumented pass.",
+        "conservative_minutes": 9.621887934207916,
+        "gpu_released": true,
+        "raw_volume": "winstoncai233/remnant-stage2a-results/microbench/v41-ds41-focused-tools-20261105t1452z/validation",
+        "launch_arguments": {
+          "source": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration",
+          "image": "im-xsGknbp3QcXYjLsd4m6ewb",
+          "run_id": "v41-ds41-focused-tools-20261105t1452z",
+          "work_seconds": 1080,
+          "controller_seconds": 1200,
+          "stage": "corrective",
+          "cases": "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[random-256-False],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[random-256-True],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[boundaries-128-False],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[boundaries-128-True],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[128-64-False],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[128-64-True],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[256-64-False],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[256-64-True],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream[64-False],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream[64-True],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-1],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-1],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-2],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-2],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks[64]",
+          "cases_json": "/tmp/glm53-ds41-integration/fp4-cases.json",
+          "scope": "all",
+          "tools": "synccheck,racecheck,memcheck",
+          "out": "data/modal/glm53-ds41-integration/v41-ds41-focused-tools-20261105t1452z/controller.json"
+        },
+        "artifact_hashes": {
+          "model-config.json": "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023",
+          "validation.log": "a5a4cc8bd9c952d07d3c90c0754b84dbafe281dabaf2529f2c3f086b6a2adc41",
+          "synccheck-interrupted.log": "c702691fe0920b8b872483baaa7a5fcbabdf1bad1153c58dea3a22ab08f922ba",
+          "sanitizer-control-bindings-query.log": "a518617e603ae9e3659eecdf4257ea7eca94fb82a98faf99a78827514ec53fc4",
+          "interruption.json": "b4523f5e55522e2df7bb8dce24de39193f0bb04f0d9f417b047732ec1eba6bdf",
+          "sanitizer-version.log": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673",
+          "build-manifest.json": "54b6298cf6819144a4132bb2c9d27d59713bbfbe310d437e74acb8e3ff11db38",
+          "driver-version.log": "641baa7aef4714d620d9cb838ee74134559d52457e2f5803efc69bd52a40a065",
+          "sanitizer-control-empty.log": "fb8d9ea8d2be1a0fc356e4685eab89b230d089597899abc6f9cde9b1b6cc3900",
+          "sanitizer-control-bindings-import.log": "4806c657afdb0ef7bbbb2360916bf4ad14b5d2a0aac0e56710f31a9d1cfecc07",
+          "validation.xml": "6364b1a83ff8d3eb5d752d53e5ec3b7e8338d597bfb97a0c1dd08038f8d6db49",
+          "synccheck.log": "c702691fe0920b8b872483baaa7a5fcbabdf1bad1153c58dea3a22ab08f922ba"
+        },
+        "sanitizer_results": {
+          "synccheck": {
+            "status": "interrupted"
+          },
+          "racecheck": {
+            "status": "not_run"
+          },
+          "memcheck": {
+            "status": "not_run"
+          }
+        },
+        "controller_log_sha256": "faa64d73b82f59a94082216af2c88ad11cb5bbc65d02ae9ed386370088b20d80"
+      },
+      {
+        "run_id": "v41-ds41-filtered-tools-20261105t1543z",
+        "account": "winstoncai233",
+        "model": "v41-fp4",
+        "app_id": "ap-jRaJ4EPTHTD1cxF189yqmQ",
+        "status": "failed",
+        "image": "im-QwKUAiKtJXt7YgD4Ec2w9K",
+        "conservative_minutes": 3.0042060017585754,
+        "raw_volume": "winstoncai233/remnant-stage2a-results/microbench/v41-ds41-filtered-tools-20261105t1543z/validation",
+        "gpu_released": true,
+        "reports": {
+          "scope-audit": {
+            "tests": 1,
+            "failures": 1,
+            "errors": 0,
+            "skipped": 0
+          },
+          "validation": {
+            "tests": 15,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        "artifact_hashes": {
+          "model-config.json": "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023",
+          "validation.log": "646dbeed860d84823193158bc919443a806f5dfe681c95c2b063ddc500322153",
+          "scope-audit.xml": "731de79786adfa8037f595cb50128a152dcd3030ccee4650d147d2af4a0e3e76",
+          "sanitizer-control-bindings-query.log": "a518617e603ae9e3659eecdf4257ea7eca94fb82a98faf99a78827514ec53fc4",
+          "result.json": "22cc6fb9f8d949895e463195f2203453a9494a12618e1a0f3a0cb9cd1fbb23ba",
+          "sanitizer-version.log": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673",
+          "build-manifest.json": "bca7781cca03eadbd4ee9187f26e37c5545dd6b1ae7f0f63da39e645888128be",
+          "driver-version.log": "641baa7aef4714d620d9cb838ee74134559d52457e2f5803efc69bd52a40a065",
+          "sanitizer-control-empty.log": "fb8d9ea8d2be1a0fc356e4685eab89b230d089597899abc6f9cde9b1b6cc3900",
+          "sanitizer-control-bindings-import.log": "4806c657afdb0ef7bbbb2360916bf4ad14b5d2a0aac0e56710f31a9d1cfecc07",
+          "validation.xml": "57ab31bac9754ad93562b2f66e581e598f332895d1acd881d4f5e39159332f15",
+          "scope-audit.log": "86fc1674f39e4ab0c4064aca76ee79b875137b392e77c891c5cc72409676325c"
+        },
+        "launch_arguments": {
+          "source": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration",
+          "image": "im-QwKUAiKtJXt7YgD4Ec2w9K",
+          "run_id": "v41-ds41-filtered-tools-20261105t1543z",
+          "work_seconds": 1080,
+          "controller_seconds": 1200,
+          "stage": "corrective",
+          "cases": "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[random-256-False],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[random-256-True],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[boundaries-128-False],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[boundaries-128-True],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[128-64-False],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[128-64-True],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[256-64-False],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[256-64-True],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream[64-False],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream[64-True],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-1],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-1],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-2],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-2],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks[64]",
+          "cases_json": "/tmp/glm53-ds41-integration/fp4-cases.json",
+          "scope": "v41-merge",
+          "tools": "synccheck,racecheck,memcheck",
+          "out": "data/modal/glm53-ds41-integration/v41-ds41-filtered-tools-20261105t1543z/controller.json"
+        },
+        "controller_sha256": "5c0d0bfa0d0fbd975f404d753bd4086f30826fc01900649c0e804b88fbc26ac3",
+        "sanitizer_tool": {
+          "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+          "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+          "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+          "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+          "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+        },
+        "sanitizer_scope": "v41-merge",
+        "selected_sanitizer_tools": [
+          "synccheck",
+          "racecheck",
+          "memcheck"
+        ],
+        "sanitizer_results": {
+          "synccheck": {
+            "status": "not_run"
+          },
+          "racecheck": {
+            "status": "not_run"
+          },
+          "memcheck": {
+            "status": "not_run"
+          }
+        },
+        "sanitizer_qualification_complete": false,
+        "gpu_function_seconds": 134.912891916,
+        "failure": "PositivePackeddecodetrace followedbyInternalSanitizerError and illegaladdresssurfacinginFP4Adapterprefill; no completedtools. Widenaudittoallproductionkernelssameasnormaltoolfilter; causeunresolved.",
+        "controller_log_sha256": "d558a86e751618ac26e7d0998415d5495f2b53d31fa22aecaa173cbfd0a6f3f1"
+      },
+      {
+        "run_id": "v41-ds41-complete-filter-tools-20261105t1621z",
+        "account": "winstoncai233",
+        "model": "v41-fp4",
+        "app_id": "ap-kN3MR5tgHntTDgy8a9aodw",
+        "status": "failed",
+        "image": "im-MKIFW5mflJBCdb5HJoM3rF",
+        "conservative_minutes": 12.730993084112804,
+        "raw_volume": "winstoncai233/remnant-stage2a-results/microbench/v41-ds41-complete-filter-tools-20261105t1621z/validation",
+        "gpu_released": true,
+        "reports": {
+          "scope-audit": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "synccheck": {
+            "tests": 15,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "validation": {
+            "tests": 15,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        "artifact_hashes": {
+          "model-config.json": "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023",
+          "validation.log": "50d40a297179aea7cd7855a74265bd7ae7ae54c872b4c69857b0d5239d219f53",
+          "scope-audit.xml": "9da6d21b936c2f36c4a0d332e0b8e67f888a3f85b6aadcf24a788087fdabeefd",
+          "sanitizer-control-bindings-query.log": "a518617e603ae9e3659eecdf4257ea7eca94fb82a98faf99a78827514ec53fc4",
+          "result.json": "a8ab74120a66d82b0fe56c3db65da40c1525ef673141d1f36f47f94466b443aa",
+          "synccheck.xml": "c9616fd34ef87c5e94f051e69bec9182626cabee72d768104943ea931b141e6d",
+          "sanitizer-version.log": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673",
+          "build-manifest.json": "58dc1f8d281e46e1d470f1365bf6742eeced46a3c2dab35e44a2041503145edb",
+          "driver-version.log": "641baa7aef4714d620d9cb838ee74134559d52457e2f5803efc69bd52a40a065",
+          "sanitizer-control-empty.log": "fb8d9ea8d2be1a0fc356e4685eab89b230d089597899abc6f9cde9b1b6cc3900",
+          "sanitizer-control-bindings-import.log": "4806c657afdb0ef7bbbb2360916bf4ad14b5d2a0aac0e56710f31a9d1cfecc07",
+          "validation.xml": "23dad3dd68be17859af44f80e2b5ae522050b1c8826b54a779b1f5a600276eef",
+          "scope-audit.log": "da91e10f8065426d2463b3334228cb5dd616390e1662ac35ac6c6b28181411fb",
+          "racecheck.log": "fcc46d3a988dd16019ad7b2abb2a0e7de8a28ac5b2b4e5bbf619721175da31fb",
+          "synccheck.log": "d90e1782768b6e9b46576632b09d5d9fe69b5dbe8011ac71261eba125f468c46"
+        },
+        "launch_arguments": {
+          "source": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration",
+          "image": "im-MKIFW5mflJBCdb5HJoM3rF",
+          "run_id": "v41-ds41-complete-filter-tools-20261105t1621z",
+          "work_seconds": 720,
+          "controller_seconds": 840,
+          "stage": "corrective",
+          "cases": "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[random-256-False],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[random-256-True],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[boundaries-128-False],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[boundaries-128-True],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[128-64-False],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[128-64-True],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[256-64-False],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[256-64-True],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream[64-False],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream[64-True],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-1],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-1],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-2],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-2],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks[64]",
+          "cases_json": "/tmp/glm53-ds41-integration/fp4-cases.json",
+          "scope": "v41-merge",
+          "tools": "synccheck,racecheck,memcheck",
+          "out": "data/modal/glm53-ds41-integration/v41-ds41-complete-filter-tools-20261105t1621z/controller.json"
+        },
+        "controller_sha256": "5c0d0bfa0d0fbd975f404d753bd4086f30826fc01900649c0e804b88fbc26ac3",
+        "sanitizer_tool": {
+          "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+          "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+          "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+          "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+          "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+        },
+        "sanitizer_scope": "v41-merge",
+        "selected_sanitizer_tools": [
+          "synccheck",
+          "racecheck",
+          "memcheck"
+        ],
+        "sanitizer_results": {
+          "synccheck": {
+            "status": "passed",
+            "report_schema": "remnant-sanitizer-raw-v1",
+            "log_sha256": "d90e1782768b6e9b46576632b09d5d9fe69b5dbe8011ac71261eba125f468c46",
+            "xml_sha256": "c9616fd34ef87c5e94f051e69bec9182626cabee72d768104943ea931b141e6d"
+          },
+          "racecheck": {
+            "status": "failed",
+            "error": "Command failed: ['/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer', '--tool', 'racecheck', '--error-exitcode', '1', '--kernel-name', 'regex=(_store|_read|flash_fwd_splitkv_mla_fp8_sparse_kernel|flash_fwd_mla_combine_kernel|sparse_attn_fwd_kernel)', '--print-level', 'info', '/opt/sglang/bin/python', '-m', 'pytest', '-q', '--disable-warnings', '--tb=short', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[random-256-False]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[random-256-True]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[boundaries-128-False]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[boundaries-128-True]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[128-64-False]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[128-64-True]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[256-64-False]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[256-64-True]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream[64-False]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream[64-True]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-1]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-1]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-2]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-2]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks[64]', '--junitxml=/results/microbench/v41-ds41-complete-filter-tools-20261105t1621z/validation/racecheck.xml']\nLog: /results/microbench/v41-ds41-complete-filter-tools-20261105t1621z/validation/racecheck.log\n========= COMPUTE-SANITIZER\n......",
+            "report_schema": "remnant-sanitizer-raw-v1",
+            "log_sha256": "fcc46d3a988dd16019ad7b2abb2a0e7de8a28ac5b2b4e5bbf619721175da31fb"
+          },
+          "memcheck": {
+            "status": "not_run"
+          }
+        },
+        "qualification_scope": "focused_fp4_merge",
+        "focused_merge_qualification_complete": false,
+        "sanitizer_qualification_complete": false,
+        "gpu_function_seconds": 723.3953471149999,
+        "scope_audit": {
+          "status": "passed",
+          "symbols": {
+            "filter": "regex=(_store|_read|flash_fwd_splitkv_mla_fp8_sparse_kernel|flash_fwd_mla_combine_kernel|sparse_attn_fwd_kernel)",
+            "triton_symbols": {
+              "_store": "/triton-cache/WZJWPHBQ5LCFG7S5FWSMTXHUTPXDYHNISJXYCK64NLBRW3D7VLUA/_store.cubin",
+              "_read": "/triton-cache/Y4HARMS7ZU2T7AVJ6CBVGQIVB7F2QMTQIJTACJRAOPGIWLGFYQIQ/_read.cubin"
+            },
+            "flashmla_symbols": [
+              "flash_fwd_splitkv_mla_fp8_sparse_kernel",
+              "flash_fwd_mla_combine_kernel",
+              "sparse_attn_fwd_kernel"
+            ],
+            "flashmla_symbol_log_sha256": "00182f4857054df2d4af8646596962c42767b0556077c4832ff37f2a85ddbff7"
+          },
+          "log_sha256": "da91e10f8065426d2463b3334228cb5dd616390e1662ac35ac6c6b28181411fb",
+          "basis": "Positive Packed decode synchronization trace; store/read/prefill/combine names verified in CPU artifacts and common filter"
+        },
+        "focused_fp4_merge_qualification_complete": false,
+        "controller_log_sha256": "3a4705e7c13d1b9f66e70d3ff2f2a683b1defde6fea8b54c2732cde64319a61b"
+      },
+      {
+        "run_id": "v41-ds41-remaining-tools-20261105t1727z",
+        "account": "winstoncai233",
+        "model": "v41-fp4",
+        "app_id": "ap-UddVGckmq12LmI1pgK5IVM",
+        "status": "failed",
+        "image": "im-uWsqVPgXoZF3YLWDSH0ig4",
+        "conservative_minutes": 23.018203751246133,
+        "raw_volume": "winstoncai233/remnant-stage2a-results/microbench/v41-ds41-remaining-tools-20261105t1727z/validation",
+        "gpu_released": true,
+        "reports": {
+          "scope-audit": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "racecheck": {
+            "tests": 15,
+            "failures": 5,
+            "errors": 0,
+            "skipped": 0
+          },
+          "memcheck": {
+            "tests": 15,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "validation": {
+            "tests": 15,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        "artifact_hashes": {
+          "model-config.json": "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023",
+          "validation.log": "9a31159c32a9418951a110877041b00e3a2a1e8dff04e80c80a9a77f0cec44a7",
+          "scope-audit.xml": "9876c2abeffde85787d05885ed8081631b41035a0a25260c194abba1f8c64d3e",
+          "racecheck.xml": "e60bf5567407bc9c18e3114ec80df3571078d82eba6e73fc7b21f7062373edd5",
+          "sanitizer-control-bindings-query.log": "a518617e603ae9e3659eecdf4257ea7eca94fb82a98faf99a78827514ec53fc4",
+          "result.json": "542bdbf1910c9445567ba25aa6abcf8f39754ed69547fe0443e855af1fbe399c",
+          "sanitizer-version.log": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673",
+          "build-manifest.json": "e8d7c6db0df175677c2746b3ce4083f85587b037e9537f11f69345e5336e702c",
+          "memcheck.xml": "5a54383f0317cb3416f56f392045f3ed9bcbf962ca235699ad83c7119acc49e7",
+          "driver-version.log": "641baa7aef4714d620d9cb838ee74134559d52457e2f5803efc69bd52a40a065",
+          "sanitizer-control-empty.log": "fb8d9ea8d2be1a0fc356e4685eab89b230d089597899abc6f9cde9b1b6cc3900",
+          "memcheck.log": "1bb3a301769ce750487e5bd14ebe0df49f1d400f96970affba0ce043726f1b10",
+          "sanitizer-control-bindings-import.log": "4806c657afdb0ef7bbbb2360916bf4ad14b5d2a0aac0e56710f31a9d1cfecc07",
+          "validation.xml": "d5595339ccdb9517474be2fcdbf1edc4ecfbb68035c9b311b8f0e9b904d768d3",
+          "scope-audit.log": "1c72fc2c21fcec38fa1fa345483e73eac6a8e4e248b077a804b776a5c70cabb0",
+          "racecheck.log": "f6dd0c87be95f4f6d8ae643673eceff3ab7b6bcde205d92217c64c7ae54bcc87"
+        },
+        "launch_arguments": {
+          "source": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration",
+          "image": "im-uWsqVPgXoZF3YLWDSH0ig4",
+          "run_id": "v41-ds41-remaining-tools-20261105t1727z",
+          "work_seconds": 1500,
+          "controller_seconds": 1620,
+          "stage": "corrective",
+          "cases": "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[random-256-False],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[random-256-True],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[boundaries-128-False],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[boundaries-128-True],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[128-64-False],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[128-64-True],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[256-64-False],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[256-64-True],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream[64-False],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream[64-True],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-1],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-1],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-2],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-2],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks[64]",
+          "cases_json": "/tmp/glm53-ds41-integration/fp4-cases.json",
+          "scope": "v41-merge",
+          "tools": "memcheck,racecheck",
+          "out": "data/modal/glm53-ds41-integration/v41-ds41-remaining-tools-20261105t1727z/controller.json"
+        },
+        "controller_sha256": "e6415beb3589d484b0f2f12828a262538d41d06151e8ed40466362348e34560f",
+        "sanitizer_tool": {
+          "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+          "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+          "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+          "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+          "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+        },
+        "sanitizer_scope": "v41-merge",
+        "selected_sanitizer_tools": [
+          "memcheck",
+          "racecheck"
+        ],
+        "sanitizer_results": {
+          "synccheck": {
+            "status": "not_run"
+          },
+          "racecheck": {
+            "status": "failed",
+            "error": "Command failed: ['/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer', '--tool', 'racecheck', '--error-exitcode', '1', '--kernel-name', 'regex=(_store|_read|flash_fwd_splitkv_mla_fp8_sparse_kernel|flash_fwd_mla_combine_kernel|sparse_attn_fwd_kernel)', '--print-level', 'info', '/opt/sglang/bin/python', '-m', 'pytest', '-q', '--disable-warnings', '--tb=short', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[random-256-False]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[random-256-True]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[boundaries-128-False]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_store_and_reader[boundaries-128-True]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[128-64-False]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[128-64-True]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[256-64-False]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_direct[256-64-True]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream[64-False]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_graph_and_stream[64-True]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-1]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-1]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-2]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-2]', '/sgl-workspace/sglang-remnant/test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks[64]', '--junitxml=/results/microbench/v41-ds41-remaining-tools-20261105t1727z/validation/racecheck.xml']\nLog: /results/microbench/v41-ds41-remaining-tools-20261105t1727z/validation/racecheck.log\nndom.py:126: in cb\n    default_generator.manual_seed(seed)\nE   torch.AcceleratorError: CUDA error: an illegal memory access was encountered\nE   Search for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nE   CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nE   For debugging consider passing CUDA_LAUNCH_BLOCKING=1\nE   The CUDA driver logged these messages, which may provide useful details:\nE   Sticky error detected\nE   Returning 700 (CUDA_ERROR_ILLEGAL_ADDRESS) from cuStreamGetCaptureInfo_v3\n_____________________ test_fp4_compressor_boundary[True-2] _____________________\ntest/registered/attention/unittests/dsv4/test_remnant_fp4.py:832: in test_fp4_compressor_boundary\n    torch.manual_seed(71)\n/opt/sglang/lib/python3.12/site-packages/torch/_compile.py:54: in inner\n    return disable_fn(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/opt/sglang/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py:1548: in _fn\n    return fn(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^\n/opt/sglang/lib/python3.12/site-packages/torch/random.py:59: in manual_seed\n    return _manual_seed_impl(seed)\n           ^^^^^^^^^^^^^^^^^^^^^^^\n/opt/sglang/lib/python3.12/site-packages/torch/random.py:67: in _manual_seed_impl\n    torch.cuda.manual_seed_all(seed)\n/opt/sglang/lib/python3.12/site-packages/torch/cuda/random.py:128: in manual_seed_all\n    _lazy_call(cb, seed_all=True)\n/opt/sglang/lib/python3.12/site-packages/torch/cuda/__init__.py:522: in _lazy_call\n    callable()\n/opt/sglang/lib/python3.12/site-packages/torch/cuda/random.py:126: in cb\n    default_generator.manual_seed(seed)\nE   torch.AcceleratorError: CUDA error: an illegal memory access was encountered\nE   Search for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nE   CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nE   For debugging consider passing CUDA_LAUNCH_BLOCKING=1\nE   The CUDA driver logged these messages, which may provide useful details:\nE   Sticky error detected\nE   Returning 700 (CUDA_ERROR_ILLEGAL_ADDRESS) from cuStreamGetCaptureInfo_v3\n_________________________ test_fp4_fragment_masks[64] __________________________\ntest/registered/attention/unittests/dsv4/test_remnant_fp4.py:1101: in test_fp4_fragment_masks\n    cache = records.cuda().view(2, page, 1, 224)\n            ^^^^^^^^^^^^^^\nE   torch.AcceleratorError: CUDA error: an illegal memory access was encountered\nE   Search for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nE   CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nE   For debugging consider passing CUDA_LAUNCH_BLOCKING=1\nE   The CUDA driver logged these messages, which may provide useful details:\nE   Sticky error detected\nE   Returning 700 (CUDA_ERROR_ILLEGAL_ADDRESS) from cuStreamIsCapturing\n=========================== short test summary info ============================\nFAILED test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-1]\nFAILED test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-1]\nFAILED test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-2]\nFAILED test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-2]\nFAILED test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks[64]\n5 failed, 10 passed, 21 warnings in 417.45s (0:06:57)\nsys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n========= Target application returned an error\n========= RACECHECK SUMMARY: 1 hazard displayed (1 error, 0 warnings)\n",
+            "report_schema": "remnant-sanitizer-raw-v1",
+            "log_sha256": "f6dd0c87be95f4f6d8ae643673eceff3ab7b6bcde205d92217c64c7ae54bcc87",
+            "xml_sha256": "e60bf5567407bc9c18e3114ec80df3571078d82eba6e73fc7b21f7062373edd5"
+          },
+          "memcheck": {
+            "status": "passed",
+            "report_schema": "remnant-sanitizer-raw-v1",
+            "log_sha256": "1bb3a301769ce750487e5bd14ebe0df49f1d400f96970affba0ce043726f1b10",
+            "xml_sha256": "5a54383f0317cb3416f56f392045f3ed9bcbf962ca235699ad83c7119acc49e7"
+          }
+        },
+        "qualification_scope": "focused_fp4_merge",
+        "focused_merge_qualification_complete": false,
+        "focused_fp4_merge_qualification_complete": false,
+        "scope_audit": {
+          "status": "passed",
+          "symbols": {
+            "filter": "regex=(_store|_read|flash_fwd_splitkv_mla_fp8_sparse_kernel|flash_fwd_mla_combine_kernel|sparse_attn_fwd_kernel)",
+            "triton_symbols": {
+              "_store": "/triton-cache/V7FOHJCFLECY5JWDSIPUBPTYGJKDHCJ3NP3JLOXKVOV23MTKJ6PA/_store.cubin",
+              "_read": "/triton-cache/6QAJJG77ZGIWMUDXT6XCWVQV6ZLJIB3LN375ZEIRFPHRQCSMSW5A/_read.cubin"
+            },
+            "flashmla_symbols": [
+              "flash_fwd_splitkv_mla_fp8_sparse_kernel",
+              "flash_fwd_mla_combine_kernel",
+              "sparse_attn_fwd_kernel"
+            ],
+            "flashmla_symbol_log_sha256": "00182f4857054df2d4af8646596962c42767b0556077c4832ff37f2a85ddbff7"
+          },
+          "log_sha256": "1c72fc2c21fcec38fa1fa345483e73eac6a8e4e248b077a804b776a5c70cabb0",
+          "basis": "Positive Packed decode synchronization trace; store/read/prefill/combine names verified in CPU artifacts and common filter"
+        },
+        "sanitizer_qualification_complete": false,
+        "gpu_function_seconds": 1339.7943647549998,
+        "controller_log_sha256": "fa53bead9908e064747e715328dd075c0d58a1f430c5969bc3c85fed9051cb85"
+      },
+      {
+        "run_id": "v41-native-c1-diagnostic-20261105t1757z",
+        "account": "winstoncai233",
+        "model": "v41-fp4-diagnostic",
+        "app_id": "ap-RUlq0jSiPzhLYL79GdtwRG",
+        "status": "passed",
+        "image": "im-uWsqVPgXoZF3YLWDSH0ig4",
+        "conservative_minutes": 2.826031235853831,
+        "raw_volume": "winstoncai233/remnant-stage2a-results/microbench/v41-native-c1-diagnostic-20261105t1757z/validation",
+        "gpu_released": true,
+        "reports": {
+          "racecheck": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "validation": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        "artifact_hashes": {
+          "model-config.json": "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023",
+          "validation.log": "5f07cbaa094fbd18dd609f4583d7b2c6f89641015004250906926fc15f032450",
+          "racecheck.xml": "48a5ea973282fc6d89f4aa2839b53bc7cd78252026d6b8cc78d15812d78a773d",
+          "sanitizer-control-bindings-query.log": "a518617e603ae9e3659eecdf4257ea7eca94fb82a98faf99a78827514ec53fc4",
+          "result.json": "17ca816fd9b0a54e392b20e1c05f3f14470396b0208fbe0eb6e616945096ce6c",
+          "sanitizer-version.log": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673",
+          "build-manifest.json": "e8d7c6db0df175677c2746b3ce4083f85587b037e9537f11f69345e5336e702c",
+          "driver-version.log": "641baa7aef4714d620d9cb838ee74134559d52457e2f5803efc69bd52a40a065",
+          "sanitizer-control-empty.log": "fb8d9ea8d2be1a0fc356e4685eab89b230d089597899abc6f9cde9b1b6cc3900",
+          "sanitizer-control-bindings-import.log": "4806c657afdb0ef7bbbb2360916bf4ad14b5d2a0aac0e56710f31a9d1cfecc07",
+          "validation.xml": "0a3ad82234e4e9792aa4459c91240d93a9f46c16556b3daf21c46c6ff0b465bb",
+          "racecheck.log": "8f66dc5451858b067e81e5f83cc7b7419f06bf588f2facfc4167b0a84a3e7d10"
+        },
+        "launch_arguments": {
+          "source": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration",
+          "image": "im-uWsqVPgXoZF3YLWDSH0ig4",
+          "run_id": "v41-native-c1-diagnostic-20261105t1757z",
+          "work_seconds": 300,
+          "controller_seconds": 390,
+          "stage": "corrective",
+          "cases": "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-1]",
+          "cases_json": "/tmp/glm53-ds41-integration/native-c1-case.json",
+          "scope": "all",
+          "tools": "racecheck",
+          "out": "data/modal/glm53-ds41-integration/v41-native-c1-diagnostic-20261105t1757z/controller.json",
+          "launch_blocking": true
+        },
+        "controller_sha256": "4f825d0c98c5676cc9f15f98679f08b53d934adb5ed46c536ba707a7592c1157",
+        "sanitizer_tool": {
+          "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+          "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+          "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+          "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+          "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+        },
+        "sanitizer_scope": "all",
+        "selected_sanitizer_tools": [
+          "racecheck"
+        ],
+        "sanitizer_results": {
+          "synccheck": {
+            "status": "not_run"
+          },
+          "racecheck": {
+            "status": "passed",
+            "report_schema": "remnant-sanitizer-raw-v1",
+            "log_sha256": "8f66dc5451858b067e81e5f83cc7b7419f06bf588f2facfc4167b0a84a3e7d10",
+            "xml_sha256": "48a5ea973282fc6d89f4aa2839b53bc7cd78252026d6b8cc78d15812d78a773d"
+          },
+          "memcheck": {
+            "status": "not_run"
+          }
+        },
+        "qualification_scope": "corrective",
+        "focused_merge_qualification_complete": false,
+        "focused_fp4_merge_qualification_complete": false,
+        "sanitizer_qualification_complete": false,
+        "gpu_function_seconds": 131.000431306,
+        "diagnostic_only": true,
+        "environment": {
+          "CUDA_LAUNCH_BLOCKING": "1"
+        },
+        "gpu_uuid": "GPU-9b4b9e97-f600-80bc-b147-3334a61deeee",
+        "controller_log_sha256": "c13472a3b06d8ec25437611be001c551e8a06a6dd1ad18c428f4a091653b37f3"
+      },
+      {
+        "run_id": "v41-failed-five-20261106",
+        "account": "winstoncai233",
+        "status": "passed",
+        "diagnostic_only": true,
+        "controller_status": "failed",
+        "controller_error": "AttributeError(\"'Connection' object has no attribute '_transport'\")",
+        "app_id": "ap-sVCHYZBchcbyw7ZfIP2zcw",
+        "image": "im-ZG6Ev0fo6k34SAzzUyMYUX",
+        "source_identities": {
+          "flashmla": {
+            "commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "dirty": false,
+            "expected_commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "integration": "v0.5.22",
+            "override": false,
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/flashmla-v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "dirty": false,
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/flashmla-v0.5.22/csrc/cutlass"
+          },
+          "parent": {
+            "commit": "57e4abed9359241a47baf3832a9e7fb97b3ee8ea",
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration"
+          },
+          "sglang": {
+            "commit": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+            "dirty": false,
+            "expected_commit": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+            "integration": "v0.5.22",
+            "override": false,
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/sglang-v0.5.22"
+          }
+        },
+        "conservative_minutes": 5.289430034160614,
+        "gpu_function_seconds": 200.55271206100002,
+        "gpu_released": true,
+        "launch_arguments": {
+          "source": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration",
+          "image": "im-ZG6Ev0fo6k34SAzzUyMYUX",
+          "run_id": "v41-failed-five-20261106",
+          "work_seconds": 480,
+          "controller_seconds": 570,
+          "stage": "corrective",
+          "cases": "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-1],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-1],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-2],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-2],test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks[64]",
+          "cases_json": "/tmp/glm53-failing-five/cases.json",
+          "scope": "all",
+          "tools": "racecheck",
+          "out": "data/modal/glm53-ds41-integration/failing-five-20261106/controller.json",
+          "launch_blocking": true
+        },
+        "sanitizer_results": {
+          "synccheck": {
+            "status": "not_run"
+          },
+          "racecheck": {
+            "status": "passed",
+            "report_schema": "remnant-sanitizer-raw-v1",
+            "log_sha256": "ee77170b86fb48e036e468c48cd1b6bc0f5e5b904d985d44c2f2e47fd52a1469",
+            "xml_sha256": "365329cf25601f39d6f1679e098a105b1ae27734239747c5870fb1689fb58948"
+          },
+          "memcheck": {
+            "status": "not_run"
+          }
+        },
+        "raw_volume": "winstoncai233/remnant-stage2a-results/microbench/v41-failed-five-20261106/validation",
+        "reports": {
+          "racecheck": {
+            "tests": 5,
+            "errors": 0,
+            "failures": 0,
+            "skipped": 0
+          },
+          "validation": {
+            "tests": 5,
+            "errors": 0,
+            "failures": 0,
+            "skipped": 0
+          }
+        },
+        "artifact_hashes": {
+          "model-config.json": "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023",
+          "validation.log": "943e8400d421fcb9fc8d5ee93f798463570fcba6e41777da926f5587106a237e",
+          "racecheck.xml": "365329cf25601f39d6f1679e098a105b1ae27734239747c5870fb1689fb58948",
+          "sanitizer-control-bindings-query.log": "a518617e603ae9e3659eecdf4257ea7eca94fb82a98faf99a78827514ec53fc4",
+          "result.json": "9c2235334f2250a1c4176c6f57f409afeca9da153fa9b7a238e1b2188241228e",
+          "sanitizer-version.log": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673",
+          "build-manifest.json": "a1a98e1c04be7bf5552aff7c3b5f9a4b133660b773f95105bdcd9031f22b0758",
+          "driver-version.log": "641baa7aef4714d620d9cb838ee74134559d52457e2f5803efc69bd52a40a065",
+          "sanitizer-control-empty.log": "fb8d9ea8d2be1a0fc356e4685eab89b230d089597899abc6f9cde9b1b6cc3900",
+          "sanitizer-control-bindings-import.log": "4806c657afdb0ef7bbbb2360916bf4ad14b5d2a0aac0e56710f31a9d1cfecc07",
+          "validation.xml": "b0f5e48c1d6e4fdb5879542275d52bd5e59a00000b04cbca54f9b8ffa1fd9e1c",
+          "racecheck.log": "ee77170b86fb48e036e468c48cd1b6bc0f5e5b904d985d44c2f2e47fd52a1469"
+        }
+      }
+    ],
+    "publication_preflight": {
+      "parent_base": "d385c1c3a52229b86cebb62aeb86e4d26933946c",
+      "sglang_base": "c4708870008528ea68ed783c68add708687d71fd",
+      "status": "Both targets and published PR heads unchanged; parent#4 and SGLang#1 still target ds41-flash-packed.",
+      "stage": "Historical snapshot before publishing these merge heads; targets remained unchanged."
+    },
+    "fallback_preflight": {
+      "winstoncai233_compute_usd": 3.85998491,
+      "winstoncai_compute_usd": 0.47618399,
+      "glm_checkpoint_volume_present": false,
+      "active_containers": 0,
+      "images": "hydrate() does not support on-demand Image lookup; no accessibility conclusion; no paid probe scheduled",
+      "decision": "User selected fallback within unchanged20USD; rebuild private images and prepare pinned weights onCPU inwinstoncai233.",
+      "private_caiw_images": "All3 lookups denied on both fallback accounts",
+      "additional_cpu_projection_usd": 2.2,
+      "total_cpu_projection_usd": 3.7,
+      "total_phase_projection_usd": 16.13773333333333
+    },
+    "fallback_checkpoint_attempts": [
+      {
+        "status": "timeout",
+        "app_id": "ap-lPJd9ToYkZQ4NNIVts3Pw2",
+        "work_seconds": 1200,
+        "completed_shards": 54,
+        "missing_shards": 8,
+        "gpu_allocated": false,
+        "inspected_after_timeout": true,
+        "compute_delta_usd": 0.34373773999999946
+      },
+      {
+        "status": "passed",
+        "app_id": "ap-4wxwrKSqOaAzffyQuEUhYu",
+        "shards": 62,
+        "bytes": 328337455672,
+        "revision": "46a050bec13002ad29ee795c16e61cf4fa3c4a9c",
+        "worker_limit_seconds": 600,
+        "gpu_allocated": false
+      }
+    ],
+    "cpu_attempts": [
+      {
+        "time": 1793887532.180416,
+        "account": "winstoncai233",
+        "source": {
+          "parent": "18107f8f3bc0ec8bcff37b61ccbd982eb50fc699",
+          "sglang": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8"
+        },
+        "compute_spend_before": 5.36360804,
+        "active_containers": 0,
+        "new_cpu_max_usd": 0.7,
+        "cpu_total_projection": 3.2,
+        "phase_max_projection": 15.637733333333331,
+        "reason": "Reviewed fixture-only correction; reuse unchanged native build layers and prepare serving source overlay. No GPU allocation."
+      },
+      {
+        "run": "20261105-fallback-cpu-glm-reuse",
+        "account": "winstoncai233",
+        "app_id": "ap-NoyCYwZYd3jIwz2gsVw3bK",
+        "image": "im-ATvDNjul45xrVyyGaGAgOJ",
+        "status": "passed",
+        "source": {
+          "parent": "18107f8f3bc0ec8bcff37b61ccbd982eb50fc699",
+          "sglang": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+          "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159"
+        },
+        "compiled_base": "im-jm7lWAjIsfwzLYySK64qlQ",
+        "compiled_source_digest": "72044025c8ca654dd75d582827c6f7cc704d6255f5a03eab93ff3afc0214480f",
+        "scope": "Strict compiled-source/binary/toolchain verification, CPU regressions and collection; harness-only overlay; no GPU."
+      },
+      {
+        "run": "20261105-fallback-cpu-serving-fixture-fix",
+        "account": "winstoncai233",
+        "app_id": "ap-i2KoprbG8iHP7UHsUkSI9o",
+        "image": "im-wFJwthXjgDMrfQg23Y2csc",
+        "compiled_base": "im-ATvDNjul45xrVyyGaGAgOJ",
+        "status": "passed",
+        "source": {
+          "parent": "18107f8f3bc0ec8bcff37b61ccbd982eb50fc699",
+          "sglang": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8"
+        },
+        "checkpoint": {
+          "revision": "46a050bec13002ad29ee795c16e61cf4fa3c4a9c",
+          "shards": 62,
+          "bytes": 328337455672,
+          "heads": 64,
+          "layers": 45
+        },
+        "scope": "Strict compiled-source verification; CPU checkpoint and LLM CLI import preflight; no GPU."
+      },
+      {
+        "run": "20261105-fallback-cpu-fixture-fix",
+        "account": "winstoncai233",
+        "app_id": "ap-1ajNNbbXgujGs6ap9QF1hw",
+        "image": "im-xsGknbp3QcXYjLsd4m6ewb",
+        "status": "passed",
+        "source": {
+          "parent": "18107f8f3bc0ec8bcff37b61ccbd982eb50fc699",
+          "sglang": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8"
+        },
+        "scope": "Fresh CPU native build, FP4 cached variants/imports/qualification and production allocation startup regression; no GPU."
+      },
+      {
+        "run": "20261105-parallel-v41-account-build",
+        "account": "winstoncai",
+        "app_id": "ap-L631lRg1Gr8IK4PguKwS7u",
+        "status": "failed",
+        "failed_image": "im-3fsMk2xBDCkwb6AV5zU4aB",
+        "source_parent": "c0e59eccd205f339a0e6797ca4001447cebcd25f",
+        "reason": "Legacy image builder injected ModalSDKwithoutgrpclib. FreshAOTbasebuilt; CPUqualificationfailedbeforeGPU. FixexplicitSDKinstallation, preservingfailureandallcosts."
+      },
+      {
+        "run": "corrective-glm-serving",
+        "account": "winstoncai233",
+        "app_id": "ap-GapMIz98Grd3WM0jFzytjD",
+        "source_parent": "c23b32f6c0f79b966c88f0292554b0db4b83ad7c",
+        "image": "im-AWSp77wV7GBLv4y13cIpEd",
+        "status": "passed",
+        "gpu_allocated": false
+      },
+      {
+        "run": "corrective-fp4-cpu",
+        "account": "winstoncai233",
+        "app_id": "ap-8b0k127ds3DdWmZ5cnkWhm",
+        "source_parent": "c23b32f6c0f79b966c88f0292554b0db4b83ad7c",
+        "image": "im-uWsqVPgXoZF3YLWDSH0ig4",
+        "compiled_base": "im-QwKUAiKtJXt7YgD4Ec2w9K",
+        "status": "passed",
+        "gpu_allocated": false
+      }
+    ],
+    "glm_evidence_reuse": {
+      "basis_run": "glm53-ds41-fallback-tools-20261105t1338z",
+      "basis_source": "80d6a473cb0ace7ab54e1e3809085912428350c9",
+      "candidate_source": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+      "unchanged_runtime_hashes": {
+        "kernels/ops/attention/dsa/tilelang_kernel.py": "2a4254889463f882f073d7e1a54311d0802e8e82e66bf1377a7b3edfc00d0875",
+        "kernels/jit/include/sgl_kernel/glm_packed_decode.cuh": "9394e536d914826f6654474f798bd5c24ab864c4de4dcdd6b90cb4b3fe96181f",
+        "srt/remnant/glm.py": "50565426fe36070791743987cf41d177081874c9a52d9bfa6f30805b7ae307aa",
+        "srt/remnant/glm_pool.py": "cfc36ad197037879867417df91e8cfb91f128fa24bc1cbfa88ae89eeae4e301d",
+        "srt/remnant/reference.py": "6231ec9622623643eba8ab50d714f9433cd13672be927030c4070ae05452021e",
+        "srt/layers/layernorm.py": "98072d836e0c77312058521ee1015c80177b2c370da7408fd066eec61015ff21"
+      },
+      "only_changed_file": "test/registered/attention/unittests/dsv4/test_remnant_fp4.py",
+      "decision": "Reuse source-bound GLM focused evidence; CPU image will verify cached binaries again. No claim of broad instrumentation or new GLM GPU run."
+    },
+    "launch_rejections": [
+      {
+        "run_id": "v41-ds41-focused-tools-20261105t1450z",
+        "app_id": "ap-kMcP5AIiQP8q5eGr5s7k3B",
+        "reason": "Local shell construction yielded empty correctivecases; appstopped duringpreparation beforeGPU worker. CPUcontroller now validates nonempty caseJSONbeforeapp.run.",
+        "status": "cancelled_before_gpu",
+        "active_containers_after": [],
+        "gpu_minutes": 0
+      },
+      {
+        "run_id": "glm53-ds41-direct-corrective-20261105t1710z",
+        "app_id": null,
+        "status": "failed",
+        "reason": "IntermediateimageIDmistakerejectedbycontrollerassertionbeforeCPUadmission/GPU;resolvedimageisnowrecordedandboundbyGO.",
+        "gpu_minutes": 0
+      }
+    ],
+    "parallel_smoke_request": {
+      "status": "attempts_complete_partial",
+      "authorization": "Userapprovedfourparallelservingmodesand25USDtotalwith3USDreserve",
+      "profiles": {
+        "glm53": {
+          "account": "winstoncai233",
+          "checkpoint": "46a050bec13002ad29ee795c16e61cf4fa3c4a9c"
+        },
+        "dsv41": {
+          "account": "winstoncai",
+          "checkpoint": "1bae0e1088993b9b82de08f59de5be5a34e42170",
+          "config_sha256": "8be45ce0476004a3f529fd896115a4a2e800a129ad2d3ec05b16050f52e21879",
+          "shards": 48,
+          "file_bytes": 510296708312
+        }
+      },
+      "gpu_launched": true,
+      "source_parent": "a56cb7b27e0c21aa4166bfde20faa532aa8a5514",
+      "cpu": "116passedbothintegrationversions;18focusedpassed;independentreviewpassedaftermodepathandcacheadmissionfixes",
+      "preparation_max_additional_usd": 0.7,
+      "sdk_and_audit_cpu": "47focusedtests pass in7.782s, includingbothintegrationrecipeimports, fullproductionfilterconsistency and internal-errorrejection",
+      "whole_phase_launch_projection": {
+        "account": "winstoncai233",
+        "time": 1793895803.556813,
+        "sources": {
+          "parent": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration",
+            "commit": "a56cb7b27e0c21aa4166bfde20faa532aa8a5514"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/sglang-v0.5.22",
+            "expected_commit": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+            "commit": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/flashmla-v0.5.22",
+            "expected_commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "image": "im-MKIFW5mflJBCdb5HJoM3rF",
+        "compiled_base": "im-QwKUAiKtJXt7YgD4Ec2w9K",
+        "work_seconds": 720,
+        "function_timeout_seconds": 780,
+        "controller_ceiling_seconds": 840,
+        "conservative_minutes": 14.5,
+        "phase_compute_delta_usd": 4.334012030000002,
+        "guaranteed_GPU_seconds_from_raw_reports": 1543.8704586489046,
+        "CPU_upper_bound_from_settled_compute_usd": 2.4491177411517615,
+        "remaining_CPU_max_covered_by_existing_accrual_usd": 0.15,
+        "four_serving_workers_ceiling_usd": 15.228586666666665,
+        "whole_phase_projection_with_reserve_excluded_usd": 21.94155918644025,
+        "protected_reserve_usd": 3,
+        "schema": "full-production-filter-v1",
+        "controller_sha256": "5c0d0bfa0d0fbd975f404d753bd4086f30826fc01900649c0e804b88fbc26ac3"
+      },
+      "ordering": "LatestparallelrequestreordersolderREADMEfocused-tools-before-servingsequence;requiredsanitizergatesremainpendingandmustcompletebeforeacceptance.",
+      "expired_controllers": {
+        "run_suffix": "20261105t1630z",
+        "status": "timeout_before_GO",
+        "gpu_calls": 0,
+        "reason": "No launchreceiptbefore900secondwaitingdeadline; bothcontrollersendedbeforetheirreplacements."
+      },
+      "fresh_projection": {
+        "time": 1793897369.129187,
+        "reported_compute_delta_usd": 5.299151240000002,
+        "conservative_accrued_usd": 6.583386866495127,
+        "four_workers_max_usd": 15.228586666666668,
+        "CPU_admission_max_usd": 0.05,
+        "routine_projection_usd": 21.861973533161798,
+        "reserve_usd": 3,
+        "rates": {
+          "H200": 4.54,
+          "CPU": 0.0473,
+          "RAMGiB": 0.008
+        }
+      },
+      "launch_receipt": {
+        "time": 1793897537.625473,
+        "source_parent": "a56cb7b27e0c21aa4166bfde20faa532aa8a5514",
+        "families": {
+          "glm53": {
+            "account": "winstoncai233",
+            "run_id": "glm53-ds41-serving-20261105t1655z",
+            "image": "im-GuMdyMF0OazFNba7XbxTvT",
+            "admission_sha256": "427ac2a2c1c2026e08eb65fbbcc34d32c556e52d7148cfcb1c010216606f54cd",
+            "app_id": "ap-tIs8NFEU0TvCC3lQB8NY8j",
+            "controller_source_sha256": "5fa1df1b3d511be481e5d99ee3cfb66fc16b30967f9ec50ff183e46aa00a6f0f"
+          },
+          "dsv41": {
+            "account": "winstoncai",
+            "run_id": "v41-ds41-serving-20261105t1655z",
+            "image": "im-HjObQW8WTX8iwgO9DRu1SV",
+            "admission_sha256": "35083c17e5e19b20b82efffcd3247d69da52f104bc5d680a6e9e04c7d399bba3",
+            "app_id": "ap-FZ6fufmei8qOGi0CvFthuq",
+            "controller_source_sha256": "5fa1df1b3d511be481e5d99ee3cfb66fc16b30967f9ec50ff183e46aa00a6f0f"
+          }
+        },
+        "reported_compute_delta_usd": 5.300069300000002,
+        "conservative_accrued_usd": 6.583386866495127,
+        "worker_maximum_usd": 15.228586666666668,
+        "CPU_admission_max_usd": 0.05,
+        "routine_projection_usd": 21.861973533161798,
+        "authorized_cap_usd": 25,
+        "protected_reserve_usd": 3,
+        "pending_gates": [
+          "V4.1racecheck",
+          "V4.1memcheck"
+        ],
+        "review": "Freshindependentreviewconfirmedcleanup/source/account/GOandbudgetcontracts;servinggatesindependent,noacceptanceuntilremainingtoolspass."
+      },
+      "gpu_released": true,
+      "outcome": "GLMNativepassed;GLMDirectloaded,capturedgraphs,health200butcoldchattimedout;V41bothloadedallweightsbutstaticfraction0.86below0.864minimum."
+    },
+    "serving_attempts": [
+      {
+        "run_id": "glm53-ds41-serving-20261105t1655z",
+        "model_family": "glm53",
+        "mode": "native",
+        "account": "winstoncai233",
+        "app_id": "ap-tIs8NFEU0TvCC3lQB8NY8j",
+        "image": "im-GuMdyMF0OazFNba7XbxTvT",
+        "source_parent": "a56cb7b27e0c21aa4166bfde20faa532aa8a5514",
+        "sglang": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+        "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159",
+        "status": "passed",
+        "error": null,
+        "raw_volume": "winstoncai233/remnant-stage2a-results/glm53-serving/glm53-ds41-serving-20261105t1655z/native",
+        "sha256": {
+          "result.json": "24fa7fd51559f6db54964eb1b1174a37c16a95970781ae362e2c43e3e9688d59",
+          "native.log": "77fd0c8799bd5a4d1123fdf0dd36db1b27c0d614326ffeeae182dfc22a2d8bc1"
+        },
+        "checkpoint": {
+          "revision": "46a050bec13002ad29ee795c16e61cf4fa3c4a9c",
+          "shards": 62,
+          "bytes": 328337455672,
+          "heads": 64,
+          "layers": 45,
+          "config_sha256": "bb8f01c42cb92a52ca72e65afb4d5bd8d11aef083cd210e8de25dfb904f23e9f"
+        },
+        "settings": {
+          "MODEL_FAMILY": "glm53",
+          "MODEL_NAME": "glm53-flash",
+          "TP": "4",
+          "EP": "4",
+          "PORT": "30211",
+          "CTX_LEN": "8192",
+          "MAX_RUN": "4",
+          "CHUNK": "2048",
+          "MAX_TOTAL_TOKENS": "16384",
+          "SGLANG_JIT_DEEPGEMM_PRECOMPILE": "0",
+          "MEM_FRAC": "0.86",
+          "SGLANG_ENABLE_HEALTH_ENDPOINT_GENERATION": "0",
+          "SGLANG_UNIFIED_RADIX_TREE_CORE_BACKEND": "python",
+          "HF_HUB_OFFLINE": "1",
+          "TRANSFORMERS_OFFLINE": "1",
+          "GLM_REASONING_PARSER": "auto",
+          "DECODE_CFG": "{\"decode\": {\"backend\": \"full\", \"max_bs\": 4, \"bs\": [1, 2, 4]}, \"prefill\": {\"backend\": \"disabled\"}}"
+        },
+        "conservative_allocated_seconds": 557.8549869060516,
+        "conservative_cost_usd": 3.2279968897881504,
+        "worker_seconds": 511.7820570079999,
+        "stage_counts": {
+          "weight_load_start": 4,
+          "weight_load_complete": 4,
+          "pool_allocation": 4,
+          "graph_capture_start": 4,
+          "graph_capture_complete": 4
+        },
+        "ready_seconds": 430.474243104,
+        "health_http_status": 200,
+        "chat_started_at": 1793897973.612032,
+        "chat_completed_at": 1793898049.0046413,
+        "chat": {
+          "http_status": 200,
+          "request": {
+            "model": "glm53-flash",
+            "messages": [
+              {
+                "role": "user",
+                "content": "Write the numbers one to five in order."
+              }
+            ],
+            "chat_template_kwargs": {
+              "reasoning_effort": "low"
+            },
+            "temperature": 0,
+            "max_tokens": 256
+          },
+          "response": {
+            "id": "22caee4d7b184666915901c4328b3c9e",
+            "object": "chat.completion",
+            "created": 1793898049,
+            "model": "glm53-flash",
+            "choices": [
+              {
+                "index": 0,
+                "message": {
+                  "role": "assistant",
+                  "content": "1, 2, 3, 4, 5",
+                  "reasoning_content": null
+                },
+                "logprobs": null,
+                "finish_reason": "stop",
+                "matched_stop": 154827
+              }
+            ],
+            "usage": {
+              "prompt_tokens": 21,
+              "total_tokens": 36,
+              "completion_tokens": 15,
+              "prompt_tokens_details": null,
+              "reasoning_tokens": 1
+            },
+            "metadata": {
+              "weight_version": "default",
+              "weight_versions": [
+                {
+                  "version": "default",
+                  "start": 0,
+                  "end": 15
+                }
+              ]
+            }
+          }
+        },
+        "resolved_settings_sha256": "c8714724bcfe99e25d253de42d0a6fd1780fa02a492bba31c81650ac26fd9f58"
+      },
+      {
+        "run_id": "glm53-ds41-serving-20261105t1655z",
+        "model_family": "glm53",
+        "mode": "direct",
+        "account": "winstoncai233",
+        "app_id": "ap-tIs8NFEU0TvCC3lQB8NY8j",
+        "image": "im-GuMdyMF0OazFNba7XbxTvT",
+        "source_parent": "a56cb7b27e0c21aa4166bfde20faa532aa8a5514",
+        "sglang": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+        "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159",
+        "status": "failed",
+        "error": "timed out",
+        "raw_volume": "winstoncai233/remnant-stage2a-results/glm53-serving/glm53-ds41-serving-20261105t1655z/direct",
+        "sha256": {
+          "direct.log": "62058adcb8f08faa5bed1fca14dcfc77f9e632dd27222694260f9583bea04407",
+          "result.json": "a04763cf02f56226ce2e3a08e80725fd7c4049d481f7aefc049a2e90e4b52e53"
+        },
+        "checkpoint": {
+          "revision": "46a050bec13002ad29ee795c16e61cf4fa3c4a9c",
+          "shards": 62,
+          "bytes": 328337455672,
+          "heads": 64,
+          "layers": 45,
+          "config_sha256": "bb8f01c42cb92a52ca72e65afb4d5bd8d11aef083cd210e8de25dfb904f23e9f"
+        },
+        "settings": {
+          "MODEL_FAMILY": "glm53",
+          "MODEL_NAME": "glm53-flash",
+          "TP": "4",
+          "EP": "4",
+          "PORT": "30211",
+          "CTX_LEN": "8192",
+          "MAX_RUN": "4",
+          "CHUNK": "2048",
+          "MAX_TOTAL_TOKENS": "16384",
+          "SGLANG_JIT_DEEPGEMM_PRECOMPILE": "0",
+          "MEM_FRAC": "0.86",
+          "SGLANG_ENABLE_HEALTH_ENDPOINT_GENERATION": "0",
+          "SGLANG_UNIFIED_RADIX_TREE_CORE_BACKEND": "python",
+          "HF_HUB_OFFLINE": "1",
+          "TRANSFORMERS_OFFLINE": "1",
+          "GLM_REASONING_PARSER": "auto",
+          "DECODE_CFG": "{\"decode\": {\"backend\": \"full\", \"max_bs\": 4, \"bs\": [1, 2, 4]}, \"prefill\": {\"backend\": \"disabled\"}}"
+        },
+        "conservative_allocated_seconds": 589.7042779922485,
+        "conservative_cost_usd": 3.412291043253369,
+        "worker_seconds": 546.1356887860001,
+        "stage_counts": {
+          "weight_load_start": 4,
+          "weight_load_complete": 4,
+          "pool_allocation": 4,
+          "graph_capture_start": 4,
+          "graph_capture_complete": 4
+        },
+        "ready_seconds": 471.52707376399997,
+        "health_http_status": 200,
+        "chat_started_at": 1793898019.781107,
+        "resolved_settings_sha256": "5b25d95f3bb561fc5fedad37e62ab47b7e73f6a1f919b7110e4d02e7bbcae9c2",
+        "failure_category": "cold_first_chat_deadline_after_successful_load_graphs_health"
+      },
+      {
+        "run_id": "v41-ds41-serving-20261105t1655z",
+        "model_family": "dsv41",
+        "mode": "native",
+        "account": "winstoncai",
+        "app_id": "ap-FZ6fufmei8qOGi0CvFthuq",
+        "image": "im-HjObQW8WTX8iwgO9DRu1SV",
+        "source_parent": "a56cb7b27e0c21aa4166bfde20faa532aa8a5514",
+        "sglang": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+        "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159",
+        "status": "failed",
+        "error": "serving process exited during startup; see /results/dsv41-serving/v41-ds41-serving-20261105t1655z/native/native.log",
+        "raw_volume": "winstoncai/remnant-stage2a-results/dsv41-serving/v41-ds41-serving-20261105t1655z/native",
+        "sha256": {
+          "result.json": "e6b2f38cf8fd750d0dfc52952c8a596735b7a0b640ee94ae7a252e6a6fb205d4",
+          "native.log": "cc9a467e51a628403e67322ca1d26b229bb92517396c98859fa67d1d97f29b56"
+        },
+        "checkpoint": {
+          "revision": "1bae0e1088993b9b82de08f59de5be5a34e42170",
+          "shards": 48,
+          "bytes": 510296708312,
+          "heads": 64,
+          "layers": 40,
+          "config_sha256": "8be45ce0476004a3f529fd896115a4a2e800a129ad2d3ec05b16050f52e21879"
+        },
+        "settings": {
+          "MODEL_FAMILY": "dsv41",
+          "MODEL_NAME": "deepseek-v4-1-flash",
+          "TP": "4",
+          "EP": "4",
+          "PORT": "30211",
+          "CTX_LEN": "8192",
+          "MAX_RUN": "4",
+          "CHUNK": "256",
+          "MAX_TOTAL_TOKENS": "16384",
+          "SGLANG_JIT_DEEPGEMM_PRECOMPILE": "0",
+          "MEM_FRAC": "0.86",
+          "SGLANG_ENABLE_HEALTH_ENDPOINT_GENERATION": "0",
+          "SGLANG_UNIFIED_RADIX_TREE_CORE_BACKEND": "python",
+          "HF_HUB_OFFLINE": "1",
+          "TRANSFORMERS_OFFLINE": "1",
+          "GLM_REASONING_PARSER": "auto",
+          "DECODE_CFG": "{\"decode\": {\"backend\": \"full\", \"max_bs\": 4, \"bs\": [1, 2, 4]}, \"prefill\": {\"backend\": \"disabled\"}}",
+          "DISABLE_FLASHINFER_AUTOTUNE": "1"
+        },
+        "conservative_allocated_seconds": 362.75946974754333,
+        "conservative_cost_usd": 1.9196425006884998,
+        "worker_seconds": 324.378397117,
+        "stage_counts": {
+          "weight_load_start": 4,
+          "weight_load_complete": 4
+        },
+        "failure_category": "static_memory_fraction_below_observed_minimum"
+      },
+      {
+        "run_id": "v41-ds41-serving-20261105t1655z",
+        "model_family": "dsv41",
+        "mode": "direct",
+        "account": "winstoncai",
+        "app_id": "ap-FZ6fufmei8qOGi0CvFthuq",
+        "image": "im-HjObQW8WTX8iwgO9DRu1SV",
+        "source_parent": "a56cb7b27e0c21aa4166bfde20faa532aa8a5514",
+        "sglang": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+        "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159",
+        "status": "failed",
+        "error": "serving process exited during startup; see /results/dsv41-serving/v41-ds41-serving-20261105t1655z/direct/direct.log",
+        "raw_volume": "winstoncai/remnant-stage2a-results/dsv41-serving/v41-ds41-serving-20261105t1655z/direct",
+        "sha256": {
+          "direct.log": "01d35d752ce4296c5b99c9b59486787faec9ca352beeea515930625ba492fd3c",
+          "result.json": "182b07d5ba8d0ed63eadd325d9ba22d131220098e0dd8348112a27d2aecf9535"
+        },
+        "checkpoint": {
+          "revision": "1bae0e1088993b9b82de08f59de5be5a34e42170",
+          "shards": 48,
+          "bytes": 510296708312,
+          "heads": 64,
+          "layers": 40,
+          "config_sha256": "8be45ce0476004a3f529fd896115a4a2e800a129ad2d3ec05b16050f52e21879"
+        },
+        "settings": {
+          "MODEL_FAMILY": "dsv41",
+          "MODEL_NAME": "deepseek-v4-1-flash",
+          "TP": "4",
+          "EP": "4",
+          "PORT": "30211",
+          "CTX_LEN": "8192",
+          "MAX_RUN": "4",
+          "CHUNK": "256",
+          "MAX_TOTAL_TOKENS": "16384",
+          "SGLANG_JIT_DEEPGEMM_PRECOMPILE": "0",
+          "MEM_FRAC": "0.86",
+          "SGLANG_ENABLE_HEALTH_ENDPOINT_GENERATION": "0",
+          "SGLANG_UNIFIED_RADIX_TREE_CORE_BACKEND": "python",
+          "HF_HUB_OFFLINE": "1",
+          "TRANSFORMERS_OFFLINE": "1",
+          "GLM_REASONING_PARSER": "auto",
+          "DECODE_CFG": "{\"decode\": {\"backend\": \"full\", \"max_bs\": 4, \"bs\": [1, 2, 4]}, \"prefill\": {\"backend\": \"disabled\"}}",
+          "DISABLE_FLASHINFER_AUTOTUNE": "1"
+        },
+        "conservative_allocated_seconds": 311.20432305336,
+        "conservative_cost_usd": 1.646824121082147,
+        "worker_seconds": 265.297277516,
+        "stage_counts": {
+          "weight_load_start": 4,
+          "weight_load_complete": 4
+        },
+        "failure_category": "static_memory_fraction_below_observed_minimum"
+      },
+      {
+        "run_id": "glm53-ds41-direct-corrective-20261105t1713z",
+        "model_family": "glm53",
+        "mode": "direct",
+        "account": "winstoncai233",
+        "app_id": "ap-VM9LXg6rFWOb07V4LRNIAS",
+        "image": "im-AWSp77wV7GBLv4y13cIpEd",
+        "source_parent": "c23b32f6c0f79b966c88f0292554b0db4b83ad7c",
+        "sglang": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+        "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159",
+        "status": "passed",
+        "raw_volume": "winstoncai233/remnant-stage2a-results/glm53-serving/glm53-ds41-direct-corrective-20261105t1713z/direct",
+        "sha256": {
+          "direct.log": "1e3271bf353218624608dcfed47ff4a4dce8e78ab235a704e797edddecca267c",
+          "result.json": "453885e95bc0c31d84f860e8f8c24dfa7c1f42b9a32bb729dd17f978f20332eb"
+        },
+        "checkpoint": {
+          "revision": "46a050bec13002ad29ee795c16e61cf4fa3c4a9c",
+          "shards": 62,
+          "bytes": 328337455672,
+          "heads": 64,
+          "layers": 45,
+          "config_sha256": "bb8f01c42cb92a52ca72e65afb4d5bd8d11aef083cd210e8de25dfb904f23e9f"
+        },
+        "settings": {
+          "MODEL_FAMILY": "glm53",
+          "MODEL_NAME": "glm53-flash",
+          "TP": "4",
+          "EP": "4",
+          "PORT": "30211",
+          "CTX_LEN": "8192",
+          "MAX_RUN": "4",
+          "CHUNK": "2048",
+          "MAX_TOTAL_TOKENS": "16384",
+          "SGLANG_JIT_DEEPGEMM_PRECOMPILE": "0",
+          "MEM_FRAC": "0.86",
+          "SGLANG_ENABLE_HEALTH_ENDPOINT_GENERATION": "0",
+          "SGLANG_UNIFIED_RADIX_TREE_CORE_BACKEND": "python",
+          "HF_HUB_OFFLINE": "1",
+          "TRANSFORMERS_OFFLINE": "1",
+          "GLM_REASONING_PARSER": "auto",
+          "DECODE_CFG": "{\"decode\": {\"backend\": \"full\", \"max_bs\": 4, \"bs\": [1, 2, 4]}, \"prefill\": {\"backend\": \"disabled\"}}"
+        },
+        "conservative_allocated_seconds": 568.7987010478973,
+        "worker_seconds": 525.476440608,
+        "stage_counts": {
+          "weight_load_start": 4,
+          "weight_load_complete": 4,
+          "pool_allocation": 4,
+          "graph_capture_start": 4,
+          "graph_capture_complete": 4
+        },
+        "ready_seconds": 442.47880410100004,
+        "health_http_status": 200,
+        "chat": {
+          "http_status": 200,
+          "request": {
+            "model": "glm53-flash",
+            "messages": [
+              {
+                "role": "user",
+                "content": "Write the numbers one to five in order."
+              }
+            ],
+            "chat_template_kwargs": {
+              "reasoning_effort": "low"
+            },
+            "temperature": 0,
+            "max_tokens": 256
+          },
+          "response": {
+            "id": "f88a7c5010804690b74936a2a50474ef",
+            "object": "chat.completion",
+            "created": 1793899523,
+            "model": "glm53-flash",
+            "choices": [
+              {
+                "index": 0,
+                "message": {
+                  "role": "assistant",
+                  "content": "1, 2, 3, 4, 5",
+                  "reasoning_content": null
+                },
+                "logprobs": null,
+                "finish_reason": "stop",
+                "matched_stop": 154827
+              }
+            ],
+            "usage": {
+              "prompt_tokens": 21,
+              "total_tokens": 36,
+              "completion_tokens": 15,
+              "prompt_tokens_details": null,
+              "reasoning_tokens": 1
+            },
+            "metadata": {
+              "weight_version": "default",
+              "weight_versions": [
+                {
+                  "version": "default",
+                  "start": 0,
+                  "end": 15
+                }
+              ]
+            }
+          }
+        },
+        "controller_sha256": "bb6b821307edeecb20f43a77d53fce1ad1fe6e72bc526910e6bd1afa77c108eb",
+        "conservative_cost_usd": 3.291322083685822
+      }
+    ],
+    "corrective_serving_projection": {
+      "time": 1793898447.410103,
+      "source_parent": "c23b32f6c0f79b966c88f0292554b0db4b83ad7c",
+      "reported_compute_delta_usd": 15.263875590000003,
+      "conservative_accrued_usd": 16.790141421307293,
+      "CPU_preparation_max_usd": 0.15,
+      "single_worker_ceiling_usd": 3.6454599999999995,
+      "routine_projection_usd": 20.58560142130729,
+      "protected_reserve_usd": 3,
+      "basis": "GLMDirectonly,9minwork/10mincontroller;noNative/V41repeats. Pendingpriorityquestiondefaultrecommendedafterreasonabletime."
+    },
+    "corrective_serving_launch": {
+      "time": 1793898999.023763,
+      "source_parent": "c23b32f6c0f79b966c88f0292554b0db4b83ad7c",
+      "families": {
+        "glm53": {
+          "account": "winstoncai233",
+          "run_id": "glm53-ds41-direct-corrective-20261105t1713z",
+          "image": "im-AWSp77wV7GBLv4y13cIpEd",
+          "admission_sha256": "427ac2a2c1c2026e08eb65fbbcc34d32c556e52d7148cfcb1c010216606f54cd",
+          "modes": [
+            "direct"
+          ]
+        }
+      },
+      "reported_compute_delta_usd": 15.265150250000003,
+      "conservative_accrued_usd": 16.390141421307295,
+      "routine_projection_usd": 20.035601421307295,
+      "protected_reserve_usd": 3,
+      "CPU_remaining_max_in_existing_accrual_usd": 0.3,
+      "review": "Freshreviewcorrectedandconfirmedexplicitmodebinding;noNativeorV41repeat."
+    },
+    "priority": "User selected GLM Direct first, then remaining sanitizer checks. V4.1 serving reruns are deferred.",
+    "glm_serving_status": "Native passed on parent a56cb7b; Direct passed on c23b32f. Both use SGLang e0d6d50, identical GLM settings and the same verified compiled base. The successful Native run remains attached to its actual source/image.",
+    "source_preservation": {
+      "original_ledger_diff_sha256": "e55ec45150a4e1579a415895d8842ab640296ba6cb0d2acd382a2b4e665c9dd8",
+      "verified_unchanged": true
+    },
+    "remaining_tools_launch": {
+      "time": 1793899672.760927,
+      "account": "winstoncai233",
+      "image": "im-uWsqVPgXoZF3YLWDSH0ig4",
+      "compiled_base": "im-QwKUAiKtJXt7YgD4Ec2w9K",
+      "source_identities": {
+        "flashmla": {
+          "commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+          "dirty": false,
+          "expected_commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+          "integration": "v0.5.22",
+          "override": false,
+          "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/flashmla-v0.5.22"
+        },
+        "flashmla/csrc/cutlass": {
+          "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "dirty": false,
+          "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "override": false,
+          "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/flashmla-v0.5.22/csrc/cutlass"
+        },
+        "parent": {
+          "commit": "c23b32f6c0f79b966c88f0292554b0db4b83ad7c",
+          "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration"
+        },
+        "sglang": {
+          "commit": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+          "dirty": false,
+          "expected_commit": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+          "integration": "v0.5.22",
+          "override": false,
+          "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/sglang-v0.5.22"
+        }
+      },
+      "CPU_receipt_sha256": "dfdfc15043cb92fe452ec77a5f505ce1aeca0a989808cae6b3394085fd47f81c",
+      "controller_sha256": "e6415beb3589d484b0f2f12828a262538d41d06151e8ed40466362348e34560f",
+      "work_seconds": 1500,
+      "function_timeout_seconds": 1560,
+      "controller_ceiling_seconds": 1620,
+      "conservative_minutes": 27.5,
+      "conservative_max_cost_usd": 2.0144666666666664,
+      "reported_phase_compute_usd": 19.230809790000002,
+      "conservative_accrued_usd": 19.681463504993115,
+      "routine_projection_usd": 21.695930171659782,
+      "reserve_usd": 3,
+      "H100_aggregate_max_minutes": 72.32235438426184,
+      "tools": [
+        "memcheck",
+        "racecheck"
+      ],
+      "scope": "v41-merge",
+      "coverage": "Exactsame15cases; retainpassed15synccheckfrommatchingproductioncontent. Default34casequalificationunchanged."
+    },
+    "native_C1_diagnostic": {
+      "time": 1793901567.494303,
+      "account": "winstoncai233",
+      "image": "im-uWsqVPgXoZF3YLWDSH0ig4",
+      "source_parent": "c23b32f6c0f79b966c88f0292554b0db4b83ad7c",
+      "controller_sha256": "4f825d0c98c5676cc9f15f98679f08b53d934adb5ed46c536ba707a7592c1157",
+      "work_seconds": 300,
+      "function_timeout_seconds": 360,
+      "controller_ceiling_seconds": 390,
+      "conservative_minutes": 7,
+      "aggregate_H100_max_minutes": 74.84055813550799,
+      "routine_projection_usd": 21.880396990451064,
+      "protected_reserve_usd": 3,
+      "case": "test_fp4_compressor_boundary[False-1]",
+      "sanitizer_scope": "all",
+      "sanitizer_tools": [
+        "racecheck"
+      ],
+      "environment": {
+        "CUDA_LAUNCH_BLOCKING": "1"
+      },
+      "purpose": "IsolatefirstfailureinNativeC1setup/projection;fullframeworkinstrumentationinfreshcontext. Noqualificationclaim;changedfilter/timingdifferfromfailedbatch.",
+      "review": "Freshreviewfoundnoblocker; singlecasesuccesscannotresolvefailedfullmatrix."
+    },
+    "source_freeze_history": [
+      {
+        "parent": "250415b7b28338e93af07abb82a4cf1184e3900c",
+        "sglang": "80d6a473cb0ace7ab54e1e3809085912428350c9",
+        "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159"
+      }
+    ],
+    "remaining_gates": [
+      "Resolve the failed full 15-case V4.1 racecheck. The isolated pass is diagnostic only."
+    ],
+    "acceptance": "Incomplete. Do not merge until the remaining gates pass or the user explicitly changes the acceptance contract.",
+    "control_packet": {
+      "raw_volume": "winstoncai233/remnant-stage2a-results/microbench/ds41-integration-20261105t1805z/control-packet.zip",
+      "sha256": "f5cfa815bdd1130a4bc5a74018b3982460c1e9f8a8b87f1f871b83d36b9f2958",
+      "bytes": 299719,
+      "members": 250,
+      "executed_controller_sources_verified": 6,
+      "source_variants": 13,
+      "purpose": "Recover exact transient controllers, input selections, launch receipts, CPU preparation logs and billing/allocation snapshots without another active runner.",
+      "remote_readback_verified": true
+    },
+    "cleanup": "Transient controllers are archived by content hash in the verified remote control packet. Maintained serve.py/kernels.py entry points remain active; no alternate numerical runner was added. The isolated integration worktree is retained for review.",
+    "failed_five_rerun": {
+      "status": "passed",
+      "preflight": {
+        "account": "winstoncai233",
+        "image": "im-ZG6Ev0fo6k34SAzzUyMYUX",
+        "source_identities": {
+          "flashmla": {
+            "commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "dirty": false,
+            "expected_commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "integration": "v0.5.22",
+            "override": false,
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/flashmla-v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "dirty": false,
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/flashmla-v0.5.22/csrc/cutlass"
+          },
+          "parent": {
+            "commit": "57e4abed9359241a47baf3832a9e7fb97b3ee8ea",
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration"
+          },
+          "sglang": {
+            "commit": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+            "dirty": false,
+            "expected_commit": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+            "integration": "v0.5.22",
+            "override": false,
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/sglang-v0.5.22"
+          }
+        },
+        "time": 1793904969.9739351,
+        "controller_sha256": "4f825d0c98c5676cc9f15f98679f08b53d934adb5ed46c536ba707a7592c1157",
+        "cases": [
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-1]",
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-1]",
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[False-2]",
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_compressor_boundary[True-2]",
+          "test/registered/attention/unittests/dsv4/test_remnant_fp4.py::test_fp4_fragment_masks[64]"
+        ],
+        "work_seconds": 480,
+        "function_timeout_seconds": 540,
+        "controller_seconds": 570,
+        "conservative_minutes": 10,
+        "projected_phase_usd": 22.457173198581476,
+        "reserve_usd": 3,
+        "aggregate_H100_max_minutes": 80.66658937136181,
+        "scope": "all",
+        "tools": [
+          "racecheck"
+        ],
+        "environment": {
+          "CUDA_LAUNCH_BLOCKING": "1"
+        },
+        "qualification": "Five-case diagnostic only. Prior full batch remains failed."
+      },
+      "run_id": "v41-failed-five-20261106",
+      "numerical_tests": 5,
+      "racecheck_tests": 5,
+      "racecheck_seconds": 143.65,
+      "hazards": 0,
+      "errors": 0,
+      "warnings": 0,
+      "limitations": "Fresh worker, unfiltered framework coverage and CUDA_LAUNCH_BLOCKING=1. The earlier full-batch failure remains unresolved.",
+      "controller_outcome": "Local Connection._transport collection error; persisted successful worker result, exact XML cases and sanitizer log/hashes independently verified.",
+      "control_packet": {
+        "raw_volume": "winstoncai233/remnant-stage2a-results/microbench/v41-failed-five-20261106/validation/control-packet.zip",
+        "sha256": "6486bb11d90131643549c1cb86395c2586522227b627217d4d0e6cd834441117"
+      }
+    },
+    "serving_followup": "Both V4.1 modes passed in the separately funded v41_parallel_serving phase; original failed attempts and costs retained."
+  },
+  "v41_parallel_serving": {
+    "objective": "Both V4.1 Native and Direct serving smokes pass, run concurrently.",
+    "status": "passed",
+    "author": "Winston Cai",
+    "budget": {
+      "authorized_usd": 15,
+      "routine_stop_usd": 12,
+      "reserve_usd": 3,
+      "cpu_max_usd": 0.5,
+      "accounted_usd": 6.679505949847327,
+      "prior_phases": "Retained separately in ds41_integration; no prior spending removed.",
+      "account": "winstoncai",
+      "baseline_compute_usd": 3.99178164,
+      "conservative_cpu_usd": 0.5,
+      "initial_pair_ceiling_usd": 7.937666666666667,
+      "initial_max_with_reserve_usd": 11.437666666666667,
+      "reported_compute_usd": 6.23529631,
+      "serving_accounted_usd": 6.179505949847327,
+      "spend_basis_usd": 6.679505949847327
+    },
+    "source_parent": "f720d20",
+    "sglang": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+    "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159",
+    "memory_fraction": 0.9,
+    "account": "winstoncai",
+    "compiled_base": "im-lElWlZcu8czVBPYD3HvYgZ",
+    "acceptance": [
+      "Both modes overlap in execution on independent four-H200 workers",
+      "All four ranks finish pinned checkpoint loading and decode graphs at batches 1/2/4",
+      "Requested native/direct format and V4.1 backend settings verified",
+      "Health HTTP200 and exact chat answer 1, 2, 3, 4, 5 with stop finish reason",
+      "Owned server/rank processes and GPU workers exit; raw evidence and all costs retained"
+    ],
+    "attempts": [
+      {
+        "run_id": "v41-native-direct-serving-20261106",
+        "model_family": "dsv41",
+        "mode": "native",
+        "account": "winstoncai",
+        "app_id": "ap-cSZV8X19J8DdSwNYL7tEgX",
+        "image": "im-SXCseSK7MhV0kyLb7TPdbJ",
+        "source_identities": {
+          "parent": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration",
+            "commit": "f720d200bb91b05900ae4aecff20bdfffa16d29b"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/sglang-v0.5.22",
+            "expected_commit": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+            "commit": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/flashmla-v0.5.22",
+            "expected_commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "checkpoint": {
+          "revision": "1bae0e1088993b9b82de08f59de5be5a34e42170",
+          "shards": 48,
+          "bytes": 510296708312,
+          "heads": 64,
+          "layers": 40,
+          "config_sha256": "8be45ce0476004a3f529fd896115a4a2e800a129ad2d3ec05b16050f52e21879"
+        },
+        "status": "passed",
+        "ready_seconds": 534.589300178,
+        "worker_seconds": 564.470689105,
+        "conservative_allocated_seconds": 601.9648540019989,
+        "conservative_cost_usd": 3.185464237411022,
+        "verified_settings": {
+          "kv_cache_format": "native",
+          "kv_cache_dtype": "fp8_e4m3",
+          "mem_fraction_static": 0.9,
+          "tp_size": 4,
+          "ep_size": 4,
+          "max_total_num_tokens": 16384,
+          "context_length": 8192,
+          "max_running_requests": 4,
+          "chunked_prefill_size": 256,
+          "dsv4_attn_backend": "flashmla",
+          "moe_runner_backend": "flashinfer_mxfp4",
+          "language_model_only": true
+        },
+        "chat": {
+          "http_status": 200,
+          "request": {
+            "model": "deepseek-v4-1-flash",
+            "messages": [
+              {
+                "role": "user",
+                "content": "Reply with exactly: 1, 2, 3, 4, 5"
+              }
+            ],
+            "chat_template_kwargs": {
+              "reasoning_effort": "low"
+            },
+            "temperature": 0,
+            "max_tokens": 256
+          },
+          "response": {
+            "id": "34aec9f7ebb44687afe1d659bd4dedda",
+            "object": "chat.completion",
+            "created": 1793907162,
+            "model": "deepseek-v4-1-flash",
+            "choices": [
+              {
+                "index": 0,
+                "message": {
+                  "role": "assistant",
+                  "content": "1, 2, 3, 4, 5",
+                  "reasoning_content": null
+                },
+                "logprobs": null,
+                "finish_reason": "stop",
+                "matched_stop": 1
+              }
+            ],
+            "usage": {
+              "prompt_tokens": 22,
+              "total_tokens": 36,
+              "completion_tokens": 14,
+              "prompt_tokens_details": null,
+              "reasoning_tokens": 0
+            },
+            "metadata": {
+              "weight_version": "default",
+              "weight_versions": [
+                {
+                  "version": "default",
+                  "start": 0,
+                  "end": 14
+                }
+              ]
+            }
+          }
+        },
+        "stages": [
+          {
+            "event": "weight_load_start",
+            "rank": 3,
+            "timestamp": "2026-11-05 19:25:12",
+            "log_line": "[2026-11-05 19:25:12 TP3 EP3] Load weight begin. avail mem=138.17 GB"
+          },
+          {
+            "event": "weight_load_start",
+            "rank": 1,
+            "timestamp": "2026-11-05 19:25:12",
+            "log_line": "[2026-11-05 19:25:12 TP1 EP1] Load weight begin. avail mem=137.93 GB"
+          },
+          {
+            "event": "weight_load_start",
+            "rank": 2,
+            "timestamp": "2026-11-05 19:25:12",
+            "log_line": "[2026-11-05 19:25:12 TP2 EP2] Load weight begin. avail mem=137.81 GB"
+          },
+          {
+            "event": "weight_load_start",
+            "rank": 0,
+            "timestamp": "2026-11-05 19:25:12",
+            "log_line": "[2026-11-05 19:25:12 TP0 EP0] Load weight begin. avail mem=137.98 GB"
+          },
+          {
+            "event": "weight_load_complete",
+            "rank": 1,
+            "timestamp": "2026-11-05 19:28:54",
+            "log_line": "[2026-11-05 19:28:54 TP1 EP1] Load weight end. elapsed=222.22 s, type=DeepseekV4ForCausalLM, quant=fp8, avail mem=18.82 GB, mem usage=119.12 GB."
+          },
+          {
+            "event": "weight_load_complete",
+            "rank": 2,
+            "timestamp": "2026-11-05 19:28:54",
+            "log_line": "[2026-11-05 19:28:54 TP2 EP2] Load weight end. elapsed=222.22 s, type=DeepseekV4ForCausalLM, quant=fp8, avail mem=18.70 GB, mem usage=119.12 GB."
+          },
+          {
+            "event": "weight_load_complete",
+            "rank": 0,
+            "timestamp": "2026-11-05 19:28:54",
+            "log_line": "[2026-11-05 19:28:54 TP0 EP0] Load weight end. elapsed=222.22 s, type=DeepseekV4ForCausalLM, quant=fp8, avail mem=18.87 GB, mem usage=119.12 GB."
+          },
+          {
+            "event": "weight_load_complete",
+            "rank": 3,
+            "timestamp": "2026-11-05 19:28:54",
+            "log_line": "[2026-11-05 19:28:54 TP3 EP3] Load weight end. elapsed=222.32 s, type=DeepseekV4ForCausalLM, quant=fp8, avail mem=19.05 GB, mem usage=119.12 GB."
+          },
+          {
+            "event": "graph_capture_start",
+            "rank": 0,
+            "timestamp": "2026-11-05 19:28:59",
+            "log_line": "[2026-11-05 19:28:59 TP0 EP0] Capture target decode CUDA graph begin. backend=full, num_tokens_per_req=1, avail mem=17.09 GB"
+          },
+          {
+            "event": "graph_capture_start",
+            "rank": 3,
+            "timestamp": "2026-11-05 19:28:59",
+            "log_line": "[2026-11-05 19:28:59 TP3 EP3] Capture target decode CUDA graph begin. backend=full, num_tokens_per_req=1, avail mem=17.47 GB"
+          },
+          {
+            "event": "graph_capture_start",
+            "rank": 1,
+            "timestamp": "2026-11-05 19:28:59",
+            "log_line": "[2026-11-05 19:28:59 TP1 EP1] Capture target decode CUDA graph begin. backend=full, num_tokens_per_req=1, avail mem=17.00 GB"
+          },
+          {
+            "event": "graph_capture_start",
+            "rank": 2,
+            "timestamp": "2026-11-05 19:28:59",
+            "log_line": "[2026-11-05 19:28:59 TP2 EP2] Capture target decode CUDA graph begin. backend=full, num_tokens_per_req=1, avail mem=16.88 GB"
+          },
+          {
+            "event": "graph_capture_complete",
+            "rank": 1,
+            "timestamp": "2026-11-05 19:32:17",
+            "log_line": "[2026-11-05 19:32:17 TP1 EP1] Capture target decode CUDA graph end. bs=[1, 2, 4], elapsed=198.09 s, mem usage=0.12 GB, avail mem=16.88 GB."
+          },
+          {
+            "event": "graph_capture_complete",
+            "rank": 2,
+            "timestamp": "2026-11-05 19:32:17",
+            "log_line": "[2026-11-05 19:32:17 TP2 EP2] Capture target decode CUDA graph end. bs=[1, 2, 4], elapsed=198.26 s, mem usage=0.12 GB, avail mem=16.76 GB."
+          },
+          {
+            "event": "graph_capture_complete",
+            "rank": 0,
+            "timestamp": "2026-11-05 19:32:17",
+            "log_line": "[2026-11-05 19:32:17 TP0 EP0] Capture target decode CUDA graph end. bs=[1, 2, 4], elapsed=198.27 s, mem usage=0.12 GB, avail mem=16.97 GB."
+          },
+          {
+            "event": "graph_capture_complete",
+            "rank": 3,
+            "timestamp": "2026-11-05 19:32:17",
+            "log_line": "[2026-11-05 19:32:17 TP3 EP3] Capture target decode CUDA graph end. bs=[1, 2, 4], elapsed=198.27 s, mem usage=0.12 GB, avail mem=17.35 GB."
+          }
+        ],
+        "raw_volume": "winstoncai/remnant-stage2a-results/dsv41-serving/v41-native-direct-serving-20261106/native",
+        "sha256": {
+          "result.json": "7f8e0507cf10934ca8922d245c4877081bd7edcd7f26f84f9dc57cd8c5cadcad",
+          "native.log": "a6431940dfd5ba37aae2c049aebcd4d1d12ea4abc5bd1d9f5f7adde7cb705c94"
+        },
+        "terminated_at": 1793907168.2276452
+      },
+      {
+        "run_id": "v41-native-direct-serving-20261106",
+        "model_family": "dsv41",
+        "mode": "direct",
+        "account": "winstoncai",
+        "app_id": "ap-cSZV8X19J8DdSwNYL7tEgX",
+        "image": "im-SXCseSK7MhV0kyLb7TPdbJ",
+        "source_identities": {
+          "parent": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration",
+            "commit": "f720d200bb91b05900ae4aecff20bdfffa16d29b"
+          },
+          "sglang": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/sglang-v0.5.22",
+            "expected_commit": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+            "commit": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          },
+          "flashmla/csrc/cutlass": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/flashmla-v0.5.22/csrc/cutlass",
+            "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "override": false,
+            "dirty": false
+          },
+          "flashmla": {
+            "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-ds41-integration/third_party/flashmla-v0.5.22",
+            "expected_commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "commit": "4e72722671d8860e9939df8b85f22dbea600d159",
+            "override": false,
+            "dirty": false,
+            "integration": "v0.5.22"
+          }
+        },
+        "checkpoint": {
+          "revision": "1bae0e1088993b9b82de08f59de5be5a34e42170",
+          "shards": 48,
+          "bytes": 510296708312,
+          "heads": 64,
+          "layers": 40,
+          "config_sha256": "8be45ce0476004a3f529fd896115a4a2e800a129ad2d3ec05b16050f52e21879"
+        },
+        "status": "passed",
+        "ready_seconds": 497.56344855099996,
+        "worker_seconds": 526.495665766,
+        "conservative_allocated_seconds": 565.7912781238556,
+        "conservative_cost_usd": 2.9940417124363052,
+        "verified_settings": {
+          "kv_cache_format": "direct",
+          "kv_cache_dtype": "fp8_e4m3",
+          "mem_fraction_static": 0.9,
+          "tp_size": 4,
+          "ep_size": 4,
+          "max_total_num_tokens": 16384,
+          "context_length": 8192,
+          "max_running_requests": 4,
+          "chunked_prefill_size": 256,
+          "dsv4_attn_backend": "flashmla",
+          "moe_runner_backend": "flashinfer_mxfp4",
+          "language_model_only": true
+        },
+        "chat": {
+          "http_status": 200,
+          "request": {
+            "model": "deepseek-v4-1-flash",
+            "messages": [
+              {
+                "role": "user",
+                "content": "Reply with exactly: 1, 2, 3, 4, 5"
+              }
+            ],
+            "chat_template_kwargs": {
+              "reasoning_effort": "low"
+            },
+            "temperature": 0,
+            "max_tokens": 256
+          },
+          "response": {
+            "id": "09211f535fc74bd18fb61615dd111057",
+            "object": "chat.completion",
+            "created": 1793907124,
+            "model": "deepseek-v4-1-flash",
+            "choices": [
+              {
+                "index": 0,
+                "message": {
+                  "role": "assistant",
+                  "content": "1, 2, 3, 4, 5",
+                  "reasoning_content": null
+                },
+                "logprobs": null,
+                "finish_reason": "stop",
+                "matched_stop": 1
+              }
+            ],
+            "usage": {
+              "prompt_tokens": 22,
+              "total_tokens": 36,
+              "completion_tokens": 14,
+              "prompt_tokens_details": null,
+              "reasoning_tokens": 0
+            },
+            "metadata": {
+              "weight_version": "default",
+              "weight_versions": [
+                {
+                  "version": "default",
+                  "start": 0,
+                  "end": 14
+                }
+              ]
+            }
+          }
+        },
+        "stages": [
+          {
+            "event": "weight_load_start",
+            "rank": 1,
+            "timestamp": "2026-11-05 19:25:07",
+            "log_line": "[2026-11-05 19:25:07 TP1 EP1] Load weight begin. avail mem=137.93 GB"
+          },
+          {
+            "event": "weight_load_start",
+            "rank": 2,
+            "timestamp": "2026-11-05 19:25:07",
+            "log_line": "[2026-11-05 19:25:07 TP2 EP2] Load weight begin. avail mem=137.93 GB"
+          },
+          {
+            "event": "weight_load_start",
+            "rank": 3,
+            "timestamp": "2026-11-05 19:25:07",
+            "log_line": "[2026-11-05 19:25:07 TP3 EP3] Load weight begin. avail mem=138.17 GB"
+          },
+          {
+            "event": "weight_load_start",
+            "rank": 0,
+            "timestamp": "2026-11-05 19:25:07",
+            "log_line": "[2026-11-05 19:25:07 TP0 EP0] Load weight begin. avail mem=137.86 GB"
+          },
+          {
+            "event": "weight_load_complete",
+            "rank": 2,
+            "timestamp": "2026-11-05 19:28:29",
+            "log_line": "[2026-11-05 19:28:29 TP2 EP2] Load weight end. elapsed=201.65 s, type=DeepseekV4ForCausalLM, quant=fp8, avail mem=18.82 GB, mem usage=119.12 GB."
+          },
+          {
+            "event": "weight_load_complete",
+            "rank": 1,
+            "timestamp": "2026-11-05 19:28:29",
+            "log_line": "[2026-11-05 19:28:29 TP1 EP1] Load weight end. elapsed=202.24 s, type=DeepseekV4ForCausalLM, quant=fp8, avail mem=18.82 GB, mem usage=119.12 GB."
+          },
+          {
+            "event": "weight_load_complete",
+            "rank": 0,
+            "timestamp": "2026-11-05 19:28:29",
+            "log_line": "[2026-11-05 19:28:29 TP0 EP0] Load weight end. elapsed=201.67 s, type=DeepseekV4ForCausalLM, quant=fp8, avail mem=18.74 GB, mem usage=119.12 GB."
+          },
+          {
+            "event": "weight_load_complete",
+            "rank": 3,
+            "timestamp": "2026-11-05 19:28:29",
+            "log_line": "[2026-11-05 19:28:29 TP3 EP3] Load weight end. elapsed=201.97 s, type=DeepseekV4ForCausalLM, quant=fp8, avail mem=19.05 GB, mem usage=119.12 GB."
+          },
+          {
+            "event": "graph_capture_start",
+            "rank": 0,
+            "timestamp": "2026-11-05 19:28:35",
+            "log_line": "[2026-11-05 19:28:35 TP0 EP0] Capture target decode CUDA graph begin. backend=full, num_tokens_per_req=1, avail mem=16.97 GB"
+          },
+          {
+            "event": "graph_capture_start",
+            "rank": 3,
+            "timestamp": "2026-11-05 19:28:35",
+            "log_line": "[2026-11-05 19:28:35 TP3 EP3] Capture target decode CUDA graph begin. backend=full, num_tokens_per_req=1, avail mem=17.47 GB"
+          },
+          {
+            "event": "graph_capture_start",
+            "rank": 1,
+            "timestamp": "2026-11-05 19:28:35",
+            "log_line": "[2026-11-05 19:28:35 TP1 EP1] Capture target decode CUDA graph begin. backend=full, num_tokens_per_req=1, avail mem=17.00 GB"
+          },
+          {
+            "event": "graph_capture_start",
+            "rank": 2,
+            "timestamp": "2026-11-05 19:28:35",
+            "log_line": "[2026-11-05 19:28:35 TP2 EP2] Capture target decode CUDA graph begin. backend=full, num_tokens_per_req=1, avail mem=17.00 GB"
+          },
+          {
+            "event": "graph_capture_complete",
+            "rank": 3,
+            "timestamp": "2026-11-05 19:31:40",
+            "log_line": "[2026-11-05 19:31:40 TP3 EP3] Capture target decode CUDA graph end. bs=[1, 2, 4], elapsed=185.66 s, mem usage=0.12 GB, avail mem=17.35 GB."
+          },
+          {
+            "event": "graph_capture_complete",
+            "rank": 2,
+            "timestamp": "2026-11-05 19:31:40",
+            "log_line": "[2026-11-05 19:31:40 TP2 EP2] Capture target decode CUDA graph end. bs=[1, 2, 4], elapsed=185.67 s, mem usage=0.12 GB, avail mem=16.88 GB."
+          },
+          {
+            "event": "graph_capture_complete",
+            "rank": 1,
+            "timestamp": "2026-11-05 19:31:40",
+            "log_line": "[2026-11-05 19:31:40 TP1 EP1] Capture target decode CUDA graph end. bs=[1, 2, 4], elapsed=185.69 s, mem usage=0.12 GB, avail mem=16.88 GB."
+          },
+          {
+            "event": "graph_capture_complete",
+            "rank": 0,
+            "timestamp": "2026-11-05 19:31:40",
+            "log_line": "[2026-11-05 19:31:40 TP0 EP0] Capture target decode CUDA graph end. bs=[1, 2, 4], elapsed=185.71 s, mem usage=0.12 GB, avail mem=16.85 GB."
+          }
+        ],
+        "raw_volume": "winstoncai/remnant-stage2a-results/dsv41-serving/v41-native-direct-serving-20261106/direct",
+        "sha256": {
+          "direct.log": "b998bcb667d961c46d3e1da60b9d5bdd753532e4a9b7c33111274d04227e582d",
+          "result.json": "d1f6124ae4dac5c75563ab8895097984fddc30e70b14b19fb40ebabab1da67d9"
+        },
+        "terminated_at": 1793907130.631162
+      }
+    ],
+    "launch": {
+      "time": 1793906598.55233,
+      "source_parent": "f720d200bb91b05900ae4aecff20bdfffa16d29b",
+      "families": {
+        "dsv41": {
+          "account": "winstoncai",
+          "run_id": "v41-native-direct-serving-20261106",
+          "image": "im-SXCseSK7MhV0kyLb7TPdbJ",
+          "admission_sha256": "35083c17e5e19b20b82efffcd3247d69da52f104bc5d680a6e9e04c7d399bba3",
+          "modes": [
+            "native",
+            "direct"
+          ]
+        }
+      },
+      "worker_ceiling_usd": 7.937666666666667,
+      "routine_projection_usd": 8.437666666666667,
+      "reserve_usd": 3,
+      "resources_per_worker": {
+        "H200": 4,
+        "cpu": 8,
+        "memory_GiB": 64
+      },
+      "work_seconds_per_mode": 660,
+      "controller_seconds": 720,
+      "memory_fraction": 0.9
+    },
+    "acceptance_audit": {
+      "both_modes_passed": true,
+      "overlap_seconds": 526.4956583976746,
+      "same_image_and_checkpoint": true,
+      "all_four_ranks_loaded_and_captured": true,
+      "settings_health_exact_answer_and_stop_verified": true,
+      "owned_process_cleanup_completed": true,
+      "active_containers_after": []
+    },
+    "control_packet": {
+      "raw_volume": "winstoncai/remnant-stage2a-results/dsv41-serving/v41-native-direct-serving-20261106/control-packet.zip",
+      "sha256": "6a4358d566065fa96484ffd132009021cddb2a47d3fe083153a2825e5afe0ef4",
+      "remote_readback_verified": true
+    }
+  },
+  "main_publication": {
+    "requested": "2026-11-06",
+    "decision": "User authorized merging the combined GLM/V4.1 branches into main and retiring the superseded parent/SGLang V4.1 branches. FlashMLA explicitly unchanged.",
+    "integration_parents": [
+      "cbfeeba734672afe8b9cac9dcce23d1848775a4c",
+      "dac02058b567675653ed4da3fc86db5270ff9a81"
+    ],
+    "sglang": "e0d6d500d6dc4af5b68a88c0774b7c7419639eb8",
+    "flashmla": "4e72722671d8860e9939df8b85f22dbea600d159",
+    "resolution": [
+      "Preserve main build lock, split guidance, validation tier and sanitizer subset state reporting.",
+      "Teach both receipt readers that not_selected tools contribute no evidence; preserve all full/focused identity and coverage gates.",
+      "Retain all 110 main CPU tests and 236 historical transfer files; restore V4 replay tools/docs/tests and migrate public replay mode to Native/Direct.",
+      "Bind replay source freeze to launch-config.sh and reject non-V4 replay before external work."
+    ],
+    "cpu": {
+      "full_suite_per_integration": 155,
+      "full_suite_seconds": {
+        "v0.5.18": 85.74,
+        "v0.5.22": 82.877
+      },
+      "final_replay_suite_per_integration": 22,
+      "distinct_tests": 157,
+      "commands": [
+        "REMNANT_INTEGRATION=v0.5.18 python -m unittest scripts.modal.tests",
+        "REMNANT_INTEGRATION=v0.5.22 python -m unittest scripts.modal.tests",
+        "REMNANT_INTEGRATION=v0.5.18 python -m unittest scripts.modal.tests.LswbSweepTests",
+        "REMNANT_INTEGRATION=v0.5.22 python -m unittest scripts.modal.tests.LswbSweepTests"
+      ],
+      "environment": "Modal 1.5.4 Python3.11 with existing dependencies; local process inspection/loopback allowed; no Modal image builds, remote functions or GPUs."
+    },
+    "review": "Fresh-context review found an omitted-tool receipt regression; fixed with independent GLM/FP4 aggregation checks. Final narrow review: no findings.",
+    "limitations": [
+      "Original V4.1 full-batch racecheck failure remains unresolved; isolated five-case pass does not replace it.",
+      "No new image build or GPU validation; prior evidence remains bound to its original sources.",
+      "SGLang main is an ancestor of the combined source; its merge also imports the existing v0.5.22 upstream history."
+    ],
+    "rollback": "Native selection or recorded pre-integration pins; preserve merge parents and exact validation identities."
+  }
+}

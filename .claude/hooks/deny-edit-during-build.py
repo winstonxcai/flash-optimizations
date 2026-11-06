@@ -24,6 +24,7 @@ IMAGE_INPUTS = (
     "scripts/modal/",
     "scripts/local/",
     "scripts/sources.py",
+    "scripts/model_profiles.py",
     "scripts/build_lock.py",
     "third_party/",
     "Dockerfile",

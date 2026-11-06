@@ -12,12 +12,7 @@ FROM ${REMNANT_BASE_IMAGE}
 ARG REMNANT_INTEGRATION=v0.5.22
 ARG REMNANT_SGLANG_SOURCE=third_party/sglang-v0.5.22
 ARG REMNANT_FLASHMLA_SOURCE=third_party/flashmla-v0.5.22
-ARG REMNANT_SGLANG_SHA
-ARG REMNANT_FLASHMLA_SHA
 ENV REMNANT_BUILT_INTEGRATION=${REMNANT_INTEGRATION}
-LABEL remnant.integration=${REMNANT_INTEGRATION} \
-      remnant.sglang=${REMNANT_SGLANG_SHA} \
-      remnant.flashmla=${REMNANT_FLASHMLA_SHA}
 
 # Literal COPY paths also work with Modal's Dockerfile parser. Profile guards
 # below reject overrides rather than labeling different sources as this build.
@@ -89,3 +84,11 @@ ENV NCCL_IB_DISABLE=1 \
     PYTHONPATH=/opt/sglang-runtime-fixes:/sgl-workspace/sglang-remnant/python
 
 CMD ["bash"]
+
+# Source identity labels follow compilation: Python-only fork commits must not
+# invalidate unchanged CUDA build layers. COPY content still keys every binary.
+ARG REMNANT_SGLANG_SHA
+ARG REMNANT_FLASHMLA_SHA
+LABEL remnant.integration=${REMNANT_INTEGRATION} \
+      remnant.sglang=${REMNANT_SGLANG_SHA} \
+      remnant.flashmla=${REMNANT_FLASHMLA_SHA}

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Start one production-fork SGLang server in the foreground.
 #
-# Usage: run-server.sh <native|triton|kernel> <model> <host> <port>
+# Usage: run-server.sh <native|direct> <model> <host> <port>
 # Author: Winston Cai.
 # The caller owns process groups, logging, and cleanup. Shared server flags
 # live here so local-container and Modal launches cannot silently diverge.
@@ -12,12 +12,6 @@ MODEL=${2:-}
 HOST=${3:-127.0.0.1}
 PORT_VALUE=${4:-}
 
-case "$MODE" in
-  native) CACHE_FORMAT=native; CACHE_IMPLEMENTATION=kernel ;;
-  triton|kernel) CACHE_FORMAT=remnant; CACHE_IMPLEMENTATION=$MODE ;;
-  packed) CACHE_FORMAT=remnant; CACHE_IMPLEMENTATION=kernel ;;
-  *) echo "usage: $0 <native|triton|kernel> <model> <host> <port> (packed aliases kernel)" >&2; exit 2 ;;
-esac
 case "${STORE_IMPLEMENTATION:-}" in
   ""|triton|kernel) ;;
   *) echo "STORE_IMPLEMENTATION must be triton or kernel" >&2; exit 2 ;;
@@ -34,6 +28,9 @@ if [ -n "${HICACHE_RATIO:-}" ]; then
     echo "HICACHE_RATIO must be a positive finite decimal; unset it to disable HiCache" >&2; exit 2;
   }
 fi
+
+. "$(dirname -- "${BASH_SOURCE[0]}")/launch-config.sh"
+resolve_launch_config || exit $?
 
 # The local-container launcher sets this after starting us in a dedicated
 # session. Record identity before exec so cleanup can recognize this exact
@@ -54,6 +51,7 @@ if [ -n "${SERVER_PID_FILE:-}" ]; then
   mv -f -- "$pid_file_tmp" "$SERVER_PID_FILE"
 fi
 
+
 args=(
   serve
   --model-path "$MODEL"
@@ -64,18 +62,65 @@ args=(
   --context-length "${CTX_LEN:-1048576}"
   --max-running-requests "${MAX_RUN:-256}"
   --chunked-prefill-size "${CHUNK:-8192}"
-  --dsv4-c4-cache-format "$CACHE_FORMAT"
-  --dsv4-c4-cache-implementation "$CACHE_IMPLEMENTATION"
   --kv-cache-dtype fp8_e4m3
-  --moe-runner-backend flashinfer_mxfp4
-  --reasoning-parser deepseek-v4
-  --tool-call-parser deepseekv4
   --host "$HOST"
   --port "$PORT_VALUE"
   --cuda-graph-config "${DECODE_CFG:?DECODE_CFG is required}"
   --skip-server-warmup
   --watchdog-timeout 1800
 )
+
+if [ -n "${MAX_TOTAL_TOKENS:-}" ]; then
+  args+=(--max-total-tokens "$MAX_TOTAL_TOKENS")
+fi
+
+case "${MODEL_FAMILY:-dsv4}" in
+  dsv4)
+    args+=(--moe-runner-backend flashinfer_mxfp4
+      --reasoning-parser deepseek-v4 --tool-call-parser deepseekv4)
+    ;;
+  dsv41)
+    [ "${REMNANT_INTEGRATION:-v0.5.18}" = v0.5.22 ] || {
+      echo "V4.1 requires v0.5.22" >&2; exit 2;
+    }
+    [ -z "${HICACHE_RATIO:-}${C4_KEEP_COUNT:-}${C4_LAYER_KEEP_COUNTS:-}${STORE_IMPLEMENTATION:-}" ] || {
+      echo "V4.1 does not support HiCache or C4 codec overrides" >&2; exit 2;
+    }
+    args+=(--model-type llm --language-model-only
+      --moe-runner-backend flashinfer_mxfp4 --ep "$EP"
+      --dsv4-attn-backend flashmla
+      --reasoning-parser deepseek-v41 --tool-call-parser deepseekv41)
+    ;;
+  glm53)
+    [ -z "${HICACHE_RATIO:-}${C4_KEEP_COUNT:-}${C4_LAYER_KEEP_COUNTS:-}${STORE_IMPLEMENTATION:-}" ] || {
+      echo "GLM Packed does not support HiCache or DeepSeek codec overrides" >&2; exit 2;
+    }
+    args+=(--model-type llm
+      --dsa-prefill-backend tilelang --dsa-decode-backend tilelang
+      --moe-runner-backend deep_gemm --ep "$EP" --language-model-only)
+    if [ -n "${GLM_REASONING_PARSER:-}" ]; then
+      args+=(--reasoning-parser "$GLM_REASONING_PARSER")
+    fi
+    ;;
+  *) echo "MODEL_FAMILY must be dsv4, dsv41 or glm53" >&2; exit 2 ;;
+esac
+
+case "${DISABLE_FLASHINFER_AUTOTUNE:-0}" in
+  0) ;;
+  1) args+=(--disable-flashinfer-autotune) ;;
+  *) echo "DISABLE_FLASHINFER_AUTOTUNE must be 0 or 1" >&2; exit 2 ;;
+esac
+
+# The untouched v0.5.18 fork predates the generic selector. Its transport
+# remains explicit; model-specific selector fields exist only in that pin.
+if [ "${REMNANT_INTEGRATION:-v0.5.18}" = v0.5.18 ]; then
+  [ "$MODEL_FAMILY" = dsv4 ] || { echo "GLM requires v0.5.22" >&2; exit 2; }
+  legacy_format=native
+  [ "$CACHE_FORMAT" = native ] || legacy_format=remnant
+  args+=(--dsv4-c4-cache-format "$legacy_format" --dsv4-c4-cache-implementation kernel)
+else
+  args+=(--kv-cache-format "$CACHE_FORMAT")
+fi
 
 if [ -n "${STORE_IMPLEMENTATION:-}" ]; then
   args+=(--dsv4-c4-cache-store-implementation "$STORE_IMPLEMENTATION")

@@ -2,9 +2,10 @@
 
 # Local serving and replay commands
 
-Run from the repository root on the GPU node. Modes: `native` = Native;
-`triton` = Packed with Triton packing/reconstruction; `kernel` = Packed with
-optimized kernels. All three use the same Docker image.
+Run from the repository root on the GPU node. Serving modes are `native` and
+`direct` (Packed). Both use the same Docker image. The v0.5.22 runtime receives
+`--kv-cache-format native|direct`; Adapter/reconstruction remain internal test
+and benchmark paths.
 
 The default pair is v0.5.18. Export `REMNANT_INTEGRATION=v0.5.22` before the
 same commands to select `third_party/{sglang,flashmla}-v0.5.22/`,
@@ -24,8 +25,11 @@ allocation. Build the image and prepare inputs before queueing GPU work.
 
 ## LongSWE concurrency sweep
 
+This sweep supports DeepSeek V4 (`MODEL_FAMILY=dsv4`) only. GLM and V4.1
+serving smokes use the maintained Modal runner.
+
 Question: does Packed improve successful requests/s under the same TTFT p90
-budget? `sweep-lswb.sh` owns one Native or Packed Kernel server, calls the existing
+budget? `sweep-lswb.sh` owns one Native or Packed Direct server, calls the existing
 replay client for each point, and stops only its own server on every exit path.
 No image builds, GPUQ submissions, source changes or automatic Git transfers occur.
 Implementation is split between the small shell environment adapter and
@@ -49,7 +53,7 @@ REMNANT_INTEGRATION=v0.5.22 MEM_FRAC=0.88 TP=4 \
 CONTAINER=remnant-v0522 PORT=30381 MASTER_PORT=29781 \
 REPLAY_DATASET=/absolute/path/to/records \
 REPLAY_MANIFEST=/absolute/path/to/manifest.json \
-bash scripts/local/sweep-lswb.sh kernel \
+bash scripts/local/sweep-lswb.sh direct \
   --concurrencies 20,22,24,26,28,30 --duration-s 1200 --repeats 1 \
   --tag no-hicache-slo --expected-image-id sha256:<full-image-id>
 ```
@@ -310,7 +314,7 @@ Acquire a GPUQ allocation before serving; the queued example below handles it.
 
 ```bash
 export GPUS=4,5,6,7 PORT=30213 MASTER_PORT=29639
-export MODE=triton                    # native | triton | kernel
+export MODE=direct                    # native | direct
 
 bash scripts/local/serve.sh "$MODE"
 curl -fsS --max-time 10 "http://127.0.0.1:$PORT/health"
@@ -326,14 +330,14 @@ on the next launch of that mode; save them with the replay results first.
 
 ## Store/decode ablation
 
-`MODE` selects Packed decode; optional `STORE_IMPLEMENTATION=triton|kernel`
-selects storage independently. Unset it to retain the existing mode defaults.
+`MODE=direct` selects Packed decode; optional `STORE_IMPLEMENTATION=triton|kernel`
+selects the DeepSeek V4 producer independently. Unset it to retain the default.
 The override is ignored for Native. With updated host Python source selected:
 
 ```bash
-STORE_IMPLEMENTATION=kernel bash scripts/local/serve.sh triton
+STORE_IMPLEMENTATION=kernel bash scripts/local/serve.sh direct
 # Original store with Direct Packed decode:
-STORE_IMPLEMENTATION=triton bash scripts/local/serve.sh kernel
+STORE_IMPLEMENTATION=triton bash scripts/local/serve.sh direct
 ```
 
 Use distinct replay tags for mixed modes. `server-info.json` records the explicit
@@ -350,9 +354,9 @@ bash scripts/local/serve.sh native
 bash scripts/local/bench-serving.sh native-128k "$PORT" 131072 2048 28
 bash scripts/local/serve.sh native stop
 
-bash scripts/local/serve.sh triton
+bash scripts/local/serve.sh direct
 bash scripts/local/bench-serving.sh packed-128k "$PORT" 131072 2048 28
-bash scripts/local/serve.sh triton stop
+bash scripts/local/serve.sh direct stop
 ```
 
 Arguments are `<tag> [port] [input_tokens] [output_tokens] [concurrency|auto]`.
@@ -734,7 +738,7 @@ cleanup() {
 trap cleanup EXIT
 trap "exit 130" INT
 trap "exit 143" TERM
-for mode in triton kernel; do
+for mode in native direct; do
   export REQUEST_METRICS_DIR="$LOG_HOST/request-metrics-$mode"
   bash scripts/local/serve.sh "$mode"
   bash scripts/local/bench-lswb.sh "$mode-timing-c24" "$PORT" 24 1200
@@ -768,7 +772,7 @@ container. Select the updated mounted Python fork with `SGLANG_PY`; this Python
 change does not require rebuilding kernels or the existing compatible image.
 
 ```bash
-DSV4_ASYNC_PREPARATION=1 bash scripts/local/serve.sh kernel
+DSV4_ASYNC_PREPARATION=1 bash scripts/local/serve.sh direct
 ```
 
 The candidate defaults to one owned CPU preparation worker. Set
@@ -799,7 +803,7 @@ Client p90 TTFT remains the ≤10-second SLO. Compare components for the same
 slow requests; component p90s cannot be added. Same server seed does not fix
 closed-loop arrival times or output/request sets. No automatic retries are used.
 
-## All five Nsight Systems runs
+## Nsight Systems runs
 
 Use the exports above. Capture is inactive during loading and graph creation.
 Each replay captures seconds 300–360 and 900–960 of its 1,200-second window.
@@ -808,7 +812,7 @@ Run this block in Bash:
 ```bash
 set -e
 export NSYS_GRAPH_TRACE=graph          # lower-overhead whole-graph controls
-for MODE in native triton kernel; do
+for MODE in native direct; do
   bash scripts/local/serve.sh "$MODE" profile
   CONCURRENCIES=24
   [ "$MODE" = native ] || CONCURRENCIES="24 28"
@@ -823,7 +827,7 @@ done
 
 Reports are separate `.nsys-rep` files under `logs/nsys-<mode>-*/`;
 `nsys-windows.jsonl` records capture acknowledgements in each replay directory.
-The final Kernel server stays running. Use `serve.sh kernel stop` when finished.
+The final Direct server stays running. Use `serve.sh direct stop` when finished.
 
 ## Short graph-node captures at C24
 
@@ -889,7 +893,7 @@ sha256sum scripts/local/{serve,run-server,bench-lswb}.sh \
   third_party/sglang-v0.5.18/python/sglang/srt/managers/scheduler.py \
   third_party/sglang-v0.5.18/python/sglang/srt/model_executor/runner/decode_cuda_graph_runner.py \
   > "logs/nsys-node-c24-source-$run_id.txt"
-for mode in native triton kernel; do
+for mode in native direct; do
   bash scripts/local/serve.sh "$mode" profile
   tag="node-$mode-c24-$run_id"
   bash scripts/local/bench-lswb.sh "$tag" "$PORT" 24 420 300:315
@@ -985,22 +989,12 @@ git push origin remnant
 Keep raw prompts and large profiles outside ordinary Git. Transfer traces
 separately using the established artifact storage or Git LFS workflow.
 
-## Per-layer Packed Triton survivor counts
+## Internal survivor-count profiles
 
-Packed defaults to 256 survivors and 328 logical bytes per C4 row. Triton mode
-also accepts 64, 128, 192, 320, 384 and 448 survivors; 512 is rejected. Counts
-are selected once at startup, not changed between requests or cache blocks.
-
-```bash
-# Uniform 192 survivors: 192 FP8 values + 64 bitmap bytes + 8 scale bytes.
-C4_KEEP_COUNT=192 bash scripts/local/serve.sh triton
-
-# Defaults apply to all C4 layers; keys are absolute, zero-based model layer IDs.
-C4_KEEP_COUNT=192 C4_LAYER_KEEP_COUNTS='{"2":128,"4":320}' \
-  bash scripts/local/serve.sh triton
-```
-
-Direct server equivalents are `--dsv4-c4-cache-keep-count` and
+Packed defaults to 256 survivors and 328 logical bytes per V4 C4 row. Internal
+Triton store/reconstruction tests also support 64, 128, 192, 320, 384 and 448
+survivors; 512 is rejected. These are internal profiles, not serving modes.
+The retained startup fields are `--dsv4-c4-cache-keep-count` and
 `--dsv4-c4-cache-layer-keep-counts`. Overrides must identify C4 layers in the
 loaded model; their order is independent of pipeline-stage/C4-pool indexing.
 The launcher checks mounted-source support and resolves the profile before
@@ -1012,9 +1006,11 @@ per row, with separate physical planes and `count + 72` logical bytes.
 The allocator sums the actual C4-layer sizes; smaller layers are not padded
 back to 256 values. Native, SWA and C128 layouts remain unchanged.
 
-Any effective non-256 count requires Triton storage **and** reconstruction,
-with HiCache disabled. The optimized CUDA store/Direct reader and HiCache
-retain their existing 256-only ABI. Learned scoring is not integrated here.
+Any effective non-256 count requires the internal Triton storage and
+reconstruction paths, with HiCache disabled. Serving `direct` rejects such
+profiles because its optimized reader supports 256 survivors. The optimized
+CUDA store and HiCache retain their existing 256-only ABI. Learned scoring is
+not integrated here.
 
 CPU references/configuration and allocation accounting have local coverage.
 Non-256 Triton execution, graph replay and memory safety require model-free
@@ -1030,3 +1026,12 @@ modal run scripts/modal/kernels.py::validate_kernels --run-id <unique-id> --sani
 This runs the extended existing tests and sanitizer selections, including mixed
 layer graph replay and every supported store/reconstruction count. It is a
 validation gate; the unchanged timing matrix remains a 256-survivor comparison.
+
+
+For the merged v0.5.22 runtime use `serve.sh native` or `serve.sh direct`, which
+emit `--kv-cache-format native|direct`. Removed model-specific serving flags are
+unknown options. Shared launchers translate those same two modes to the unchanged
+v0.5.18 pin's original flags. Adapter/reconstruction selections are internal
+benchmark/test inputs. GLM uses `MODEL_FAMILY=glm53`, TileLang FP8 KV and a
+matching TP/EP/visible GPU assignment; `MAX_TOTAL_TOKENS` and
+`GLM_REASONING_PARSER` are transported unchanged through Docker.
