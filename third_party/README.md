@@ -17,7 +17,7 @@ Folder suffixes identify the SGLang integration pair, not a FlashMLA release.
 |---|---|---|---|
 | `sglang-v0.5.18/` | `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` | `6687a7c` |
 | `flashmla-v0.5.18/` | `05e26647fe840b8baedae486c2d86d5ce4efeb7c` | `remnant/flashmla-v0518` | `97f3faa` |
-| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `ds41-flash-lswb-modal-local` | `3c595a2b` |
+| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `ds41-flash-lswb-modal-local` | `92c8b3de` |
 | `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `ds41-flash-packed` | `858bb1c` |
 
 Both FlashMLA checkouts pin CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`.
@@ -50,6 +50,16 @@ Ordinary serving does not accept these overrides. A source check does not prove
 that an existing container's loaded binaries match; source changes need a rebuild.
 
 ## Experimental V4.1 FP4 on SM90
+
+Active decode-only follow-up: SGLang `92c8b3de`, FlashMLA `858bb1c` unchanged.
+The isolated original Native control now carries synchronization-only corrections
+at `ee0f871`; the complete patch and original base are preserved in the experiment
+record. It is identified as synchronization-corrected upstream Native, not the
+untouched failed binary. Protocol v5 and `v41-decode` qualify two production-page
+decode graph/stream cases per sanitizer before the ten-case timing matrix.
+A new $15 allowance ($2 reserve) covers this follow-up. CPU/GPU checks are pending;
+no arithmetic, persistent layout or production runtime change is claimed.
+
 
 Upstream comparison candidate: SGLang `3c595a2b`, FlashMLA `858bb1c` unchanged.
 The v4 microbenchmark defines Native as the original upstream H100 auto

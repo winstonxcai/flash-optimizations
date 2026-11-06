@@ -1,0 +1,110 @@
+diff --git a/csrc/kernels/sm90/decode/sparse/config.h b/csrc/kernels/sm90/decode/sparse/config.h
+index 25b30c0..7bc4e05 100644
+--- a/csrc/kernels/sm90/decode/sparse/config.h
++++ b/csrc/kernels/sm90/decode/sparse/config.h
+@@ -144,12 +144,40 @@ enum NamedBarriers : uint32_t {
+ };
+ 
+ 
++// Author: Winston Cai. V4 consumers rendezvous from divergent warpgroup paths.
++// Use unaligned PTX barriers with the existing 256-thread participant count.
++template<uint32_t ID>
++static __forceinline__ __device__ void consumer_barrier_sync() {
++    if constexpr (MODEL_TYPE == ModelType::V4) {
++        asm volatile("barrier.sync %0, 256;" :: "n"(ID + static_cast<uint32_t>(cutlass::arch::ReservedNamedBarriers::FirstUserBarrier)) : "memory");
++    } else {
++        cutlass::arch::NamedBarrier::arrive_and_wait(256, ID);
++    }
++}
++template<uint32_t ID>
++static __forceinline__ __device__ void consumer_barrier_arrive() {
++    if constexpr (MODEL_TYPE == ModelType::V4) {
++        asm volatile("barrier.arrive %0, 256;" :: "n"(ID + static_cast<uint32_t>(cutlass::arch::ReservedNamedBarriers::FirstUserBarrier)) : "memory");
++    } else {
++        cutlass::arch::NamedBarrier::arrive(256, ID);
++    }
++}
++
+ // Synchronize all threads within the cluster (which processes one q token)
+ static __forceinline__ __device__ void sync_all_threads_in_cluster() {
+     if constexpr (CLUSTER_SIZE == 1) {
+-        __syncthreads();
++        if constexpr (MODEL_TYPE == ModelType::V4) {
++            asm volatile("barrier.sync 0, %0;" :: "n"(NUM_THREADS) : "memory");
++        } else {
++            __syncthreads();
++        }
+     } else {
+-        ku::barrier_cluster_arrive_relaxed();
++        // Publish shared-memory accesses before the next request reuses the union.
++        if constexpr (MODEL_TYPE == ModelType::V4) {
++            ku::barrier_cluster_arrive_release();
++        } else {
++            ku::barrier_cluster_arrive_relaxed();
++        }
+         ku::barrier_cluster_wait_acquire();
+     }
+ }
+diff --git a/csrc/kernels/sm90/decode/sparse/splitkv_mla.cuh b/csrc/kernels/sm90/decode/sparse/splitkv_mla.cuh
+index d8d746e..cc343ff 100644
+--- a/csrc/kernels/sm90/decode/sparse/splitkv_mla.cuh
++++ b/csrc/kernels/sm90/decode/sparse/splitkv_mla.cuh
+@@ -240,7 +240,7 @@ __device__ void KernelTemplate<MODEL_TYPE, NUM_HEADS>::devfunc(const SparseAttnD
+                 
+                 // Calculate S = softmax(mask(scale(P)))
+                 if (block_idx != args.start_block_idx)
+-                    NamedBarrier::arrive_and_wait(256, NamedBarriers::sScale_and_sS_free);  // Make sure that sScale and sS is free
++                    consumer_barrier_sync<NamedBarriers::sScale_and_sS_free>();  // Make sure that sScale and sS is free
+ 
+                 // Since in our case TOPK_BLOCK_SIZE == BLOCK_M, so we only need to do OOB checking for the last 2 blocks
+                 scale_softmax(rP, rS, rO, params.sm_scale_div_log2, sScale, rM, rL, plan.is_kv_valid[buf_idx], block_idx, idx_in_warpgroup);
+@@ -257,7 +257,7 @@ __device__ void KernelTemplate<MODEL_TYPE, NUM_HEADS>::devfunc(const SparseAttnD
+                     rO
+                 );
+ 
+-                NamedBarrier::arrive(256, NamedBarriers::sScale_and_sS_ready);
++                consumer_barrier_arrive<NamedBarriers::sScale_and_sS_ready>();
+ 
+                 cute::warpgroup_wait<0>();
+ 
+@@ -316,7 +316,7 @@ __device__ void KernelTemplate<MODEL_TYPE, NUM_HEADS>::devfunc(const SparseAttnD
+             // This is a synchronization point for warpgroup 0/1.
+             // Warpgroup 0 should wait wg 1 for oBuf/oAccumBuf (overlapped with k) to be free
+             // Warpgroup 1 should wait wg 0 for sL to be ready
+-            NamedBarrier::arrive_and_wait(256, NamedBarriers::oBuf_free_and_sL_ready);
++            consumer_barrier_sync<NamedBarriers::oBuf_free_and_sL_ready>();
+ 
+             CUTE_UNROLL
+             for (int i = 0; i < 2; ++i)
+@@ -380,8 +380,17 @@ __device__ void KernelTemplate<MODEL_TYPE, NUM_HEADS>::devfunc(const SparseAttnD
+                 int buf_idx = (block_idx-args.start_block_idx) % NUM_K_BUFS;
+                 Tensor sV = make_tensor(make_smem_ptr(plan.u.k[buf_idx].data() + (SmemLayoutV{})(_256{}, _0{})), SmemLayoutHalfV{});
+ 
++                // Author: Winston Cai. Both consumers acquire KV completion directly;
++                // the S-ready handoff alone does not establish peer KV lifetime.
++                if constexpr (MODEL_TYPE == ModelType::V4) {
++                    plan.bar_k_local_ready[buf_idx].wait((bar_phase_k >> buf_idx) & 1);
++                    if constexpr (CLUSTER_SIZE == 2) {
++                        plan.bar_k_remote_ready[buf_idx].wait((bar_phase_k >> buf_idx) & 1);
++                    }
++                    bar_phase_k ^= 1 << buf_idx;
++                }
+                 // Wait for S and sScale
+-                NamedBarrier::arrive_and_wait(256, NamedBarriers::sScale_and_sS_ready);
++                consumer_barrier_sync<NamedBarriers::sScale_and_sS_ready>();
+ 
+                 // Scale O
+                 float cur_scales[2];
+@@ -412,10 +421,10 @@ __device__ void KernelTemplate<MODEL_TYPE, NUM_HEADS>::devfunc(const SparseAttnD
+                 }
+                 
+                 if (block_idx != args.end_block_idx-1)
+-                    NamedBarrier::arrive(256, NamedBarriers::sScale_and_sS_free);   // Tell WG0 that sScale and sS are available
++                    consumer_barrier_arrive<NamedBarriers::sScale_and_sS_free>();   // Tell WG0 that sScale and sS are available
+             }
+ 
+-            NamedBarrier::arrive_and_wait(256, NamedBarriers::oBuf_free_and_sL_ready);
++            consumer_barrier_sync<NamedBarriers::oBuf_free_and_sL_ready>();
+ 
+             float o_scales[2];
+             CUTE_UNROLL

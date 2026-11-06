@@ -146,6 +146,7 @@ def read_receipt(
     states = result.get("sanitizer_results", {})
     if set(states) != TOOLS:
         raise RuntimeError(f"Incomplete sanitizer states: {run_id}")
+    case_count = 2 if manifest["validation_suite"] == "v41-decode" else FP4_CASE_COUNT
     passed = set()
     expected_ids = None
     for tool, state in states.items():
@@ -168,7 +169,7 @@ def read_receipt(
             (case.get("classname", ""), case.get("name", "")) for case in cases
         )
         if (
-            len(cases) != FP4_CASE_COUNT
+            len(cases) != case_count
             or len(ids) != len(cases)
             or any(list(case) for case in cases)
             or any(not a or not b for a, b in ids)

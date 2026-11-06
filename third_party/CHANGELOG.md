@@ -13,6 +13,15 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Decode synchronization candidate from parent `3776842`: SGLang `92c8b3de` /
+  FlashMLA `858bb1c` unchanged. Preserve the isolated upstream synchronization
+  patch at `ee0f871`, based on original `3620b63`. Protocol v5 labels the corrected
+  Native control explicitly; decode-only strict qualification reuses the existing
+  two production-page graph/stream fixtures and retains ten final timing cases.
+  New $15 budget with $2 reserve; no model loads or prefill GPU validation.
+  Candidate unqualified pending Modal CPU build/preflight and H100 gates.
+
+
 - Upstream Native validation from parent `7e913f5fbe05`, SGLang
   `3c595a2b70b9` / FlashMLA `858bb1ccac6f` (unchanged): Modal CPU build/precompile
   and 27 tests + 15 subtests passed, then 43 ordinary H100 cases passed. Original

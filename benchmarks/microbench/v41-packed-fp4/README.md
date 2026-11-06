@@ -1,6 +1,41 @@
 <!-- Author: Winston Cai. -->
 # V4.1 Packed FP4 on H100
 
+## Decode-only synchronization follow-up — active
+
+User authorizes an additional **$15** for fixing synchronization and obtaining
+Native versus Packed Direct decode timing. Reserve $2; projected work cap $13.
+Prior phase costs remain historical and do not disappear. No model loads,
+serving, GPUQ, profiling or prefill GPU validation. One H100, bounded jobs.
+
+The original Native barrier failure is addressed in an isolated control at
+`ee0f8718fdaab4eaaef9f3bb61cdd470ff650d32`, based on original `3620b63`.
+[native-sync.patch](native-sync.patch) preserves its complete source delta:
+unaligned 256-thread consumer barriers, full-CTA unaligned rendezvous, release
+publication before shared-memory reuse, and direct local/peer KV-ready acquires
+in the second consumer. Decode arithmetic, storage and scheduling stay upstream.
+This is **Native with synchronization corrections**, not the untouched binary.
+The isolated source remains `/tmp/remnant-v41-native-upstream`; reproduce with
+`git apply native-sync.patch` on the recorded original base and commit the exact
+result (commit metadata affects SHA; use the recorded checkout for frozen runs).
+
+Protocol v5 rejects old measurements. `REMNANT_VALIDATION_SUITE=v41-decode`
+selects the existing two production-page decode controls, each checking Native,
+dense FP4 and Packed numerical output, graph replay and nondefault streams.
+Strict memcheck/racecheck/synccheck must each pass both cases. Existing allocation
+checks remain separate. The ten-case final decode timing still covers H64,
+SWA128/page256, C1/page256 and C2/page128, B8/16/24/28/32, with all path outputs
+validated before timing. Dense FP4 is diagnostic; the requested result is
+synchronization-corrected upstream Native versus Packed Direct. Stop conditions
+are a failed CPU preflight or budget exhaustion; failures get fixed and retried
+within the new cap. No successful comparison is claimed yet.
+
+Next entry point: existing `scripts/modal/kernels.py::preflight_kernels` with
+`REMNANT_INTEGRATION=v0.5.22`, `REMNANT_VALIDATION_SUITE=v41-decode`, and
+`REMNANT_UPSTREAM_FLASHMLA_SOURCE=/tmp/remnant-v41-native-upstream`. Source and
+binary manifests must match for validation and timing. Rollback omits this suite;
+production runtime and the selected FlashMLA fork remain unchanged.
+
 ## Upstream Native comparison — blocked by synchronization failure
 
 **Outcome:** the unchanged upstream Native control passes the ordinary numerical

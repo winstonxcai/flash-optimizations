@@ -47,8 +47,8 @@ from scripts.sources import check_sources, integration_profile
 
 INTEGRATION = integration_profile()
 VALIDATION_SUITE = os.environ.get("REMNANT_VALIDATION_SUITE", "v4")
-if VALIDATION_SUITE not in ("v4", "v41-fp4") or (
-    VALIDATION_SUITE == "v41-fp4" and INTEGRATION["version"] != "v0.5.22"
+if VALIDATION_SUITE not in ("v4", "v41-fp4", "v41-decode") or (
+    VALIDATION_SUITE in ("v41-fp4", "v41-decode") and INTEGRATION["version"] != "v0.5.22"
 ):
     raise ValueError("REMNANT_VALIDATION_SUITE must be v4, or v41-fp4 with v0.5.22")
 
@@ -93,8 +93,8 @@ BUILD_ROOT = Path("/opt/remnant-build")
 SANITIZER_ROOT = Path("/opt/remnant-sanitizer")
 UPSTREAM_FLASHMLA_ROOT = Path("/opt/flashmla-upstream-native")
 NATIVE_CONTROL_MANIFEST = Path("/opt/remnant-native-control.json")
-UPSTREAM_FLASHMLA_SHA = "3620b63fc4ebe33950c50e1b7701b6607f44150e"
-if modal.is_local() and VALIDATION_SUITE == "v41-fp4":
+UPSTREAM_FLASHMLA_SHA = "ee0f8718fdaab4eaaef9f3bb61cdd470ff650d32"
+if modal.is_local() and VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
     value = os.environ.get("REMNANT_UPSTREAM_FLASHMLA_SOURCE")
     if not value:
         raise RuntimeError(
@@ -132,18 +132,18 @@ SANITIZER = (
 )
 # Include the upstream control in CPU build time; reserve time for cleanup.
 GPU_TIMEOUT_S = 3600
-CPU_BUILD_TIMEOUT_S = 1200 if VALIDATION_SUITE == "v41-fp4" else 3600
+CPU_BUILD_TIMEOUT_S = 1200 if VALIDATION_SUITE in ("v41-fp4", "v41-decode") else 3600
 VALIDATION_TIMEOUT_S = (
     int(
         os.environ.get(
             "REMNANT_VALIDATION_TIMEOUT_S",
-            "5400" if VALIDATION_SUITE == "v41-fp4" else "2700",
+            "5400" if VALIDATION_SUITE in ("v41-fp4", "v41-decode") else "2700",
         )
     )
     if INTEGRATION["version"] == "v0.5.22"
     else GPU_TIMEOUT_S
 )
-VALIDATION_TIMEOUT_CAP_S = 5400 if VALIDATION_SUITE == "v41-fp4" else 2700
+VALIDATION_TIMEOUT_CAP_S = 5400 if VALIDATION_SUITE in ("v41-fp4", "v41-decode") else 2700
 if (
     INTEGRATION["version"] == "v0.5.22"
     and not 120 <= VALIDATION_TIMEOUT_S <= VALIDATION_TIMEOUT_CAP_S
@@ -222,7 +222,7 @@ SANITIZER_ORDER = (
 )
 # Scoped FP4 qualification keeps the legacy suite intact. Collection and XML
 # gates reject skips; these explicit lists are copied into each result manifest.
-if VALIDATION_SUITE == "v41-fp4":
+if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
     fp4_tests = TEST_ROOT + "test_remnant_fp4.py"
     VALIDATION_TESTS = (
         fp4_tests,
@@ -256,6 +256,13 @@ if VALIDATION_SUITE == "v41-fp4":
     )
     VALIDATION_TESTS += (native_tests,)
     SANITIZER_TESTS += (native_tests,)
+
+# Decode-only qualification excludes producer, reconstruction and prefill execution.
+# Each existing control case checks Native/dense/Packed output, graph replay and
+# a nondefault stream against independent cache references on a production page.
+if VALIDATION_SUITE == "v41-decode":
+    VALIDATION_TESTS = (native_tests, fp4_tests + "::test_fp4_pool_allocations")
+    SANITIZER_TESTS = (native_tests,)
 
 NCU_SECTIONS = [
     "SpeedOfLight",
@@ -295,7 +302,7 @@ def _flashmla_ignored(path: Path) -> bool:
 def _source_hashes() -> dict[str, str]:
     hashes = {}
     roots = [("sglang", SGLANG_ROOT), ("flashmla", FLASHMLA_ROOT)]
-    if VALIDATION_SUITE == "v41-fp4":
+    if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
         roots.append(("upstream_flashmla", UPSTREAM_FLASHMLA_ROOT))
     for label, root in roots:
         digest = hashlib.sha256()
@@ -460,7 +467,7 @@ def _build_image() -> None:
     deadline = time.monotonic() + CPU_BUILD_BUDGET_S
     build = BUILD_ROOT
     build.mkdir()
-    if VALIDATION_SUITE == "v41-fp4":
+    if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
         # Run pure receipt and mocked dispatch tests in the existing CPU builder.
         # Child vendor Python lacks Modal's injected SDK/dependencies/context.
         # Keep these tests before core precompilation and GPU allocation.
@@ -539,7 +546,7 @@ def _build_image() -> None:
     aot = SGLANG_ROOT / "python/sglang/kernels/aot"
     # Content identity includes dirty submitted sources, not just Git commits.
     sources = _source_hashes()
-    if VALIDATION_SUITE == "v41-fp4":
+    if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
         _build_upstream_native_control(build, deadline, cpu_environment)
     # The v0.5.22 serving Dockerfile already compiled these exact extensions.
     if INTEGRATION["version"] == "v0.5.22":
@@ -613,7 +620,7 @@ def _build_image() -> None:
         )
     shutil.copy2(libraries.pop(), NATIVE_LIBRARY)
     binaries.append(NATIVE_LIBRARY)
-    if VALIDATION_SUITE == "v41-fp4":
+    if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
         # Compile these after resolving the compressor library: the JIT cache
         # now contains three valid modules rather than a single Native store.
         from sglang.kernels.ops.attention.dsv4.attn import _jit_fused_store_module
@@ -655,7 +662,7 @@ def _build_image() -> None:
             raise RuntimeError("Pinned 0731 configuration content changed")
         Path("/opt/remnant-0731-config.json").write_bytes(payload)
         model_config = {"revision": revision, "sha256": digest, "url": url}
-    if VALIDATION_SUITE == "v41-fp4":
+    if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
         # Compile every new core format/geometry on CPU before an H100 exists.
         code = """
 import triton
@@ -701,7 +708,7 @@ print('FP4 CPU SM90 precompilation passed')
         deadline,
         environment=cpu_environment,
     )
-    if VALIDATION_SUITE == "v41-fp4":
+    if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
         _run_command(
             _benchmark_command("--suite", "v41-fp4-decode", "--check-imports"),
             build / "fp4-benchmark-imports.log",
@@ -771,13 +778,13 @@ print('FP4 CPU SM90 precompilation passed')
                 for p in Path(os.environ["TRITON_CACHE_DIR"]).rglob("*")
                 if p.is_file()
             }
-            if VALIDATION_SUITE == "v41-fp4"
+            if VALIDATION_SUITE in ("v41-fp4", "v41-decode")
             else {}
         ),
         "native_dtype": "float32",
         "upstream_native_control": (
             json.loads(NATIVE_CONTROL_MANIFEST.read_text())
-            if VALIDATION_SUITE == "v41-fp4"
+            if VALIDATION_SUITE in ("v41-fp4", "v41-decode")
             else None
         ),
         "cpu_import_driver_stub_sha256": hashlib.sha256(
@@ -859,7 +866,7 @@ else:
         )
     )
 
-if VALIDATION_SUITE == "v41-fp4":
+if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
     kernel_base = kernel_base.add_local_dir(
         UPSTREAM_FLASHMLA_SOURCE if modal.is_local() else UPSTREAM_FLASHMLA_ROOT,
         str(UPSTREAM_FLASHMLA_ROOT),
@@ -939,7 +946,7 @@ _GPU = {
     # over a nonempty path fails Modal startup; retain its verified image cache.
     "volumes": {
         str(RESULTS_ROOT): results_volume,
-        **({"/triton-cache": triton_volume} if VALIDATION_SUITE != "v41-fp4" else {}),
+        **({"/triton-cache": triton_volume} if VALIDATION_SUITE not in ("v41-fp4", "v41-decode") else {}),
     },
 }
 
@@ -1014,7 +1021,7 @@ def _dispatch_benchmark(
     preflight = None
     if suite == "v41-fp4-decode":
         if (
-            VALIDATION_SUITE != "v41-fp4"
+            VALIDATION_SUITE not in ("v41-fp4", "v41-decode")
             or keep_count != 256
             or modes not in ("", "native,dense_fp4,kernel")
             or prefill_reader != "split"
@@ -1051,7 +1058,7 @@ def benchmark_kernels(
     **{
         **_GPU,
         "timeout": 900,
-        **({"cpu": 2, "memory": 16384} if VALIDATION_SUITE == "v41-fp4" else {}),
+        **({"cpu": 2, "memory": 16384} if VALIDATION_SUITE in ("v41-fp4", "v41-decode") else {}),
     }
 )
 def _benchmark_worker(
@@ -1069,7 +1076,7 @@ def _benchmark_worker(
     is_fp4 = suite == "v41-fp4-decode"
     if is_fp4:
         if (
-            VALIDATION_SUITE != "v41-fp4"
+            VALIDATION_SUITE not in ("v41-fp4", "v41-decode")
             or keep_count != 256
             or modes not in ("", "native,dense_fp4,kernel")
         ):
@@ -1172,7 +1179,7 @@ def _benchmark_worker(
     **{
         **_GPU,
         "timeout": VALIDATION_TIMEOUT_S,
-        **({"cpu": 2, "memory": 16384} if VALIDATION_SUITE == "v41-fp4" else {}),
+        **({"cpu": 2, "memory": 16384} if VALIDATION_SUITE in ("v41-fp4", "v41-decode") else {}),
     }
 )
 def validate_kernels(
@@ -1236,7 +1243,7 @@ def validate_kernels(
             for path, expected in manifest["binaries"].items():
                 if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
                     raise RuntimeError(f"Loaded binary input changed: {path}")
-            if VALIDATION_SUITE == "v41-fp4":
+            if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
                 artifacts = manifest.get("fp4_precompile_artifacts", {})
                 if not artifacts:
                     raise RuntimeError("Missing CPU-precompiled FP4 artifacts")
@@ -1319,7 +1326,7 @@ def validate_kernels(
                 r["mode"] for r in allocation["modes"]
             } != (
                 {"Native", "Packed"}
-                if VALIDATION_SUITE == "v41-fp4"
+                if VALIDATION_SUITE in ("v41-fp4", "v41-decode")
                 else {"native", "triton", "kernel"}
             ):
                 raise RuntimeError("Incomplete real-allocation coverage")
@@ -1630,7 +1637,7 @@ def _run_command(
     child_environment["PYTHONPATH"] = (
         "/opt/sglang-runtime-fixes:" if INTEGRATION["version"] == "v0.5.22" else ""
     ) + f"{SGLANG_ROOT / 'python'}:{REMOTE_REPO}"
-    if VALIDATION_SUITE == "v41-fp4":
+    if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
         child_environment["PYTHONPATH"] += f":{UPSTREAM_FLASHMLA_ROOT}"
     try:
         with output.open("w") as log:
@@ -1761,5 +1768,5 @@ def _run_context(
         try:
             results_volume.commit()
         finally:
-            if VALIDATION_SUITE != "v41-fp4":
+            if VALIDATION_SUITE not in ("v41-fp4", "v41-decode"):
                 triton_volume.commit()

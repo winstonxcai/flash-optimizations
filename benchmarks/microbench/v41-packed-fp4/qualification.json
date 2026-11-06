@@ -4950,5 +4950,29 @@
       "code_or_pin_changes_this_continuation": false,
       "pushed": false
     }
+  },
+  "decode_sync_followup": {
+    "status": "prepared_unqualified",
+    "budget": {
+      "authorized_usd": 15,
+      "reserve_usd": 2,
+      "max_projected_work_usd": 13,
+      "account": "peroace360",
+      "account_compute_baseline_usd": 3.23656187,
+      "prior_phase_cumulative_usd": 18.14965811,
+      "spent_followup_usd": 0,
+      "note": "New user-authorized follow-up allowance; preserve earlier phase spend separately."
+    },
+    "upstream_base": "3620b63fc4ebe33950c50e1b7701b6607f44150e",
+    "native_sync_commit": "ee0f8718fdaab4eaaef9f3bb61cdd470ff650d32",
+    "native_sync_patch_sha256": "4693f631fbce4e5562601a0df3c5b1f03dc438c25a87fb7b74dcd9a21d933011",
+    "scope": "Decode only; existing two production-page graph/stream controls under all three strict sanitizers; ten final timing cases; no prefill/producer GPU tests",
+    "protocol": "remnant-v41-fp4-decode-v5",
+    "sglang": "92c8b3de",
+    "flashmla": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208",
+    "validation_suite": "v41-decode",
+    "result": "pending",
+    "concurrency": 1,
+    "automatic_retries": false
   }
 }
