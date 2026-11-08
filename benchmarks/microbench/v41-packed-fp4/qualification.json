@@ -4960,19 +4960,27 @@
       "account": "peroace360",
       "account_compute_baseline_usd": 3.23656187,
       "prior_phase_cumulative_usd": 18.14965811,
-      "spent_followup_usd": 0,
+      "spent_followup_usd": 0.00141706,
       "note": "New user-authorized follow-up allowance; preserve earlier phase spend separately."
     },
     "upstream_base": "3620b63fc4ebe33950c50e1b7701b6607f44150e",
-    "native_sync_commit": "ee0f8718fdaab4eaaef9f3bb61cdd470ff650d32",
+    "native_sync_commit": "3332c1bad8075ecb8083dd5732ed3110cdc3947e",
     "native_sync_patch_sha256": "4693f631fbce4e5562601a0df3c5b1f03dc438c25a87fb7b74dcd9a21d933011",
     "scope": "Decode only; existing two production-page graph/stream controls under all three strict sanitizers; ten final timing cases; no prefill/producer GPU tests",
     "protocol": "remnant-v41-fp4-decode-v5",
-    "sglang": "92c8b3de",
+    "sglang": "1be83c11cfbb7ec7dec920209467e5b91fe66cde",
     "flashmla": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208",
     "validation_suite": "v41-decode",
     "result": "pending",
     "concurrency": 1,
-    "automatic_retries": false
+    "automatic_retries": false,
+    "cpu_attempts": [
+      {
+        "app_id": "ap-nOvTrxvaARiYkA2Xu6QS9K",
+        "status": "terminated_during_image_unpack",
+        "cost_usd": 0.00141706,
+        "control_commit": "ee0f8718fdaab4eaaef9f3bb61cdd470ff650d32"
+      }
+    ]
   }
 }

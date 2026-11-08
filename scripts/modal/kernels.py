@@ -93,7 +93,7 @@ BUILD_ROOT = Path("/opt/remnant-build")
 SANITIZER_ROOT = Path("/opt/remnant-sanitizer")
 UPSTREAM_FLASHMLA_ROOT = Path("/opt/flashmla-upstream-native")
 NATIVE_CONTROL_MANIFEST = Path("/opt/remnant-native-control.json")
-UPSTREAM_FLASHMLA_SHA = "ee0f8718fdaab4eaaef9f3bb61cdd470ff650d32"
+UPSTREAM_FLASHMLA_SHA = "3332c1bad8075ecb8083dd5732ed3110cdc3947e"
 if modal.is_local() and VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
     value = os.environ.get("REMNANT_UPSTREAM_FLASHMLA_SOURCE")
     if not value:

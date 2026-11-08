@@ -9,12 +9,13 @@ Prior phase costs remain historical and do not disappear. No model loads,
 serving, GPUQ, profiling or prefill GPU validation. One H100, bounded jobs.
 
 The original Native barrier failure is addressed in an isolated control at
-`ee0f8718fdaab4eaaef9f3bb61cdd470ff650d32`, based on original `3620b63`.
+`3332c1bad8075ecb8083dd5732ed3110cdc3947e`, based on original `3620b63`.
 [native-sync.patch](native-sync.patch) preserves its complete source delta:
 unaligned 256-thread consumer barriers, full-CTA unaligned rendezvous, release
 publication before shared-memory reuse, and direct local/peer KV-ready acquires
 in the second consumer. Decode arithmetic, storage and scheduling stay upstream.
 This is **Native with synchronization corrections**, not the untouched binary.
+The control commit is retained on the local FlashMLA branch `fix/ds41-flash/native-sync`. The first CPU attempt stopped during image unpacking and cost $0.00141706.
 The isolated source remains `/tmp/remnant-v41-native-upstream`; reproduce with
 `git apply native-sync.patch` on the recorded original base and commit the exact
 result (commit metadata affects SHA; use the recorded checkout for frozen runs).
