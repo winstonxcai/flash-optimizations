@@ -281,12 +281,20 @@ PREFILL_METRICS = (
 
 # CPU image preparation; the recipe must be defined before Modal uses it.
 
+_SGLANG_TEST_FILES = {
+    test.partition("::")[0]
+    for test in (*VALIDATION_TESTS, *CPU_TESTS, *BENCHMARK_TESTS, *SANITIZER_TESTS)
+}
+if VALIDATION_SUITE == "v41-decode":
+    # The allocation and CPU fixtures import helpers from these modules.
+    _SGLANG_TEST_FILES.update((TEST_MODULES["flashmla_direct"], TEST_MODULES["pool"]))
+
 
 def _sglang_ignored(path: Path) -> bool:
     allowed = (
         path.parts[0] == "python"
         or path.parts[:2] == ("benchmark", "remnant")
-        or path.as_posix() in VALIDATION_TESTS
+        or path.as_posix() in _SGLANG_TEST_FILES
         or path.as_posix() == "test/registered/attention/unittests/conftest.py"
         or path.name.startswith("LICENSE")
     )
