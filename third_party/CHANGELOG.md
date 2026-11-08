@@ -13,6 +13,16 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Decode-only comparison qualified on parent `7710f18`, SGLang `8084dc44` /
+  FlashMLA `858bb1c`. The separate upstream Native control `6fbbf3a` corrects
+  the divergent output epilogue as well as the consumer barriers. CPU preflight,
+  three ordinary H100 cases, two production-page cases per strict sanitizer,
+  and independent review passed. Packed Direct took 2.56× as long as Native
+  across ten decode cases. Observed follow-up compute was $1.63. Full-model and
+  serving results are outside this milestone. See the experiment record for
+  source hashes, commands and timing. Rollback omits the experimental suite.
+
+
 - Decode synchronization candidate from parent `3776842`: SGLang `92c8b3de` /
   FlashMLA `858bb1c` unchanged. Preserve the isolated upstream synchronization
   patch at `ee0f871`, based on original `3620b63`. Protocol v5 labels the corrected

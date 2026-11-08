@@ -1,7 +1,48 @@
 <!-- Author: Winston Cai. -->
 # V4.1 Packed FP4 on H100
 
-## Decode-only synchronization follow-up — active
+## Decode-only synchronization follow-up — passed
+
+
+Packed Direct took **2.56× as long as synchronization-corrected upstream
+Native** across ten H100 decode cases, using the geometric mean of per-case
+mean latency ratios. Packed took 1.72× to 3.42× as long by case. Relative to the
+custom dense FP4 diagnostic, Packed took 1.032× as long.
+
+H64, Q1, K512, SWA128/page256. Mean latency in microseconds per CUDA graph replay,
+30 rounds of 100 replays per path and case. Native captures first-use scheduling.
+Each complete attention API includes its required scheduling and split/combine work.
+
+| Global page | Batch | Native µs | Dense FP4 µs | Packed Direct µs | Packed / Native |
+|---:|---:|---:|---:|---:|---:|
+| 256 | 8 | 42.19 | 72.97 | 72.73 | 1.72× |
+| 256 | 16 | 45.81 | 101.71 | 104.12 | 2.27× |
+| 256 | 24 | 50.05 | 130.18 | 133.55 | 2.67× |
+| 256 | 28 | 51.72 | 159.01 | 163.82 | 3.17× |
+| 256 | 32 | 52.43 | 159.45 | 165.03 | 3.15× |
+| 128 | 8 | 42.10 | 72.90 | 72.89 | 1.73× |
+| 128 | 16 | 45.60 | 101.55 | 104.19 | 2.28× |
+| 128 | 24 | 49.84 | 130.66 | 135.62 | 2.72× |
+| 128 | 28 | 51.66 | 159.11 | 163.74 | 3.17× |
+| 128 | 32 | 52.26 | 159.82 | 178.85 | 3.42× |
+
+The CPU preflight passed 27 tests and 15 subtests. All three ordinary H100 cases
+passed. Synccheck, racecheck and memcheck each passed both B8 production-page
+decode cases with zero errors or hazards. All ten timed cases passed their
+output checks. Independent reviews of synchronization and benchmark fairness
+found no blocker. Frozen parent `7710f18`, SGLang `8084dc44`, FlashMLA
+`858bb1c`, and Native control `6fbbf3a` match across validation and timing.
+
+The passing qualification and timing prefixes are
+`microbench/v41-native-sync-20261109-c/validation/` and
+`microbench/v41-native-sync-20261109-timing/timing/` in
+`remnant-stage2a-results`. [qualification.json](qualification.json) records
+the commands, artifact hashes, case means and p95 values, and billing.
+Observed follow-up spend was **$1.63** against the **$15** ceiling.
+All containers stopped. Keep the opt-in candidate for storage research and
+record the measured latency cost. This qualifies only the scoped model-free
+decode comparison. Prefill, serving, model quality and allocator capacity
+against upstream Native remain unmeasured.
 
 User authorizes an additional **$15** for fixing synchronization and obtaining
 Native versus Packed Direct decode timing. Reserve $2; projected work cap $13.
@@ -20,7 +61,7 @@ The isolated source remains `/tmp/remnant-v41-native-upstream`; reproduce with
 `git apply native-sync.patch` on the recorded original base and commit the exact
 result (commit metadata affects SHA; use the recorded checkout for frozen runs).
 
-The first qualified CPU image `im-UlUgS4e8mdqGs2mHpXYeLK` passed CPU preflight. Run `v41-native-sync-20261109-b` passed all three ordinary tests, then synccheck reported 10,240 divergence errors at Native H64 PC `0x88f0`. Disassembly confirmed the output epilogue still emitted an aligned barrier. Both epilogue branches now use the existing unaligned helper. The revised control awaits fresh preflight.
+The first qualified CPU image `im-UlUgS4e8mdqGs2mHpXYeLK` passed CPU preflight. Run `v41-native-sync-20261109-b` passed all three ordinary tests, then synccheck reported 10,240 divergence errors at Native H64 PC `0x88f0`. Disassembly confirmed the output epilogue still emitted an aligned barrier. Both epilogue branches now use the existing unaligned helper. The revised control passed fresh preflight and all scoped GPU gates.
 
 Protocol v5 rejects old measurements. `REMNANT_VALIDATION_SUITE=v41-decode`
 selects the existing two production-page decode controls, each checking Native,
@@ -31,9 +72,9 @@ SWA128/page256, C1/page256 and C2/page128, B8/16/24/28/32, with all path outputs
 validated before timing. Dense FP4 is diagnostic; the requested result is
 synchronization-corrected upstream Native versus Packed Direct. Stop conditions
 are a failed CPU preflight or budget exhaustion; failures get fixed and retried
-within the new cap. No successful comparison is claimed yet.
+within the new cap. The completed comparison is recorded above.
 
-Next entry point: existing `scripts/modal/kernels.py::preflight_kernels` with
+Reproduction starts at `scripts/modal/kernels.py::preflight_kernels` with
 `REMNANT_INTEGRATION=v0.5.22`, `REMNANT_VALIDATION_SUITE=v41-decode`, and
 `REMNANT_UPSTREAM_FLASHMLA_SOURCE=/tmp/remnant-v41-native-upstream`. Source and
 binary manifests must match for validation and timing. Rollback omits this suite;

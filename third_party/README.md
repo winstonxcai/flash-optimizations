@@ -51,14 +51,15 @@ that an existing container's loaded binaries match; source changes need a rebuil
 
 ## Experimental V4.1 FP4 on SM90
 
-Active decode-only follow-up: SGLang `8084dc44`, FlashMLA `858bb1c` unchanged.
+Qualified decode-only follow-up: SGLang `8084dc44`, FlashMLA `858bb1c` unchanged.
 The isolated original Native control now carries synchronization-only corrections
 at `6fbbf3a`; the complete patch and original base are preserved in the experiment
 record. It is identified as synchronization-corrected upstream Native, not the
 untouched failed binary. Protocol v5 and `v41-decode` qualify two production-page
 decode graph/stream cases per sanitizer before the ten-case timing matrix.
-A new $15 allowance ($2 reserve) covers this follow-up. CPU/GPU checks are pending;
-no arithmetic, persistent layout or production runtime change is claimed.
+CPU preflight, three ordinary H100 cases, all three strict decode sanitizers and
+independent reviews passed. Packed took 2.56× as long as synchronization-corrected
+Native across ten cases (range 1.72×–3.42×). Observed follow-up spend was $1.63.
 
 
 Upstream comparison candidate: SGLang `3c595a2b`, FlashMLA `858bb1c` unchanged.
