@@ -4964,11 +4964,11 @@
       "note": "New user-authorized follow-up allowance; preserve earlier phase spend separately."
     },
     "upstream_base": "3620b63fc4ebe33950c50e1b7701b6607f44150e",
-    "native_sync_commit": "3332c1bad8075ecb8083dd5732ed3110cdc3947e",
-    "native_sync_patch_sha256": "4693f631fbce4e5562601a0df3c5b1f03dc438c25a87fb7b74dcd9a21d933011",
+    "native_sync_commit": "6fbbf3a61285d4078b8ac0f2874e99b7b0b11866",
+    "native_sync_patch_sha256": "72b0fe0695a177f94c5223f0949c401ee16c8c9f5139ad269e480b4fc4d48e30",
     "scope": "Decode only; existing two production-page graph/stream controls under all three strict sanitizers; ten final timing cases; no prefill/producer GPU tests",
     "protocol": "remnant-v41-fp4-decode-v5",
-    "sglang": "1be83c11cfbb7ec7dec920209467e5b91fe66cde",
+    "sglang": "8084dc44ef35666da52195368c96046693714858",
     "flashmla": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208",
     "validation_suite": "v41-decode",
     "result": "pending",
@@ -4980,6 +4980,34 @@
         "status": "terminated_during_image_unpack",
         "cost_usd": 0.00141706,
         "control_commit": "ee0f8718fdaab4eaaef9f3bb61cdd470ff650d32"
+      },
+      {
+        "app_id": "ap-hV9AEizzA8HmC5X5q9zJgG",
+        "status": "stopped_after_detecting_fixture_packaging_bug"
+      },
+      {
+        "app_id": "ap-BlNsEvcKYjtZIwi70f8XuE",
+        "status": "passed",
+        "image": "im-UlUgS4e8mdqGs2mHpXYeLK",
+        "cost_usd_observed": 0.34092364,
+        "control_commit": "3332c1bad8075ecb8083dd5732ed3110cdc3947e"
+      }
+    ],
+    "gpu_attempts": [
+      {
+        "app_id": "ap-55CIjiZdNGPqBGV3x7TIPm",
+        "status": "stopped_before_allocation_after_connection_error"
+      },
+      {
+        "app_id": "ap-UzxeDmlCkdj6abvjTcWtRk",
+        "run_id": "v41-native-sync-20261109-b",
+        "control_commit": "3332c1bad8075ecb8083dd5732ed3110cdc3947e",
+        "ordinary_passed": 3,
+        "synccheck_errors": 10240,
+        "fault_pc": "0x88f0",
+        "sass": "BAR.SYNC.DEFER_BLOCKING 0xb, 0x100",
+        "status": "stopped_after_synccheck_failure",
+        "artifact_prefix": "microbench/v41-native-sync-20261109-b/validation/"
       }
     ]
   }

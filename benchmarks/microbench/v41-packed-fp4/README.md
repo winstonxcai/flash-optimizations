@@ -9,7 +9,7 @@ Prior phase costs remain historical and do not disappear. No model loads,
 serving, GPUQ, profiling or prefill GPU validation. One H100, bounded jobs.
 
 The original Native barrier failure is addressed in an isolated control at
-`3332c1bad8075ecb8083dd5732ed3110cdc3947e`, based on original `3620b63`.
+`6fbbf3a61285d4078b8ac0f2874e99b7b0b11866`, based on original `3620b63`.
 [native-sync.patch](native-sync.patch) preserves its complete source delta:
 unaligned 256-thread consumer barriers, full-CTA unaligned rendezvous, release
 publication before shared-memory reuse, and direct local/peer KV-ready acquires
@@ -19,6 +19,8 @@ The control commit is retained on the local FlashMLA branch `fix/ds41-flash/nati
 The isolated source remains `/tmp/remnant-v41-native-upstream`; reproduce with
 `git apply native-sync.patch` on the recorded original base and commit the exact
 result (commit metadata affects SHA; use the recorded checkout for frozen runs).
+
+The first qualified CPU image `im-UlUgS4e8mdqGs2mHpXYeLK` passed CPU preflight. Run `v41-native-sync-20261109-b` passed all three ordinary tests, then synccheck reported 10,240 divergence errors at Native H64 PC `0x88f0`. Disassembly confirmed the output epilogue still emitted an aligned barrier. Both epilogue branches now use the existing unaligned helper. The revised control awaits fresh preflight.
 
 Protocol v5 rejects old measurements. `REMNANT_VALIDATION_SUITE=v41-decode`
 selects the existing two production-page decode controls, each checking Native,

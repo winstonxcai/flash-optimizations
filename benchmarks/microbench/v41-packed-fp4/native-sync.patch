@@ -1,5 +1,5 @@
 diff --git a/csrc/kernels/sm90/decode/sparse/config.h b/csrc/kernels/sm90/decode/sparse/config.h
-index 25b30c0..7bc4e05 100644
+index 25b30c0..052533e 100644
 --- a/csrc/kernels/sm90/decode/sparse/config.h
 +++ b/csrc/kernels/sm90/decode/sparse/config.h
 @@ -144,12 +144,40 @@ enum NamedBarriers : uint32_t {
@@ -45,11 +45,45 @@ index 25b30c0..7bc4e05 100644
          ku::barrier_cluster_wait_acquire();
      }
  }
+@@ -198,7 +226,6 @@ static __forceinline__ __device__ void store_o(
+     int warpgroup_idx,
+     int idx_in_warpgroup
+ ) {
+-    using cutlass::arch::NamedBarrier;
+     if constexpr (IS_NO_SPLIT) {
+         // Should convert the output to bfloat16 / float16, and save it to O
+         // Here we don't pipeline STSM and tma store because it's slower
+@@ -231,7 +258,7 @@ static __forceinline__ __device__ void store_o(
+         }
+ 
+         cutlass::arch::fence_view_async_shared();
+-        NamedBarrier::arrive_and_wait(256, NamedBarriers::epilogue_r2s_ready);
++        consumer_barrier_sync<NamedBarriers::epilogue_r2s_ready>();
+ 
+         if (threadIdx.x == 0) {
+             SM90_TMA_STORE_5D::copy(
+@@ -255,7 +282,7 @@ static __forceinline__ __device__ void store_o(
+         }
+         cutlass::arch::fence_view_async_shared();
+         
+-        NamedBarrier::arrive_and_wait(256, NamedBarriers::epilogue_r2s_ready);
++        consumer_barrier_sync<NamedBarriers::epilogue_r2s_ready>();
+         
+         if (elect_one_sync()) {
+             CUTLASS_PRAGMA_UNROLL
 diff --git a/csrc/kernels/sm90/decode/sparse/splitkv_mla.cuh b/csrc/kernels/sm90/decode/sparse/splitkv_mla.cuh
-index d8d746e..cc343ff 100644
+index d8d746e..d110c4e 100644
 --- a/csrc/kernels/sm90/decode/sparse/splitkv_mla.cuh
 +++ b/csrc/kernels/sm90/decode/sparse/splitkv_mla.cuh
-@@ -240,7 +240,7 @@ __device__ void KernelTemplate<MODEL_TYPE, NUM_HEADS>::devfunc(const SparseAttnD
+@@ -21,7 +21,6 @@ namespace sm90::decode::sparse {
+ 
+ static constexpr float MAX_INIT_VAL = -1e30;    // Prevent (-inf) - (-inf) = nan
+ using cutlass::arch::fence_view_async_shared;
+-using cutlass::arch::NamedBarrier;
+ using fp8_e8m0 = __nv_fp8_e8m0;
+ 
+ template<
+@@ -240,7 +239,7 @@ __device__ void KernelTemplate<MODEL_TYPE, NUM_HEADS>::devfunc(const SparseAttnD
                  
                  // Calculate S = softmax(mask(scale(P)))
                  if (block_idx != args.start_block_idx)
@@ -58,7 +92,7 @@ index d8d746e..cc343ff 100644
  
                  // Since in our case TOPK_BLOCK_SIZE == BLOCK_M, so we only need to do OOB checking for the last 2 blocks
                  scale_softmax(rP, rS, rO, params.sm_scale_div_log2, sScale, rM, rL, plan.is_kv_valid[buf_idx], block_idx, idx_in_warpgroup);
-@@ -257,7 +257,7 @@ __device__ void KernelTemplate<MODEL_TYPE, NUM_HEADS>::devfunc(const SparseAttnD
+@@ -257,7 +256,7 @@ __device__ void KernelTemplate<MODEL_TYPE, NUM_HEADS>::devfunc(const SparseAttnD
                      rO
                  );
  
@@ -67,7 +101,7 @@ index d8d746e..cc343ff 100644
  
                  cute::warpgroup_wait<0>();
  
-@@ -316,7 +316,7 @@ __device__ void KernelTemplate<MODEL_TYPE, NUM_HEADS>::devfunc(const SparseAttnD
+@@ -316,7 +315,7 @@ __device__ void KernelTemplate<MODEL_TYPE, NUM_HEADS>::devfunc(const SparseAttnD
              // This is a synchronization point for warpgroup 0/1.
              // Warpgroup 0 should wait wg 1 for oBuf/oAccumBuf (overlapped with k) to be free
              // Warpgroup 1 should wait wg 0 for sL to be ready
@@ -76,7 +110,7 @@ index d8d746e..cc343ff 100644
  
              CUTE_UNROLL
              for (int i = 0; i < 2; ++i)
-@@ -380,8 +380,17 @@ __device__ void KernelTemplate<MODEL_TYPE, NUM_HEADS>::devfunc(const SparseAttnD
+@@ -380,8 +379,17 @@ __device__ void KernelTemplate<MODEL_TYPE, NUM_HEADS>::devfunc(const SparseAttnD
                  int buf_idx = (block_idx-args.start_block_idx) % NUM_K_BUFS;
                  Tensor sV = make_tensor(make_smem_ptr(plan.u.k[buf_idx].data() + (SmemLayoutV{})(_256{}, _0{})), SmemLayoutHalfV{});
  
@@ -95,7 +129,7 @@ index d8d746e..cc343ff 100644
  
                  // Scale O
                  float cur_scales[2];
-@@ -412,10 +421,10 @@ __device__ void KernelTemplate<MODEL_TYPE, NUM_HEADS>::devfunc(const SparseAttnD
+@@ -412,10 +420,10 @@ __device__ void KernelTemplate<MODEL_TYPE, NUM_HEADS>::devfunc(const SparseAttnD
                  }
                  
                  if (block_idx != args.end_block_idx-1)

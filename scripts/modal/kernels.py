@@ -93,7 +93,7 @@ BUILD_ROOT = Path("/opt/remnant-build")
 SANITIZER_ROOT = Path("/opt/remnant-sanitizer")
 UPSTREAM_FLASHMLA_ROOT = Path("/opt/flashmla-upstream-native")
 NATIVE_CONTROL_MANIFEST = Path("/opt/remnant-native-control.json")
-UPSTREAM_FLASHMLA_SHA = "3332c1bad8075ecb8083dd5732ed3110cdc3947e"
+UPSTREAM_FLASHMLA_SHA = "6fbbf3a61285d4078b8ac0f2874e99b7b0b11866"
 if modal.is_local() and VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
     value = os.environ.get("REMNANT_UPSTREAM_FLASHMLA_SOURCE")
     if not value:
@@ -387,8 +387,8 @@ def _build_upstream_native_control(
 ) -> None:
     """Build the original selected upstream package on CPU. Author: Winston Cai.
 
-    Its public Python wrapper, scheduling, CUDA arithmetic and synchronization
-    stay unchanged. The upstream build flags select SM90a only; no SM100 target
+    The public Python wrapper, scheduling and CUDA arithmetic come from upstream.
+    The isolated control carries the recorded SM90 synchronization corrections. The upstream build flags select SM90a only; no SM100 target
     or model is loaded. Keep this package separate from the fork's sgl_kernel.
     """
     environment = dict(cpu_environment)
