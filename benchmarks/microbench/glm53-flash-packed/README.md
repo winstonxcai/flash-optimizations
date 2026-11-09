@@ -19,6 +19,15 @@ sanitizers and the unprofiled 24-case, 30-round matrix with fresh paired Native
 samples. Preserve the prior result and any failed candidate. Stop scheduling
 when a launch would exceed $20, counting the $1.73 already metered.
 
+The first SM90a build emitted 32 FP8 `QGMMA` sites and zero local-memory
+instructions per specialization. The generated KV panel offsets matched the
+loader and the transpose buffer was disjoint from both QK operands. The
+generic transpose emitted 294 static CTA barriers, with 256 inside the
+per-tile transpose. Its CPU evidence is under
+`data/modal/glm53-decode-speed/wgmma-cpu-artifacts` in the experiment worktree.
+The next revision uses a per-lane 16×16 register transpose and verifies the
+CTA barrier count before H200 profiling.
+
 ### Original 1.20× target
 
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched
