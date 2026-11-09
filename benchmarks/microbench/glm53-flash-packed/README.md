@@ -134,8 +134,7 @@ The timing runner requires all five candidate artifact bindings and reports
 the strict 0.5000 Direct/Native target while retaining the 24 cases and 30
 paired rounds. Focused qualification requires exact cubin and probe source
 identities. It checks first-partition graph replay, the short final splits,
-and a positive WGMMA barrier trace on H200. These gates and the full
-paired result are pending.
+and a positive WGMMA barrier trace on H200.
 
 The first H200 qualification exposed a missing optional field in the small
 graph fixture. The fixture-only fix preserved every compiled kernel artifact
@@ -144,6 +143,24 @@ racecheck trace limit after logging 9,984 combine events. The trace audit
 now uses one representative combine case. The three sanitizer tools still
 require all 23 focused cases each. Both attempts and raw report identities are
 in the ledger. Conservative compute spend through the trace timeout is $4.49.
+
+Run `glm53-decode-full-v-paired-20261110` completed all 24 cases with 30
+fresh pairs per case on one H200. The equal-case geometric-mean ratio was
+**0.58502**, or **1.70935×** speedup over untouched upstream Native. All
+case means favored Direct. Batch 8 had the highest ratios (0.70054–0.70994).
+Reaching 2.0× requires a further 14.53% reduction in the aggregate ratio.
+The [WGMMA CSV](upstream-decode-wgmma.csv) contains all absolute latencies,
+paired samples, and fixture hashes.
+
+The measured sources are parent `527574e36b9e`, SGLang `d355f3196cc9`,
+and FlashMLA `858bb1ccac6f`, image `im-pdTEWtY6wu4Sjj8l9DxGFF`.
+All fixture hashes match the prior 24-case run. Every fixture passed
+exact Packed-byte, independent numerical, and changing-input replay checks.
+The trace audit finished in 47 seconds and each sanitizer tool passed all
+23 focused cases. Timing took 77.62 seconds inside the H200 Function.
+Conservatively accounted compute through this result was $6.88 of $20.
+The ledger binds the raw reports and exact commands to the image and source
+identities. This candidate remains an experiment while the 2.0× goal is open.
 
 ### Original 1.20× target
 
