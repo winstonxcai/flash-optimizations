@@ -57,7 +57,9 @@ import modal
 from scripts.modal.kernel_qualification import QualificationContext
 from scripts.modal.kernel_qualification import \
     check_glm_scope_audit as _check_glm_scope_audit
-from scripts.modal.kernel_qualification import (qualification_run_ids,
+from scripts.modal.kernel_qualification import (glm_decode_combine_cases,
+                                                glm_decode_scope_filter,
+                                                qualification_run_ids,
                                                 qualify_glm_timing)
 from scripts.modal.qualification import check_fp4_scope_audit
 from scripts.modal.qualification import \
@@ -939,9 +941,16 @@ def _build_image() -> None:
                 f"Incomplete verified TileLang entrypoint sources: {sorted(missing)}, "
                 f"bytes probe present={bool(probe_sources)}"
             )
-        compiled["scope_symbol_audit"] = dict(filter="regex=glm_packed_(partial|bytes)",
-            partial_sources=entrypoints, probe_sources=probe_sources,
-            excluded="Unchanged Native, combine and framework kernels")
+        combines = compiled.get("decode_combine", {})
+        compiled["scope_symbol_audit"] = dict(
+            filter=glm_decode_scope_filter(combine=bool(combines)),
+            partial_sources=entrypoints,
+            probe_sources=probe_sources,
+            excluded="Unchanged Native and framework kernels" if combines
+            else "Unchanged Native, combine and framework kernels",
+        )
+        if combines:
+            compiled["scope_symbol_audit"]["decode_combine"] = combines
         compile_path.write_text(json.dumps(compiled, indent=2) + "\n")
     else:
         model_config = None
@@ -2062,15 +2071,20 @@ def validate_kernels(
             ):
                 raise RuntimeError("Incomplete real-allocation coverage")
             record["allocation"] = allocation
+        combine_tests = ()
+        glm_scope_filter = glm_decode_scope_filter()
         if sanitizer and sanitizer_scope in ("glm-decode", "glm-merge"):
+            if _UPSTREAM_DECODE and sanitizer_scope == "glm-decode" and glm_decode_combine_cases(manifest):
+                combine_tests = (GLM_TEST + "::test_packed_decode_combine_graph",)
+                glm_scope_filter = glm_decode_scope_filter(combine=True)
             audit_prefix = (SANITIZER, "--tool", "racecheck", "--error-exitcode", "1",
-                            "--kernel-name", "regex=glm_packed_(partial|bytes)", "--racecheck-trace-sync", "yes")
-            _run_pytest((GLM_TEST + "::test_packed_loader_bytes",), root, "scope-audit",
+                            "--kernel-name", glm_scope_filter, "--racecheck-trace-sync", "yes")
+            _run_pytest((GLM_TEST + "::test_packed_loader_bytes", *combine_tests), root, "scope-audit",
                         min(deadline, time.monotonic() + 180), prefix=audit_prefix)
             audit_log = (root / "scope-audit.log").read_text()
             _check_sanitizer_report(audit_log, "racecheck")
-            _check_glm_scope_audit(audit_log, run_id)
-            record["scope_audit"] = dict(status="passed", filter="regex=glm_packed_(partial|bytes)",
+            _check_glm_scope_audit(audit_log, run_id, combine=bool(combine_tests))
+            record["scope_audit"] = dict(status="passed", filter=glm_scope_filter,
                 log_sha256=hashlib.sha256(audit_log.encode()).hexdigest(),
                 entrypoints=manifest["glm_compile"]["scope_symbol_audit"],
                 basis="Racecheck synchronization trace; other tools use completed tests, identical entrypoints and common filter contract")
@@ -2100,7 +2114,7 @@ def validate_kernels(
                     # Distinct Packed entrypoints include their inline helper.
                     # One exact production CTA per bank; stock Native partial
                     # is the control. Full attention has its own numerical gate.
-                    prefix += ("--kernel-name", "regex=glm_packed_(partial|bytes)", "--print-level", "info")
+                    prefix += ("--kernel-name", glm_scope_filter, "--print-level", "info")
                 if sanitizer_scope == "v41-merge":
                     prefix = _fp4_sanitizer_prefix(tool)
 
@@ -2113,7 +2127,7 @@ def validate_kernels(
                     tool_environment = dict(environment)
                     if sanitizer_scope in ("glm-decode", "glm-merge"):
                         tool_environment["PYTEST_ADDOPTS"] = "--full-trace -o faulthandler_timeout=120"
-                    _run_pytest((GLM_TEST + "::test_packed_loader_bytes", GLM_DECODE_PARTIAL) if sanitizer_scope == "glm-decode"
+                    _run_pytest((GLM_TEST + "::test_packed_loader_bytes", GLM_DECODE_PARTIAL, *combine_tests) if sanitizer_scope == "glm-decode"
                                 else (selected_tests if stage == "corrective" else SANITIZER_TESTS),
                                 root, tool, deadline, prefix=prefix,
                                 environment=tool_environment if sanitizer_scope in ("glm-decode", "glm-merge") else None)

@@ -38,6 +38,23 @@ GLM_DECODE_REQUIRED = {
 }
 
 
+def glm_decode_combine_cases(manifest: dict) -> dict[str, dict]:
+    """Map both exact candidate shapes to the expected sanitizer case IDs."""
+    variants = manifest["glm_compile"].get("decode_combine", {})
+    if not variants:
+        return {}
+    if set(variants) != {"66x128", "33x512"}:
+        raise RuntimeError("Incomplete GLM decode combine manifest")
+    return {
+        f"test_packed_decode_combine_graph[{shape.replace('x', '-')}]": variant
+        for shape, variant in variants.items()
+    }
+
+
+def glm_decode_scope_filter(*, combine: bool = False) -> str:
+    return "regex=glm_packed_(partial|bytes|decode_combine)" if combine else "regex=glm_packed_(partial|bytes)"
+
+
 @dataclass(frozen=True)
 class QualificationContext:
     """Explicit evidence inputs; no source checkout, image or GPU side effects."""
@@ -75,6 +92,7 @@ def qualify_glm_timing(
         raise ValueError("GLM qualification phase must be all, decode or upstream-decode")
     manifest = context.manifest
     current = context.runtime_hashes
+    combine_cases = glm_decode_combine_cases(manifest) if phase == "upstream-decode" else {}
     groups = {}
     for run_id in ids:
         root = context.results_root / "microbench" / run_id / "validation"
@@ -143,7 +161,7 @@ def qualify_glm_timing(
                 audit_log = (root / "scope-audit.log").read_text()
                 if (
                     audit.get("status") != "passed"
-                    or audit.get("filter") != "regex=glm_packed_(partial|bytes)"
+                    or audit.get("filter") != glm_decode_scope_filter(combine=bool(combine_cases))
                     or audit.get("log_sha256")
                     != hashlib.sha256(audit_log.encode()).hexdigest()
                     or audit.get("entrypoints")
@@ -153,13 +171,13 @@ def qualify_glm_timing(
                         f"Focused instrumentation audit changed: {run_id}"
                     )
                 check_sanitizer_report(audit_log, "racecheck")
-                check_glm_scope_audit(audit_log, run_id)
+                check_glm_scope_audit(audit_log, run_id, combine=bool(combine_cases))
             if phase in ("decode", "upstream-decode"):
                 tests, _ = read_pytest_report(root / f"{tool}.xml")
                 names = {x.attrib["name"] for x in tests}
                 if (
                     not names
-                    or not names <= (GLM_DECODE_REQUIRED | ({"test_prefill_partial_graph[64]", "test_prefill_partial_graph_h8"} if phase == "upstream-decode" else set()))
+                    or not names <= (GLM_DECODE_REQUIRED | combine_cases.keys() | ({"test_prefill_partial_graph[64]", "test_prefill_partial_graph_h8"} if phase == "upstream-decode" else set()))
                     or len(names) != len(tests)
                     or any(
                         not x.get("classname", "").endswith(
@@ -176,6 +194,13 @@ def qualify_glm_timing(
                     raise RuntimeError(f"Incomplete focused cases: {run_id}/{tool}")
                 for node in tests:
                     name = node.attrib["name"]
+                    if name in combine_cases:
+                        props = {
+                            x.get("name"): x.get("value")
+                            for x in node.findall("properties/property")
+                        }
+                        if props.get("combine_cubin_sha256") != combine_cases[name]["cubin_sha256"]:
+                            raise RuntimeError(f"Focused GLM combine cubin changed: {run_id}/{name}")
                     if name.startswith("test_decode_partial_graph["):
                         heads, inner = map(
                             int, name.split("[")[1].rstrip("]").split("-")
@@ -231,7 +256,7 @@ def qualify_glm_timing(
                 )
             )
     required = (
-        GLM_DECODE_REQUIRED
+        GLM_DECODE_REQUIRED | combine_cases.keys()
         if phase in ("decode", "upstream-decode")
         else required_glm_sanitizer_cases(historical=False)
     )
@@ -253,10 +278,11 @@ def qualify_glm_timing(
     )
 
 
-def check_glm_scope_audit(log: str, identity: str) -> None:
+def check_glm_scope_audit(log: str, identity: str, *, combine: bool = False) -> None:
     """Pinned tool trace proves helper warp and handoff CTA synchronization."""
     if (
         "glm_packed_bytes" not in log
+        or (combine and "glm_packed_decode_combine" not in log)
         or not re.search(r"(?i)(warp|warpsync)", log)
         or not re.search(r"(?i)(block|cta|barrier)", log)
     ):

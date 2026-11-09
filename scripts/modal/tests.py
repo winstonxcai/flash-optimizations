@@ -4628,6 +4628,12 @@ class GLMUpstreamDecodeTests(unittest.TestCase):
             self.assertEqual(json.loads(manifest.read_text())["upstream_compile"], {"baseline": "compiled"})
 
     def test_reused_scope_allows_harness_changes_but_keeps_compiler_and_cache_identity(self):
+        self._check_reused_decode_scope(combine=False)
+
+    def test_candidate_decode_qualification_requires_both_combine_cubins(self):
+        self._check_reused_decode_scope(combine=True)
+
+    def _check_reused_decode_scope(self, *, combine):
         import hashlib
         import xml.etree.ElementTree as ET
 
@@ -4642,25 +4648,36 @@ class GLMUpstreamDecodeTests(unittest.TestCase):
                                              cache_files={"cached-direct": "same"},
                                              scope_symbol_audit={"trace": "bound"}),
                             sanitizer={"binary_sha256": "sanitizer"})
+            if combine:
+                manifest["glm_compile"]["decode_combine"] = {
+                    key: {"cubin_sha256": f"combine-{key}"} for key in ("66x128", "33x512")
+                }
+            combine_cases = qualification.glm_decode_combine_cases(manifest)
             (folder / "build-manifest.json").write_text(json.dumps(manifest))
             trace = ("glm_packed_bytes WarpSync CTA barrier\n"
+                     + ("glm_packed_decode_combine_kernel CTA barrier\n" if combine else "")
+                     +
                      "========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)\n")
             (folder / "scope-audit.log").write_text(trace)
             result = dict(model_family="glm53", status="passed", runtime_hashes={"kernel": "same"},
                           sanitizer_scope="glm-merge",
                           sanitizer_results={t: {"status": "passed"} for t in kernels.SANITIZER_ORDER},
-                          scope_audit=dict(status="passed", filter="regex=glm_packed_(partial|bytes)",
+                          scope_audit=dict(status="passed", filter=qualification.glm_decode_scope_filter(combine=combine),
                                            log_sha256=hashlib.sha256(trace.encode()).hexdigest(),
                                            entrypoints={"trace": "bound"}))
             (folder / "result.json").write_text(json.dumps(result))
             for tool in kernels.SANITIZER_ORDER:
                 (folder / f"{tool}.log").write_text(trace if tool == "racecheck" else "========= ERROR SUMMARY: 0 errors\n")
                 suite = ET.Element("testsuite")
-                for name in sorted(qualification.GLM_DECODE_REQUIRED | {
+                for name in sorted(qualification.GLM_DECODE_REQUIRED | combine_cases.keys() | {
                     "test_prefill_partial_graph[64]", "test_prefill_partial_graph_h8"
                 }):
                     node = ET.SubElement(suite, "testcase", name=name,
                                          classname="registered.attention.unittests.test_glm5_remnant")
+                    if name in combine_cases:
+                        props = ET.SubElement(node, "properties")
+                        ET.SubElement(props, "property", name="combine_cubin_sha256",
+                                      value=combine_cases[name]["cubin_sha256"])
                     if name.startswith("test_decode_partial_graph["):
                         h, i = map(int, name.split("[")[1][:-1].split("-"))
                         props = ET.SubElement(node, "properties")
@@ -4688,6 +4705,17 @@ class GLMUpstreamDecodeTests(unittest.TestCase):
                     changed["glm_compile"]["tilelang"][0]["cubin_sha256"] = "different"
                 with self.subTest(change=change), self.assertRaises(RuntimeError):
                     qualify(changed)
+            if combine:
+                report = folder / "memcheck.xml"
+                xml = report.read_text()
+                report.write_text(xml.replace("combine-33x512", "unbound"))
+                with self.assertRaisesRegex(RuntimeError, "combine cubin changed"):
+                    qualify(current)
+                parsed = ET.fromstring(xml)
+                parsed.remove(next(node for node in parsed if node.get("name") in combine_cases))
+                ET.ElementTree(parsed).write(report)
+                with self.assertRaisesRegex(RuntimeError, "missing sanitizer gates"):
+                    qualify(current)
 
 
 if __name__ == "__main__":
