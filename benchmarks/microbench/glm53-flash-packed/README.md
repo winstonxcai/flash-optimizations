@@ -47,6 +47,14 @@ reductions using the pinned TileLang API, keeping the accumulator layout
 and softmax recurrence. CPU preparation now checks for at most 24 static
 CTA barriers and rechecks the disjoint shared ranges.
 
+The batched reductions emitted 15 CTA barriers with zero spills. The next
+eight-case H200 diagnostic passed and reached 1.551× on the summed stage
+traces. The batch-64 partial measured 76.84–77.54 µs. The following candidate
+delays each tile's PV issue until the start of the next iteration, where it
+can overlap expansion into separate K storage. The final PV drains after
+the loop. The experiment will keep the same attention recurrence and check
+the generated waits before H200 profiling.
+
 ### Original 1.20× target
 
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched
