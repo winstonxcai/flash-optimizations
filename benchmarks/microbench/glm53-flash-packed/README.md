@@ -1,5 +1,20 @@
 # GLM-5.3-Flash Packed
 
+## Decode performance follow-up
+
+The goal is at least 1.20× equal-case geometric-mean speedup over untouched
+upstream FP8 TileLang on one H200. The score uses the mean of each case's 30
+paired Direct/Native ratios and all 24 cases. Preserve the existing fixture,
+Packed ABI, numerical tolerances and changing-input replay checks. The $20
+Modal budget covers preparation, profiling, candidates and final confirmation.
+
+The maintained upstream decode entry point accepts `--profile-decode` for a
+separate CUDA trace of batches 1, 8, 32 and 64 with zero tails under both cache
+policies. It exports per-mode graph kernel durations and the raw traces. Use
+those traces to decide which stage to optimize. Run without this flag for
+acceptance. The timing output reports the equal-case score alongside the
+existing batch-weighted statistic. No new measurements have been collected.
+
 ## Pristine upstream TP4 decode comparison
 
 Question: what is production Packed Direct's complete attention-call overhead

@@ -1512,11 +1512,14 @@ def _dispatch_benchmark(
     *, model_family: str = "dsv4", max_seconds: int = RUN_BUDGETS_S["timing"],
     resume_run: str = "", allow_incomplete_qualification: bool = False,
     phase: str = "all", packed_prefill_tile: int = 32,
+    profile_decode: bool = False,
 ) -> str:
     if model_family != MODEL_FAMILY:
         raise ValueError("--model-family must match REMNANT_MODEL_FAMILY")
     preflight = None
     upstream = suite == "glm-upstream-decode"
+    if profile_decode and (not upstream or resume_run):
+        raise ValueError("Decode profiling requires a fresh upstream decode run")
     if upstream and (not _UPSTREAM_DECODE or model_family != "glm53" or phase != "decode"
                      or packed_prefill_tile != 32 or allow_incomplete_qualification):
         raise ValueError("Upstream suite requires its H200 image, GLM decode, production tile32 and qualification")
@@ -1558,7 +1561,7 @@ def _dispatch_benchmark(
     return _benchmark_worker.remote(
         run_id, keep_count, modes, suite, prefill_reader, qualification_runs, preflight,
         model_family, max_seconds, resume_run, allow_incomplete_qualification,
-        phase, packed_prefill_tile,
+        phase, packed_prefill_tile, profile_decode,
     )
 
 
@@ -1569,13 +1572,14 @@ def benchmark_kernels(
     model_family: str = "dsv4", max_seconds: int = RUN_BUDGETS_S["timing"],
     resume_run: str = "", allow_incomplete_qualification: bool = False,
     phase: str = "all", packed_prefill_tile: int = 32,
+    profile_decode: bool = False,
 ) -> None:
     """Public CLI: validate the requested suite before scheduling its worker."""
     print(_dispatch_benchmark(
         run_id, keep_count, modes, suite, prefill_reader, qualification_runs,
         model_family=model_family, max_seconds=max_seconds,
         resume_run=resume_run, allow_incomplete_qualification=allow_incomplete_qualification,
-        phase=phase, packed_prefill_tile=packed_prefill_tile,
+        phase=phase, packed_prefill_tile=packed_prefill_tile, profile_decode=profile_decode,
     ))
 
 
@@ -1599,11 +1603,14 @@ def _benchmark_worker(
     model_family: str = "dsv4", max_seconds: int = RUN_BUDGETS_S["timing"],
     resume_run: str = "", allow_incomplete_qualification: bool = False,
     phase: str = "all", packed_prefill_tile: int = 32,
+    profile_decode: bool = False,
 ) -> str:
     """Validate and time the complete matrix for the selected survivor budget."""
     if model_family != MODEL_FAMILY:
         raise ValueError("--model-family must match REMNANT_MODEL_FAMILY")
     upstream = suite == "glm-upstream-decode"
+    if profile_decode and (not upstream or resume_run):
+        raise ValueError("Decode profiling requires a fresh upstream decode run")
     if upstream and (not _UPSTREAM_DECODE or model_family != "glm53" or phase != "decode"
                      or packed_prefill_tile != 32 or allow_incomplete_qualification):
         raise ValueError("Upstream suite requires its H200 image, GLM decode, production tile32 and qualification")
@@ -1627,7 +1634,8 @@ def _benchmark_worker(
         limit = _GLM_PREFILL_TIMEOUT_S - 60 if phase == "prefill" else 1140
         if not 60 <= max_seconds <= limit:
             raise ValueError(f"GLM timing max_seconds must be between 60 and {limit}")
-        with _run_context(run_id, "timing", max_seconds) as (root, record, deadline):
+        stage = "decode-profile" if profile_decode else "timing"
+        with _run_context(run_id, stage, max_seconds) as (root, record, deadline):
             _verify_glm_image()
             if phase == "prefill-small":
                 if qualification_runs or resume_run:
@@ -1647,18 +1655,26 @@ def _benchmark_worker(
             )
             if not prefill_h200 and not upstream:
                 _run_pytest((GLM_DECODE_GRAPH if phase == "decode" else GLM_BENCHMARK_GRAPH,), root, "benchmark-graphs", deadline)
+            result_name = "profile" if profile_decode else "timing"
             argv = _benchmark_command("--model-family", "glm53", "--suite", suite,
                                       "--phase", phase, "--packed-prefill-tile", str(packed_prefill_tile),
-                                      "--output", str(root / "timing"),
+                                      "--output", str(root / result_name),
                                       "--max-seconds", str(max(60, int(deadline-time.monotonic())-10)))
+            if profile_decode:
+                argv += ["--profile-decode"]
             if resume_run:
                 checkpoint = _glm_timing_checkpoint(resume_run)
                 argv += ["--resume", str(checkpoint)]
                 record["resume_run"] = resume_run
             record.update(command=argv, modes=("upstream", "direct") if upstream else ("native", "direct"), suite=suite)
-            _run_command(argv, root / "timing.log", deadline)
+            _run_command(argv, root / f"{result_name}.log", deadline)
             contract = _glm_benchmark_contract()
-            first = json.loads((root / "timing.json").read_text())
+            first = json.loads((root / f"{result_name}.json").read_text())
+            if profile_decode:
+                if first["status"] != "passed" or len(first["cases"]) != 8:
+                    raise RuntimeError("Incomplete GLM upstream decode profile")
+                record["profile"] = first
+                return str(root)
             contract.validate_timing(first)
             if phase == "prefill-small":
                 second_argv = argv.copy()
