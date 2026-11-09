@@ -950,14 +950,6 @@ def _build_image() -> None:
             excluded="Unchanged Native and framework kernels" if combines
             else "Unchanged Native, combine and framework kernels",
         )
-        if _UPSTREAM_DECODE:
-            required_probes = [
-                "glm_packed_bytes_kernel",
-                "glm_packed_bytes_rank_table_kernel",
-            ]
-            if set(required_probes) - {entry["symbol"] for entry in probe_sources.values()}:
-                raise RuntimeError("Missing CPU-compiled GLM bitmap expansion byte probe")
-            compiled["scope_symbol_audit"]["required_probe_symbols"] = required_probes
         if combines:
             compiled["scope_symbol_audit"]["decode_combine"] = combines
         compile_path.write_text(json.dumps(compiled, indent=2) + "\n")
@@ -2116,10 +2108,7 @@ def validate_kernels(
             audit_log = (root / "scope-audit.log").read_text()
             _check_sanitizer_report(audit_log, "racecheck")
             _check_glm_scope_audit(
-                audit_log, run_id, combine=bool(combine_tests), wgmma=bool(wgmma_tests),
-                required_probe_symbols=manifest["glm_compile"]["scope_symbol_audit"].get(
-                    "required_probe_symbols", ()
-                ),
+                audit_log, run_id, combine=bool(combine_tests), wgmma=bool(wgmma_tests)
             )
             record["scope_audit"] = dict(status="passed", filter=glm_scope_filter,
                 log_sha256=hashlib.sha256(audit_log.encode()).hexdigest(),

@@ -6307,7 +6307,7 @@
     "status": "full_paired_result_below_target",
     "target_direct_over_upstream": 0.5,
     "budget_usd": 20,
-    "conservative_compute_usd": 7.456316747042028,
+    "conservative_compute_usd": 8.210714370255763,
     "decision": "Retain the qualified full-V WGMMA candidate as the measured control for further optimization. The 2.0x goal remains open.",
     "diagnostics": {
       "wgmma_disjoint": {
@@ -12067,6 +12067,771 @@
             },
             "full_v_ratio": 0.5815813479402305,
             "register_pv_ratio": 0.5229047632260254
+          }
+        ]
+      },
+      "wgmma_nibble_table": {
+        "status": "diagnostic_passed_rejected_on_latency",
+        "decision": "Restore register-fed PV without the nibble table. Five of six changed partial-attention cases slowed down despite fewer static instructions.",
+        "run_id": "glm53-decode-wgmma-lut-profile-20261110",
+        "account": "winstoncai",
+        "app_id": "ap-BcblpEbavT8VKlE3oh0P8O",
+        "image": "im-sIzQShhkNUIAmlSPn6D1xd",
+        "gpu": "NVIDIA H200",
+        "gpu_function_seconds": 59.607064667,
+        "controller": {
+          "argv": [
+            "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+            "run",
+            "scripts/modal/kernels.py::benchmark_kernels",
+            "--run-id",
+            "glm53-decode-wgmma-lut-profile-20261110",
+            "--model-family",
+            "glm53",
+            "--suite",
+            "glm-upstream-decode",
+            "--phase",
+            "decode",
+            "--profile-decode",
+            "--max-seconds",
+            "240"
+          ],
+          "account": "winstoncai",
+          "run_id": "glm53-decode-wgmma-lut-profile-20261110",
+          "image": "im-sIzQShhkNUIAmlSPn6D1xd",
+          "seconds": 185.07781787500426,
+          "returncode": 0
+        },
+        "command": [
+          "/opt/sglang/bin/python",
+          "/sgl-workspace/sglang-remnant/benchmark/remnant/microbench.py",
+          "--model-family",
+          "glm53",
+          "--suite",
+          "glm-upstream-decode",
+          "--phase",
+          "decode",
+          "--packed-prefill-tile",
+          "32",
+          "--output",
+          "/results/microbench/glm53-decode-wgmma-lut-profile-20261110/decode-profile/profile",
+          "--max-seconds",
+          "205",
+          "--profile-decode"
+        ],
+        "source_identities": {
+          "parent": "6b8fd0f1d20bd9a752b78147de6b324382e5a3c6",
+          "sglang": "72e92b14ddd9af4f102d98adadd0c68767d35b9c",
+          "flashmla/csrc/cutlass": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "flashmla": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208"
+        },
+        "native": {
+          "commit": "baa9befa381511cd4d56f83980951e5a45fffc6d",
+          "files": {
+            "kernels/ops/attention/dsa/tilelang_kernel.py": "3d288dc04676b304e1a4d1a44703a8281762ebe789ca7cdd745b0c80fcac591e",
+            "kernels/ops/quantization/fp8_kernel.py": "f5b428f2cb51b7707b19dd7b55e9ef61818a5f99b1cb382cd5e811429dd46806",
+            "srt/utils/__init__.py": "d4c887ce6d68fb14d2f870c50dabc621da1c67a85823e8c8cf704392865963c8",
+            "srt/utils/common.py": "5423d1bb153e72852306934ab56ee0b3eccab8b3ec6395dc9da0fea79f7e74da"
+          },
+          "scope": "attention-module"
+        },
+        "environment": {
+          "MODAL_PROFILE": "winstoncai",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_GLM_UPSTREAM_DECODE": "1",
+          "REMNANT_GLM_CPU_REBUILD_FROM": "im-Ze2dhPXTzQEwaF4jrWbzLQ",
+          "REMNANT_GLM_CPU_REBUILD_BASE_SGLANG": "4479b36e430fa74da43a5845661f74965f4915e6",
+          "REMNANT_VALIDATION_TIMEOUT_S": "1260"
+        },
+        "artifact_volume": "winstoncai/remnant-stage2a-results/microbench/glm53-decode-wgmma-lut-profile-20261110",
+        "artifacts": {
+          "decode-profile/build-manifest.json": "9ee85fe8037fad050579f03f55e021af5c4cac5bfe7a704fa91b565f2fc3c99e",
+          "decode-profile/profile.json": "a8a2fcc72531afbfb3b916b56e96311ea430671ef60aed28c4fd3d4c59afb2f0",
+          "decode-profile/profile.log": "9a9c301e7e1c37dec0a96e325f5327a28f698ad884535cee2642ad8a953cd726",
+          "decode-profile/profile.traces/decode_h16_q1_t0_independent_rotating-direct.json": "59f6dd081bae233518fe02c1f0e269f589439a3759ba67dc0b3ddbe6ad4825f7",
+          "decode-profile/profile.traces/decode_h16_q1_t0_independent_rotating-upstream.json": "afcda237300fab0ddf3d2dd9011b7910063ddf8f6a98b1214e2c83c73634562d",
+          "decode-profile/profile.traces/decode_h16_q1_t0_independent_warm-direct.json": "4f5e0848db5938860ceb71d68a3fc59de31bea611a0d59d29e8f1256a199c765",
+          "decode-profile/profile.traces/decode_h16_q1_t0_independent_warm-upstream.json": "1ee38d72333db06c32d5a9e24b45f7d6fbb7b174b323b14197d50646d544b668",
+          "decode-profile/profile.traces/decode_h16_q32_t0_independent_rotating-direct.json": "fae96b40f744deb898baa0a0a21f245b8e71d6baaec87f027d91715b399440c0",
+          "decode-profile/profile.traces/decode_h16_q32_t0_independent_rotating-upstream.json": "7caf5849a03233d8b9f6786a644ca5f73b0857b1270b032aceccbac9e2388f95",
+          "decode-profile/profile.traces/decode_h16_q32_t0_independent_warm-direct.json": "a96a084271385f74726f882b09c6ee396fee1c051db3c7aab154cfb906e94ae9",
+          "decode-profile/profile.traces/decode_h16_q32_t0_independent_warm-upstream.json": "74307a4d586e2d479d18a013bc67031f5c5accc8c5dcbbed49f9c91823d1dadd",
+          "decode-profile/profile.traces/decode_h16_q64_t0_independent_rotating-direct.json": "c4a619ade84ed018865e94697040552ac80cab740f741a057bda9ce7f73da841",
+          "decode-profile/profile.traces/decode_h16_q64_t0_independent_rotating-upstream.json": "1ad078e30b7de0905b3d10a4cb9b47682fa129e0e4c7b8a703d95ed5c474c9be",
+          "decode-profile/profile.traces/decode_h16_q64_t0_independent_warm-direct.json": "89c888d2fd06211adc174dbea3541094d978726d109c64b2a7df353ad42c3407",
+          "decode-profile/profile.traces/decode_h16_q64_t0_independent_warm-upstream.json": "72e105458b865a3a2d538a80fd17ea746e3d943735af5248772ac7f3df60efb7",
+          "decode-profile/profile.traces/decode_h16_q8_t0_independent_rotating-direct.json": "78a9349e96a3acd4585d5f7e9e2e270ee9091bab8947ec3c4eb98121aee11616",
+          "decode-profile/profile.traces/decode_h16_q8_t0_independent_rotating-upstream.json": "38012eab1ef772a86c538e8d9afd91a37ef6f5031dc6422b8281fe8d7787c45e",
+          "decode-profile/profile.traces/decode_h16_q8_t0_independent_warm-direct.json": "feb00d1c80f8b766432fd2101c95125bbed68cc92a4f04530683a1d58eb58152",
+          "decode-profile/profile.traces/decode_h16_q8_t0_independent_warm-upstream.json": "ec0a9fe54ed13d35f041838ccb068a62444bbcee51f0a91111b18e74cc056d11",
+          "decode-profile/result.json": "be7b935c68bd62e72ae1f709c43d6392243eac52dec32bcdd67782f450570158",
+          "local-reconciliation.json": "e51b8fc14d3fb5593ee016199ea6e0f1ea8b30c38742c98d113fc382105e5094",
+          "preflight/build-manifest.json": "9ee85fe8037fad050579f03f55e021af5c4cac5bfe7a704fa91b565f2fc3c99e",
+          "preflight/result.json": "546b17e303894de7d82d1a5c201d5d1be4ccd5a3124f14a61f567609bd8c768b"
+        },
+        "cpu_preparation": {
+          "argv": [
+            "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+            "run",
+            "scripts/modal/kernels.py::prepare_kernels",
+            "--model-family",
+            "glm53"
+          ],
+          "account": "winstoncai",
+          "base_image": "im-Ze2dhPXTzQEwaF4jrWbzLQ",
+          "seconds": 674.0960182919953,
+          "returncode": 0,
+          "app_id": "ap-dQMPZNj8Dv5om6sjZliKGn"
+        },
+        "cpu_export_app_id": "ap-Dqvx20C2Sqz2eEogwIs4mK",
+        "failed_export": {
+          "app_id": "ap-w7lCt0KOW1bucgVeySIYPe",
+          "reason": "Exporter reused a manifest variable name for a per-batch record.",
+          "log_sha256": "553bd41ff5dfe6ac94aa74155711a65394bcbb9ffe76dd616e943518aa74d5e9"
+        },
+        "cpu_manifest_sha256": "9ee85fe8037fad050579f03f55e021af5c4cac5bfe7a704fa91b565f2fc3c99e",
+        "cpu_resource_summary": {
+          "native_unchanged": true,
+          "batch1_instructions": {
+            "register_pv": {
+              "cubin_sha256": "036a6c9035722d54840ff2fd204d73a400a1dc494d0a5ab1ee1424bc3093d4b1",
+              "instruction_encoding_sha256": "a417e1bb29fb3a3a8bfca94e6889fc82be5f521ac7a3edfcde8d13d06546bf42",
+              "words": 4592
+            },
+            "rank_table": {
+              "cubin_sha256": "aa3f73b7a90390f4efcff1696dc0262d996e2c5a8fe50b3ca654813e180120f9",
+              "instruction_encoding_sha256": "a417e1bb29fb3a3a8bfca94e6889fc82be5f521ac7a3edfcde8d13d06546bf42",
+              "words": 4592
+            }
+          },
+          "batches": {
+            "8": {
+              "registers": 112,
+              "static_shared_bytes": 1024,
+              "dynamic_shared_bytes": 54848,
+              "estimated_ctas_per_sm": 4,
+              "shared_ranges": {
+                "kv": [
+                  0,
+                  32768
+                ],
+                "p": [
+                  32768,
+                  33792
+                ],
+                "q": [
+                  33792,
+                  41984
+                ],
+                "rank_table": [
+                  41984,
+                  42048
+                ],
+                "scratch": [
+                  42048,
+                  50752
+                ],
+                "workspace": [
+                  50752,
+                  52800
+                ],
+                "workspace_1": [
+                  52800,
+                  54848
+                ]
+              },
+              "register_pv_sites": 16,
+              "total_instruction_sites_before": 2366,
+              "total_instruction_sites_after": 2079,
+              "opcode_sites": {
+                "IMAD": [
+                  485,
+                  324
+                ],
+                "LOP3": [
+                  453,
+                  283
+                ],
+                "PRMT": [
+                  208,
+                  128
+                ],
+                "LDS": [
+                  112,
+                  176
+                ],
+                "SHF": [
+                  172,
+                  186
+                ]
+              },
+              "artifact_sha256": {
+                "batch8-device.cu": "eb28abd06e5d0c0253416c6aee9b828971227108c48da170ed32d383f234a629",
+                "batch8-sass.sass": "95ba1533c1ee3172935c0d0a481689b03aebe23c9a9db9dc42262d468408a1a1"
+              }
+            },
+            "16": {
+              "registers": 143,
+              "static_shared_bytes": 1024,
+              "dynamic_shared_bytes": 54848,
+              "estimated_ctas_per_sm": 3,
+              "shared_ranges": {
+                "kv": [
+                  0,
+                  32768
+                ],
+                "p": [
+                  32768,
+                  33792
+                ],
+                "q": [
+                  33792,
+                  41984
+                ],
+                "rank_table": [
+                  41984,
+                  42048
+                ],
+                "scratch": [
+                  42048,
+                  50752
+                ],
+                "workspace": [
+                  50752,
+                  52800
+                ],
+                "workspace_1": [
+                  52800,
+                  54848
+                ]
+              },
+              "register_pv_sites": 16,
+              "total_instruction_sites_before": 2572,
+              "total_instruction_sites_after": 2308,
+              "opcode_sites": {
+                "IMAD": [
+                  496,
+                  371
+                ],
+                "LOP3": [
+                  462,
+                  294
+                ],
+                "PRMT": [
+                  208,
+                  128
+                ],
+                "LDS": [
+                  112,
+                  176
+                ],
+                "SHF": [
+                  175,
+                  187
+                ]
+              },
+              "artifact_sha256": {
+                "batch16-device.cu": "69e57c895be80cc47a40920fbd7d4b9086a10ddc139091a60ea5c29d0306dc06",
+                "batch16-sass.sass": "ad33dfd0a15aa4cddde565e96972191f8bd5cdad0faef0ccb16cc115f5f16ba0"
+              }
+            },
+            "24": {
+              "registers": 142,
+              "static_shared_bytes": 1024,
+              "dynamic_shared_bytes": 54848,
+              "estimated_ctas_per_sm": 3,
+              "shared_ranges": {
+                "kv": [
+                  0,
+                  32768
+                ],
+                "p": [
+                  32768,
+                  33792
+                ],
+                "q": [
+                  33792,
+                  41984
+                ],
+                "rank_table": [
+                  41984,
+                  42048
+                ],
+                "scratch": [
+                  42048,
+                  50752
+                ],
+                "workspace": [
+                  50752,
+                  52800
+                ],
+                "workspace_1": [
+                  52800,
+                  54848
+                ]
+              },
+              "register_pv_sites": 16,
+              "total_instruction_sites_before": 2529,
+              "total_instruction_sites_after": 2260,
+              "opcode_sites": {
+                "IMAD": [
+                  489,
+                  360
+                ],
+                "LOP3": [
+                  462,
+                  294
+                ],
+                "PRMT": [
+                  208,
+                  128
+                ],
+                "LDS": [
+                  112,
+                  176
+                ],
+                "SHF": [
+                  172,
+                  187
+                ]
+              },
+              "artifact_sha256": {
+                "batch24-device.cu": "a4052380ab02c0f3d3bae2575b06324c0c396d022d3f514542f617f4b8ecf8a6",
+                "batch24-sass.sass": "0bce1e7a6b000751b8363f4efac25daabd6968b82032929e239be0350d430766"
+              }
+            },
+            "32": {
+              "registers": 143,
+              "static_shared_bytes": 1024,
+              "dynamic_shared_bytes": 54848,
+              "estimated_ctas_per_sm": 3,
+              "shared_ranges": {
+                "kv": [
+                  0,
+                  32768
+                ],
+                "p": [
+                  32768,
+                  33792
+                ],
+                "q": [
+                  33792,
+                  41984
+                ],
+                "rank_table": [
+                  41984,
+                  42048
+                ],
+                "scratch": [
+                  42048,
+                  50752
+                ],
+                "workspace": [
+                  50752,
+                  52800
+                ],
+                "workspace_1": [
+                  52800,
+                  54848
+                ]
+              },
+              "register_pv_sites": 16,
+              "total_instruction_sites_before": 2572,
+              "total_instruction_sites_after": 2308,
+              "opcode_sites": {
+                "IMAD": [
+                  496,
+                  371
+                ],
+                "LOP3": [
+                  462,
+                  294
+                ],
+                "PRMT": [
+                  208,
+                  128
+                ],
+                "LDS": [
+                  112,
+                  176
+                ],
+                "SHF": [
+                  175,
+                  187
+                ]
+              },
+              "artifact_sha256": {
+                "batch32-device.cu": "dae3f6fc9ff0525aff6c567ef8d1dcdae6d73058b0b01644b2e76a8e51dbff53",
+                "batch32-sass.sass": "3fc6b31c6b0b0c0f7ed22608fb1c1131f817d5e200b0bcdd6d72d20755dd5b4b"
+              }
+            },
+            "64": {
+              "registers": 143,
+              "static_shared_bytes": 1024,
+              "dynamic_shared_bytes": 54848,
+              "estimated_ctas_per_sm": 3,
+              "shared_ranges": {
+                "kv": [
+                  0,
+                  32768
+                ],
+                "p": [
+                  32768,
+                  33792
+                ],
+                "q": [
+                  33792,
+                  41984
+                ],
+                "rank_table": [
+                  41984,
+                  42048
+                ],
+                "scratch": [
+                  42048,
+                  50752
+                ],
+                "workspace": [
+                  50752,
+                  52800
+                ],
+                "workspace_1": [
+                  52800,
+                  54848
+                ]
+              },
+              "register_pv_sites": 16,
+              "total_instruction_sites_before": 2572,
+              "total_instruction_sites_after": 2308,
+              "opcode_sites": {
+                "IMAD": [
+                  496,
+                  371
+                ],
+                "LOP3": [
+                  462,
+                  294
+                ],
+                "PRMT": [
+                  208,
+                  128
+                ],
+                "LDS": [
+                  112,
+                  176
+                ],
+                "SHF": [
+                  175,
+                  187
+                ]
+              },
+              "artifact_sha256": {
+                "batch64-device.cu": "2901c331175f27cc74897b9cb4c3c7b39a0546469a5c041b7f578b3dbb996c40",
+                "batch64-sass.sass": "34008607a0555f8f7490280881bfa8606ecd4089019c396a7d367cd2a6ce4b53"
+              }
+            }
+          }
+        },
+        "partial_cubin_sha256": {
+          "8": "b4c540623f6010aa70210999fb1c5c3f74f30969ffb07e64dc701e549bf4e97f",
+          "16": "4092c837ec8251a341397f80ccfcdac725ca20e4cf4fbeffd7dbac8905257504",
+          "24": "a477604ed4c6ba9d3e1c577e7205a71f35e7af518fc06cfb678682285c2d7bf3",
+          "32": "07eb001959627169e4b37115850ed27f9a851d170405badedeb238b409ee93c5",
+          "64": "2bdd76a34bdb855ffba3f2c2f33c6a057199ebe203b6e8a47f3b305028c5d045"
+        },
+        "exact_byte_validation": {
+          "argv": [
+            "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+            "run",
+            "scripts/modal/kernels.py::validate_kernels",
+            "--run-id",
+            "glm53-decode-wgmma-lut-bytes-20261110",
+            "--model-family",
+            "glm53",
+            "--stage",
+            "corrective",
+            "--cases",
+            "test/registered/attention/unittests/test_glm5_remnant.py::test_packed_loader_bytes",
+            "--max-seconds",
+            "160"
+          ],
+          "account": "winstoncai",
+          "run_id": "glm53-decode-wgmma-lut-bytes-20261110",
+          "image": "im-sIzQShhkNUIAmlSPn6D1xd",
+          "seconds": 144.80632229200273,
+          "returncode": 0,
+          "app_id": "ap-l9Zj8OCDeXolcznN0pcsV3",
+          "status": "passed",
+          "paths": [
+            "legacy",
+            "shared_nibble_table"
+          ],
+          "artifact_volume": "winstoncai/remnant-stage2a-results/microbench/glm53-decode-wgmma-lut-bytes-20261110/validation",
+          "artifact_sha256": {
+            "build-manifest.json": "9ee85fe8037fad050579f03f55e021af5c4cac5bfe7a704fa91b565f2fc3c99e",
+            "corrective.log": "4d4d5f4c3453d7d2ae6f23a6da4ddb86bbf1168b1869ad181dca01b14cb8a7ba",
+            "corrective.xml": "cbde85a8afc3ae87f8126a01dd1a2ec6956eb7eec51383f18f897318c8bed1f2",
+            "model-config.json": "bb8f01c42cb92a52ca72e65afb4d5bd8d11aef083cd210e8de25dfb904f23e9f",
+            "result.json": "651ff21652aaa7efe6a3378d4b3c917b927e1dfc8b027ffabd3d21f38e6ddf93"
+          }
+        },
+        "account_compute": {
+          "ephemeral_apps_usd": {
+            "before-wgmma-lut-prep": "15.94640683",
+            "before-wgmma-lut-export": "16.12427655",
+            "before-wgmma-lut-export-retry": "16.06288692",
+            "before-wgmma-lut-bytes": "16.06326996",
+            "after-wgmma-lut-bytes": "16.19345396",
+            "before-wgmma-lut-profile": "16.19345396",
+            "after-wgmma-lut-profile": "16.29759108"
+          },
+          "conservative_compute_usd": 8.210714370255763,
+          "all_workers_stopped": true
+        },
+        "numerical_and_graph_checks": "passed_all_8",
+        "register_pv_speedup": 1.8545347342375507,
+        "rank_table_speedup": 1.838184075297896,
+        "cases": [
+          {
+            "case": "decode_h16_q1_t0_independent_warm",
+            "fixture_sha256": "701cb8f67b0f8f5ea7eee9c56020db5e7896b776517957edab7bd5e3ceea6593",
+            "register_pv": {
+              "upstream": {
+                "query_conversion": 1.024,
+                "partial_attention": 5.312,
+                "combine": 13.184
+              },
+              "direct": {
+                "query_conversion": 1.056,
+                "partial_attention": 5.568,
+                "combine": 2.176
+              }
+            },
+            "rank_table": {
+              "upstream": {
+                "query_conversion": 0.992,
+                "partial_attention": 5.376,
+                "combine": 13.281
+              },
+              "direct": {
+                "query_conversion": 1.056,
+                "partial_attention": 5.601,
+                "combine": 2.145
+              }
+            },
+            "register_pv_ratio": 0.4508196721311476,
+            "rank_table_ratio": 0.4479617283322306
+          },
+          {
+            "case": "decode_h16_q1_t0_independent_rotating",
+            "fixture_sha256": "8e7d6210911dbfa3139e71eb1fae267654932b766292952622d2fd1f977b3b82",
+            "register_pv": {
+              "upstream": {
+                "query_conversion": 1.0361502590673575,
+                "partial_attention": 5.89140932642487,
+                "combine": 13.053518134715027
+              },
+              "direct": {
+                "query_conversion": 1.0289430051813473,
+                "partial_attention": 5.946870466321244,
+                "combine": 1.947119170984456
+              }
+            },
+            "rank_table": {
+              "upstream": {
+                "query_conversion": 1.0737357512953367,
+                "partial_attention": 6.153772020725389,
+                "combine": 13.67159067357513
+              },
+              "direct": {
+                "query_conversion": 0.9534507772020725,
+                "partial_attention": 5.569979274611399,
+                "combine": 1.7698601036269432
+              }
+            },
+            "register_pv_ratio": 0.44656913743261767,
+            "rank_table_ratio": 0.39682525909092936
+          },
+          {
+            "case": "decode_h16_q8_t0_independent_warm",
+            "fixture_sha256": "a306d9c66c9161e387a4eb6141eb9cab3ffad325190c0ceced4366656ab0d9d1",
+            "register_pv": {
+              "upstream": {
+                "query_conversion": 1.12,
+                "partial_attention": 12.001,
+                "combine": 8.832
+              },
+              "direct": {
+                "query_conversion": 1.12,
+                "partial_attention": 9.44,
+                "combine": 3.968
+              }
+            },
+            "rank_table": {
+              "upstream": {
+                "query_conversion": 1.152,
+                "partial_attention": 12.127,
+                "combine": 8.671
+              },
+              "direct": {
+                "query_conversion": 1.184,
+                "partial_attention": 9.697,
+                "combine": 4.032
+              }
+            },
+            "register_pv_ratio": 0.6617774336081629,
+            "rank_table_ratio": 0.6794077448747152
+          },
+          {
+            "case": "decode_h16_q8_t0_independent_rotating",
+            "fixture_sha256": "8a37d174e52cbcbec756f53a03b0ec3e2967dcf2e4eb5f03ff66295c20e46f7d",
+            "register_pv": {
+              "upstream": {
+                "query_conversion": 1.12264,
+                "partial_attention": 13.212200000000001,
+                "combine": 8.45576
+              },
+              "direct": {
+                "query_conversion": 1.12884,
+                "partial_attention": 10.287160000000002,
+                "combine": 3.7207999999999997
+              }
+            },
+            "rank_table": {
+              "upstream": {
+                "query_conversion": 1.14316,
+                "partial_attention": 13.2556,
+                "combine": 8.55472
+              },
+              "direct": {
+                "query_conversion": 1.13792,
+                "partial_attention": 10.5264,
+                "combine": 3.76436
+              }
+            },
+            "register_pv_ratio": 0.664168560722403,
+            "rank_table_ratio": 0.6721717142672919
+          },
+          {
+            "case": "decode_h16_q32_t0_independent_warm",
+            "fixture_sha256": "4dbf8d4abdb05cf647687adfb156f1ed4566c6ab7be07743c104a034822cf1ac",
+            "register_pv": {
+              "upstream": {
+                "query_conversion": 1.664,
+                "partial_attention": 49.047,
+                "combine": 12.062
+              },
+              "direct": {
+                "query_conversion": 1.632,
+                "partial_attention": 29.568,
+                "combine": 2.24
+              }
+            },
+            "rank_table": {
+              "upstream": {
+                "query_conversion": 1.455,
+                "partial_attention": 43.034,
+                "combine": 10.661
+              },
+              "direct": {
+                "query_conversion": 1.544,
+                "partial_attention": 29.029,
+                "combine": 2.193
+              }
+            },
+            "register_pv_ratio": 0.5327131091392797,
+            "rank_table_ratio": 0.5941251133272892
+          },
+          {
+            "case": "decode_h16_q32_t0_independent_rotating",
+            "fixture_sha256": "2c0e5c76a42f10dd830e5b7e76c1fefa85e0d403b7b80279e83ff15057652f24",
+            "register_pv": {
+              "upstream": {
+                "query_conversion": 1.705142857142857,
+                "partial_attention": 49.30871428571429,
+                "combine": 12.04257142857143
+              },
+              "direct": {
+                "query_conversion": 1.6147142857142855,
+                "partial_attention": 31.482428571428574,
+                "combine": 2.0765714285714285
+              }
+            },
+            "rank_table": {
+              "upstream": {
+                "query_conversion": 1.7647142857142857,
+                "partial_attention": 49.517999999999994,
+                "combine": 12.03657142857143
+              },
+              "direct": {
+                "query_conversion": 1.635857142857143,
+                "partial_attention": 32.45885714285714,
+                "combine": 2.120714285714286
+              }
+            },
+            "register_pv_ratio": 0.5578132964804767,
+            "rank_table_ratio": 0.571949417351969
+          },
+          {
+            "case": "decode_h16_q64_t0_independent_warm",
+            "fixture_sha256": "97d47b391fd5342417e11581abe1feef14e5de8c8ff2cdc7ac43e8b5ea2eeec5",
+            "register_pv": {
+              "upstream": {
+                "query_conversion": 2.016,
+                "partial_attention": 95.745,
+                "combine": 19.329
+              },
+              "direct": {
+                "query_conversion": 1.824,
+                "partial_attention": 56.479,
+                "combine": 2.56
+              }
+            },
+            "rank_table": {
+              "upstream": {
+                "query_conversion": 1.956,
+                "partial_attention": 96.464,
+                "combine": 20.069
+              },
+              "direct": {
+                "query_conversion": 1.76,
+                "partial_attention": 58.518,
+                "combine": 2.527
+              }
+            },
+            "register_pv_ratio": 0.5197967375523102,
+            "rank_table_ratio": 0.5300492028795922
+          },
+          {
+            "case": "decode_h16_q64_t0_independent_rotating",
+            "fixture_sha256": "29aa19055b005f5f691c46e2b76181f03a21aa1b0a536e8b4ca551b890e23715",
+            "register_pv": {
+              "upstream": {
+                "query_conversion": 2.11975,
+                "partial_attention": 95.405,
+                "combine": 19.607
+              },
+              "direct": {
+                "query_conversion": 1.84,
+                "partial_attention": 56.945,
+                "combine": 2.46375
+              }
+            },
+            "rank_table": {
+              "upstream": {
+                "query_conversion": 2.224,
+                "partial_attention": 99.43950000000001,
+                "combine": 20.3625
+              },
+              "direct": {
+                "query_conversion": 1.8395000000000001,
+                "partial_attention": 59.512,
+                "combine": 2.67175
+              }
+            },
+            "register_pv_ratio": 0.5229047632260254,
+            "rank_table_ratio": 0.5246689230164063
           }
         ]
       }

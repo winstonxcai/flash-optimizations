@@ -196,6 +196,20 @@ instructions and resources before profiling. Qualify the full matrix only
 after identifying a candidate that can plausibly reach 2.0×. The measured
 register-fed control is SGLang `4479b36e430f`.
 
+The H200 byte probe passed on both loaders, including malformed masks
+and offsets above 2 GiB. The lookup removed 10–12% of static instruction
+sites and added 64 shared-load sites. In the eight matched stage traces,
+the speedup fell from 1.855× to 1.838×. Five of the six partial-attention
+cases using the lookup slowed down. Keep the register-fed loader without
+the table. The ledger retains the rejected cubins, exact-byte receipt and
+stage timings. Conservative compute through this experiment is $8.21.
+
+The next experiment will allow two independent register-fed PV groups to
+be in flight. Each group owns separate source and accumulator registers.
+Wait for the older group before recycling its operand registers, then
+drain both before the online softmax reads the accumulators. Verify the
+emitted dependency barriers, registers and spills before H200 profiling.
+
 ### Original 1.20× target
 
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched
