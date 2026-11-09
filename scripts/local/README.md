@@ -1035,3 +1035,13 @@ v0.5.18 pin's original flags. Adapter/reconstruction selections are internal
 benchmark/test inputs. GLM uses `MODEL_FAMILY=glm53`, TileLang FP8 KV and a
 matching TP/EP/visible GPU assignment; `MAX_TOTAL_TOKENS` and
 `GLM_REASONING_PARSER` are transported unchanged through Docker.
+
+
+## V4.1 LongSWEbench on Modal
+
+Select `REMNANT_INTEGRATION=v0.5.22 REMNANT_MODEL_FAMILY=dsv41` for the
+V4.1 checkpoint. After staging the replay corpus on the `lswb-replay` volume,
+use `scripts/modal/serve.py::prepare_lswb` to prepare it and
+`scripts/modal/serve.py::benchmark_lswb --mode native` or `--mode direct` to
+run an arm. The replay uses TP4/EP4 and checks the server's resolved
+`kv_cache_format`. Historical replay records retain their original labels.

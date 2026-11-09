@@ -113,8 +113,8 @@ GLM_MERGE_SANITIZER = (
 )
 
 VALIDATION_SUITE = os.environ.get("REMNANT_VALIDATION_SUITE", "v4")
-if VALIDATION_SUITE not in ("v4", "v41-fp4") or (
-    VALIDATION_SUITE == "v41-fp4" and INTEGRATION["version"] != "v0.5.22"
+if VALIDATION_SUITE not in ("v4", "v41-fp4", "v41-decode") or (
+    VALIDATION_SUITE in ("v41-fp4", "v41-decode") and INTEGRATION["version"] != "v0.5.22"
 ):
     raise ValueError("REMNANT_VALIDATION_SUITE must be v4, or v41-fp4 with v0.5.22")
 if MODEL_FAMILY == "glm53" and VALIDATION_SUITE != "v4":
@@ -171,20 +171,59 @@ NATIVE_LIBRARY = Path("/opt/remnant-native-store.so")
 MANIFEST = Path("/opt/remnant-build.json")
 BUILD_ROOT = Path("/opt/remnant-build")
 SANITIZER_ROOT = Path("/opt/remnant-sanitizer")
+UPSTREAM_FLASHMLA_ROOT = Path("/opt/flashmla-upstream-native")
+NATIVE_CONTROL_MANIFEST = Path("/opt/remnant-native-control.json")
+UPSTREAM_FLASHMLA_SHA = "6fbbf3a61285d4078b8ac0f2874e99b7b0b11866"
+if modal.is_local() and VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
+    value = os.environ.get("REMNANT_UPSTREAM_FLASHMLA_SOURCE")
+    if not value:
+        raise RuntimeError(
+            "V4.1 qualification requires REMNANT_UPSTREAM_FLASHMLA_SOURCE: "
+            f"a clean isolated checkout of {UPSTREAM_FLASHMLA_SHA} with pinned CUTLASS"
+        )
+    UPSTREAM_FLASHMLA_SOURCE = Path(value).resolve()
+    for path, expected in (
+        (UPSTREAM_FLASHMLA_SOURCE, UPSTREAM_FLASHMLA_SHA),
+        (
+            UPSTREAM_FLASHMLA_SOURCE / "csrc/cutlass",
+            "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+        ),
+    ):
+        actual = subprocess.check_output(
+            ["git", "-C", str(path), "rev-parse", "HEAD"], text=True, timeout=30
+        ).strip()
+        dirty = subprocess.check_output(
+            ["git", "-C", str(path), "status", "--porcelain", "--untracked-files=all"],
+            text=True,
+            timeout=30,
+        ).strip()
+        if actual != expected or dirty:
+            raise RuntimeError(
+                f"Native control source mismatch at {path}: expected {expected}, actual {actual}, dirty={bool(dirty)}"
+            )
+    SOURCE_IDENTITIES["upstream_native"] = {
+        "commit": UPSTREAM_FLASHMLA_SHA,
+        "path": str(UPSTREAM_FLASHMLA_SOURCE),
+    }
 SANITIZER = (
     str(SANITIZER_ROOT / "usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer")
     if INTEGRATION["version"] == "v0.5.22"
     else "compute-sanitizer"
 )
-# Preserve existing work caps; reserve time inside the outer timeout for cleanup.
+# Include the upstream control in CPU build time; reserve time for cleanup.
 GPU_TIMEOUT_S = 3600
-CPU_BUILD_TIMEOUT_S = 900 if _UPSTREAM_DECODE or VALIDATION_SUITE == "v41-fp4" else 3600
+CPU_BUILD_TIMEOUT_S = 900 if _UPSTREAM_DECODE else 1200 if VALIDATION_SUITE in ("v41-fp4", "v41-decode") else 3600
 VALIDATION_TIMEOUT_S = (
-    int(os.environ.get("REMNANT_VALIDATION_TIMEOUT_S", "2700"))
+    int(
+        os.environ.get(
+            "REMNANT_VALIDATION_TIMEOUT_S",
+            "5400" if VALIDATION_SUITE in ("v41-fp4", "v41-decode") else "2700",
+        )
+    )
     if INTEGRATION["version"] == "v0.5.22"
     else GPU_TIMEOUT_S
 )
-VALIDATION_TIMEOUT_CAP_S = 5400 if VALIDATION_SUITE == "v41-fp4" else 2700
+VALIDATION_TIMEOUT_CAP_S = 5400 if VALIDATION_SUITE in ("v41-fp4", "v41-decode") else 2700
 if (
     INTEGRATION["version"] == "v0.5.22"
     and not 120 <= VALIDATION_TIMEOUT_S <= VALIDATION_TIMEOUT_CAP_S
@@ -271,7 +310,7 @@ SANITIZER_ORDER = (
 )
 # Scoped FP4 qualification keeps the legacy suite intact. Collection and XML
 # gates reject skips; these explicit lists are copied into each result manifest.
-if VALIDATION_SUITE == "v41-fp4":
+if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
     fp4_tests = TEST_ROOT + "test_remnant_fp4.py"
     VALIDATION_TESTS = (
         fp4_tests,
@@ -285,6 +324,9 @@ if VALIDATION_SUITE == "v41-fp4":
         fp4_tests + "::test_fp4_backend_dispatch",
         TEST_MODULES["cache_format"],
         "benchmark/remnant/test_microbench.py::test_v41_fp4_matrix_and_timing_gate",
+        "benchmark/remnant/test_microbench.py::test_v41_native_reference_preserves_tail_and_rounds_fp8_ties",
+        "benchmark/remnant/test_microbench.py::test_v41_three_path_ratios",
+        "benchmark/remnant/test_microbench.py::test_v41_native_call_does_not_reuse_warmup_metadata",
     )
     SANITIZER_TESTS = tuple(
         fp4_tests + "::" + name
@@ -293,9 +335,22 @@ if VALIDATION_SUITE == "v41-fp4":
             "test_fp4_direct",
             "test_fp4_graph_and_stream",
             "test_fp4_compressor_boundary",
+            "test_fp4_c2_decode_store",
             "test_fp4_fragment_masks",
         )
     )
+    native_tests = (
+        "benchmark/remnant/test_microbench.py::test_gpu_v41_upstream_native_comparison"
+    )
+    VALIDATION_TESTS += (native_tests,)
+    SANITIZER_TESTS += (native_tests,)
+
+# Decode-only qualification excludes producer, reconstruction and prefill execution.
+# Each existing control case checks Native/dense/Packed output, graph replay and
+# a nondefault stream against independent cache references on a production page.
+if VALIDATION_SUITE == "v41-decode":
+    VALIDATION_TESTS = (native_tests, fp4_tests + "::test_fp4_pool_allocations")
+    SANITIZER_TESTS = (native_tests,)
 
 V41_MERGE_SANITIZER = tuple(
     TEST_ROOT + "test_remnant_fp4.py::" + name
@@ -354,12 +409,20 @@ PREFILL_METRICS = (
 
 # CPU image preparation; the recipe must be defined before Modal uses it.
 
+_SGLANG_TEST_FILES = {
+    test.partition("::")[0]
+    for test in (*VALIDATION_TESTS, *CPU_TESTS, *BENCHMARK_TESTS, *SANITIZER_TESTS)
+}
+if VALIDATION_SUITE == "v41-decode":
+    # The allocation and CPU fixtures import helpers from these modules.
+    _SGLANG_TEST_FILES.update((TEST_MODULES["flashmla_direct"], TEST_MODULES["pool"]))
+
 
 def _sglang_ignored(path: Path) -> bool:
     allowed = (
         path.parts[0] == "python"
         or path.parts[:2] == ("benchmark", "remnant")
-        or path.as_posix() in VALIDATION_TESTS
+        or path.as_posix() in _SGLANG_TEST_FILES
         or path.as_posix() == "test/registered/attention/unittests/conftest.py"
         or path.name.startswith("LICENSE")
     )
@@ -374,7 +437,10 @@ def _flashmla_ignored(path: Path) -> bool:
 
 def _source_hashes() -> dict[str, str]:
     hashes = {}
-    for label, root in (("sglang", SGLANG_ROOT), ("flashmla", FLASHMLA_ROOT)):
+    roots = [("sglang", SGLANG_ROOT), ("flashmla", FLASHMLA_ROOT)]
+    if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
+        roots.append(("upstream_flashmla", UPSTREAM_FLASHMLA_ROOT))
+    for label, root in roots:
         digest = hashlib.sha256()
         for path in sorted(root.rglob("*")):
             relative = path.relative_to(root)
@@ -545,6 +611,74 @@ def _validation_sanitizer_order(value: str) -> tuple[str, ...]:
     return tools
 
 
+def _build_upstream_native_control(
+    build: Path, deadline: float, cpu_environment: dict[str, str]
+) -> None:
+    """Build the original selected upstream package on CPU. Author: Winston Cai.
+
+    The public Python wrapper, scheduling and CUDA arithmetic come from upstream.
+    The isolated control carries the recorded SM90 synchronization corrections. The upstream build flags select SM90a only; no SM100 target
+    or model is loaded. Keep this package separate from the fork's sgl_kernel.
+    """
+    environment = dict(cpu_environment)
+    environment.update(
+        FLASH_MLA_DISABLE_SM100="1",
+        FLASH_MLA_DISABLE_SM90="0",
+        MAX_JOBS="4",
+        NVCC_THREADS="1",
+    )
+    _run_command(
+        [
+            sys.executable,
+            "-c",
+            "import os, runpy, sys; "
+            f"os.chdir({str(UPSTREAM_FLASHMLA_ROOT)!r}); "
+            "sys.argv=['setup.py', 'build_ext', '--inplace']; "
+            "runpy.run_path('setup.py', run_name='__main__')",
+        ],
+        build / "upstream-native-build.log",
+        deadline,
+        environment=environment,
+    )
+    matches = list((UPSTREAM_FLASHMLA_ROOT / "flash_mla").glob("cuda*.so"))
+    if len(matches) != 1:
+        raise RuntimeError(f"Upstream Native expected one cuda binary: {matches}")
+    binary = matches[0].resolve()
+    listing = _run_command(
+        ["cuobjdump", "--list-elf", str(binary)],
+        build / "upstream-native-architectures.log",
+        deadline,
+    )
+    architectures = sorted(set(re.findall(r"sm_[0-9]+[a-z]?", listing)))
+    if architectures != ["sm_90a"]:
+        raise RuntimeError(f"Upstream Native has unexpected targets: {architectures}")
+    python = UPSTREAM_FLASHMLA_ROOT / "flash_mla/flash_mla_interface.py"
+    NATIVE_CONTROL_MANIFEST.write_text(
+        json.dumps(
+            {
+                "source_commit": UPSTREAM_FLASHMLA_SHA,
+                "source_sha256": _source_hashes()["upstream_flashmla"],
+                "binary": str(binary),
+                "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
+                "python": str(python),
+                "python_sha256": hashlib.sha256(python.read_bytes()).hexdigest(),
+                "architectures": architectures,
+                "build_flags": {
+                    key: environment[key]
+                    for key in (
+                        "FLASH_MLA_DISABLE_SM100",
+                        "FLASH_MLA_DISABLE_SM90",
+                        "MAX_JOBS",
+                        "NVCC_THREADS",
+                    )
+                },
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+
+
 def _build_image() -> None:
     """CPU image layer: compile existing SM90 targets, install, then preflight."""
     import torch
@@ -574,7 +708,7 @@ def _build_image() -> None:
     if build.exists() and (os.environ.get("REMNANT_COMPILED_IMAGE") or os.environ.get("REMNANT_GLM_CPU_REBUILD_FROM")):
         shutil.rmtree(build)
     build.mkdir()
-    if VALIDATION_SUITE == "v41-fp4":
+    if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
         # Run pure receipt and mocked dispatch tests in the existing CPU builder.
         # Child vendor Python lacks Modal's injected SDK/dependencies/context.
         # Keep these tests before core precompilation and GPU allocation.
@@ -589,6 +723,14 @@ def _build_image() -> None:
                 launcher_tests.FP4PreflightTests,
             )
         )
+        for name in (
+            "test_pytest_rejects_skipped_failed_and_empty_coverage",
+            "test_sanitizer_reordering_preserves_all_tools_and_checkpoints_receipts",
+            "test_sanitizer_failures_preserve_later_results_and_fail_the_run",
+            "test_sanitizer_deadline_keeps_unstarted_tools_explicitly_incomplete",
+            "test_sanitizer_prelaunch_timeout_keeps_tool_not_run",
+        ):
+            suite.addTest(launcher_tests.LauncherTests(name))
         report = build / "qualification-tests.log"
         with report.open("w") as stream:
             result = unittest.TextTestRunner(stream=stream, verbosity=2).run(suite)
@@ -653,6 +795,8 @@ def _build_image() -> None:
     aot = SGLANG_ROOT / "python/sglang/kernels/aot"
     # Content identity includes dirty submitted sources, not just Git commits.
     sources = _source_hashes()
+    if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
+        _build_upstream_native_control(build, deadline, cpu_environment)
     # The v0.5.22 serving Dockerfile already compiled these exact extensions.
     if INTEGRATION["version"] == "v0.5.22":
         package = Path(sysconfig.get_paths()["purelib"]) / "sgl_kernel"
@@ -697,7 +841,7 @@ def _build_image() -> None:
             shutil.copy2(matches[0], destination)
             binaries.append(destination)
         shutil.copy2(aot / "python/sgl_kernel/flash_mla.py", package / "flash_mla.py")
-    if MODEL_FAMILY == "dsv4":
+    if MODEL_FAMILY != "glm53":
         # 3. Precompile the Native store using the fork's dependency-valid cache.
         from sglang.kernels.jit.utils.compile.cache import find_prebuilt
         from sglang.kernels.ops.attention.dsv4.compress import \
@@ -726,6 +870,23 @@ def _build_image() -> None:
             )
         shutil.copy2(libraries.pop(), NATIVE_LIBRARY)
         binaries.append(NATIVE_LIBRARY)
+    if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
+        # Compile these after resolving the compressor library: the JIT cache
+        # now contains three valid modules rather than a single Native store.
+        from sglang.kernels.ops.attention.dsv4.attn import _jit_fused_store_module
+        from sglang.kernels.ops.attention.dsv4.kv_layout import KVLayout
+
+        with override_jit_cuda_arch(9, 0, "a"):
+            for page_size in (128, 256):
+                _jit_fused_store_module(
+                    "flashmla", torch.bfloat16, torch.int64, page_size, KVLayout.V4
+                )
+        for scope in {p.parent.parent for p in cache.rglob("*.so")}:
+            library = find_prebuilt(scope=scope, module_name=scope.parent.name)
+            if library is not None and library not in binaries:
+                binaries.append(library)
+        control = json.loads(NATIVE_CONTROL_MANIFEST.read_text())
+        binaries.append(Path(control["binary"]))
     binary_architectures = {}
     if INTEGRATION["version"] == "v0.5.22":
         for binary in binaries:
@@ -794,13 +955,14 @@ def _build_image() -> None:
                 raise RuntimeError("Pinned 0731 configuration content changed")
             Path("/opt/remnant-0731-config.json").write_bytes(payload)
             model_config = {"revision": revision, "sha256": digest, "url": url}
-    if VALIDATION_SUITE == "v41-fp4":
+    if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
         # Compile every new core format/geometry on CPU before an H100 exists.
         code = """
 import triton
 from triton.compiler import ASTSource
 from triton.backends.compiler import GPUTarget
 from sglang.kernels.ops.attention.dsv4.fp4_cache import _store, _read
+from sglang.kernels.ops.attention.dsv4.c2_decode_pool import _c2_decode_pool_kernel
 from sgl_kernel import flashmla_ops
 import torch
 assert hasattr(torch.ops.sgl_kernel, 'fp4_sparse_decode_fwd')
@@ -809,10 +971,15 @@ for p in (128,256):
     for packed in (False,True):
         stride=p*(224 if packed else 288)
         for rotate in (False,True):
-            src=ASTSource(_store, signature={'X':'*bf16','F':'*fp32' if rotate else '*bf16','LOC':'*i64','C':'*u8'}, constexprs={'XS':512,'FS':64 if rotate else 512,'P':p,'STRIDE':stride,'N':2,'PACKED':packed,'DATA_BYTES':192 if packed else 256,'VALUE_BYTES':128 if packed else 256,'ROTATE':rotate})
-            triton.compile(src,target=GPUTarget('cuda',90,32),options={'num_warps':4,'enable_fp_fusion':False})
+            for n in ((2,4) if p == 128 and rotate else (2,)):
+                src=ASTSource(_store, signature={'X':'*bf16','F':'*fp32' if rotate else '*bf16','LOC':'*i64','C':'*u8'}, constexprs={'XS':512,'FS':64 if rotate else 512,'P':p,'STRIDE':stride,'N':n,'PACKED':packed,'DATA_BYTES':192 if packed else 256,'VALUE_BYTES':128 if packed else 256,'ROTATE':rotate})
+                triton.compile(src,target=GPUTarget('cuda',90,32),options={'num_warps':4,'enable_fp_fusion':False})
         src=ASTSource(_read,signature={'C':'*u8','IDS':'*i32','OUT':'*bf16'},constexprs={'OS':512,'P':p,'STRIDE':stride,'N':2,'PACKED':packed,'DATA_BYTES':192 if packed else 256,'VALUE_BYTES':128 if packed else 256})
         triton.compile(src,target=GPUTarget('cuda',90,32),options={'num_warps':4})
+# The actual C2 decode producer keeps FP32 key/score halves in an interleaved
+# request ring. Compile its exercised ABI before model-free H100 integration.
+src=ASTSource(_c2_decode_pool_kernel, signature={'kv_ptr':'*fp32','score_ptr':'*fp32','pos_ptr':'*i64','raw_out_loc_ptr':'*i64','out_loc_ptr':'*i64','req_ptr':'*i64','state_kv_ptr':'*fp32','state_score_ptr':'*fp32','pooled_ptr':'*fp32','group_pos_ptr':'*i64','slots_ptr':'*i64','pad_row':'i32'}, constexprs={'RING_SIZE':2,'STATE_KV_STRIDE':1024,'STATE_SCORE_STRIDE':1024,'D':512,'BLOCK_D':512})
+triton.compile(src,target=GPUTarget('cuda',90,32),options={'num_warps':4})
 print('FP4 CPU SM90 precompilation passed')
 """
         _run_command(
@@ -838,7 +1005,7 @@ print('FP4 CPU SM90 precompilation passed')
     if MODEL_FAMILY == "glm53":
         _run_command(_benchmark_command("--model-family", "glm53", "--suite", "glm-attention", "--check-imports"),
                      build / "glm-benchmark-imports.log", deadline, environment=cpu_environment)
-    if VALIDATION_SUITE == "v41-fp4":
+    if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
         _run_command(
             _benchmark_command("--suite", "v41-fp4-decode", "--check-imports"),
             build / "fp4-benchmark-imports.log",
@@ -943,8 +1110,13 @@ print('FP4 CPU SM90 precompilation passed')
                 for p in Path(os.environ["TRITON_CACHE_DIR"]).rglob("*")
                 if p.is_file()
             }
-            if VALIDATION_SUITE == "v41-fp4"
+            if VALIDATION_SUITE in ("v41-fp4", "v41-decode")
             else {}
+        ),
+        "upstream_native_control": (
+            json.loads(NATIVE_CONTROL_MANIFEST.read_text())
+            if VALIDATION_SUITE in ("v41-fp4", "v41-decode")
+            else None
         ),
         "cpu_import_driver_stub_sha256": hashlib.sha256(
             (build / "cpu-driver-stubs/libcuda.so.1").read_bytes()
@@ -1123,6 +1295,14 @@ if _UPSTREAM_DECODE:
         "REMNANT_GLM_UPSTREAM_SOURCE": "/opt/remnant-glm-upstream-v0522",
     })
 
+if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
+    kernel_base = kernel_base.add_local_dir(
+        UPSTREAM_FLASHMLA_SOURCE if modal.is_local() else UPSTREAM_FLASHMLA_ROOT,
+        str(UPSTREAM_FLASHMLA_ROOT),
+        copy=True,
+        ignore=_ignore,
+    )
+
 kernel_image = (
     # Legacy image builders inject the SDK without its Python dependencies.
     # Install the submitting version before CPU launcher tests import Modal.
@@ -1140,6 +1320,7 @@ kernel_image = (
             + f"{SGLANG_ROOT / 'python'}:{REMOTE_REPO}",
             "PYTHONUNBUFFERED": "1",
             "PYTHONDONTWRITEBYTECODE": "1",
+            "REMNANT_NATIVE_CONTROL_MANIFEST": str(NATIVE_CONTROL_MANIFEST),
             "TORCH_CUDA_ARCH_LIST": "9.0",
             "SGLANG_JIT_CACHE_DIR": "/opt/remnant-jit",
             "REMNANT_FLASHMLA_SOURCE_DIR": str(FLASHMLA_ROOT),
@@ -1209,7 +1390,7 @@ _GPU = {
     # over a nonempty path fails Modal startup; retain its verified image cache.
     "volumes": {
         str(RESULTS_ROOT): results_volume,
-        **({"/triton-cache": triton_volume} if VALIDATION_SUITE != "v41-fp4" else {}),
+        **({"/triton-cache": triton_volume} if VALIDATION_SUITE not in ("v41-fp4", "v41-decode") else {}),
     },
 }
 
@@ -1235,6 +1416,18 @@ if _UPSTREAM_DECODE and _GLM_PREFILL_H200:
     raise ValueError("Upstream decode and prefill image selection are exclusive")
 if _GLM_PREFILL_H200 and MODEL_FAMILY != "glm53":
     raise ValueError("REMNANT_GLM_PREFILL_H200 requires GLM")
+
+@app.function(image=kernel_image, cpu=1, memory=2048, timeout=60, retries=0)
+def preflight_kernels() -> dict:
+    """Return the completed CPU build identity without GPU allocation. Author: Winston Cai."""
+    manifest = json.loads(MANIFEST.read_text())
+    if manifest["sources"] != _source_hashes():
+        raise RuntimeError("CPU preflight source identity changed")
+    for path, expected in manifest["binaries"].items():
+        if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
+            raise RuntimeError(f"CPU preflight binary changed: {path}")
+    return {"status": "passed", "gpu": False, "manifest": manifest}
+
 
 def _fp4_timing_qualification(run_ids: str) -> dict:
     """Author: Winston Cai. Aggregate only complete tools with identical inputs."""
@@ -1351,10 +1544,14 @@ def _dispatch_benchmark(
         )
     elif suite == "v41-fp4-decode":
         if (
-            VALIDATION_SUITE != "v41-fp4" or keep_count != 256
-            or modes not in ("", "native,kernel") or prefill_reader != "split"
+            VALIDATION_SUITE not in ("v41-fp4", "v41-decode")
+            or keep_count != 256
+            or modes not in ("", "native,dense_fp4,kernel")
+            or prefill_reader != "split"
         ):
-            raise ValueError("FP4 timing requires qualified Native/Packed Direct keep256")
+            raise ValueError(
+                "FP4 timing requires v41-fp4 qualification and upstream Native/custom dense FP4/Packed keep256"
+            )
         preflight = _preflight_fp4_timing.remote(run_id, qualification_runs)
     elif qualification_runs:
         raise ValueError("qualification_runs requires GLM or v41-fp4-decode")
@@ -1389,7 +1586,7 @@ def benchmark_kernels(
         if _GLM_PREFILL_H200 else kernel_image,
     "timeout": 1320 if _UPSTREAM_DECODE else _GLM_PREFILL_TIMEOUT_S if _GLM_PREFILL_H200
         else (1200 if MODEL_FAMILY == "glm53" else 900),
-    **({"cpu": 2, "memory": 16384} if VALIDATION_SUITE == "v41-fp4" else {}),
+    **({"cpu": 2, "memory": 16384} if VALIDATION_SUITE in ("v41-fp4", "v41-decode") else {}),
 })
 def _benchmark_worker(
     run_id: str,
@@ -1494,12 +1691,12 @@ def _benchmark_worker(
     is_fp4 = suite == "v41-fp4-decode"
     if is_fp4:
         if (
-            VALIDATION_SUITE != "v41-fp4"
+            VALIDATION_SUITE not in ("v41-fp4", "v41-decode")
             or keep_count != 256
-            or modes not in ("", "native,kernel")
+            or modes not in ("", "native,dense_fp4,kernel")
         ):
             raise ValueError(
-                "FP4 timing requires v41-fp4 qualification and Native/Packed keep256"
+                "FP4 timing requires upstream Native, custom dense FP4 and Packed keep256"
             )
         if prefill_reader != "split":
             raise ValueError("FP4 timing uses the Direct decode paths")
@@ -1597,7 +1794,7 @@ def _benchmark_worker(
     **{
         **_GPU,
         "timeout": VALIDATION_TIMEOUT_S,
-        **({"cpu": 2, "memory": 16384} if VALIDATION_SUITE == "v41-fp4" else {}),
+        **({"cpu": 2, "memory": 16384} if VALIDATION_SUITE in ("v41-fp4", "v41-decode") else {}),
     }
 )
 def validate_kernels(
@@ -1718,7 +1915,7 @@ def validate_kernels(
             for path, expected in manifest["binaries"].items():
                 if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
                     raise RuntimeError(f"Loaded binary input changed: {path}")
-            if VALIDATION_SUITE == "v41-fp4":
+            if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
                 artifacts = manifest.get("fp4_precompile_artifacts", {})
                 if not artifacts:
                     raise RuntimeError("Missing CPU-precompiled FP4 artifacts")
@@ -1830,7 +2027,7 @@ def validate_kernels(
                 r["mode"] for r in allocation["modes"]
             } != (
                 {"native", "adapter", "direct"} if MODEL_FAMILY == "glm53"
-                else {"Native", "Packed"} if VALIDATION_SUITE == "v41-fp4"
+                else {"Native", "Packed"} if VALIDATION_SUITE in ("v41-fp4", "v41-decode")
                 else {"native", "triton", "kernel"}
             ):
                 raise RuntimeError("Incomplete real-allocation coverage")
@@ -1876,6 +2073,12 @@ def validate_kernels(
                     prefix += ("--kernel-name", "regex=glm_packed_(partial|bytes)", "--print-level", "info")
                 if sanitizer_scope == "v41-merge":
                     prefix = _fp4_sanitizer_prefix(tool)
+
+                # A hard kill must leave an incomplete running checkpoint, never
+                # a misleading not_run state that hides partial failure output.
+                record["sanitizer_results"][tool] = {"status": "running"}
+                (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
+                results_volume.commit()
                 try:
                     tool_environment = dict(environment)
                     if sanitizer_scope in ("glm-decode", "glm-merge"):
@@ -1886,7 +2089,8 @@ def validate_kernels(
                                 environment=tool_environment if sanitizer_scope in ("glm-decode", "glm-merge") else None)
                 except TimeoutError:
                     # The boundary may expire between this loop and the command
-                    # check. No process started; keep this tool marked not_run.
+                    # check. No process started; return this tool to not_run.
+                    record["sanitizer_results"][tool] = {"status": "not_run"}
                     break
                 except RuntimeError as error:
                     record["sanitizer_results"][tool] = {
@@ -1895,17 +2099,27 @@ def validate_kernels(
                     }
                     # Each tool owns a fresh pytest process. Retain later tools'
                     # evidence without converting this failure into a pass.
+                except BaseException as error:
+                    # Reuse of completed siblings requires an independent audit
+                    # of this tool's partial XML/log; cancellation is never a pass.
+                    record["sanitizer_results"][tool] = {
+                        "status": "interrupted",
+                        "error": repr(error),
+                    }
+                    raise
                 else:
                     record["sanitizer_results"][tool] = {"status": "passed"}
-                state = record["sanitizer_results"][tool]
-                state["report_schema"] = "remnant-sanitizer-raw-v1"
-                for suffix in ("log", "xml"):
-                    path = root / f"{tool}.{suffix}"
-                    if path.is_file():
-                        state[f"{suffix}_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
-                # Preserve completed evidence even if a later tool is cancelled.
-                (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
-                results_volume.commit()
+                finally:
+                    state = record["sanitizer_results"][tool]
+                    if state["status"] != "not_run":
+                        state["report_schema"] = "remnant-sanitizer-raw-v1"
+                        for suffix in ("log", "xml"):
+                            path = root / f"{tool}.{suffix}"
+                            if path.is_file():
+                                state[f"{suffix}_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+                    # Preserve completed evidence even if a later tool is cancelled.
+                    (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
+                    results_volume.commit()
             incomplete = [
                 tool
                 for tool in selected_tools
@@ -2207,6 +2421,8 @@ def _run_command(
     child_environment["PYTHONPATH"] = (
         "/opt/sglang-runtime-fixes:" if INTEGRATION["version"] == "v0.5.22" else ""
     ) + f"{SGLANG_ROOT / 'python'}:{REMOTE_REPO}"
+    if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
+        child_environment["PYTHONPATH"] += f":{UPSTREAM_FLASHMLA_ROOT}"
     try:
         with output.open("w") as log:
             process = subprocess.Popen(
@@ -2476,5 +2692,5 @@ def _run_context(
         try:
             results_volume.commit()
         finally:
-            if resource == "gpu" and VALIDATION_SUITE != "v41-fp4":
+            if resource == "gpu" and VALIDATION_SUITE not in ("v41-fp4", "v41-decode"):
                 triton_volume.commit()

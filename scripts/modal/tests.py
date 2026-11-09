@@ -426,13 +426,14 @@ class LauncherTests(unittest.TestCase):
         self.results_volume = volume.start()
         self.addCleanup(volume.stop)
 
-    def test_only_three_remote_functions_and_no_model_volumes(self):
+    def test_registered_remote_functions_have_no_model_volumes(self):
         self.assertEqual(
             set(kernels.app.registered_functions),
             {
                 "_benchmark_worker",
                 "_preflight_fp4_timing",
                 "_preflight_glm_timing",
+                "preflight_kernels",
                 "profile_kernels",
                 "validate_kernels",
             },
@@ -461,8 +462,16 @@ class LauncherTests(unittest.TestCase):
                         kernels._run_pytest(kernels.BENCHMARK_TESTS, self.root, "check", 100)
                 argv = command.call_args.args[0]
                 self.assertEqual(
-                    argv[:4],
-                    [sys.executable, "-m", "pytest", "-q"],
+                    argv[:7],
+                    [
+                        sys.executable,
+                        "-m",
+                        "pytest",
+                        "-q",
+                        "--disable-warnings",
+                        "--tb=short",
+                        str(kernels.SGLANG_ROOT / kernels.BENCHMARK_TESTS[0]),
+                    ],
                 )
                 self.assertIn(str(kernels.SGLANG_ROOT / kernels.BENCHMARK_TESTS[0]), argv)
                 self.assertNotIn("--worker", argv)
@@ -531,7 +540,7 @@ class LauncherTests(unittest.TestCase):
             json.loads((self.root / "result.json").read_text())["sanitizer_results"],
             record["sanitizer_results"],
         )
-        self.assertEqual(self.results_volume.commit.call_count, 3)
+        self.assertEqual(self.results_volume.commit.call_count, 6)
 
     def test_sanitizer_failures_preserve_later_results_and_fail_the_run(self):
         function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
@@ -3025,7 +3034,8 @@ class FP4QualificationTests(unittest.TestCase):
         self.root = Path(temporary.name)
         self.manifest = {key: {"fixture": key} for key in q.IDENTITY_FIELDS}
 
-    def receipt(self, name, passed=(), failed=None, manifest=None, count=34, omitted_status="not_run"):
+    def receipt(self, name, passed=(), failed=None, manifest=None, count=None, omitted_status="not_run"):
+        count = self.q.FP4_CASE_COUNT if count is None else count
         root = self.root / "microbench" / name / "validation"
         root.mkdir(parents=True)
         (root / "build-manifest.json").write_text(json.dumps(manifest or self.manifest))
@@ -3061,7 +3071,7 @@ class FP4QualificationTests(unittest.TestCase):
         self.receipt("b", ("synccheck",))
         result = self.q.qualify_fp4_runs(self.root, "a,b", self.manifest)
         self.assertEqual(set(result["tools"]), self.q.TOOLS)
-        self.assertEqual(result["case_count_per_tool"], 34)
+        self.assertEqual(result["case_count_per_tool"], self.q.FP4_CASE_COUNT)
         self.assertEqual(len(result["identity_sha256"]), 64)
 
     def test_unselected_tools_need_no_reports_and_clean_single_tool_runs_combine(self):
@@ -3073,6 +3083,114 @@ class FP4QualificationTests(unittest.TestCase):
         self.assertEqual(set(result["tools"]), self.q.TOOLS)
         with self.assertRaisesRegex(RuntimeError, "incomplete/different sanitizer coverage"):
             self.q.qualify_fp4_runs(self.root, "memcheck", self.manifest)
+
+    def partial_tool(self, name, status="interrupted", *, xml=None, log=None):
+        base = self.root / "microbench" / name / "validation"
+        result = base / "result.json"
+        record = json.loads(result.read_text())
+        record["sanitizer_results"]["racecheck"] = {"status": status}
+        result.write_text(json.dumps(record))
+        (base / "racecheck.xml").write_text(
+            xml
+            if xml is not None
+            else '<testsuites><testsuite tests="1" errors="0" failures="0" skipped="0">'
+            '<testcase classname="fp4" name="case0"/></testsuite></testsuites>'
+        )
+        (base / "racecheck.log").write_bytes(
+            log if log is not None else b"========= COMPUTE-SANITIZER\n.\n"
+        )
+        return base
+
+    def test_clean_partial_tools_preserve_siblings_without_adding_coverage(self):
+        self.receipt("remaining", ("racecheck", "synccheck"))
+        for status in ("interrupted", "not_run"):
+            self.receipt(status, ("memcheck",))
+            self.partial_tool(status, status)
+            receipt = self.q.read_receipt(
+                self.root,
+                status,
+                self.q.QualificationIdentity.from_manifest(self.manifest),
+            )
+            self.assertEqual(receipt.tools, frozenset({"memcheck"}))
+            result = self.q.qualify_fp4_runs(
+                self.root, f"{status},remaining", self.manifest
+            )
+            self.assertEqual(set(result["tools"]), self.q.TOOLS)
+            self.assertEqual(result["case_count_per_tool"], self.q.FP4_CASE_COUNT)
+
+    def test_partial_failures_cannot_be_erased_by_a_complete_later_run(self):
+        self.receipt("good", self.q.TOOLS)
+        failing_xml = (
+            '<testsuites><testsuite tests="1" errors="0" failures="1" skipped="0">'
+            '<testcase classname="fp4" name="case0"><failure message="bad output"/>'
+            '</testcase></testsuite></testsuites>'
+        )
+        for index, (status, xml, log) in enumerate(
+            (
+                ("interrupted", failing_xml, None),
+                ("not_run", failing_xml, None),
+                (
+                    "interrupted",
+                    None,
+                    b"========= COMPUTE-SANITIZER\n.\n"
+                    b"========= Warning: Race reported between accesses\n"
+                    b"========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)\n",
+                ),
+                ("interrupted", None, b"========= COMPUTE-SANITIZER\n.F\n"),
+                (
+                    "interrupted",
+                    None,
+                    b"========= COMPUTE-SANITIZER\nunknown diagnostic\n",
+                ),
+            )
+        ):
+            name = f"bad{index}"
+            self.receipt(name, ("memcheck",))
+            self.partial_tool(name, status, xml=xml, log=log)
+            for order in (f"{name},good", f"good,{name}"):
+                with (
+                    self.subTest(status=status, index=index, order=order),
+                    self.assertRaisesRegex(RuntimeError, "partial sanitizer"),
+                ):
+                    self.q.qualify_fp4_runs(self.root, order, self.manifest)
+
+    def test_unreadable_partial_evidence_and_unfinished_states_fail_closed(self):
+        self.receipt("good", self.q.TOOLS)
+        for index, corruption in enumerate(
+            (
+                "missing_xml",
+                "missing_log",
+                "truncated_xml",
+                "invalid_utf8",
+                "running",
+                "unknown",
+            )
+        ):
+            name = f"incomplete{index}"
+            self.receipt(name, ("memcheck",))
+            state = corruption if corruption in {"running", "unknown"} else "interrupted"
+            base = self.partial_tool(name, state)
+            if corruption == "missing_xml":
+                (base / "racecheck.xml").unlink()
+            elif corruption == "missing_log":
+                (base / "racecheck.log").unlink()
+            elif corruption == "truncated_xml":
+                (base / "racecheck.xml").write_text("<testsuites>")
+            elif corruption == "invalid_utf8":
+                (base / "racecheck.log").write_bytes(b"\xff")
+            with self.subTest(corruption=corruption), self.assertRaises(RuntimeError):
+                self.q.qualify_fp4_runs(self.root, f"{name},good", self.manifest)
+
+    def test_decode_receipts_require_two_cases_and_cannot_qualify_broad_scope(self):
+        decode = {**self.manifest, "validation_suite": "v41-decode"}
+        self.receipt("short-decode", self.q.TOOLS, manifest=decode, count=1)
+        with self.assertRaisesRegex(RuntimeError, "Incomplete qualification XML"):
+            self.q.qualify_fp4_runs(self.root, "short-decode", decode)
+        self.receipt("complete-decode", self.q.TOOLS, manifest=decode, count=2)
+        result = self.q.qualify_fp4_runs(self.root, "complete-decode", decode)
+        self.assertEqual(result["case_count_per_tool"], 2)
+        with self.assertRaisesRegex(RuntimeError, "Qualification identity changed"):
+            self.q.qualify_fp4_runs(self.root, "complete-decode", self.manifest)
 
     def test_a_later_pass_does_not_erase_a_sanitizer_failure(self):
         self.receipt("bad", ("memcheck",), failed="racecheck")
@@ -3103,7 +3221,7 @@ class FP4QualificationTests(unittest.TestCase):
                 self.q.QualificationIdentity.from_manifest(missing)
 
     def test_missing_or_skipped_cases_never_qualify(self):
-        self.receipt("short", self.q.TOOLS, count=33)
+        self.receipt("short", self.q.TOOLS, count=self.q.FP4_CASE_COUNT - 1)
         with self.assertRaisesRegex(RuntimeError, "Incomplete qualification XML"):
             self.q.qualify_fp4_runs(self.root, "short", self.manifest)
         self.receipt("skipped", self.q.TOOLS)
@@ -3118,6 +3236,57 @@ class FP4QualificationTests(unittest.TestCase):
 
 
 class FP4PreflightTests(unittest.TestCase):
+    def test_sanitizer_cancellation_persists_running_then_interrupted(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        order = ("memcheck", "racecheck", "synccheck")
+        record = {}
+        checkpoints = []
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+
+            def checkpoint():
+                checkpoints.append(json.loads((root / "result.json").read_text()))
+
+            def run_pytest(tests, root, name, deadline, **kwargs):
+                if name == "validation":
+                    return
+                persisted = json.loads((root / "result.json").read_text())
+                self.assertEqual(
+                    persisted["sanitizer_results"][name]["status"], "running"
+                )
+                if name == "racecheck":
+                    (root / "racecheck.log").write_text(
+                        "========= Warning: Race reported\n"
+                    )
+                    raise KeyboardInterrupt("budgeted cancellation")
+
+            with (
+                patch.object(kernels, "INTEGRATION", {"version": "v0.5.18"}),
+                patch.object(kernels, "SANITIZER_ORDER", order),
+                patch.object(
+                    kernels,
+                    "_run_context",
+                    return_value=nullcontext((root, record, 100)),
+                ),
+                patch.object(kernels.time, "monotonic", return_value=0),
+                patch.object(kernels, "_run_pytest", side_effect=run_pytest) as run,
+                patch.object(kernels.results_volume, "commit", side_effect=checkpoint),
+                self.assertRaises(KeyboardInterrupt),
+            ):
+                function("fixture", sanitizer=True)
+            states = record["sanitizer_results"]
+            self.assertEqual(states["memcheck"]["status"], "passed")
+            self.assertEqual(states["racecheck"]["status"], "interrupted")
+            self.assertEqual(states["synccheck"]["status"], "not_run")
+            self.assertEqual(
+                [c.args[2] for c in run.call_args_list],
+                ["validation", "memcheck", "racecheck"],
+            )
+            self.assertEqual(
+                [c["sanitizer_results"]["racecheck"]["status"] for c in checkpoints],
+                ["not_run", "not_run", "running", "interrupted"],
+            )
+
     def test_failed_cpu_preflight_never_schedules_an_h100(self):
         with (
             patch.object(kernels, "VALIDATION_SUITE", "v41-fp4"),
@@ -3905,6 +4074,237 @@ class LswbSweepTests(unittest.TestCase):
         self.assertIn("prefix cache flush failed", result.stderr)
         self.assertFalse((failed_root / "client/args.json").exists())
 
+    def _fake_sglang(self) -> dict[str, str]:
+        tools = self.root / "fake-sglang"
+        tools.mkdir(exist_ok=True)
+        fake = tools / "sglang"
+        fake.write_text('#!/bin/sh\nprintf "%s\\n" "$@"\n')
+        fake.chmod(0o755)
+        return {"PATH": str(tools) + os.pathsep + os.environ["PATH"], "DECODE_CFG": "{}"}
+
+    def test_run_server_v41_modes_select_only_the_v41_layout(self):
+        script = kernels.REPO_ROOT / "scripts/local/run-server.sh"
+        environment = {
+            **self._fake_sglang(), "MODEL_FAMILY": "dsv41",
+            "REMNANT_INTEGRATION": "v0.5.22", "TP": "4", "EP": "4",
+        }
+        for mode in ("native", "direct"):
+            result = subprocess.run(
+                ["bash", str(script), mode, "/model", "127.0.0.1", "1"],
+                env=environment, capture_output=True, text=True, timeout=10,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            words = result.stdout.split()
+            for flag, value in (
+                ("--kv-cache-format", mode), ("--ep", "4"),
+                ("--dsv4-attn-backend", "flashmla"),
+                ("--reasoning-parser", "deepseek-v41"),
+                ("--tool-call-parser", "deepseekv41"),
+            ):
+                self.assertEqual(words[words.index(flag) + 1], value)
+            self.assertFalse([w for w in words if w.startswith("--dsv4-c4-")])
+
+    def test_replay_direct_execution_skips_git_check_and_names_v41_modes(self):
+        """LSWB_EXECUTION=direct needs no git checkout and reports the V4.1 layout."""
+        repo = self.root / "direct"
+        local = repo / "scripts/local"
+        local.mkdir(parents=True)
+        (local / "bench-lswb.sh").write_text((kernels.REPO_ROOT / "scripts/local/bench-lswb.sh").read_text())
+        fake_runner = repo / "client.py"
+        fake_runner.write_text(
+            "import pathlib, sys\n"
+            "args=sys.argv[1:]; root=pathlib.Path(args[args.index('--result-root')+1])\n"
+            "(root/'summary.json').write_text('{}')\n"
+        )
+        tools = repo / "tools"
+        tools.mkdir()
+        curl = tools / "curl"
+        curl.write_text("#!/bin/sh\ncase \"$*\" in\n*server_info*) cat \"$INFO\";;\n*flush_cache*) echo ok;;\nesac\n")
+        curl.chmod(0o755)
+        (local / "env.sh").write_text(
+            f"HOST_REPO={shlex.quote(str(repo))}\nRESULTS_HOST=$HOST_REPO/results\n"
+            "REPO_CT=/not/the/host\nLOG_HOST=$HOST_REPO/logs\nPORT=30381\nMODEL_NAME=fixture\n"
+            "check_sources() { echo git checkout required >&2; return 1; }\nts() { echo 20260101_000000; }\n"
+        )
+        (local / "eval-env.sh").write_text(
+            f"REPLAY_RUNNER={shlex.quote(str(fake_runner))}\nREPLAY_ADAPTER=$REPLAY_RUNNER\n"
+            "REPLAY_DATASET=$HOST_REPO\nREPLAY_MANIFEST=$REPLAY_RUNNER\nrequire_replay_config() { return 0; }\n"
+        )
+        graphs = {"cuda_graph_config": {"decode": {"backend": "full", "bs": [48]}}, "export_metrics_to_file": False}
+        environment = {"PATH": str(tools) + os.pathsep + os.environ["PATH"], "PYTHON": sys.executable}
+
+        def run(info: dict, execution: str | None, run_root: str) -> subprocess.CompletedProcess:
+            info_path = repo / "info.json"
+            info_path.write_text(json.dumps(info))
+            env = {**environment, "INFO": str(info_path), "LSWB_RUN_ROOT": str(repo / "results/lswb-replay" / run_root)}
+            if execution:
+                env["LSWB_EXECUTION"] = execution
+            return subprocess.run(["bash", str(local / "bench-lswb.sh"), "tag", "30381", "2", "1"],
+                                  env=env, capture_output=True, text=True, timeout=15)
+
+        result = run({**graphs, "dsv4_c4_cache_format": "native"}, None, "docker-default")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("git checkout required", result.stderr)
+        result = run({**graphs, "dsv4_c4_cache_format": "native"}, "bogus", "bogus")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("LSWB_EXECUTION must be docker or direct", result.stderr)
+        for fmt in ("native", "direct"):
+            with self.subTest(v41=fmt):
+                info = {**graphs, "dsv4_c4_cache_format": "native", "kv_cache_format": fmt}
+                result = run(info, "direct", f"direct-{fmt}")
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                config = json.loads((repo / f"results/lswb-replay/direct-{fmt}/collection-config.json").read_text())
+                self.assertEqual(config["mode"], fmt)
+        result = run({**graphs, "dsv4_c4_cache_format": "native"}, "direct", "direct-v4")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        config = json.loads((repo / "results/lswb-replay/direct-v4/collection-config.json").read_text())
+        self.assertEqual(config["mode"], "native")
+
+
+class LswbReplayPlanTests(unittest.TestCase):
+    """CPU contracts for the Modal paired-LSWB launcher and its concurrency plan."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = Path(self._tmp.name)
+
+    @staticmethod
+    def _manifest(sizes: list[list[int]]) -> dict:
+        records = []
+        for user, session in enumerate(sizes):
+            for turn, tokens in enumerate(session):
+                records.append({
+                    "request_id": f"u{user:03d}-{turn:03d}", "user_id": f"user{user:03d}",
+                    "created": float(user * 1000 + turn), "expected_prompt_tokens": tokens - 1,
+                    "expected_completion_tokens": 1,
+                })
+        return {"records": records}
+
+    def test_working_set_matches_a_hand_computed_schedule(self):
+        from scripts.local.business_replay import capacity_plan as plan
+
+        sizes = [[10, 20], [5, 5, 5], [100]]
+        sessions = plan.session_sizes(self._manifest(sizes))
+        self.assertEqual(sessions, sizes)
+        # C=2: tick0 10+5, tick1 20+5, then session 0 ends and [100] joins: 100+5.
+        self.assertEqual(plan.peak_working_set(sessions, 2, ticks=3), 105)
+        self.assertEqual(plan.peak_working_set(sessions, 2, ticks=2), 25)
+        self.assertEqual(plan.peak_working_set(sessions, 1, ticks=3), 20)
+        with self.assertRaises(ValueError):
+            plan.peak_working_set(sessions, 0)
+
+    def test_plan_picks_largest_fitting_c_and_rejects_tiny_pools(self):
+        from scripts.local.business_replay import capacity_plan as plan
+
+        sessions = [[1000] * 5 for _ in range(30)]  # Each live session holds 1000 tokens.
+        chosen = plan.plan_concurrency(sessions, pool_tokens=20000, max_running=48, ticks=5)
+        self.assertEqual((chosen["c_high"], chosen["c_low"]), (18, 14))  # 18_000 <= 0.9 * 20_000
+        self.assertEqual(plan.plan_concurrency(sessions, 10**9, 12, ticks=5)["c_high"], 12)
+        with self.assertRaisesRegex(ValueError, "minimum 8"):
+            plan.plan_concurrency(sessions, 5000, 48, ticks=5)
+
+    def test_server_info_must_describe_the_requested_arm(self):
+        from scripts.modal import serve
+
+        good = {
+            "tp_size": 4, "ep_size": 4, "kv_cache_format": "native", "random_seed": serve.LSWB_SEED,
+            "max_running_requests": serve.LSWB_MAX_RUN, "mem_fraction_static": 0.92,
+            "cuda_graph_config": {"decode": {"bs": [1, 48, 136]}},
+        }
+        serve._check_server_info(good, "native")
+        for key, value in (("kv_cache_format", "direct"), ("tp_size", 8),
+                           ("random_seed", 1), ("max_running_requests", 256), ("ep_size", 1)):
+            with self.subTest(key=key), self.assertRaisesRegex(RuntimeError, key):
+                serve._check_server_info({**good, key: value}, "native")
+        with self.assertRaisesRegex(RuntimeError, "decode graphs"):
+            serve._check_server_info({**good, "cuda_graph_config": {"decode": {"bs": [1, 8]}}}, "native")
+
+    def test_replay_stall_detection(self):
+        from scripts.modal import serve
+
+        responses = self.root / "responses.jsonl"
+        self.assertIsNone(serve._replay_stalled(responses, 299))
+        self.assertIn("first 300 s", serve._replay_stalled(responses, 301))
+        rows = [{"valid": index >= 3} for index in range(60)]  # 3/60 = 5% fails: allowed.
+        responses.write_text("".join(json.dumps(row) + "\n" for row in rows))
+        self.assertIsNone(serve._replay_stalled(responses, 600))
+        rows[3]["valid"] = False  # 4/60 > 5%.
+        responses.write_text("".join(json.dumps(row) + "\n" for row in rows))
+        self.assertIn("4/60", serve._replay_stalled(responses, 600))
+
+    def test_lswb_arguments_are_validated_before_any_allocation(self):
+        from scripts.modal import serve
+
+        with patch.object(serve, "_check_devices") as devices:
+            with patch.object(serve, "MODEL_FAMILY", "dsv4"), self.assertRaisesRegex(ValueError, "REMNANT_MODEL"):
+                serve.benchmark_lswb.local("native")
+            with patch.object(serve, "MODEL_FAMILY", "dsv41"):
+                with self.assertRaisesRegex(ValueError, "mode must be"):
+                    serve.benchmark_lswb.local("invalid")
+                for low, high in ((10, 0), (0, 10), (20, 10), (10, 49)):
+                    with self.subTest(low=low, high=high), self.assertRaisesRegex(ValueError, "c_low"):
+                        serve.benchmark_lswb.local("native", c_low=low, c_high=high)
+            devices.assert_not_called()
+
+
+    def _run_lswb(self, mode: str, pool: int = 5_000_000, **kwargs):
+        from scripts.modal import serve
+
+        lswb = self.root / "lswb"
+        (lswb / "replay").mkdir(parents=True, exist_ok=True)
+        (lswb / "replay/manifest.json").write_text(json.dumps(self._manifest([[100_000] * 6 for _ in range(60)])))
+        (lswb / "prepare-receipt.json").write_text("{}")
+        info = {
+            "tp_size": 4, "ep_size": 4, "kv_cache_format": serve.LSWB_SERVER_MODES[mode],
+            "random_seed": serve.LSWB_SEED, "max_running_requests": serve.LSWB_MAX_RUN,
+            "mem_fraction_static": 0.92, "cuda_graph_config": {"decode": {"bs": [136]}},
+            "max_total_num_tokens": pool,
+        }
+        points = []
+        with (
+            patch.object(serve, "MODEL_FAMILY", "dsv41"), patch.object(serve, "LSWB_ROOT", lswb),
+            patch.object(serve, "RESULTS_ROOT", self.root / "results"),
+            patch.object(serve, "REMOTE_REPO", kernels.REPO_ROOT),
+            patch.object(serve, "_kernel_extensions_ready", return_value=True),
+            patch.object(serve, "_check_devices", return_value=["H200"] * 4),
+            patch.object(serve, "_running_serving_server", return_value=nullcontext()) as boot,
+            patch.object(serve, "_http_json", return_value=info),
+            patch.object(serve, "_sanity_check", return_value=["ok"]),
+            patch.object(serve, "_run_replay_point", side_effect=lambda *a: points.append(a[2:])),
+            patch.object(serve.results_volume, "commit"),
+        ):
+            run = Path(serve.benchmark_lswb.local(mode, **kwargs))
+        return run, points, boot
+
+    def test_lswb_boots_once_and_replays_matched_points_low_then_high(self):
+        run, points, boot = self._run_lswb("native")
+        plan = json.loads((run / "c-plan.json").read_text())
+        # Each live session holds 100K..600K tokens; the plan comes from the 5M-token pool.
+        self.assertEqual([p[0] for p in points], [f"native-c{plan['c_low']}", f"native-c{plan['c_high']}"])
+        self.assertEqual([p[1] for p in points], [plan["c_low"], plan["c_high"]])
+        self.assertLess(plan["c_low"], plan["c_high"])
+        self.assertLessEqual(plan["peak_high"], 0.9 * 5_000_000)
+        boot.assert_called_once()
+        env = boot.call_args.args[0]
+        self.assertEqual((env["SERVING_MODE"], env["LSWB_EXECUTION"], env["MAX_RUN"], env["MEM_FRAC"]),
+                         ("native", "direct", "48", "0.92"))
+        self.assertEqual(boot.call_args.args[3], serve_markers := boot.call_args.args[3])
+        self.assertIn("CUDA out of memory", serve_markers)
+
+    def test_second_arm_reuses_given_c_and_fails_if_it_cannot_fit(self):
+        run, points, _ = self._run_lswb("direct", c_low=2, c_high=3)
+        self.assertEqual([p[1] for p in points], [2, 3])
+        self.assertTrue(json.loads((run / "c-plan.json").read_text())["given"])
+        with self.assertRaisesRegex(RuntimeError, "above the 3000000-token pool"):
+            self._run_lswb("direct", pool=3_000_000, c_low=30, c_high=48)
+
+
+
+
+
+
+
 
 
 class BuildLockTests(unittest.TestCase):
@@ -4155,12 +4555,6 @@ class ValidationTierTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("validation_tier:", result.stderr)
         self.assertNotIn("Traceback", result.stderr)
-
-
-
-
-
-
 
 class GLMUpstreamDecodeTests(unittest.TestCase):
     """Upstream dispatch and source-bound evidence; no remote calls or CUDA."""

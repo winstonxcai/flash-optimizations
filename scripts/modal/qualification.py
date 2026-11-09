@@ -26,7 +26,7 @@ def check_fp4_scope_audit(log: str, identity: str) -> None:
         raise RuntimeError(f"Missing positive FP4 synchronization trace: {identity}")
 
 
-FP4_CASE_COUNT = 34
+FP4_CASE_COUNT = 38
 IDENTITY_FIELDS = (
     "validation_suite",
     "integration",
@@ -45,6 +45,7 @@ IDENTITY_FIELDS = (
     "binary_architectures",
     "fp4_precompile_artifacts",
     "native_dtype",
+    "upstream_native_control",
     "binaries",
     "nvcc",
 )
@@ -87,6 +88,56 @@ def qualification_run_ids(value: str) -> tuple[str, ...]:
     return ids
 
 
+def _check_partial_sanitizer(base: Path, tool: str) -> None:
+    """Audit an interrupted tool without counting any of its cases as coverage.
+
+    Hard kills may leave no XML or truncated output. Those receipts cannot prove
+    that an earlier failure was absent and must not qualify completed siblings.
+    Only the quiet pytest output used by this runner and clean sanitizer records
+    are accepted; unknown diagnostics require a fresh, unambiguous receipt.
+    """
+    try:
+        report = ET.parse(base / f"{tool}.xml").getroot()
+        output = (base / f"{tool}.log").read_text(encoding="utf-8")
+        suites = list(report.iter("testsuite"))
+        counts = {
+            key: sum(int(suite.attrib[key]) for suite in suites)
+            for key in ("tests", "errors", "failures", "skipped")
+        }
+    except (OSError, UnicodeError, ET.ParseError, KeyError, ValueError) as error:
+        raise RuntimeError(
+            f"Unreadable partial sanitizer evidence: {base}/{tool}"
+        ) from error
+    cases = list(report.iter("testcase"))
+    ids = {(case.get("classname", ""), case.get("name", "")) for case in cases}
+    if (
+        not suites
+        or not 0 < len(cases) <= FP4_CASE_COUNT
+        or counts["tests"] != len(cases)
+        or any(counts[key] != 0 for key in ("errors", "failures", "skipped"))
+        or len(ids) != len(cases)
+        or any(not a or not b for a, b in ids)
+        or any(list(case) for case in cases)
+    ):
+        raise RuntimeError(f"Failed or ambiguous partial sanitizer XML: {base}/{tool}")
+    summary = (
+        "RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)"
+        if tool == "racecheck"
+        else "ERROR SUMMARY: 0 errors"
+    )
+    allowed = (
+        rf"\.*\s*========= (?:COMPUTE-SANITIZER|{re.escape(summary)})",
+        r"\.+(?:\s+\[\s*\d+%\])?",
+        r"-+ generated xml file: .+ -+",
+        r"\d+ passed(?:, \d+ warnings?)? in \d+(?:\.\d+)?s(?: \([\d:]+\))?",
+    )
+    lines = [line.strip() for line in output.splitlines() if line.strip()]
+    if not any("========= COMPUTE-SANITIZER" in line for line in lines) or any(
+        not any(re.fullmatch(pattern, line) for pattern in allowed) for line in lines
+    ):
+        raise RuntimeError(f"Failed or ambiguous partial sanitizer log: {base}/{tool}")
+
+
 def read_receipt(
     root: Path, run_id: str, identity: QualificationIdentity
 ) -> QualificationReceipt:
@@ -102,11 +153,21 @@ def read_receipt(
     states = result.get("sanitizer_results", {})
     if set(states) != TOOLS:
         raise RuntimeError(f"Incomplete sanitizer states: {run_id}")
+    case_count = 2 if manifest["validation_suite"] == "v41-decode" else FP4_CASE_COUNT
     passed = set()
     expected_ids = None
     for tool, state in states.items():
         status = state.get("status")
         if status in {"not_run", "not_selected", "interrupted"}:
+            # Older writers left an active tool marked not_run on cancellation.
+            # Never treat its artifacts as absent merely because of that label.
+            has_artifacts = any(
+                (base / f"{tool}.{ext}").exists() for ext in ("xml", "log")
+            )
+            if status == "not_selected" and has_artifacts:
+                raise RuntimeError(f"Unexpected unselected sanitizer artifacts: {run_id}/{tool}")
+            if status == "interrupted" or has_artifacts:
+                _check_partial_sanitizer(base, tool)
             continue
         if status != "passed":
             raise RuntimeError(
@@ -118,7 +179,7 @@ def read_receipt(
             (case.get("classname", ""), case.get("name", "")) for case in cases
         )
         if (
-            len(cases) != FP4_CASE_COUNT
+            len(cases) != case_count
             or len(ids) != len(cases)
             or any(list(case) for case in cases)
             or any(not a or not b for a, b in ids)

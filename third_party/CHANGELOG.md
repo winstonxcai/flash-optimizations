@@ -13,6 +13,14 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Upstream decode integration of parent tips `d186b9e` and `fb1a708` uses
+  SGLang `6ba5517ea595` and FlashMLA `858bb1ccac6f`. Both benchmark protocols
+  retain their own Native controls and receipt identities. V4.1 replay uses
+  the shared serving selector and retains its historical captures. Local
+  benchmark and launcher tests cover the combined source. The existing GPU
+  results apply to the original measured revisions. Fresh qualification of the
+  combined image remains pending.
+
 - Parent baseline `1b19ad9`, SGLang `99499fb02c86` / FlashMLA
   `4e72722671d8`: add a source-verified pristine upstream FP8 attention baseline
   and a separate 24-case TP4 decode protocol on one H200. Production kernels,
@@ -168,6 +176,60 @@ records rather than this milestone log.
   experiment. Production kernels and all fork pins are unchanged. Seven focused
   launcher tests and real saved-evidence reconciliation pass (racecheck and
   synccheck 13 cases each; memcheck unverified). No timing claim yet.
+
+- Decode-only comparison qualified on parent `7710f18`, SGLang `8084dc44` /
+  FlashMLA `858bb1c`. The separate upstream Native control `6fbbf3a` corrects
+  the divergent output epilogue as well as the consumer barriers. CPU preflight,
+  three ordinary H100 cases, two production-page cases per strict sanitizer,
+  and independent review passed. Packed Direct took 2.56× as long as Native
+  across ten decode cases. Observed follow-up compute was $1.63. Full-model and
+  serving results are outside this milestone. See the experiment record for
+  source hashes, commands and timing. Rollback omits the experimental suite.
+
+
+- Decode synchronization candidate from parent `3776842`: SGLang `92c8b3de` /
+  FlashMLA `858bb1c` unchanged. Preserve the isolated upstream synchronization
+  patch at `ee0f871`, based on original `3620b63`. Protocol v5 labels the corrected
+  Native control explicitly; decode-only strict qualification reuses the existing
+  two production-page graph/stream fixtures and retains ten final timing cases.
+  New $15 budget with $2 reserve; no model loads or prefill GPU validation.
+  Candidate unqualified pending Modal CPU build/preflight and H100 gates.
+
+
+- Upstream Native validation from parent `7e913f5fbe05`, SGLang
+  `3c595a2b70b9` / FlashMLA `858bb1ccac6f` (unchanged): Modal CPU build/precompile
+  and 27 tests + 15 subtests passed, then 43 ordinary H100 cases passed. Original
+  FlashMLA `3620b63` failed strict synccheck with 4,192 divergent-thread barrier
+  errors at upstream sparse decode `splitkv_mla.cuh:418`. The preceding 36
+  custom-path cases completed, but no complete synccheck XML exists. The app was
+  stopped; partial racecheck (7/38) is unqualified, memcheck/timing are not run.
+  Original Native and the failed evidence are preserved; no latency claim or gate
+  waiver. All containers stopped, conservative cumulative compute $18.15 under
+  the approved $25 ceiling with $2 reserve. Independent fresh review remains
+  pending. Evidence-only continuation; no runtime/kernel/pin changes or push.
+  Rollback omits the benchmark suite or restores SGLang `4f8fb091`.
+
+- Upstream Native comparison candidate, based on parent `d2e3fcd`: SGLang
+  `3c595a2b` / FlashMLA `858bb1ccac6f` unchanged. Protocol v4 compares upstream
+  H100 auto FP8/BF16 with custom dense FP4 and Packed, preserving the ten
+  production geometry cases. A separately built original FlashMLA `3620b63`
+  package is source/binary verified; the fork's earlier Native synchronization
+  fixes cannot substitute for it. Add two graph/stream control fixtures to the
+  required sanitizer matrix (38 cases/tool), retain all historical receipts,
+  and reject old protocols. Six focused Modal CPU tests, syntax and lint
+  checks passed. The original Native control built/imported with verified SM90a
+  hashes; complete CPU preflight timed out. GPU qualification/timing/review are pending;
+  no new performance claim, runtime arithmetic change or serving run. Rollback
+  omits the suite or restores the preceding SGLang pin `4f8fb091`.
+
+- Follow-up review candidate: SGLang `4f8fb0912c84` / FlashMLA `858bb1ccac6f`.
+  Resolve effective prefill policy, share page checks, name FP4 decode modes and
+  exercise actual C2 decode ownership. Persist sanitizer execution states and
+  audit interrupted evidence before receipt reuse. Merge main `be6ebcfd2c29`,
+  preserving both FP4 and replay test groups. Independent static review passed;
+  fresh Modal checks are pending. Prior qualification applies only to its frozen
+  sources. Rollback uses `auto` or previous pins `c4708870` / `4e72722`.
+
 - Review-fix integration parent `cc1b9a8`, CPU runner follow-up `2707db9`:
   SGLang `c47088700085` / FlashMLA `4e72722671d8`. Reject effective Q8KV8
   overrides and misaligned cache bases/page strides; retain startup prefill

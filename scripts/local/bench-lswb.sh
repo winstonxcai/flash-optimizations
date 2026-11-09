@@ -24,7 +24,15 @@ TAG=${1:-} PORT=${2:-$PORT} C=${3:-15} DUR=${4:-1200}
 NSYS_WINDOWS=${5:-}
 REPLAY_MINIMUM_SUCCESS_RATE=${REPLAY_MINIMUM_SUCCESS_RATE:-0.99}
 [ -n "$TAG" ] || { echo "usage: $0 <tag> [port] [concurrency] [duration_s]"; exit 1; }
-check_sources || exit 1
+# LSWB_EXECUTION=direct runs inside the serving image (Modal): the git checkout
+# that check_sources reads is absent, so the caller's recorded preflight owns
+# source identity, and the server's repository paths are this host's paths.
+LSWB_EXECUTION=${LSWB_EXECUTION:-docker}
+case "$LSWB_EXECUTION" in
+  docker) check_sources || exit 1 ;;
+  direct) REPO_CT=$HOST_REPO ;;
+  *) echo "LSWB_EXECUTION must be docker or direct" >&2; exit 2 ;;
+esac
 require_replay_config || exit 1
 [[ "$C" =~ ^[1-9][0-9]*$ ]] || { echo "concurrency must be a positive integer" >&2; exit 2; }
 [[ "$DUR" =~ ^[1-9][0-9]*$ ]] || { echo "duration must be a positive integer" >&2; exit 2; }
@@ -144,8 +152,13 @@ if decode.get("backend") != "full" or not covered:
 print(f"[lswb] decode graph preflight OK: c{concurrency}, captured sizes={sizes}")
 if seed and info.get("random_seed") != int(seed):
     raise SystemExit(f"Server seed mismatch: expected {seed}, got {info.get('random_seed')}")
-mode = "native" if info.get("dsv4_c4_cache_format") == "native" else info.get("dsv4_c4_cache_implementation")
-if mode not in ("native", "triton", "kernel"):
+mode = info.get("kv_cache_format")
+if mode is None:
+    if info.get("dsv4_c4_cache_format") == "native":
+        mode = "native"
+    else:
+        mode = info.get("dsv4_c4_cache_implementation")
+if mode not in ("native", "direct", "triton", "kernel"):
     raise SystemExit(f"Unknown server cache mode: {mode!r}")
 metrics_dir = None
 if info.get("export_metrics_to_file"):
