@@ -98,7 +98,7 @@ All nine cells completed 1,280 requests without errors. Checksums, input lengths
 
 ### Supporting operation studies
 
-Model-free [split-reader](../benchmarks/microbench/prefill-read-20261018/README.md) and [fused unpack/RoPE](../benchmarks/microbench/prefill-read-fused-rope-20261018/README.md) studies measure additional Packed preparation cost. Fusion reduces the penalty but remains slower than Native. These measurements do not establish the cost's share of serving latency; see the [historical execution profiles](../benchmarks/lswb-replay/c24-three-mode-profiles-n1-20261013/PROFILE.md) for diagnostic evidence and capture limitations.
+Model-free [split-reader](../benchmarks/microbench/dsv4-flash-prefill-read/README.md) and [fused unpack/RoPE](../benchmarks/microbench/dsv4-flash-prefill-read-fused-rope/README.md) studies measure additional Packed preparation cost. Fusion reduces the penalty but remains slower than Native. These measurements do not establish the cost's share of serving latency; see the [historical execution profiles](../benchmarks/lswb-replay/c24-three-mode-profiles-n1-20261013/PROFILE.md) for diagnostic evidence and capture limitations.
 
 ## Agentic benchmark results
 

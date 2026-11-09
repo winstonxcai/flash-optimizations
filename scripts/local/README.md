@@ -13,7 +13,7 @@ same commands to select `third_party/{sglang,flashmla}-v0.5.22/`,
 Both fork HEADs and nested CUTLASS must exactly match the selected parent pins.
 Container-internal install paths stay unchanged; do not reuse binaries across
 profiles. Override GPU IDs and ports explicitly if running both integrations.
-The v0.5.22 [core model-free qualification](../../benchmarks/microbench/v0522-qualification-20261023/README.md)
+The v0.5.22 [core model-free qualification](https://github.com/winstonxcai/flash-optimizations/blob/83530552f0e10bc08c03e1e69a928e3ccdc14d99/benchmarks/microbench/v0522-qualification-20261023/README.md)
 does not establish full-model boot, live HiCache or serving performance, and this
 reorganized parent image has not been built.
 

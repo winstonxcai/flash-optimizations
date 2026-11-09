@@ -81,7 +81,7 @@ both global page sizes (38 cases/tool). All task containers are stopped;
 conservative cumulative compute is $18.15 under the approved $25 ceiling,
 retaining the $2 reserve. Prior allocator results compare custom dense FP4
 against Packed, not upstream `auto`.
-See the single [experiment record](../benchmarks/microbench/v41-packed-fp4/README.md).
+See the single [experiment record](../benchmarks/microbench/dsv41-flash-packed-fp4/README.md).
 Rollback omits the timing suite or restores SGLang `4f8fb091`; runtime `auto`
 continues to select its existing path.
 
@@ -160,7 +160,7 @@ transfer, speculation/DSpark, replay and legacy layout overrides are rejected.
   Full-history prefill scratch scaling above remains a serving limitation.
   Select `--kv-cache-format native` or restore recorded baseline pins to roll back.
 
-See the [single experiment record](../benchmarks/microbench/v41-packed-fp4/README.md)
+See the [single experiment record](../benchmarks/microbench/dsv41-flash-packed-fp4/README.md)
 for exact sources, commands, all cases, costs, failed attempts and limitations.
 Broader GitHub lint/gating statuses are separate from these focused Modal gates.
 
@@ -195,7 +195,7 @@ The separate experimental V4.1 candidate above extends this baseline.
 V4 synchronization corrections `31877b4..3eb8594` replace divergent aligned
 barriers and add explicit local/peer KV-ready acquires. Arithmetic and persistent
 layout are unchanged, but v0.5.22 Native is **not the untouched historical
-binary**. The [qualification record](../benchmarks/microbench/v0522-qualification-20261023/README.md)
+binary**. The [qualification record](https://github.com/winstonxcai/flash-optimizations/blob/83530552f0e10bc08c03e1e69a928e3ccdc14d99/benchmarks/microbench/v0522-qualification-20261023/README.md)
 retains failed baselines as well as completed core numerical, allocation and
 memcheck/racecheck/synccheck gates. HiCache GPU, full-model, distributed execution
 and serving remain pending.
@@ -396,8 +396,8 @@ reusing its conclusions. Test presence and CUDA skips are not passes.
 
 | Scope | Evidence | Limits |
 |---|---|---|
-| Default-256 decode/store | [H100 three-mode reference](../benchmarks/microbench/decode-store-h100-three-mode-20261014/README.md): 114 GPU checks, 33 timing cases, 12 Compute captures; recorded SGLang `7b2592eb9048`, FlashMLA `57e9560`, plus submitted-content hashes | Model-free; not qualification of the current pin pair or serving TPOT |
-| Prefill reconstruction | [Split-reader study](../benchmarks/microbench/prefill-read-20261018/README.md) and [fused-reader study](../benchmarks/microbench/prefill-read-fused-rope-20261018/README.md): fused study reports 291 validation checks, 67 under each sanitizer, 36 timing cases and 108 profiles, including all-count read parity and changing-input graphs | Dirty source snapshot based on SGLang `0098b4277f` / FlashMLA `57e9560`, not a clean current-pin run; no production promotion or serving/quality gain |
+| Default-256 decode/store | [H100 three-mode reference](../benchmarks/microbench/dsv4-flash-decode-store/README.md): 114 GPU checks, 33 timing cases, 12 Compute captures; recorded SGLang `7b2592eb9048`, FlashMLA `57e9560`, plus submitted-content hashes | Model-free; not qualification of the current pin pair or serving TPOT |
+| Prefill reconstruction | [Split-reader study](../benchmarks/microbench/dsv4-flash-prefill-read/README.md) and [fused-reader study](../benchmarks/microbench/dsv4-flash-prefill-read-fused-rope/README.md): fused study reports 291 validation checks, 67 under each sanitizer, 36 timing cases and 108 profiles, including all-count read parity and changing-input graphs | Dirty source snapshot based on SGLang `0098b4277f` / FlashMLA `57e9560`, not a clean current-pin run; no production promotion or serving/quality gain |
 | Matched-load serving | [C24 triplicate](../benchmarks/lswb-replay/c24-native-packed256-n3-20261018/README.md): three independent unprofiled runs per mode, all meeting the 99% success criterion and TTFT p90 below 10 s; [128k/8k study](../benchmarks/serving/random-128k-8k-c24-capacity-n1-20261018/README.md): six error-free single-run cells with exact output lengths | Triplicate still has 15–21 failures/run. Collections use different images and lack full loaded-runtime/extension identity; no statistical equivalence, task-quality or replicated SLO-capacity claim |
 | Capture/configuration/HiCache | Focused regression entry points in the file map | No complete retained qualification of the current pair's live TP4 capture or all host-cache/non-256 serving combinations; historical CPU capture checks are not GPU validation |
 
@@ -474,7 +474,7 @@ The attention benchmark uses `--model-family glm53 --suite glm-attention`;
 `--phase decode` runs 48 cases, while default `all` requires 128. Resume requires
 a complete verified build manifest plus matching source, artifact and fixture
 identities. Individual sanitizer-tool runs remain partial qualification.
-See [the experiment index](../benchmarks/microbench/glm53-packed/README.md) for
+See [the experiment index](../benchmarks/microbench/glm53-flash-packed/README.md) for
 commands, all cases, budget, source identities and historical evidence.
 
 Historical optimized decode at SGLang `246ee03c1ad5`: all 48 paired cases and
@@ -494,7 +494,7 @@ uses two splits and reuses the unpacked latent tile in QK and PV. The H200
 suite completed 80 paired cases at both local head counts with focused
 sanitizers. Packed Direct was faster in 70 cases and missed the strict
 per-case parity criterion. The serving launcher uses its production dispatch.
-See the [GLM experiment guide](../benchmarks/microbench/glm53-packed/README.md)
+See the [GLM experiment guide](../benchmarks/microbench/glm53-flash-packed/README.md)
 for reproduction and the source-bound evidence.
 
 ### Full-model H200 smoke test
@@ -536,7 +536,7 @@ Each response contained `1, 2, 3, 4, 5` with finish reason `stop`. The tested
 Modal serving image is `im-VvBWmlcKXOGyVuHTE6kVxx` in `caiw`. It used an
 explicit source override with benchmark-only prefill edits alongside the
 serving fixes. The 64-row prefill experiment was outside this smoke scope.
-The [qualification record](../benchmarks/microbench/glm53-packed/qualification.json)
+The [qualification record](../benchmarks/microbench/glm53-flash-packed/qualification.json)
 contains the exact image and source identities, commands, response bodies,
 log hashes and costs. This was a single-request smoke per mode. Serving
 performance, capacity and multimodal behavior remain unverified.
@@ -580,7 +580,7 @@ verification by `scripts/sources.py`; pure report parsing by
 separate. Shared numerical timing statistics live in the fork's `timing.py`.
 
 The current merge-validation status and $26 phase ledger are recorded in the
-existing GLM [qualification record](../benchmarks/microbench/glm53-packed/qualification.json).
+existing GLM [qualification record](../benchmarks/microbench/glm53-flash-packed/qualification.json).
 Historical qualification and prefill parity misses stay bound to their measured
 sources. The 64-row prefill candidate remains benchmark-only.
 
@@ -606,4 +606,4 @@ full-model serving performance. See the GLM experiment README and ledger.
 The source-pinned 24-case upstream decode comparison passed on H200: Direct
 adds +1.28947% batch-weighted complete-call overhead, with all numerical and
 changing-input graph checks passed. These are attention-only results; see the
-[per-case table](../benchmarks/microbench/glm53-packed/README.md#completed-upstream-decode-result).
+[per-case table](../benchmarks/microbench/glm53-flash-packed/README.md#completed-upstream-decode-result).
