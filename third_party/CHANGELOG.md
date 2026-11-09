@@ -298,7 +298,7 @@ records rather than this milestone log.
   tokens (+21.96%); record-byte savings 22.22% are separate. No model quality,
   serving, performance or production claim. Source hashes, exact commands,
   failed attempts, costs and the missing gate are indexed by the
-  [experiment record](../benchmarks/microbench/v41-packed-fp4/README.md).
+  [experiment record](../benchmarks/microbench/dsv41-flash-packed-fp4/README.md).
 
 - Reconciled GitHub main `ffb11cb` in parent merge `814aaa8`, retaining its
   v0.5.18 SGLang `6687a7c36c0c`, FlashMLA `97f3faa58450`, frontend preparation/
@@ -333,7 +333,7 @@ Parent integration `0f0dec1`; versioned-path update `a10bc97`, based on local
   CUDA store/Adapter/Direct, host-cache routing, capture and profiling interfaces.
   Upstream frontend conversion offload is retained. The V4 synchronization
   corrections include Native; do not call this an untouched Native binary.
-- **Evidence:** [core model-free qualification](../benchmarks/microbench/v0522-qualification-20261023/README.md)
+- **Evidence:** [core model-free qualification](https://github.com/winstonxcai/flash-optimizations/blob/83530552f0e10bc08c03e1e69a928e3ccdc14d99/benchmarks/microbench/v0522-qualification-20261023/README.md)
   on the unchanged v0.5.22 fork sources passed numerical tests, exact physical
   allocation reconciliation and all three sanitizers. JSON/CSV and original
   source identities are retained unchanged; raw artifacts remain archived.
@@ -540,7 +540,7 @@ SGLang `9e42a0d8886dd93944dc6b47ef3bffef4e033b5a`, FlashMLA unchanged
 timed out; memcheck and independent fresh-context review remain unverified.
 Physical Direct storage saves 277,364,736 bytes/rank at 131,072 token slots with
 matched KDA reservation. The 54.39% capacity ratio remains a projection.
-See `benchmarks/microbench/glm53-packed/qualification.json` for exact commands,
+See `benchmarks/microbench/glm53-flash-packed/qualification.json` for exact commands,
 source/artifact identities, costs and failed attempts. Retain as an opt-in
 candidate; rollback is Native or the starting SGLang pin. No serving/quality claim.
 

@@ -12,7 +12,7 @@ Throughput benefits depend on workload, and task-quality equivalence is not esta
 **Parallel integration:** v0.5.18 remains the default. Set
 `REMNANT_INTEGRATION=v0.5.22` to select the independent v0.5.22 source pair,
 `Dockerfile.v0.5.22`, image `remnant:v0.5.22` and container `remnant-v0522` in
-the same local/Modal commands below. Its [core model-free qualification](benchmarks/microbench/v0522-qualification-20261023/README.md)
+the same local/Modal commands below. Its [core model-free qualification](https://github.com/winstonxcai/flash-optimizations/blob/83530552f0e10bc08c03e1e69a928e3ccdc14d99/benchmarks/microbench/v0522-qualification-20261023/README.md)
 passed; HiCache GPU, full-model and serving validation remain pending. Historical
 v0.5.18 performance results do not describe v0.5.22.
 
@@ -157,8 +157,8 @@ Start with the [benchmark index](benchmarks/README.md):
 - [LongSWE C24, three runs per mode](benchmarks/lswb-replay/c24-native-packed256-n3-20261018/README.md): repeated Native/Triton/Kernel serving comparison.
 - [128k input / 8k output](benchmarks/serving/random-128k-8k-c24-capacity-n1-20261018/README.md): matched C24 and allocator-ceiling loads; one run per cell.
 - [Shared-prefix C16](benchmarks/serving/shared-prefix-c16-n1-20261019/README.md): G16/G32/G40 working sets; observed cache-retention gains in a single-run synthetic screen, not replicated production gains.
-- [H100 decode/store microbench](benchmarks/microbench/decode-store-h100-three-mode-20261014/README.md): operation timing and Nsight Compute reports, not serving latency.
-- [Prefill-read studies](benchmarks/microbench/prefill-read-20261018/README.md) and [fused-reader experiment](benchmarks/microbench/prefill-read-fused-rope-20261018/README.md): reconstruction cost and profiling; not end-to-end serving gains.
+- [H100 decode/store microbench](benchmarks/microbench/dsv4-flash-decode-store/README.md): operation timing and Nsight Compute reports, not serving latency.
+- [Prefill-read studies](benchmarks/microbench/dsv4-flash-prefill-read/README.md) and [fused-reader experiment](benchmarks/microbench/dsv4-flash-prefill-read-fused-rope/README.md): reconstruction cost and profiling; not end-to-end serving gains.
 
 JSON is canonical; each collection records provenance and limits. Git LFS stores
 large reports; download curated artifacts with `git lfs pull --include="benchmarks/**" --exclude=""`.

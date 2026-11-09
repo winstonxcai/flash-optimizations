@@ -37,7 +37,7 @@ deterministically randomized paired rounds, twenty eager calls per sample.
 | 128 | 8192 | rotating | 2948.58 | 2973.33 | 2990.50 |
 
 All 36 case definitions and input hashes match the original
-[split-reader study](../prefill-read-20261018/README.md). Fresh Native controls
+[split-reader study](../dsv4-flash-prefill-read/README.md). Fresh Native controls
 are measured together with the candidate. Old split versus new fused results
 are separate runs, not paired timings. Complete-path timing is authoritative;
 isolated stages need not add because cache state differs.
