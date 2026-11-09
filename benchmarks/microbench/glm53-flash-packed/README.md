@@ -32,6 +32,21 @@ overlapped its transpose destination with Q and KV, so that revision remained
 CPU-only. The next build disables TileLang shared-memory reuse for this
 kernel and rejects overlapping generated buffer ranges during preparation.
 
+The disjoint-buffer build passed all eight H200 diagnostic cases, including
+independent numerical and changing-input graph checks. At batch 32, Direct
+partial attention fell from 50.17–53.50 µs to 39.78–42.10 µs. At batch 64,
+it fell from 93.02–93.79 µs to 81.48–81.85 µs. The equal-case speedup from
+the eight sums of traced kernel durations was 1.512×. The complete 24-case
+matrix is still pending. See `decode_wgmma_followup` in the
+[qualification ledger](qualification.json) for stage timings, commands,
+compiled artifact identities and raw trace hashes.
+
+The 39 static CTA barriers include separate max and sum reductions for each
+of the four heads owned by a lane. The next candidate batches those
+reductions using the pinned TileLang API, keeping the accumulator layout
+and softmax recurrence. CPU preparation now checks for at most 24 static
+CTA barriers and rechecks the disjoint shared ranges.
+
 ### Original 1.20× target
 
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched
