@@ -105,6 +105,22 @@ the QK and PV instruction families, any FP16 conversion, SW128 layout,
 register use and actual shared-memory footprint before running the same
 H200 diagnostic.
 
+Warp-level PV reduced dynamic shared memory to 54.5 KiB, but batch-64
+registers rose to 201 per thread. The SM90a binary used 72 FP8-to-FP16
+unpack sites and 32 warp MMA sites for PV. All eight H200 diagnostics
+passed numerical and replay checks. The six cases that used the new PV
+were slower, lowering the eight-case trace speedup to 1.639×.
+Conservative compute spend through this comparison is $3.62.
+
+The next candidate restores native FP8 warpgroup PV and uses one 16 KiB V
+buffer for two 256-feature halves. The first transpose overlaps QK.
+The first PV drains before the second transpose reuses V. Keep the
+probabilities and expanded K across both halves, with the same per-feature
+accumulation and normalization. The CPU gate checks both transpose calls,
+the native FP8 instructions and a shared-memory footprint that can fit
+three CTAs per SM. Register use and H200 timing determine whether that
+additional residency is attainable and worthwhile.
+
 ### Original 1.20× target
 
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched
