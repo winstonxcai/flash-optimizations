@@ -55,6 +55,11 @@ can overlap expansion into separate K storage. The final PV drains after
 the loop. The experiment will keep the same attention recurrence and check
 the generated waits before H200 profiling.
 
+The first pipelined build reached artifact binding. Batch 8 produced the same
+device code as the previous build, with a second cached host wrapper. The
+retry binds each library to the exact TileLang JIT cache entry and checks it
+against the adapter's generated host and device code before profiling.
+
 ### Original 1.20× target
 
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched
