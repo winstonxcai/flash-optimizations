@@ -4336,5 +4336,1971 @@
       "readback_verified": true,
       "contents": "Raw CPU/GPU records, pristine upstream module and license, canonical phase snapshot, and recoverable parent/SGLang source patches."
     }
+  },
+  "decode_speed_experiment": {
+    "status": "target_met",
+    "target": {
+      "geomean_direct_over_upstream_max": 0.8333333333333334,
+      "case_count": 24,
+      "paired_rounds": 30
+    },
+    "budget_usd": 20,
+    "observed_workspace_compute_delta_usd": 1.73169129,
+    "budget_note": "One workspace across both profiles, preparation, qualification and timing. Gross metered deltas before credits. Storage and egress deltas are included below.",
+    "baseline_profile": {
+      "run_id": "glm53-decode-baseline-profile-20261110",
+      "app": "ap-wYkIjkOvoFrTqB4Pjtz6JU",
+      "image": "im-hy9qCAdqilm2ahk9carkvd",
+      "base_image": "im-Ab04cxkKOaytftKqcRnJAs",
+      "controller_seconds": 706.1507549285889,
+      "gpu_function_seconds": 56.612173482,
+      "argv": [
+        "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+        "run",
+        "scripts/modal/kernels.py::benchmark_kernels",
+        "--run-id",
+        "glm53-decode-baseline-profile-20261110",
+        "--model-family",
+        "glm53",
+        "--suite",
+        "glm-upstream-decode",
+        "--phase",
+        "decode",
+        "--profile-decode",
+        "--max-seconds",
+        "240"
+      ],
+      "source_identities": {
+        "parent": {
+          "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-decode-speed",
+          "commit": "43ee5d937cc9067d9eed087d7252dd68d09d8873"
+        },
+        "sglang": {
+          "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-decode-speed/third_party/sglang-v0.5.22",
+          "expected_commit": "1a3f737b8c536fb49a95f7315f248ae38cff0c63",
+          "commit": "1a3f737b8c536fb49a95f7315f248ae38cff0c63",
+          "override": false,
+          "dirty": false,
+          "integration": "v0.5.22"
+        },
+        "flashmla/csrc/cutlass": {
+          "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-decode-speed/third_party/flashmla-v0.5.22/csrc/cutlass",
+          "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "override": false,
+          "dirty": false
+        },
+        "flashmla": {
+          "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-decode-speed/third_party/flashmla-v0.5.22",
+          "expected_commit": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208",
+          "commit": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208",
+          "override": false,
+          "dirty": false,
+          "integration": "v0.5.22"
+        }
+      },
+      "upstream": {
+        "commit": "baa9befa381511cd4d56f83980951e5a45fffc6d",
+        "files": {
+          "kernels/ops/attention/dsa/tilelang_kernel.py": "3d288dc04676b304e1a4d1a44703a8281762ebe789ca7cdd745b0c80fcac591e",
+          "kernels/ops/quantization/fp8_kernel.py": "f5b428f2cb51b7707b19dd7b55e9ef61818a5f99b1cb382cd5e811429dd46806",
+          "srt/utils/__init__.py": "d4c887ce6d68fb14d2f870c50dabc621da1c67a85823e8c8cf704392865963c8",
+          "srt/utils/common.py": "5423d1bb153e72852306934ab56ee0b3eccab8b3ec6395dc9da0fea79f7e74da"
+        },
+        "scope": "attention-module"
+      },
+      "volume": "winstoncai/remnant-stage2a-results/microbench/glm53-decode-baseline-profile-20261110",
+      "profile_sha256": "6d59c2a8adf25a876f443473dab61cf775a8e30391b7fc129bc08ffcc99fd4d9",
+      "manifest_sha256": "63d724b3a5f3c86d7345412afc796e9da5b80d3b0a6a9ea557563d533f0c0467",
+      "traces_sha256": {
+        "decode_h16_q1_t0_independent_rotating-direct.json": "9ac82e4e9523042eac6f05a6edc8e1fdc52ce7414df028852dfba25f5663e34c",
+        "decode_h16_q1_t0_independent_rotating-upstream.json": "9b5db72ef89c777927b0886c6b86aef7d641a2769bc3e49f60cbb80837c17a2c",
+        "decode_h16_q1_t0_independent_warm-direct.json": "6846657ac859a0f529b6b794d5ce9d865f3f57a7f42b922897e50ab5cb077d9b",
+        "decode_h16_q1_t0_independent_warm-upstream.json": "609787e158ea9222cb7b45d7649a0f65a87b284f598fc2e150bb578702454df5",
+        "decode_h16_q32_t0_independent_rotating-direct.json": "e8f5e25c927d4706d9242e7df853936d02f26ea02b36f311eab9b215c2575a84",
+        "decode_h16_q32_t0_independent_rotating-upstream.json": "8c64c2e5641bb8d80eaaa4e31e71ea3f30c9c11fe6919e96d943c72b88ff6148",
+        "decode_h16_q32_t0_independent_warm-direct.json": "446bd4cc310470a72252e9aaad84136d43f79408a9bc2514ca870119535cd9fb",
+        "decode_h16_q32_t0_independent_warm-upstream.json": "ee95ce8174ac78a645fb0979c2de1f1cefc0622d7ed4bd521d419f484f7d5181",
+        "decode_h16_q64_t0_independent_rotating-direct.json": "8942a50c4d9f20587247d92f6d47ca14851984b306e01b4389d5ae6220eb5f52",
+        "decode_h16_q64_t0_independent_rotating-upstream.json": "a31cd765624334f54ae777b828a7bdfe185918a73b32e919e96cde9a2a5a9c08",
+        "decode_h16_q64_t0_independent_warm-direct.json": "2550ed94eedefc62827653c9ee71292076fd6ab2c429a9a4a4741861833b1714",
+        "decode_h16_q64_t0_independent_warm-upstream.json": "fdf437143be8eedcbdaed00272fe29daf8155c153bff71e2ff4fd9556e68964f",
+        "decode_h16_q8_t0_independent_rotating-direct.json": "5d28eaf716fd469e6648b6bfc3479dfe01dae79215b489104a3d675567aa5076",
+        "decode_h16_q8_t0_independent_rotating-upstream.json": "3818ee303a18f5cfa781cb82c63a7da9d59b665e80e5f95a4f83f06b870442d5",
+        "decode_h16_q8_t0_independent_warm-direct.json": "da00b98f63a4fb6af218653bcc6193d4f7204ebffa33b0eb0a5f4802ca477f66",
+        "decode_h16_q8_t0_independent_warm-upstream.json": "5bcea356466b530201d4c7538c0bd01b936c8393d922c16a1baeea2166d18406"
+      },
+      "cases": [
+        {
+          "name": "decode_h16_q1_t0_independent_warm",
+          "banks": 1,
+          "upstream_stage_us": [
+            1.024,
+            5.408,
+            13.184
+          ],
+          "direct_stage_us": [
+            1.056,
+            5.313,
+            13.152
+          ]
+        },
+        {
+          "name": "decode_h16_q1_t0_independent_rotating",
+          "banks": 193,
+          "upstream_stage_us": [
+            1.0329689119170984,
+            5.874746113989637,
+            13.181709844559586
+          ],
+          "direct_stage_us": [
+            1.0327772020725388,
+            5.831331606217616,
+            13.110746113989636
+          ]
+        },
+        {
+          "name": "decode_h16_q8_t0_independent_warm",
+          "banks": 1,
+          "upstream_stage_us": [
+            1.152,
+            12.032,
+            8.736
+          ],
+          "direct_stage_us": [
+            1.12,
+            13.344,
+            8.8
+          ]
+        },
+        {
+          "name": "decode_h16_q8_t0_independent_rotating",
+          "banks": 25,
+          "upstream_stage_us": [
+            1.1328,
+            13.12552,
+            8.43664
+          ],
+          "direct_stage_us": [
+            1.13536,
+            14.13008,
+            8.45068
+          ]
+        },
+        {
+          "name": "decode_h16_q32_t0_independent_warm",
+          "banks": 1,
+          "upstream_stage_us": [
+            1.664,
+            48.704,
+            12.32
+          ],
+          "direct_stage_us": [
+            1.696,
+            49.474,
+            10.4
+          ]
+        },
+        {
+          "name": "decode_h16_q32_t0_independent_rotating",
+          "banks": 7,
+          "upstream_stage_us": [
+            1.7465714285714284,
+            49.089,
+            11.806857142857142
+          ],
+          "direct_stage_us": [
+            1.7234285714285715,
+            50.05171428571428,
+            10.500285714285713
+          ]
+        },
+        {
+          "name": "decode_h16_q64_t0_independent_warm",
+          "banks": 1,
+          "upstream_stage_us": [
+            1.92,
+            95.311,
+            19.363
+          ],
+          "direct_stage_us": [
+            2.029,
+            97.61,
+            19.75
+          ]
+        },
+        {
+          "name": "decode_h16_q64_t0_independent_rotating",
+          "banks": 4,
+          "upstream_stage_us": [
+            2.1675,
+            95.188,
+            19.53325
+          ],
+          "direct_stage_us": [
+            2.248,
+            97.65925,
+            19.81475
+          ]
+        }
+      ],
+      "stage_order": [
+        "query_conversion",
+        "partial_attention",
+        "combine"
+      ]
+    },
+    "final_billing": {
+      "account": "winstoncai",
+      "start": {
+        "ephemeral_apps": "9.89048549",
+        "volumes": "23.48250850",
+        "network_egress": "0.56732125",
+        "llm_tokens": "0E-8"
+      },
+      "end": {
+        "volumes": "23.48250850",
+        "ephemeral_apps": "11.62217678",
+        "network_egress": "0.56734080",
+        "llm_tokens": "0E-8"
+      },
+      "deltas_usd": {
+        "ephemeral_apps": "1.73169129",
+        "volumes": "0E-8",
+        "network_egress": "0.00001955",
+        "llm_tokens": "0E-8"
+      },
+      "active_containers": []
+    },
+    "decision": "Keep the benchmarked H200 Packed Direct candidate in the experiment branch. Serving dispatch has not been switched to it.",
+    "verification": {
+      "pristine_native_source_and_cubins_identical_across_profiles": true,
+      "exact_historical_fixture_input_hashes_all_24_cases": true,
+      "all_24_valid_and_graph_replay": true,
+      "paired_rounds_per_case": 30,
+      "raw_csv_matches_json": true,
+      "recomputed_geometric_mean": 0.7665724032845003,
+      "timing_protocol": "remnant-glm-upstream-decode-v1",
+      "seed": 20261024,
+      "local_cpu_checks": [
+        {
+          "owner": "parent",
+          "command": "REMNANT_INTEGRATION=v0.5.22 python -m unittest scripts.modal.tests.GLMUpstreamDecodeTests",
+          "passed": 6
+        },
+        {
+          "owner": "sglang",
+          "command": "python -m pytest -q benchmark/remnant/test_microbench.py",
+          "passed": 141,
+          "gpu_skips": 105
+        }
+      ]
+    },
+    "tuned_candidate": {
+      "branch": "perf/glm53-flash/decode-splits",
+      "image": "im-GxvdtgbwKar2lKco4w1lAq",
+      "preparation": {
+        "argv": [
+          "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::prepare_kernels",
+          "--model-family",
+          "glm53"
+        ],
+        "image": "im-Ab04cxkKOaytftKqcRnJAs",
+        "account": "winstoncai",
+        "seconds": 816.4717378616333,
+        "returncode": 0
+      },
+      "preparation_app": "ap-hKxdBXAjNXBPQEmGmCjiAc",
+      "environment": {
+        "MODAL_PROFILE": "winstoncai",
+        "REMNANT_INTEGRATION": "v0.5.22",
+        "REMNANT_MODEL_FAMILY": "glm53",
+        "REMNANT_GLM_UPSTREAM_DECODE": "1",
+        "REMNANT_GLM_CPU_REBUILD_FROM": "im-Ab04cxkKOaytftKqcRnJAs",
+        "REMNANT_GLM_CPU_REBUILD_BASE_SGLANG": "dad47fcc193ae1ea7416e05b72048bd20297057a"
+      },
+      "source_identities": {
+        "parent": {
+          "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-decode-tuned",
+          "commit": "66aee8c308cc3ef7507b15f571b26293c55a0466"
+        },
+        "sglang": {
+          "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-decode-tuned/third_party/sglang-v0.5.22",
+          "expected_commit": "29fe520dd457df8599db60140b9624ae6d6b7ab3",
+          "commit": "29fe520dd457df8599db60140b9624ae6d6b7ab3",
+          "override": false,
+          "dirty": false,
+          "integration": "v0.5.22"
+        },
+        "flashmla/csrc/cutlass": {
+          "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-decode-tuned/third_party/flashmla-v0.5.22/csrc/cutlass",
+          "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "override": false,
+          "dirty": false
+        },
+        "flashmla": {
+          "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-decode-tuned/third_party/flashmla-v0.5.22",
+          "expected_commit": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208",
+          "commit": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208",
+          "override": false,
+          "dirty": false,
+          "integration": "v0.5.22"
+        }
+      },
+      "native_source": {
+        "commit": "baa9befa381511cd4d56f83980951e5a45fffc6d",
+        "files": {
+          "kernels/ops/attention/dsa/tilelang_kernel.py": "3d288dc04676b304e1a4d1a44703a8281762ebe789ca7cdd745b0c80fcac591e",
+          "kernels/ops/quantization/fp8_kernel.py": "f5b428f2cb51b7707b19dd7b55e9ef61818a5f99b1cb382cd5e811429dd46806",
+          "srt/utils/__init__.py": "d4c887ce6d68fb14d2f870c50dabc621da1c67a85823e8c8cf704392865963c8",
+          "srt/utils/common.py": "5423d1bb153e72852306934ab56ee0b3eccab8b3ec6395dc9da0fea79f7e74da"
+        },
+        "scope": "attention-module"
+      },
+      "native_partial_artifacts": [
+        {
+          "heads": 16,
+          "inner": 1,
+          "packed": false,
+          "block_i": 32,
+          "source_sha256": "caf1027ec208026543517ba0cb6e6f169d23d1bf80be96acd7f09ba5a1129ba0",
+          "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/ce657c5690870c2852b5bf8e285bae10c9da635ea7ddac01a17ee9e3609f9aa0.cubin",
+          "cubin_sha256": "6690221fe2890510e2b68bd5e0176834d0207a7c9ebec6023387168e3dca3ec9",
+          "symbol": "main_kernel",
+          "parameters": [
+            {
+              "name": "indices",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "kv_fp8",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "partial_lse",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "partial_o",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "q_fp8",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "num_pages",
+              "pointer": false,
+              "type": "int"
+            },
+            {
+              "name": "seq_len",
+              "pointer": false,
+              "type": "int"
+            }
+          ],
+          "dynamic_shared": 25216
+        },
+        {
+          "heads": 16,
+          "inner": 2,
+          "packed": false,
+          "block_i": 32,
+          "source_sha256": "bb5206271296f7c1925cac6bb05c171915b4b46ef8be340054bab775f34892c0",
+          "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/257a1167cc9389cd2a80d4c9a74b6cc48dc6b9107f3a1231b4960c60549c054c.cubin",
+          "cubin_sha256": "e806efaffd6f9005ae067aadc3d98e121d75466d4879d94e9a90e2cf5de0b9bd",
+          "symbol": "main_kernel",
+          "parameters": [
+            {
+              "name": "indices",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "kv_fp8",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "partial_lse",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "partial_o",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "q_fp8",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "num_pages",
+              "pointer": false,
+              "type": "int"
+            },
+            {
+              "name": "seq_len",
+              "pointer": false,
+              "type": "int"
+            }
+          ],
+          "dynamic_shared": 26240
+        }
+      ],
+      "packed_partial_artifacts": [
+        {
+          "heads": 16,
+          "inner": 1,
+          "packed": true,
+          "block_i": 32,
+          "source_sha256": "d49a9e34fe86c280c9ad09a1eab57ab6c40317968dc5f8d94bf673d494e545ad",
+          "libraries": {
+            "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/d9dbb2f6db340a3ac37c39297e780aec41e2909c3723f5f08ecadea0b8439cb9/executable.so": "bf96298be77f58a34bf0f7cff65c111184edbfd80414b092cbcc4c4f8e656ab5"
+          },
+          "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/324bff65af21336cdf8618f3c998bb6355d632410dbab7e11758af71df3904bb.cubin",
+          "cubin_sha256": "a5b5d44bf1623d11a1f047cd83a5322b37175d5a532755de053ad56fa5004369",
+          "symbol": "glm_packed_partial_kernel",
+          "parameters": [
+            {
+              "name": "bitmap",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "indices",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "kv_fp8",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "partial_lse",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "partial_o",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "q_fp8",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "num_pages",
+              "pointer": false,
+              "type": "int"
+            },
+            {
+              "name": "seq_len",
+              "pointer": false,
+              "type": "int"
+            }
+          ],
+          "dynamic_shared": 33408
+        },
+        {
+          "heads": 16,
+          "inner": 2,
+          "packed": true,
+          "block_i": 32,
+          "source_sha256": "0f79ce26e283149740750a82d58515b0f4952694918bbf764deeb7395fe5e7f1",
+          "libraries": {
+            "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6c396034336b0da2e8a4f5e62b5effd756ae62b548de1c314e82d149fd172631/executable.so": "edd0eb20f6ad7ba5b16c2f1603caca54775c436bc8122a07cb427c9097ff7b5a"
+          },
+          "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/d6249be4db91971b110330bdf41adc327714814447baacd4de7b201578efeed5.cubin",
+          "cubin_sha256": "ccf7f06d1bf9ef51b2b2473b802b8b9ae0386c2c95460944959f14d31dd1a7e8",
+          "symbol": "glm_packed_partial_kernel",
+          "parameters": [
+            {
+              "name": "bitmap",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "indices",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "kv_fp8",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "partial_lse",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "partial_o",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "q_fp8",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "num_pages",
+              "pointer": false,
+              "type": "int"
+            },
+            {
+              "name": "seq_len",
+              "pointer": false,
+              "type": "int"
+            }
+          ],
+          "dynamic_shared": 34944
+        },
+        {
+          "heads": 16,
+          "inner": 3,
+          "packed": true,
+          "block_i": 32,
+          "source_sha256": "fc89fa587ac63faaec1cd00abaef01236c48c6ee103a647d8518535c1acb4069",
+          "libraries": {
+            "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/1693b37e1233b2337be7ac581515a9e2bcf7ff16fe40e716a03402475fa8b848/executable.so": "c999d1a87c76f5cb3ec5f94f37c1d0e0905bad069ee5267677d49be854dd69e7"
+          },
+          "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/b9d23e9490fa201651998d048d835a4fbcdb5499736e19bf3c55c4a01ad638aa.cubin",
+          "cubin_sha256": "ae1f9235ef051d8e55425e49e494ff670a9448a0e6f219a59be1bd8e10664c50",
+          "symbol": "glm_packed_partial_kernel",
+          "parameters": [
+            {
+              "name": "bitmap",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "indices",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "kv_fp8",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "partial_lse",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "partial_o",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "q_fp8",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "num_pages",
+              "pointer": false,
+              "type": "int"
+            },
+            {
+              "name": "seq_len",
+              "pointer": false,
+              "type": "int"
+            }
+          ],
+          "dynamic_shared": 34944
+        },
+        {
+          "heads": 16,
+          "inner": 6,
+          "packed": true,
+          "block_i": 32,
+          "source_sha256": "18b2b30ce7149017ba13d6f39df7625cbecc51a9672bba9b8981a14525c4685d",
+          "libraries": {
+            "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/eef9b20379298e988465996294fe9ad0c903c6970977126d35fe9e9485fc95be/executable.so": "e2bb41c4b76d411d0cedf9b9a4c4ba7edab5e18876319b47f3af33fabc1c6aa8"
+          },
+          "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/22eea9c8be307873276c179805556dd85d6d88c53311ceb69caafd10be29af01.cubin",
+          "cubin_sha256": "ba6edde4962ab0c6ed80e1def01200a3ea36d86cbff50ecdb743fbc1763ce238",
+          "symbol": "glm_packed_partial_kernel",
+          "parameters": [
+            {
+              "name": "bitmap",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "indices",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "kv_fp8",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "partial_lse",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "partial_o",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "q_fp8",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "num_pages",
+              "pointer": false,
+              "type": "int"
+            },
+            {
+              "name": "seq_len",
+              "pointer": false,
+              "type": "int"
+            }
+          ],
+          "dynamic_shared": 34944
+        },
+        {
+          "heads": 16,
+          "inner": 11,
+          "packed": true,
+          "block_i": 32,
+          "source_sha256": "a2ce6a1e3c860e33635be0cc6cb73c6507b7d2a8dd640b9dd5b82fc367ef00dd",
+          "libraries": {
+            "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/b4df2da20b1bb9485edd0688d8f3771cd93eaf144a74d8da747e822fc3687954/executable.so": "c3b66b731e9f59c4920b40153c85ebd48da717143c8d1e9288219738bf615f9f"
+          },
+          "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/2b0de63760e62f355710008a565f1b7f22c82603153c9d0c88ae8aeef0696cfb.cubin",
+          "cubin_sha256": "b341591984de927585994ac20be9a2d96a1b68743c55e121f36193618a0047f8",
+          "symbol": "glm_packed_partial_kernel",
+          "parameters": [
+            {
+              "name": "bitmap",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "indices",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "kv_fp8",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "partial_lse",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "partial_o",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "q_fp8",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "num_pages",
+              "pointer": false,
+              "type": "int"
+            },
+            {
+              "name": "seq_len",
+              "pointer": false,
+              "type": "int"
+            }
+          ],
+          "dynamic_shared": 34944
+        }
+      ],
+      "packed_combine_artifacts": {
+        "66x128": {
+          "source_sha256": "5c4752e5a796fc6f9dea29fa7423e5a510ca4f1b8800bd97f2792e4b0b784f75",
+          "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/ce8b14371d347a8a5093e298869dd1799bd1894cff97823763feb95f71bd1a64.cubin",
+          "cubin_sha256": "9af4ac810edc0c4efbfeec67ea449b5a1c50d82647418823563ea28b1c1778e8",
+          "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6394437d7a1fcba2127353977b87ec93fa00a1222babbae17ddcf770370e6dc1/executable.so",
+          "library_sha256": "4932afd0959df6a91e79d88502310ed88db172bc3edecaccd91fcbd59eb4fef1"
+        },
+        "33x512": {
+          "source_sha256": "102f12c65184edbe69c8c90a998b0af9fe052f70ef25204908934569c7ecd45f",
+          "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/e5468edb7528f612786a20ff37f0edb061275852123b4040f87b8bdf70924bd5.cubin",
+          "cubin_sha256": "6e6d676288d5fa3feec1c9e3c062585264e3441e7fbd7747e8d2ab9f100c92e0",
+          "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/74d82897fbd8cc88784417736c44354bac468dbc7e2d61a53cdf3ee3e6fea615/executable.so",
+          "library_sha256": "7a78549fba39ac6c00bbf1dcb7cf98e3c5b52cd994d6367c07283f62db3c38b9"
+        },
+        "22x512": {
+          "source_sha256": "c14e4017fe12c41ff29bb4475176cd1163660c724e2457e7144db2e5889cc8c9",
+          "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/df4fa9948a9bf1c0c1e8bb5747d74eee4ce3f5eabb1447fe90dfdc4545e276a8.cubin",
+          "cubin_sha256": "9eb4522a9666f9fb854d15a04efb795ccbc765d4b2d30e104d2f05fe6cfb1ad9",
+          "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/8c5502c8cac05c633be103e4f3118ef5d3c003dd66825e8fb057c51377a96e4f/executable.so",
+          "library_sha256": "183e9b645b26f7d3c0866915b38e4d83ef3836a631abe3a2ff05120b2208dc2b"
+        },
+        "11x512": {
+          "source_sha256": "65bad8e27b0d3c2ef549b69e403be1a431d5004ba525c4ef42572696c1a82863",
+          "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/2a2e73c9610abbefa0550a13aba90c9d21e381af0b6b3143c0020696664e9694.cubin",
+          "cubin_sha256": "7565cbe1073043453962e4eaa69756e8ee6090c843cd55c1e88403e72be5d305",
+          "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/dffd18d597e579f805e68946e85c943d44b9d6b88573f03d47f37c97adc9bc16/executable.so",
+          "library_sha256": "d4763ca2b0ee33fbd9772c0b2760409cdbe000215ce1f93dfc6143d91c405efb"
+        },
+        "6x512": {
+          "source_sha256": "dd215fb415a888910091eaf6156f2a71db96b0b78ba3962a2bec62c8f6327b3e",
+          "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/df2e677c0b6fa3df1e2fb1adaeb679771b2de08cb564c48906319eef4c43a455.cubin",
+          "cubin_sha256": "8c9129435fec27bb379bb1064456edd6934675aefcdb338b726e0a65d5a83520",
+          "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/b9061282472f9e7bd38bbe50785151a961eb77c7b3dbe72a40a302cb41a0dddb/executable.so",
+          "library_sha256": "680944f83a872aa2b2fccf007cf223e113bcfa3d42c7381de81e4448219e4059"
+        }
+      },
+      "toolchain": {
+        "cuda": "13.0",
+        "nvcc": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:58:59_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0\n",
+        "torch": "2.14.1+cu130",
+        "triton": "3.8.0",
+        "tilelang": "0.1.12",
+        "cuda_python": "13.0.3",
+        "cuda_bindings": "13.0.3",
+        "sanitizer": {
+          "path": "/opt/remnant-sanitizer/usr/local/cuda-13.3/compute-sanitizer/compute-sanitizer",
+          "url": "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-sanitizer-13-3_13.3.75-1_amd64.deb",
+          "package_sha256": "ab5467d9473adfb528481d1b6166b9bc718ab668563a3466d0f2c5d8dd27aa4f",
+          "binary_sha256": "60daf5185095c69b515bf62a3d44004de9fcdf0a769e74d1950abc94af5fe1cd",
+          "version": "NVIDIA (R) Compute Sanitizer\nCopyright (c) 2020-2026 NVIDIA Corporation\nVersion 2026.2.1.0 (build 38334959) (public-release)\n"
+        }
+      }
+    },
+    "tuned_profile": {
+      "run_id": "glm53-decode-tuned-profile-20261110",
+      "app_id": "ap-OI1V5BTdhAfLOm2JoQYdtg",
+      "status": "passed",
+      "volume": "winstoncai/remnant-stage2a-results/microbench/glm53-decode-tuned-profile-20261110",
+      "controller": {
+        "argv": [
+          "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::benchmark_kernels",
+          "--run-id",
+          "glm53-decode-tuned-profile-20261110",
+          "--model-family",
+          "glm53",
+          "--suite",
+          "glm-upstream-decode",
+          "--phase",
+          "decode",
+          "--profile-decode",
+          "--max-seconds",
+          "240"
+        ],
+        "run_id": "glm53-decode-tuned-profile-20261110",
+        "image": "im-GxvdtgbwKar2lKco4w1lAq",
+        "account": "winstoncai",
+        "seconds": 212.7964737089933,
+        "returncode": 0
+      },
+      "command": [
+        "/opt/sglang/bin/python",
+        "/sgl-workspace/sglang-remnant/benchmark/remnant/microbench.py",
+        "--model-family",
+        "glm53",
+        "--suite",
+        "glm-upstream-decode",
+        "--phase",
+        "decode",
+        "--packed-prefill-tile",
+        "32",
+        "--output",
+        "/results/microbench/glm53-decode-tuned-profile-20261110/decode-profile/profile",
+        "--max-seconds",
+        "208",
+        "--profile-decode"
+      ],
+      "gpu_function_seconds": 54.033458134,
+      "artifacts": {
+        "profile.json": "317ce0bf92499dab5f4db25a663653edd20d4725efde3c7131d353017b9a45ba",
+        "result.json": "5527db998b9e5cee7eb0a59aa7b859dc8e6cc4e42b904592967747321ba55811",
+        "build-manifest.json": "249749e740d2bdda3db252cf768480799eebc4687538c07c4866650cf342a5af",
+        "profile.log": "58f77b4b57f723270d252cea7f43221c4ce49e940cd416c082be434841f57281"
+      },
+      "cases": [
+        {
+          "name": "decode_h16_q1_t0_independent_warm",
+          "fixture_sha256": "701cb8f67b0f8f5ea7eee9c56020db5e7896b776517957edab7bd5e3ceea6593",
+          "banks": 1,
+          "paths": {
+            "upstream": {
+              "trace": "profile.traces/decode_h16_q1_t0_independent_warm-upstream.json",
+              "stages": {
+                "query_conversion": {
+                  "symbol": "void at::native::vectorized_elementwise_kernel<8, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>, false>(int, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>)",
+                  "us_per_call": 0.96
+                },
+                "partial_attention": {
+                  "symbol": "main_kernel",
+                  "us_per_call": 5.236
+                },
+                "combine": {
+                  "symbol": "main_kernel",
+                  "us_per_call": 12.952
+                }
+              },
+              "trace_sha256": "3b2be1a08a1ee682f7b5c13ace748d47875d79a188b13e05af8bb68f5874e977"
+            },
+            "direct": {
+              "trace": "profile.traces/decode_h16_q1_t0_independent_warm-direct.json",
+              "stages": {
+                "query_conversion": {
+                  "symbol": "void at::native::vectorized_elementwise_kernel<8, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>, false>(int, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>)",
+                  "us_per_call": 1.088
+                },
+                "partial_attention": {
+                  "symbol": "glm_packed_partial_kernel",
+                  "us_per_call": 5.666
+                },
+                "combine": {
+                  "symbol": "glm_packed_decode_combine_kernel",
+                  "us_per_call": 2.113
+                }
+              },
+              "trace_sha256": "b46c6f41b98607c1d862d3f443a82a0ced655d4ed787dbaf3f0e47ae06fbbac5"
+            }
+          }
+        },
+        {
+          "name": "decode_h16_q1_t0_independent_rotating",
+          "fixture_sha256": "8e7d6210911dbfa3139e71eb1fae267654932b766292952622d2fd1f977b3b82",
+          "banks": 193,
+          "paths": {
+            "upstream": {
+              "trace": "profile.traces/decode_h16_q1_t0_independent_rotating-upstream.json",
+              "stages": {
+                "query_conversion": {
+                  "symbol": "void at::native::vectorized_elementwise_kernel<8, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>, false>(int, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>)",
+                  "us_per_call": 1.1013108808290155
+                },
+                "partial_attention": {
+                  "symbol": "main_kernel",
+                  "us_per_call": 6.2359896373057
+                },
+                "combine": {
+                  "symbol": "main_kernel",
+                  "us_per_call": 13.90158031088083
+                }
+              },
+              "trace_sha256": "a5bf4179d35804de9d8a4fa9f4a836dfe6bbe1ec30637ffea82f1cfc37f55728"
+            },
+            "direct": {
+              "trace": "profile.traces/decode_h16_q1_t0_independent_rotating-direct.json",
+              "stages": {
+                "query_conversion": {
+                  "symbol": "void at::native::vectorized_elementwise_kernel<8, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>, false>(int, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>)",
+                  "us_per_call": 1.0264248704663212
+                },
+                "partial_attention": {
+                  "symbol": "glm_packed_partial_kernel",
+                  "us_per_call": 5.909875647668394
+                },
+                "combine": {
+                  "symbol": "glm_packed_decode_combine_kernel",
+                  "us_per_call": 1.9169481865284974
+                }
+              },
+              "trace_sha256": "167edcd2d7106820c3bb5b9b741fe90c125032b49c4ce0b4cfb846027faff729"
+            }
+          }
+        },
+        {
+          "name": "decode_h16_q8_t0_independent_warm",
+          "fixture_sha256": "a306d9c66c9161e387a4eb6141eb9cab3ffad325190c0ceced4366656ab0d9d1",
+          "banks": 1,
+          "paths": {
+            "upstream": {
+              "trace": "profile.traces/decode_h16_q8_t0_independent_warm-upstream.json",
+              "stages": {
+                "query_conversion": {
+                  "symbol": "void at::native::vectorized_elementwise_kernel<8, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>, false>(int, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>)",
+                  "us_per_call": 1.12
+                },
+                "partial_attention": {
+                  "symbol": "main_kernel",
+                  "us_per_call": 12.191
+                },
+                "combine": {
+                  "symbol": "main_kernel",
+                  "us_per_call": 9.087
+                }
+              },
+              "trace_sha256": "bcac52989ec4fd6e13cd6f44f924596d5289468af0f4aa80e062b5ae4ca33d1c"
+            },
+            "direct": {
+              "trace": "profile.traces/decode_h16_q8_t0_independent_warm-direct.json",
+              "stages": {
+                "query_conversion": {
+                  "symbol": "void at::native::vectorized_elementwise_kernel<8, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>, false>(int, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>)",
+                  "us_per_call": 1.152
+                },
+                "partial_attention": {
+                  "symbol": "glm_packed_partial_kernel",
+                  "us_per_call": 13.409
+                },
+                "combine": {
+                  "symbol": "glm_packed_decode_combine_kernel",
+                  "us_per_call": 4.033
+                }
+              },
+              "trace_sha256": "0f30484ad73dc0cb954f3c489b44a363c9d1db6ce2df08f668698a38743414ee"
+            }
+          }
+        },
+        {
+          "name": "decode_h16_q8_t0_independent_rotating",
+          "fixture_sha256": "8a37d174e52cbcbec756f53a03b0ec3e2967dcf2e4eb5f03ff66295c20e46f7d",
+          "banks": 25,
+          "paths": {
+            "upstream": {
+              "trace": "profile.traces/decode_h16_q8_t0_independent_rotating-upstream.json",
+              "stages": {
+                "query_conversion": {
+                  "symbol": "void at::native::vectorized_elementwise_kernel<8, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>, false>(int, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>)",
+                  "us_per_call": 1.10596
+                },
+                "partial_attention": {
+                  "symbol": "main_kernel",
+                  "us_per_call": 13.1224
+                },
+                "combine": {
+                  "symbol": "main_kernel",
+                  "us_per_call": 8.68924
+                }
+              },
+              "trace_sha256": "e3c26c4f353952ffa0794e2941035bc46b14f1746c83653d20ecb776728fd2b3"
+            },
+            "direct": {
+              "trace": "profile.traces/decode_h16_q8_t0_independent_rotating-direct.json",
+              "stages": {
+                "query_conversion": {
+                  "symbol": "void at::native::vectorized_elementwise_kernel<8, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>, false>(int, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>)",
+                  "us_per_call": 1.12
+                },
+                "partial_attention": {
+                  "symbol": "glm_packed_partial_kernel",
+                  "us_per_call": 13.998
+                },
+                "combine": {
+                  "symbol": "glm_packed_decode_combine_kernel",
+                  "us_per_call": 3.76416
+                }
+              },
+              "trace_sha256": "d66e01d7b5708f636a9cce40c1b0e1fbd302d863c5ae20f585db591ef40b3354"
+            }
+          }
+        },
+        {
+          "name": "decode_h16_q32_t0_independent_warm",
+          "fixture_sha256": "4dbf8d4abdb05cf647687adfb156f1ed4566c6ab7be07743c104a034822cf1ac",
+          "banks": 1,
+          "paths": {
+            "upstream": {
+              "trace": "profile.traces/decode_h16_q32_t0_independent_warm-upstream.json",
+              "stages": {
+                "query_conversion": {
+                  "symbol": "void at::native::vectorized_elementwise_kernel<8, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>, false>(int, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>)",
+                  "us_per_call": 1.76
+                },
+                "partial_attention": {
+                  "symbol": "main_kernel",
+                  "us_per_call": 48.895
+                },
+                "combine": {
+                  "symbol": "main_kernel",
+                  "us_per_call": 12.256
+                }
+              },
+              "trace_sha256": "736c9c9582be3078f734c917f5e249854db730bc835d4ffef15fa85bef30c911"
+            },
+            "direct": {
+              "trace": "profile.traces/decode_h16_q32_t0_independent_warm-direct.json",
+              "stages": {
+                "query_conversion": {
+                  "symbol": "void at::native::vectorized_elementwise_kernel<8, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>, false>(int, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>)",
+                  "us_per_call": 1.536
+                },
+                "partial_attention": {
+                  "symbol": "glm_packed_partial_kernel",
+                  "us_per_call": 50.173
+                },
+                "combine": {
+                  "symbol": "glm_packed_decode_combine_kernel",
+                  "us_per_call": 2.464
+                }
+              },
+              "trace_sha256": "9dca0305c1d9d393b7d8fdbf83a834fa82051f4d5a64abf5f64981bc6f3ad39a"
+            }
+          }
+        },
+        {
+          "name": "decode_h16_q32_t0_independent_rotating",
+          "fixture_sha256": "2c0e5c76a42f10dd830e5b7e76c1fefa85e0d403b7b80279e83ff15057652f24",
+          "banks": 7,
+          "paths": {
+            "upstream": {
+              "trace": "profile.traces/decode_h16_q32_t0_independent_rotating-upstream.json",
+              "stages": {
+                "query_conversion": {
+                  "symbol": "void at::native::vectorized_elementwise_kernel<8, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>, false>(int, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>)",
+                  "us_per_call": 1.7417142857142858
+                },
+                "partial_attention": {
+                  "symbol": "main_kernel",
+                  "us_per_call": 48.980000000000004
+                },
+                "combine": {
+                  "symbol": "main_kernel",
+                  "us_per_call": 11.822142857142856
+                }
+              },
+              "trace_sha256": "ec6bc362c7472cf31240b30b918aecb185d4d0370fcbd151652a01ae3c8c15e5"
+            },
+            "direct": {
+              "trace": "profile.traces/decode_h16_q32_t0_independent_rotating-direct.json",
+              "stages": {
+                "query_conversion": {
+                  "symbol": "void at::native::vectorized_elementwise_kernel<8, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>, false>(int, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>)",
+                  "us_per_call": 1.6011428571428572
+                },
+                "partial_attention": {
+                  "symbol": "glm_packed_partial_kernel",
+                  "us_per_call": 53.49771428571428
+                },
+                "combine": {
+                  "symbol": "glm_packed_decode_combine_kernel",
+                  "us_per_call": 2.2872857142857144
+                }
+              },
+              "trace_sha256": "8a8127ad2476f0a45947bb2572996ff84bff740aa2d396c2eaa0b4a039d9665b"
+            }
+          }
+        },
+        {
+          "name": "decode_h16_q64_t0_independent_warm",
+          "fixture_sha256": "97d47b391fd5342417e11581abe1feef14e5de8c8ff2cdc7ac43e8b5ea2eeec5",
+          "banks": 1,
+          "paths": {
+            "upstream": {
+              "trace": "profile.traces/decode_h16_q64_t0_independent_warm-upstream.json",
+              "stages": {
+                "query_conversion": {
+                  "symbol": "void at::native::vectorized_elementwise_kernel<8, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>, false>(int, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>)",
+                  "us_per_call": 2.049
+                },
+                "partial_attention": {
+                  "symbol": "main_kernel",
+                  "us_per_call": 94.465
+                },
+                "combine": {
+                  "symbol": "main_kernel",
+                  "us_per_call": 19.648
+                }
+              },
+              "trace_sha256": "dd8520e7132bf884bc2ec7e731bd0a4dc393635ab2f12b744065237fde7d4fda"
+            },
+            "direct": {
+              "trace": "profile.traces/decode_h16_q64_t0_independent_warm-direct.json",
+              "stages": {
+                "query_conversion": {
+                  "symbol": "void at::native::vectorized_elementwise_kernel<8, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>, false>(int, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>)",
+                  "us_per_call": 1.824
+                },
+                "partial_attention": {
+                  "symbol": "glm_packed_partial_kernel",
+                  "us_per_call": 93.02
+                },
+                "combine": {
+                  "symbol": "glm_packed_decode_combine_kernel",
+                  "us_per_call": 2.688
+                }
+              },
+              "trace_sha256": "dfc6eb291dd9ef35ca0ba048adec91c6e7f149a36cbc8fe320f7ec18e4174e43"
+            }
+          }
+        },
+        {
+          "name": "decode_h16_q64_t0_independent_rotating",
+          "fixture_sha256": "29aa19055b005f5f691c46e2b76181f03a21aa1b0a536e8b4ca551b890e23715",
+          "banks": 4,
+          "paths": {
+            "upstream": {
+              "trace": "profile.traces/decode_h16_q64_t0_independent_rotating-upstream.json",
+              "stages": {
+                "query_conversion": {
+                  "symbol": "void at::native::vectorized_elementwise_kernel<8, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>, false>(int, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>)",
+                  "us_per_call": 2.11225
+                },
+                "partial_attention": {
+                  "symbol": "main_kernel",
+                  "us_per_call": 96.01875
+                },
+                "combine": {
+                  "symbol": "main_kernel",
+                  "us_per_call": 19.784750000000003
+                }
+              },
+              "trace_sha256": "e74e7f6861b36eec5a6c66a824da34926ca51e084f0d78cd457f5cddf3479797"
+            },
+            "direct": {
+              "trace": "profile.traces/decode_h16_q64_t0_independent_rotating-direct.json",
+              "stages": {
+                "query_conversion": {
+                  "symbol": "void at::native::vectorized_elementwise_kernel<8, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>, false>(int, at::native::ConvertToFloat8E4M3fnOp<c10::BFloat16>, std::array<char*, 2ul>)",
+                  "us_per_call": 1.82375
+                },
+                "partial_attention": {
+                  "symbol": "glm_packed_partial_kernel",
+                  "us_per_call": 93.79375
+                },
+                "combine": {
+                  "symbol": "glm_packed_decode_combine_kernel",
+                  "us_per_call": 2.67225
+                }
+              },
+              "trace_sha256": "953fe18bc1bfee8d5dfddd4857de7a5554102303787f4568ce208fb8be5a43a7"
+            }
+          }
+        }
+      ]
+    },
+    "focused_qualification": {
+      "run_id": "glm53-decode-tuned-qualification-retry-20261110",
+      "app_id": "ap-OCpKsaSGyYm0hWC2kNV5LO",
+      "gpu": "H100",
+      "status": "passed",
+      "volume": "winstoncai/remnant-stage2a-results/microbench/glm53-decode-tuned-qualification-retry-20261110",
+      "controller": {
+        "argv": [
+          "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::validate_kernels",
+          "--run-id",
+          "glm53-decode-tuned-qualification-retry-20261110",
+          "--model-family",
+          "glm53",
+          "--stage",
+          "corrective",
+          "--cases",
+          "test/registered/attention/unittests/test_glm5_remnant.py::test_packed_loader_bytes,test/registered/attention/unittests/test_glm5_remnant.py::test_decode_bank_graph",
+          "--sanitizer",
+          "--sanitizer-scope",
+          "glm-decode",
+          "--max-seconds",
+          "900"
+        ],
+        "run_id": "glm53-decode-tuned-qualification-retry-20261110",
+        "image": "im-GxvdtgbwKar2lKco4w1lAq",
+        "account": "winstoncai",
+        "seconds": 792.811990000002,
+        "returncode": 0
+      },
+      "gpu_function_seconds": 679.699992993,
+      "scope_audit": "passed",
+      "artifacts": {
+        "result.json": "67fad5c91a58ed3ca4a4dedbb6b310aad46ba6ed293f543a28567d72061abe45",
+        "build-manifest.json": "249749e740d2bdda3db252cf768480799eebc4687538c07c4866650cf342a5af",
+        "scope-audit.log": "73180a15794db1d9ba8859ec7c27a97d5b9f89bcc1fe0d2d6404bcc3fac4d70b",
+        "scope-audit.xml": "7286c5bd35736ef46ec052f360ec000a972c1108cab1308e06beed5ded1621d5",
+        "corrective.log": "9fc639f39a6e578b5425975f5eace712366858dd939642f1909b2afd20c0ffc4",
+        "corrective.xml": "3dbea133a91cfb264145eeb158f463b12346eb8570ec7e173f5943af434436b8"
+      },
+      "sanitizer_results": {
+        "synccheck": {
+          "status": "passed",
+          "report_schema": "remnant-sanitizer-raw-v1",
+          "log_sha256": "d10b7dab6a8e6ba710b3e650d3f162fff470a6c3388bf56bb497fb9ca9618f28",
+          "xml_sha256": "bcc013ec99f486eed53d96e68c7321a9b36cbcf098d8e301b7845241f464fad4",
+          "cases": [
+            "test_packed_loader_bytes",
+            "test_decode_partial_graph[8-1]",
+            "test_decode_partial_graph[8-2]",
+            "test_decode_partial_graph[16-1]",
+            "test_decode_partial_graph[16-2]",
+            "test_decode_partial_graph[16-3]",
+            "test_decode_partial_graph[16-6]",
+            "test_decode_partial_graph[16-11]",
+            "test_packed_decode_combine_graph[66-128]",
+            "test_packed_decode_combine_graph[33-512]",
+            "test_packed_decode_combine_graph[22-512]",
+            "test_packed_decode_combine_graph[11-512]",
+            "test_packed_decode_combine_graph[6-512]"
+          ]
+        },
+        "racecheck": {
+          "status": "passed",
+          "report_schema": "remnant-sanitizer-raw-v1",
+          "log_sha256": "9ef88080faf8f079b553ff20c38b1f69858d707a21c3c04a2c129c41e7e74fcc",
+          "xml_sha256": "91df6f2aa05d4481cadbb4e669b60131bd8ea893f23208f4ec6bb3ec3fe238d2",
+          "cases": [
+            "test_packed_loader_bytes",
+            "test_decode_partial_graph[8-1]",
+            "test_decode_partial_graph[8-2]",
+            "test_decode_partial_graph[16-1]",
+            "test_decode_partial_graph[16-2]",
+            "test_decode_partial_graph[16-3]",
+            "test_decode_partial_graph[16-6]",
+            "test_decode_partial_graph[16-11]",
+            "test_packed_decode_combine_graph[66-128]",
+            "test_packed_decode_combine_graph[33-512]",
+            "test_packed_decode_combine_graph[22-512]",
+            "test_packed_decode_combine_graph[11-512]",
+            "test_packed_decode_combine_graph[6-512]"
+          ]
+        },
+        "memcheck": {
+          "status": "passed",
+          "report_schema": "remnant-sanitizer-raw-v1",
+          "log_sha256": "d822630de12d4efaa20b460ec2d0adbe9f5dec4c5b37395385c396883a7a71d3",
+          "xml_sha256": "12f0c35062fae2424c263e551d0bad6df018c5532e37e2fb3dcb1910bb937254",
+          "cases": [
+            "test_packed_loader_bytes",
+            "test_decode_partial_graph[8-1]",
+            "test_decode_partial_graph[8-2]",
+            "test_decode_partial_graph[16-1]",
+            "test_decode_partial_graph[16-2]",
+            "test_decode_partial_graph[16-3]",
+            "test_decode_partial_graph[16-6]",
+            "test_decode_partial_graph[16-11]",
+            "test_packed_decode_combine_graph[66-128]",
+            "test_packed_decode_combine_graph[33-512]",
+            "test_packed_decode_combine_graph[22-512]",
+            "test_packed_decode_combine_graph[11-512]",
+            "test_packed_decode_combine_graph[6-512]"
+          ]
+        }
+      }
+    },
+    "acceptance": {
+      "run_id": "glm53-decode-tuned-acceptance-20261110",
+      "app_id": "ap-oDVjJje67ciI7AXVgovOtY",
+      "status": "passed",
+      "gpu": "H200",
+      "local_heads": 16,
+      "profiled": false,
+      "volume": "winstoncai/remnant-stage2a-results/microbench/glm53-decode-tuned-acceptance-20261110",
+      "launch_argv": [
+        "modal",
+        "run",
+        "scripts/modal/kernels.py::benchmark_kernels",
+        "--run-id",
+        "glm53-decode-tuned-acceptance-20261110",
+        "--model-family",
+        "glm53",
+        "--suite",
+        "glm-upstream-decode",
+        "--phase",
+        "decode",
+        "--qualification-runs",
+        "glm53-decode-tuned-qualification-retry-20261110",
+        "--max-seconds",
+        "300"
+      ],
+      "command": [
+        "/opt/sglang/bin/python",
+        "/sgl-workspace/sglang-remnant/benchmark/remnant/microbench.py",
+        "--model-family",
+        "glm53",
+        "--suite",
+        "glm-upstream-decode",
+        "--phase",
+        "decode",
+        "--packed-prefill-tile",
+        "32",
+        "--output",
+        "/results/microbench/glm53-decode-tuned-acceptance-20261110/timing/timing",
+        "--max-seconds",
+        "267"
+      ],
+      "gpu_function_seconds": 84.292520204,
+      "cpu_preflight_seconds": 4.775736195000004,
+      "qualification_run": "glm53-decode-tuned-qualification-retry-20261110",
+      "score": {
+        "geometric_mean_direct_over_upstream": 0.7665724032845003,
+        "speedup": 1.3045082182913739,
+        "meets_target": true
+      },
+      "batch_weighted_overhead_percent": -15.799027071521422,
+      "regressions": [],
+      "artifacts": {
+        "timing.json": "18a85116f881c8e330834bd19676f60b553dba83a8e09be1cd3d839662742a91",
+        "timing.csv": "79affcd868444019912f6f5ef4d56fbaf848e075cfafc5777e82363093825c78",
+        "result.json": "b01506d4e2f941e6f60dfec67a15fba7996b5b53e5344046dc0ebb9b4a92a861",
+        "build-manifest.json": "249749e740d2bdda3db252cf768480799eebc4687538c07c4866650cf342a5af",
+        "timing.log": "eaf7a5f3d419fcad6f002e4fa0e4e0a0dcdd685527f92645e02c6e0c0a6e4001"
+      },
+      "cases": [
+        {
+          "name": "decode_h16_q1_t0_independent_warm",
+          "native_us": 20.387893517812092,
+          "direct_us": 9.990399996439615,
+          "mean_paired_ratio": 0.4900163034153568,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "701cb8f67b0f8f5ea7eee9c56020db5e7896b776517957edab7bd5e3ceea6593",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 1,
+              "partial_groups": 66
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 1,
+              "partial_groups": 66
+            }
+          },
+          "direct_combine_columns": 128,
+          "banks": 1,
+          "calls_per_sample": 100,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q1_t0_independent_rotating",
+          "native_us": 19.937967554069346,
+          "direct_us": 8.829186885056307,
+          "mean_paired_ratio": 0.44283288966593004,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "8e7d6210911dbfa3139e71eb1fae267654932b766292952622d2fd1f977b3b82",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 1,
+              "partial_groups": 66
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 1,
+              "partial_groups": 66
+            }
+          },
+          "direct_combine_columns": 128,
+          "banks": 193,
+          "calls_per_sample": 193,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q1_t3_independent_warm",
+          "native_us": 20.352362712224323,
+          "direct_us": 9.958357354005178,
+          "mean_paired_ratio": 0.48929740144796047,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "e66f4d233c9991f8e2efb577a639d53c260b745643bc30fcb81ca3a55ef397f2",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 1,
+              "partial_groups": 66
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 1,
+              "partial_groups": 66
+            }
+          },
+          "direct_combine_columns": 128,
+          "banks": 1,
+          "calls_per_sample": 100,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q1_t3_independent_rotating",
+          "native_us": 19.90443886154228,
+          "direct_us": 8.815522264275288,
+          "mean_paired_ratio": 0.4428922898100885,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "24e5ca01dd0e779b66d41dabdda0d716530276592ce9fc43fc9bd5cfcea11ccd",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 1,
+              "partial_groups": 66
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 1,
+              "partial_groups": 66
+            }
+          },
+          "direct_combine_columns": 128,
+          "banks": 192,
+          "calls_per_sample": 192,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q8_t0_independent_warm",
+          "native_us": 22.96756283442179,
+          "direct_us": 19.7217280069987,
+          "mean_paired_ratio": 0.858677645904434,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "a306d9c66c9161e387a4eb6141eb9cab3ffad325190c0ceced4366656ab0d9d1",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            }
+          },
+          "direct_combine_columns": 512,
+          "banks": 1,
+          "calls_per_sample": 100,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q8_t0_independent_rotating",
+          "native_us": 22.73359990119934,
+          "direct_us": 18.763455947240196,
+          "mean_paired_ratio": 0.8253624914385514,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "8a37d174e52cbcbec756f53a03b0ec3e2967dcf2e4eb5f03ff66295c20e46f7d",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            }
+          },
+          "direct_combine_columns": 512,
+          "banks": 25,
+          "calls_per_sample": 100,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q8_t3_independent_warm",
+          "native_us": 22.91802676518758,
+          "direct_us": 19.497973442077637,
+          "mean_paired_ratio": 0.8507704091652211,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "a8b49f59486dd4079ba15fe514ab17a05e8ceac3db3e8c86c41a89930f81bd1b",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            }
+          },
+          "direct_combine_columns": 512,
+          "banks": 1,
+          "calls_per_sample": 100,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q8_t3_independent_rotating",
+          "native_us": 22.76173339949714,
+          "direct_us": 18.920346829626297,
+          "mean_paired_ratio": 0.8312349273412495,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "870adaf99fa19cb97fee692419e6ef6d8b409e6413aba1fe8e90b66d645e91ff",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            }
+          },
+          "direct_combine_columns": 512,
+          "banks": 24,
+          "calls_per_sample": 120,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q16_t0_independent_warm",
+          "native_us": 34.82612260182699,
+          "direct_us": 33.25514658292134,
+          "mean_paired_ratio": 0.9548915468596086,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "b03cc384b50e7d942a0c9ed9f521991a3714daf27f163f4ebd2d55374de42da1",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 3,
+              "partial_groups": 22
+            }
+          },
+          "direct_combine_columns": 512,
+          "banks": 1,
+          "calls_per_sample": 100,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q16_t0_independent_rotating",
+          "native_us": 35.71054347050496,
+          "direct_us": 34.549507727989784,
+          "mean_paired_ratio": 0.9674878945614047,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "b133cbdc9c5099dead9759faad9ece099cf0e7a6121c9554f8bb15d3134b0cde",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 3,
+              "partial_groups": 22
+            }
+          },
+          "direct_combine_columns": 512,
+          "banks": 13,
+          "calls_per_sample": 104,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q16_t3_independent_warm",
+          "native_us": 34.887818574905396,
+          "direct_us": 33.27820793787639,
+          "mean_paired_ratio": 0.9538640604007637,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "15365a88e339d30acdc01f000be059845a68ead590e12e8c9e5d65eb3ead8a7f",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 3,
+              "partial_groups": 22
+            }
+          },
+          "direct_combine_columns": 512,
+          "banks": 1,
+          "calls_per_sample": 100,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q16_t3_independent_rotating",
+          "native_us": 35.706577845561654,
+          "direct_us": 34.59509132820883,
+          "mean_paired_ratio": 0.9688722855436165,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "50255ac712f14a02893c135dea0257c48a23387f856701fbcd5e4badeff2f717",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 3,
+              "partial_groups": 22
+            }
+          },
+          "direct_combine_columns": 512,
+          "banks": 12,
+          "calls_per_sample": 108,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q24_t0_independent_warm",
+          "native_us": 49.19406954447429,
+          "direct_us": 35.25048542022705,
+          "mean_paired_ratio": 0.7165601893256102,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "847a8e0cc30694b1c1d24ee3aadbde4246ff2456726381a659960442c46c71ad",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 6,
+              "partial_groups": 11
+            }
+          },
+          "direct_combine_columns": 512,
+          "banks": 1,
+          "calls_per_sample": 100,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q24_t0_independent_rotating",
+          "native_us": 48.578044367425235,
+          "direct_us": 35.725293998365046,
+          "mean_paired_ratio": 0.7354208515012359,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "520bae18231515ce4ccacbc1af01e91725e25bb54e63b96288459e25702e626e",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 6,
+              "partial_groups": 11
+            }
+          },
+          "direct_combine_columns": 512,
+          "banks": 9,
+          "calls_per_sample": 108,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q24_t3_independent_warm",
+          "native_us": 49.391093254089355,
+          "direct_us": 35.08129072189331,
+          "mean_paired_ratio": 0.7102758279168794,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "b485476cd93e190f2358de66cba040ab136eee9af33849a02bd30a9635791419",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 6,
+              "partial_groups": 11
+            }
+          },
+          "direct_combine_columns": 512,
+          "banks": 1,
+          "calls_per_sample": 100,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q24_t3_independent_rotating",
+          "native_us": 48.60433844419626,
+          "direct_us": 35.755507762615494,
+          "mean_paired_ratio": 0.735644506793406,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "12e164ee2632f47fd0060bc5aa001570a47f84eca3059ad367e2af4e855027f0",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 6,
+              "partial_groups": 11
+            }
+          },
+          "direct_combine_columns": 512,
+          "banks": 8,
+          "calls_per_sample": 104,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q32_t0_independent_warm",
+          "native_us": 64.12882137298584,
+          "direct_us": 54.52405325571696,
+          "mean_paired_ratio": 0.8502270199448902,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "4dbf8d4abdb05cf647687adfb156f1ed4566c6ab7be07743c104a034822cf1ac",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 6,
+              "partial_groups": 11
+            }
+          },
+          "direct_combine_columns": 512,
+          "banks": 1,
+          "calls_per_sample": 100,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q32_t0_independent_rotating",
+          "native_us": 62.3494499448746,
+          "direct_us": 57.317750113351,
+          "mean_paired_ratio": 0.9192986420553159,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "2c0e5c76a42f10dd830e5b7e76c1fefa85e0d403b7b80279e83ff15057652f24",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 6,
+              "partial_groups": 11
+            }
+          },
+          "direct_combine_columns": 512,
+          "banks": 7,
+          "calls_per_sample": 105,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q32_t3_independent_warm",
+          "native_us": 64.0932370821635,
+          "direct_us": 54.70455455780029,
+          "mean_paired_ratio": 0.8535154438308499,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "98cf6bf4fa52c8aa31ed9cae4a6ad0db0f1a6fa28fd174e4c2b411d32a06826c",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 6,
+              "partial_groups": 11
+            }
+          },
+          "direct_combine_columns": 512,
+          "banks": 1,
+          "calls_per_sample": 100,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q32_t3_independent_rotating",
+          "native_us": 62.38174126818289,
+          "direct_us": 57.37103262757944,
+          "mean_paired_ratio": 0.9196768837086274,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "fe79829b62b5a126009bc1cc6f6f74d66c521099325a7e38983fe4eeb22c6035",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 6,
+              "partial_groups": 11
+            }
+          },
+          "direct_combine_columns": 512,
+          "banks": 6,
+          "calls_per_sample": 102,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q64_t0_independent_warm",
+          "native_us": 117.87590344746908,
+          "direct_us": 98.78056557973227,
+          "mean_paired_ratio": 0.8380048349924041,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "97d47b391fd5342417e11581abe1feef14e5de8c8ff2cdc7ac43e8b5ea2eeec5",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 11,
+              "partial_groups": 6
+            }
+          },
+          "direct_combine_columns": 512,
+          "banks": 1,
+          "calls_per_sample": 100,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q64_t0_independent_rotating",
+          "native_us": 116.35898653666179,
+          "direct_us": 98.03866672515869,
+          "mean_paired_ratio": 0.8425534957379585,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "29aa19055b005f5f691c46e2b76181f03a21aa1b0a536e8b4ca551b890e23715",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 11,
+              "partial_groups": 6
+            }
+          },
+          "direct_combine_columns": 512,
+          "banks": 4,
+          "calls_per_sample": 100,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q64_t3_independent_warm",
+          "native_us": 117.86529127756755,
+          "direct_us": 98.85081672668457,
+          "mean_paired_ratio": 0.8386763176256462,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "3fa832e88430133d4bb2cd8fc65843729b31f4d8a1a2284b2485900c2405aa5d",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 11,
+              "partial_groups": 6
+            }
+          },
+          "direct_combine_columns": 512,
+          "banks": 1,
+          "calls_per_sample": 100,
+          "changing_input_replay": "passed"
+        },
+        {
+          "name": "decode_h16_q64_t3_independent_rotating",
+          "native_us": 116.60230175342436,
+          "direct_us": 98.20603358200174,
+          "mean_paired_ratio": 0.842230649050764,
+          "valid": true,
+          "paired_rounds": 30,
+          "common_inputs_sha256": "949908ff2ea8abdfff7f79d5edf0954f8a472be7be65cf4ba53864541ba88510",
+          "path_geometry": {
+            "upstream": {
+              "tile_rows": 32,
+              "inner_iter": 2,
+              "partial_groups": 33
+            },
+            "direct": {
+              "tile_rows": 32,
+              "inner_iter": 11,
+              "partial_groups": 6
+            }
+          },
+          "direct_combine_columns": 512,
+          "banks": 3,
+          "calls_per_sample": 102,
+          "changing_input_replay": "passed"
+        }
+      ]
+    },
+    "local_failures": [
+      {
+        "run_id": "glm53-decode-tuned-qualification-20261110",
+        "stage": "CLI preparation",
+        "gpu_allocated": false,
+        "failure": "Local filesystem rejected temporary file creation",
+        "log_sha256": "607c6c589c7ff3a332539e489ce6c9348224d93108b218389399bfb307aaf2e4",
+        "controller": {
+          "argv": [
+            "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+            "run",
+            "scripts/modal/kernels.py::validate_kernels",
+            "--run-id",
+            "glm53-decode-tuned-qualification-20261110",
+            "--model-family",
+            "glm53",
+            "--stage",
+            "corrective",
+            "--cases",
+            "test/registered/attention/unittests/test_glm5_remnant.py::test_packed_loader_bytes,test/registered/attention/unittests/test_glm5_remnant.py::test_decode_bank_graph",
+            "--sanitizer",
+            "--sanitizer-scope",
+            "glm-decode",
+            "--max-seconds",
+            "900"
+          ],
+          "run_id": "glm53-decode-tuned-qualification-20261110",
+          "image": "im-GxvdtgbwKar2lKco4w1lAq",
+          "account": "winstoncai",
+          "seconds": 5.86406204199011,
+          "returncode": 1
+        },
+        "resolution": "Retried under a dedicated writable temporary directory after confirming no worker."
+      },
+      {
+        "run_id": "glm53-decode-tuned-acceptance-20261110",
+        "stage": "local controller summary",
+        "failure": "Local filesystem rejected the controller JSON write after the Modal function returned.",
+        "resolution": "Verified terminal Modal app, empty allocation list, and qualified remote timing JSON, CSV and manifest."
+      }
+    ]
   }
 }

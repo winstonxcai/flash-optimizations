@@ -13,7 +13,92 @@ separate CUDA trace of batches 1, 8, 32 and 64 with zero tails under both cache
 policies. It exports per-mode graph kernel durations and the raw traces. Use
 those traces to decide which stage to optimize. Run without this flag for
 acceptance. The timing output reports the equal-case score alongside the
-existing batch-weighted statistic. No new measurements have been collected.
+existing batch-weighted statistic.
+
+### Baseline trace on H200
+
+| Batch | Cache | Native Q / partial / combine (µs) | Direct Q / partial / combine (µs) |
+|---:|---|---:|---:|
+| 1 | warm | 1.02 / 5.41 / 13.18 | 1.06 / 5.31 / 13.15 |
+| 1 | rotating | 1.03 / 5.87 / 13.18 | 1.03 / 5.83 / 13.11 |
+| 8 | warm | 1.15 / 12.03 / 8.74 | 1.12 / 13.34 / 8.80 |
+| 8 | rotating | 1.13 / 13.13 / 8.44 | 1.14 / 14.13 / 8.45 |
+| 32 | warm | 1.66 / 48.70 / 12.32 | 1.70 / 49.47 / 10.40 |
+| 32 | rotating | 1.75 / 49.09 / 11.81 | 1.72 / 50.05 / 10.50 |
+| 64 | warm | 1.92 / 95.31 / 19.36 | 2.03 / 97.61 / 19.75 |
+| 64 | rotating | 2.17 / 95.19 / 19.53 | 2.25 / 97.66 / 19.81 |
+
+At batch 1, combine accounts for about two thirds of traced Direct kernel
+time. At batch 64, partial attention accounts for about four fifths. Test
+parallel combine at low batch and fewer splits at higher batches. These
+diagnostic kernel durations come from one graph replay per mode and case.
+The profile manifest, trace hashes and exact command are in the qualification
+ledger.
+
+### Tuned H200 decode result
+
+Packed Direct achieved **1.3045× geometric-mean speedup** over untouched
+upstream FP8 TileLang. The equal-case paired ratio is **0.76657**, a **23.34%**
+latency reduction. All 24 case means favor Direct. Ratios range from 0.44283
+to 0.96887. Batch 1 gains the most, while batch 16 rotating gains the least.
+
+The tuned kernel distributes combine work over heads and output columns and
+reduces the number of partials at higher batches. The tuned diagnostic put
+batch 1 Direct combine at 1.92–2.11 µs, down from 13.11–13.15 µs in the baseline
+Direct trace. At batch 64, the tuned split policy emits six partials per query
+instead of 33, and the Direct combine trace fell from 19.75–19.82 µs to
+2.67–2.69 µs. Those traces are separate from the acceptance measurements below.
+
+The acceptance run `glm53-decode-tuned-acceptance-20261110` measured complete
+attention calls on one H200 with 16 local heads. It used fresh Native samples,
+30 balanced paired CUDA-graph rounds per case, and the same input hashes and
+bank counts as the historical matrix. All fixtures passed exact Packed-code
+and independent numerical checks at `atol=rtol=0.02` and changing-input graph
+replay. H100 memcheck, racecheck and synccheck each passed 13 focused cases,
+covering the byte loader, seven partial variants and five combine variants.
+
+Measured parent `66aee8c308cc`, SGLang `29fe520dd457`, FlashMLA `858bb1ccac6f`,
+CPU-prepared image `im-GxvdtgbwKar2lKco4w1lAq`. The pristine module is from
+`baa9befa381511cd4d56f83980951e5a45fffc6d`, with identical Native source and
+cubins across both profiles. The [ledger](qualification.json) contains exact
+commands, image/source/artifact hashes, trace and sanitizer receipts, and
+the raw output locations. The [tuned CSV](upstream-decode-tuned.csv) contains
+both modes and every paired sample. The existing comparison below retains
+its original data.
+
+| Batch | Tails | Cache | Native µs | Direct µs | Mean paired Direct/Native |
+|---:|---:|---|---:|---:|---:|
+| 1 | 0 | warm | 20.388 | 9.990 | 0.49002 |
+| 1 | 0 | rotating | 19.938 | 8.829 | 0.44283 |
+| 1 | 3 | warm | 20.352 | 9.958 | 0.48930 |
+| 1 | 3 | rotating | 19.904 | 8.816 | 0.44289 |
+| 8 | 0 | warm | 22.968 | 19.722 | 0.85868 |
+| 8 | 0 | rotating | 22.734 | 18.763 | 0.82536 |
+| 8 | 3 | warm | 22.918 | 19.498 | 0.85077 |
+| 8 | 3 | rotating | 22.762 | 18.920 | 0.83123 |
+| 16 | 0 | warm | 34.826 | 33.255 | 0.95489 |
+| 16 | 0 | rotating | 35.711 | 34.550 | 0.96749 |
+| 16 | 3 | warm | 34.888 | 33.278 | 0.95386 |
+| 16 | 3 | rotating | 35.707 | 34.595 | 0.96887 |
+| 24 | 0 | warm | 49.194 | 35.250 | 0.71656 |
+| 24 | 0 | rotating | 48.578 | 35.725 | 0.73542 |
+| 24 | 3 | warm | 49.391 | 35.081 | 0.71028 |
+| 24 | 3 | rotating | 48.604 | 35.756 | 0.73564 |
+| 32 | 0 | warm | 64.129 | 54.524 | 0.85023 |
+| 32 | 0 | rotating | 62.349 | 57.318 | 0.91930 |
+| 32 | 3 | warm | 64.093 | 54.705 | 0.85352 |
+| 32 | 3 | rotating | 62.382 | 57.371 | 0.91968 |
+| 64 | 0 | warm | 117.876 | 98.781 | 0.83800 |
+| 64 | 0 | rotating | 116.359 | 98.039 | 0.84255 |
+| 64 | 3 | warm | 117.865 | 98.851 | 0.83868 |
+| 64 | 3 | rotating | 116.602 | 98.206 | 0.84223 |
+
+The timing worker used 84.29 seconds. Across preparation, diagnostics,
+qualification and timing, the observed Modal compute delta was **$1.73** of
+the $20 budget. No workers remain. The tuned specialization is selected in
+the microbenchmark. Its serving dispatch and full-model performance are
+unverified. The earlier Packed path remains available through the existing
+GLM attention suite and the starting pin.
 
 ## Pristine upstream TP4 decode comparison
 
