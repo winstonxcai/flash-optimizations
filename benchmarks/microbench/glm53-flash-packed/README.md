@@ -60,6 +60,18 @@ device code as the previous build, with a second cached host wrapper. The
 retry binds each library to the exact TileLang JIT cache entry and checks it
 against the adapter's generated host and device code before profiling.
 
+The pipelined candidate passed all eight diagnostics at 1.555× on summed
+stage traces, compared with 1.551× for batched reductions alone. Batch-64
+partial attention still took 76.83–78.25 µs. The fixture hashes and pristine
+Native partial cubins matched the preceding run. Preparation and profiling
+bring conservative compute accounting to $2.78.
+
+The next candidate issues aligned asynchronous copies for both 32-row Packed
+payload waves before waiting and expanding them. Its shared scratch grows
+from 8.5 to 17 KiB so each wave owns its staging area. The bitmap ranking,
+swizzled FP8 tiles, PV schedule and baseline stay fixed. Verify the copy and
+wait instructions, shared ranges and register usage before profiling.
+
 ### Original 1.20× target
 
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched
