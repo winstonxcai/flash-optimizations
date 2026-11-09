@@ -2,6 +2,25 @@
 
 ## Decode performance follow-up
 
+### 2.0× follow-up
+
+Starting point: measured SGLang `29fe520dd457` and evidence commit `36b8ad8`.
+The question is whether Hopper WGMMA can cut Packed partial attention time
+enough to reach an equal-case Direct/Native ratio of 0.5000 on the same H200
+matrix. The prior candidate remains the batch-1 control. For batches 8–64,
+test 64 selected rows per tile, transposed QK and PV, and the existing
+cooperative expansion and parallel combine. The cache ABI, pristine Native
+source, query conversion, fixture inputs and timing boundaries stay fixed.
+
+CPU-compile and inspect the SM90a instructions first. Use the maintained
+eight-case diagnostic to check numerical parity, graph replay and stage
+latencies before qualifying a candidate. Acceptance requires focused
+sanitizers and the unprofiled 24-case, 30-round matrix with fresh paired Native
+samples. Preserve the prior result and any failed candidate. Stop scheduling
+when a launch would exceed $20, counting the $1.73 already metered.
+
+### Original 1.20× target
+
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched
 upstream FP8 TileLang on one H200. The score uses the mean of each case's 30
 paired Direct/Native ratios and all 24 cases. Preserve the existing fixture,
