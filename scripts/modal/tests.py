@@ -4660,7 +4660,7 @@ class GLMUpstreamDecodeTests(unittest.TestCase):
                      "========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)\n")
             (folder / "scope-audit.log").write_text(trace)
             result = dict(model_family="glm53", status="passed", runtime_hashes={"kernel": "same"},
-                          sanitizer_scope="glm-merge",
+                          sanitizer_scope="glm-decode" if combine else "glm-merge",
                           sanitizer_results={t: {"status": "passed"} for t in kernels.SANITIZER_ORDER},
                           scope_audit=dict(status="passed", filter=qualification.glm_decode_scope_filter(combine=combine),
                                            log_sha256=hashlib.sha256(trace.encode()).hexdigest(),
@@ -4689,6 +4689,16 @@ class GLMUpstreamDecodeTests(unittest.TestCase):
                         }.items():
                             ET.SubElement(props, "property", name=key, value=json.dumps(value))
                 ET.ElementTree(suite).write(folder / f"{tool}.xml")
+            def bind_reports():
+                if combine:
+                    for tool, state in result["sanitizer_results"].items():
+                        state["report_schema"] = "remnant-sanitizer-raw-v1"
+                        for suffix in ("log", "xml"):
+                            state[f"{suffix}_sha256"] = hashlib.sha256(
+                                (folder / f"{tool}.{suffix}").read_bytes()
+                            ).hexdigest()
+                    (folder / "result.json").write_text(json.dumps(result))
+            bind_reports()
             current = copy.deepcopy(manifest)
             current["sources"] = {"harness": "new"}
             def qualify(candidate):
@@ -4708,12 +4718,19 @@ class GLMUpstreamDecodeTests(unittest.TestCase):
             if combine:
                 report = folder / "memcheck.xml"
                 xml = report.read_text()
+                result["sanitizer_scope"] = "all"
+                bind_reports()
+                with self.assertRaisesRegex(RuntimeError, "focused decode scope"):
+                    qualify(current)
+                result["sanitizer_scope"] = "glm-decode"
                 report.write_text(xml.replace("combine-33x512", "unbound"))
+                bind_reports()
                 with self.assertRaisesRegex(RuntimeError, "combine cubin changed"):
                     qualify(current)
                 parsed = ET.fromstring(xml)
                 parsed.remove(next(node for node in parsed if node.get("name") in combine_cases))
                 ET.ElementTree(parsed).write(report)
+                bind_reports()
                 with self.assertRaisesRegex(RuntimeError, "missing sanitizer gates"):
                     qualify(current)
 

@@ -141,6 +141,8 @@ def qualify_glm_timing(
                 )
         if old["sanitizer"]["binary_sha256"] != manifest["sanitizer"]["binary_sha256"]:
             raise RuntimeError(f"GLM sanitizer identity changed: {run_id}")
+        if combine_cases and result.get("sanitizer_scope") != "glm-decode":
+            raise RuntimeError(f"Candidate combine requires the focused decode scope: {run_id}")
         for tool, status in result.get("sanitizer_results", {}).items():
             if status.get("status") in {"not_run", "not_selected"}:
                 continue
@@ -154,6 +156,8 @@ def qualify_glm_timing(
                 check_glm_interrupted_checkpoint(
                     json.loads(note.read_text()), root, run_id, tool, log
                 )
+            if combine_cases and status.get("report_schema") != "remnant-sanitizer-raw-v1":
+                raise RuntimeError(f"Missing candidate sanitizer report hashes: {run_id}/{tool}")
             verify_sanitizer_artifacts(root, tool, status)
             check_sanitizer_report(log, tool)
             if phase in ("decode", "upstream-decode") and result.get("sanitizer_scope") in ("glm-decode", "glm-merge"):
