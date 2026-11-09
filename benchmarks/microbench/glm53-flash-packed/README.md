@@ -121,6 +121,22 @@ the native FP8 instructions and a shared-memory footprint that can fit
 three CTAs per SM. Register use and H200 timing determine whether that
 additional residency is attainable and worthwhile.
 
+The half-V build used 70 KiB of dynamic shared memory and 96–159 registers
+per thread, enough for three theoretical CTAs per SM. It passed all eight
+H200 diagnostic cases. Its equal-case trace speedup was 1.705× and the
+full-V control remained faster overall at 1.751×. Conservative compute
+spend through the half-V diagnostic is $3.95.
+
+The first full paired WGMMA comparison restores the measured full-V kernel
+and loader byte for byte. Batch 1 retains the existing tile32 partial and
+combine. Batches 8–64 use the image-bound tile64 partials and combines.
+The timing runner requires all five candidate artifact bindings and reports
+the strict 0.5000 Direct/Native target while retaining the 24 cases and 30
+paired rounds. Focused qualification requires exact cubin and probe source
+identities. It checks first-partition graph replay, the short final splits,
+and a positive WGMMA barrier trace on H200. These gates and the full
+paired result are pending.
+
 ### Original 1.20× target
 
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched

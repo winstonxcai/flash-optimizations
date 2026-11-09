@@ -58,6 +58,33 @@ def glm_tuned_inner_splits(compiled: dict) -> set[int]:
     return {3, 6, 11} if len(variants) == 5 else set()
 
 
+def glm_wgmma_cases(manifest: dict) -> dict[str, dict]:
+    """Identify exact experimental partial and combine launches from the image."""
+    variants = (manifest.get("upstream_compile") or {}).get("decode_wgmma", {})
+    if not variants:
+        return {}
+    if set(variants) != {"8", "16", "24", "32", "64"}:
+        raise RuntimeError("Incomplete GLM WGMMA decode variants")
+    cases = {}
+    for batch, variant in variants.items():
+        geometry = variant["geometry"]
+        partial = variant["partial"]
+        combine = variant["combine"]
+        if partial.get("symbol") != "glm_packed_partial_wgmma_kernel":
+            raise RuntimeError(f"Unbound GLM WGMMA partial launch: {batch=}")
+        cases[f"test_wgmma_decode_partial_graph[{batch}]"] = dict(
+            partial_cubin_sha256=partial["cubin_sha256"],
+            decode_geometry=geometry,
+            short_split_ctas=str(
+                geometry["partial_groups"] if 33 % geometry["inner_iter"] else 0
+            ),
+        )
+        cases[f"test_wgmma_decode_combine_graph[{batch}]"] = dict(
+            combine_cubin_sha256=combine["cubin_sha256"]
+        )
+    return cases
+
+
 def verify_glm_tile32_variants(compiled: dict) -> None:
     expected = {
         (heads, inner, packed)
@@ -115,7 +142,8 @@ def qualify_glm_timing(
     manifest = context.manifest
     current = context.runtime_hashes
     combine_cases = glm_decode_combine_cases(manifest) if phase == "upstream-decode" else {}
-    decode_cases = GLM_DECODE_REQUIRED | combine_cases.keys()
+    wgmma_cases = glm_wgmma_cases(manifest) if phase == "upstream-decode" else {}
+    decode_cases = GLM_DECODE_REQUIRED | combine_cases.keys() | wgmma_cases.keys()
     if phase == "upstream-decode":
         decode_cases |= {
             f"test_decode_partial_graph[16-{inner}]"
@@ -149,6 +177,13 @@ def qualify_glm_timing(
             raise RuntimeError(
                 f"GLM focused fixture/binary/source identity changed: {run_id}"
             )
+        if wgmma_cases and (
+            (old.get("upstream_compile") or {}).get("decode_wgmma")
+            != manifest["upstream_compile"]["decode_wgmma"]
+        ):
+            raise RuntimeError(f"GLM WGMMA artifact identity changed: {run_id}")
+        if wgmma_cases and old.get("sources") != manifest.get("sources"):
+            raise RuntimeError(f"GLM WGMMA probe source identity changed: {run_id}")
         for key in (
             "torch",
             "cuda",
@@ -203,7 +238,9 @@ def qualify_glm_timing(
                         f"Focused instrumentation audit changed: {run_id}"
                     )
                 check_sanitizer_report(audit_log, "racecheck")
-                check_glm_scope_audit(audit_log, run_id, combine=bool(combine_cases))
+                check_glm_scope_audit(
+                    audit_log, run_id, combine=bool(combine_cases), wgmma=bool(wgmma_cases)
+                )
             if phase in ("decode", "upstream-decode"):
                 tests, _ = read_pytest_report(root / f"{tool}.xml")
                 names = {x.attrib["name"] for x in tests}
@@ -226,6 +263,20 @@ def qualify_glm_timing(
                     raise RuntimeError(f"Incomplete focused cases: {run_id}/{tool}")
                 for node in tests:
                     name = node.attrib["name"]
+                    if name in wgmma_cases:
+                        props = {
+                            x.get("name"): x.get("value")
+                            for x in node.findall("properties/property")
+                        }
+                        expected = wgmma_cases[name]
+                        if "decode_geometry" in expected:
+                            props["decode_geometry"] = json.loads(
+                                props.get("decode_geometry", "{}")
+                            )
+                        if any(props.get(key) != value for key, value in expected.items()):
+                            raise RuntimeError(
+                                f"GLM WGMMA launch evidence changed: {run_id}/{name}"
+                            )
                     if name in combine_cases:
                         props = {
                             x.get("name"): x.get("value")
@@ -310,11 +361,20 @@ def qualify_glm_timing(
     )
 
 
-def check_glm_scope_audit(log: str, identity: str, *, combine: bool = False) -> None:
+def check_glm_scope_audit(
+    log: str, identity: str, *, combine: bool = False, wgmma: bool = False
+) -> None:
     """Pinned tool trace proves helper warp and handoff CTA synchronization."""
+    wgmma_barrier = wgmma and any(
+        "glm_packed_partial_wgmma_kernel" in entry[0]
+        for entry in re.finditer(
+            r"Barrier called[^\n]*(?:\n={9}[ \t]+Device Frame:[^\n]*)*", log
+        )
+    )
     if (
         "glm_packed_bytes" not in log
         or (combine and not re.search(r"glm_packed_decode_combine_kernel\b", log))
+        or (wgmma and not wgmma_barrier)
         or not re.search(r"(?i)(warp|warpsync)", log)
         or not re.search(r"(?i)(block|cta|barrier)", log)
     ):

@@ -59,6 +59,7 @@ from scripts.modal.kernel_qualification import \
     check_glm_scope_audit as _check_glm_scope_audit
 from scripts.modal.kernel_qualification import (glm_decode_combine_cases,
                                                 glm_decode_scope_filter,
+                                                glm_wgmma_cases,
                                                 qualification_run_ids,
                                                 qualify_glm_timing,
                                                 verify_glm_tile32_variants)
@@ -580,6 +581,7 @@ def _prepare_upstream_decode(build: Path, deadline: float) -> None:
             "test_glm_upstream_source_and_helper_provenance",
             "test_glm_upstream_compile_artifacts_are_bound",
             "test_glm_upstream_result_identity_and_csv",
+            "test_glm_upstream_wgmma_timing_requires_candidate_geometry_and_score",
         )
     ), build, "upstream-cpu-tests", deadline, environment=environment)
     manifest = json.loads(MANIFEST.read_text())
@@ -1509,10 +1511,13 @@ def _preflight_glm_timing(
     if suite == "glm-upstream-decode":
         from sglang.benchmark.remnant.glm_upstream import verify_compilation
 
-        verify_compilation(json.loads(MANIFEST.read_text()).get("upstream_compile", {}))
+        manifest = _verify_glm_compiled_artifacts()
+        verify_compilation(
+            manifest.get("upstream_compile", {}),
+            require_wgmma=True,
+        )
     with _run_context(run_id, "preflight", 120, resource="cpu") as (_, record, _):
         if profile_decode:
-            _verify_glm_compiled_artifacts()
             record["qualification"] = {"status": "diagnostic", "artifact_verification": "passed"}
             return record["qualification"]
         record["qualification"] = _glm_timing_qualification(
@@ -1832,6 +1837,7 @@ def _benchmark_worker(
     **{
         **_GPU,
         "timeout": VALIDATION_TIMEOUT_S,
+        "gpu": "H200" if _UPSTREAM_DECODE else _GPU["gpu"],
         **({"cpu": 2, "memory": 16384} if VALIDATION_SUITE in ("v41-fp4", "v41-decode") else {}),
     }
 )
@@ -1925,11 +1931,12 @@ def validate_kernels(
         if INTEGRATION["version"] == "v0.5.22":
             import torch
 
+            gpu_family = "H200" if _UPSTREAM_DECODE else "H100"
             if (
                 torch.cuda.get_device_capability() != (9, 0)
-                or "H100" not in torch.cuda.get_device_name()
+                or gpu_family not in torch.cuda.get_device_name()
             ):
-                raise RuntimeError("Qualification requires one H100/SM90")
+                raise RuntimeError(f"Qualification requires one {gpu_family}/SM90")
             if "cpu-driver-stubs" in environment.get("LD_LIBRARY_PATH", ""):
                 raise RuntimeError("CPU-only driver stubs leaked into the GPU loader")
             manifest = json.loads(MANIFEST.read_text())
@@ -2071,18 +2078,35 @@ def validate_kernels(
                 raise RuntimeError("Incomplete real-allocation coverage")
             record["allocation"] = allocation
         combine_tests = ()
+        wgmma_tests = ()
+        decode_tests = ()
         glm_scope_filter = glm_decode_scope_filter()
         if sanitizer and sanitizer_scope in ("glm-decode", "glm-merge"):
-            if _UPSTREAM_DECODE and sanitizer_scope == "glm-decode" and glm_decode_combine_cases(manifest):
+            if _UPSTREAM_DECODE and sanitizer_scope == "glm-decode":
+                if not glm_decode_combine_cases(manifest) or not glm_wgmma_cases(manifest):
+                    raise RuntimeError("Upstream decode qualification requires all candidate artifacts")
                 combine_tests = (GLM_TEST + "::test_packed_decode_combine_graph",)
                 glm_scope_filter = glm_decode_scope_filter(combine=True)
+                wgmma_tests = (
+                    GLM_TEST + "::test_wgmma_decode_partial_graph",
+                    GLM_TEST + "::test_wgmma_decode_combine_graph",
+                )
             audit_prefix = (SANITIZER, "--tool", "racecheck", "--error-exitcode", "1",
                             "--kernel-name", glm_scope_filter, "--racecheck-trace-sync", "yes")
-            _run_pytest((GLM_TEST + "::test_packed_loader_bytes", *combine_tests), root, "scope-audit",
+            wgmma_audit = (wgmma_tests[0] + "[8]",) if wgmma_tests else ()
+            if sanitizer_scope == "glm-decode":
+                decode_tests = (
+                    GLM_TEST + "::test_packed_loader_bytes", GLM_DECODE_PARTIAL,
+                    *combine_tests, *wgmma_tests,
+                )
+                record["coverage"]["sanitizer"] = decode_tests
+            _run_pytest((GLM_TEST + "::test_packed_loader_bytes", *combine_tests, *wgmma_audit), root, "scope-audit",
                         min(deadline, time.monotonic() + 180), prefix=audit_prefix)
             audit_log = (root / "scope-audit.log").read_text()
             _check_sanitizer_report(audit_log, "racecheck")
-            _check_glm_scope_audit(audit_log, run_id, combine=bool(combine_tests))
+            _check_glm_scope_audit(
+                audit_log, run_id, combine=bool(combine_tests), wgmma=bool(wgmma_tests)
+            )
             record["scope_audit"] = dict(status="passed", filter=glm_scope_filter,
                 log_sha256=hashlib.sha256(audit_log.encode()).hexdigest(),
                 entrypoints=manifest["glm_compile"]["scope_symbol_audit"],
@@ -2126,7 +2150,7 @@ def validate_kernels(
                     tool_environment = dict(environment)
                     if sanitizer_scope in ("glm-decode", "glm-merge"):
                         tool_environment["PYTEST_ADDOPTS"] = "--full-trace -o faulthandler_timeout=120"
-                    _run_pytest((GLM_TEST + "::test_packed_loader_bytes", GLM_DECODE_PARTIAL, *combine_tests) if sanitizer_scope == "glm-decode"
+                    _run_pytest(decode_tests if sanitizer_scope == "glm-decode"
                                 else (selected_tests if stage == "corrective" else SANITIZER_TESTS),
                                 root, tool, deadline, prefix=prefix,
                                 environment=tool_environment if sanitizer_scope in ("glm-decode", "glm-merge") else None)

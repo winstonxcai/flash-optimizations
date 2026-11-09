@@ -4559,6 +4559,25 @@ class ValidationTierTests(unittest.TestCase):
 class GLMUpstreamDecodeTests(unittest.TestCase):
     """Upstream dispatch and source-bound evidence; no remote calls or CUDA."""
 
+    def test_full_preflight_checks_the_legacy_artifacts_before_qualification(self):
+        preflight = inspect.unwrap(kernels._preflight_glm_timing.get_raw_f())
+        upstream = SimpleNamespace(verify_compilation=MagicMock())
+        with (
+            patch.dict(sys.modules, {"sglang.benchmark.remnant.glm_upstream": upstream}),
+            patch.object(kernels.results_volume, "reload"),
+            patch.object(
+                kernels, "_verify_glm_compiled_artifacts",
+                side_effect=RuntimeError("changed batch-1 artifact"),
+            ),
+            patch.object(kernels, "_glm_timing_qualification") as qualify,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "changed batch-1 artifact"):
+                preflight(
+                    "timing", "receipt", "decode", False, "", suite="glm-upstream-decode"
+                )
+            upstream.verify_compilation.assert_not_called()
+            qualify.assert_not_called()
+
     def test_public_dispatch_rejects_incompatible_scope_before_scheduling(self):
         base = dict(run_id="upstream", keep_count=256, modes="", suite="glm-upstream-decode",
                     prefill_reader="split", qualification_runs="qualified", model_family="glm53",
@@ -4656,7 +4675,10 @@ class GLMUpstreamDecodeTests(unittest.TestCase):
     def test_candidate_decode_qualification_requires_both_combine_cubins(self):
         self._check_reused_decode_scope(combine=True)
 
-    def _check_reused_decode_scope(self, *, combine):
+    def test_wgmma_decode_qualification_binds_candidate_launches(self):
+        self._check_reused_decode_scope(combine=True, wgmma=True)
+
+    def _check_reused_decode_scope(self, *, combine, wgmma=False):
         import hashlib
         import xml.etree.ElementTree as ET
 
@@ -4676,9 +4698,20 @@ class GLMUpstreamDecodeTests(unittest.TestCase):
                     key: {"cubin_sha256": f"combine-{key}"} for key in ("66x128", "33x512")
                 }
             combine_cases = qualification.glm_decode_combine_cases(manifest)
+            if wgmma:
+                manifest["upstream_compile"] = {"decode_wgmma": {
+                    str(batch): {
+                        "geometry": dict(tile_rows=64, inner_iter=inner, partial_groups=(33 + inner - 1) // inner),
+                        "partial": dict(symbol="glm_packed_partial_wgmma_kernel", cubin_sha256=f"partial-wgmma-{batch}"),
+                        "combine": dict(cubin_sha256=f"combine-wgmma-{batch}"),
+                    }
+                    for batch, inner in ((8, 1), (16, 2), (24, 3), (32, 4), (64, 8))
+                }}
+            wgmma_cases = qualification.glm_wgmma_cases(manifest)
             (folder / "build-manifest.json").write_text(json.dumps(manifest))
             trace = ("glm_packed_bytes WarpSync CTA barrier\n"
                      + ("glm_packed_decode_combine_kernel CTA barrier\n" if combine else "")
+                     + ("========= Barrier called at glm_packed_partial_wgmma_kernel+0x40\n" if wgmma else "")
                      +
                      "========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)\n")
             (folder / "scope-audit.log").write_text(trace)
@@ -4692,7 +4725,7 @@ class GLMUpstreamDecodeTests(unittest.TestCase):
             for tool in kernels.SANITIZER_ORDER:
                 (folder / f"{tool}.log").write_text(trace if tool == "racecheck" else "========= ERROR SUMMARY: 0 errors\n")
                 suite = ET.Element("testsuite")
-                for name in sorted(qualification.GLM_DECODE_REQUIRED | combine_cases.keys() | {
+                for name in sorted(qualification.GLM_DECODE_REQUIRED | combine_cases.keys() | wgmma_cases.keys() | {
                     "test_prefill_partial_graph[64]", "test_prefill_partial_graph_h8"
                 }):
                     node = ET.SubElement(suite, "testcase", name=name,
@@ -4701,6 +4734,11 @@ class GLMUpstreamDecodeTests(unittest.TestCase):
                         props = ET.SubElement(node, "properties")
                         ET.SubElement(props, "property", name="combine_cubin_sha256",
                                       value=combine_cases[name]["cubin_sha256"])
+                    if name in wgmma_cases:
+                        props = ET.SubElement(node, "properties")
+                        for key, value in wgmma_cases[name].items():
+                            ET.SubElement(props, "property", name=key,
+                                          value=json.dumps(value) if isinstance(value, dict) else value)
                     if name.startswith("test_decode_partial_graph["):
                         h, i = map(int, name.split("[")[1][:-1].split("-"))
                         props = ET.SubElement(node, "properties")
@@ -4723,11 +4761,32 @@ class GLMUpstreamDecodeTests(unittest.TestCase):
                     (folder / "result.json").write_text(json.dumps(result))
             bind_reports()
             current = copy.deepcopy(manifest)
-            current["sources"] = {"harness": "new"}
+            if not wgmma:
+                current["sources"] = {"harness": "new"}
             def qualify(candidate):
                 context = qualification.QualificationContext(root, candidate, {"kernel": "same"}, kernels.SANITIZER_ORDER)
                 return qualification.qualify_glm_timing("fixture", context=context, phase="upstream-decode")
             self.assertEqual(qualify(current)["status"], "passed")
+            if wgmma:
+                with self.assertRaisesRegex(RuntimeError, "WGMMA probe source identity changed"):
+                    qualify({**current, "sources": {"harness": "new"}})
+                with self.assertRaisesRegex(RuntimeError, "positive TileLang synchronization trace"):
+                    qualification.check_glm_scope_audit(
+                        trace.replace("Barrier called at", "Loaded"),
+                        "mock", combine=True, wgmma=True,
+                    )
+                changed = copy.deepcopy(current)
+                changed["upstream_compile"]["decode_wgmma"]["64"]["partial"]["cubin_sha256"] = "changed"
+                with self.assertRaisesRegex(RuntimeError, "WGMMA artifact identity changed"):
+                    qualify(changed)
+                report = folder / "memcheck.xml"
+                original = report.read_text()
+                report.write_text(original.replace("partial-wgmma-64", "wrong-cubin"))
+                bind_reports()
+                with self.assertRaisesRegex(RuntimeError, "WGMMA launch evidence changed"):
+                    qualify(current)
+                report.write_text(original)
+                bind_reports()
             for change in ("compiler", "cache", "kernel"):
                 changed = copy.deepcopy(current)
                 if change == "compiler":
