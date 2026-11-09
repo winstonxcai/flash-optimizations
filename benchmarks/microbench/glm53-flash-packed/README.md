@@ -162,6 +162,23 @@ Conservatively accounted compute through this result was $6.88 of $20.
 The ledger binds the raw reports and exact commands to the image and source
 identities. This candidate remains an experiment while the 2.0× goal is open.
 
+### Register-fed PV experiment
+
+Test whether feeding the expanded SW128 KV tile to FP8 WGMMA through
+registers makes up the remaining decode latency gap. Use the qualified
+full-V run as the candidate control and preserve the upstream Native
+baseline, split geometry, Packed ABI, query conversion and timing protocol.
+Keep the probability operand in SW64 shared memory and remove the
+32 KiB transposed V allocation. Batch independent PV panels and hold
+their source registers live through the WGMMA wait.
+
+Check the SM90a artifact for register-source PV instructions, the absence
+of shared matrix stores, shared-memory bounds and spills before H200
+profiling. The maintained diagnostic provides stage timings and graph
+and numerical checks. A promising candidate proceeds to the same focused
+sanitizers and full 24-case, 30-round comparison. Stop at the existing $20
+cap. Roll back to SGLang `d355f3196cc9` for the qualified full-V control.
+
 ### Original 1.20× target
 
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched

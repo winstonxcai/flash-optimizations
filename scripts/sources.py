@@ -51,10 +51,11 @@ def verify_compiled_image_sources(
 def glm_rebuild_source_digest(
     roots: list[Path], formatting_paths: tuple[str, ...] = ()
 ) -> str:
-    """Hash every compiled source except the two authorized GLM JIT inputs."""
+    """Hash compiled sources outside the authorized GLM attention JIT inputs."""
     allowed = {
         "ops/attention/dsa/tilelang_kernel.py",
         "jit/include/sgl_kernel/glm_packed_decode.cuh",
+        "jit/include/sgl_kernel/glm_wgmma_pv.cuh",
     }
     digest = hashlib.sha256()
     for i, root in enumerate(map(Path, roots)):
