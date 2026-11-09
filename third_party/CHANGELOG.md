@@ -13,6 +13,162 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Parent baseline `1b19ad9`, SGLang `99499fb02c86` / FlashMLA
+  `4e72722671d8`: add a source-verified pristine upstream FP8 attention baseline
+  and a separate 24-case TP4 decode protocol on one H200. Production kernels,
+  persistent formats and serving defaults are unchanged. Fork CPU contracts:
+  134 passed, 103 GPU skips; parent 159 full checks and three corrective checks
+  passed; independent review passed. Measured parent `5acc209` completed all 24
+  cases with +1.28947% batch-weighted overhead (range -1.97922% to +6.12250%).
+  Numerical/graph gates pass; matching H100 focus evidence is reused. All
+  workers stopped. $0.45247 reported / $0.78581 conservative under the separate
+  $5 cap, including the diagnosed and corrected CPU-only preparation failure.
+
+- Main integration from parent `cbfeeba` and main `dac0205`, retaining SGLang
+  `e0d6d500d6dc` / FlashMLA `4e72722671d8` and both v0.5.18 pins. Preserve main's
+  build locks, split guidance and validation tier; reconcile sanitizer subsets
+  with both receipt readers. Retain historical replay records and migrate the
+  V4 replay caller to Native/Direct, freezing its shared launch configuration.
+  CPU checks cover 157 distinct tests under both integration profiles (155 full
+  suite plus the final 22 replay checks); fresh-context review passed. No image
+  rebuild or GPU execution. User authorized publication with the original V4.1
+  full-batch racecheck failure still explicitly unresolved; FlashMLA unchanged.
+
+- Measured parent `f720d20`, SGLang `e0d6d500d6dc` / FlashMLA `4e72722671d8`:
+  V4.1 Native and Direct full-model serving smokes pass concurrently, each on
+  four H200s, with the corrected 0.90 memory fraction and bounded 16K pool.
+  All ranks load and capture batches 1/2/4; health/chat return 200 and the exact
+  expected answer with `stop`. New phase cost: $6.24 reported / $6.68 conservative
+  under its separate $15 cap. Workers stopped. Preserve earlier failed runs;
+  the full-batch racecheck issue remains separate and unresolved.
+
+- Runtime freeze parent `c23b32f`, SGLang `e0d6d500d6dc` / FlashMLA
+  `4e72722671d8`: GLM Native and Direct full-model smokes pass on four H200s.
+  V4.1 numerical/allocation (39 cases), memcheck and synccheck (15 cases each)
+  pass. Full focused racecheck fails in Native C1 setup/projection; the isolated
+  case passes under expanded instrumentation but the batch failure remains
+  unresolved. Both V4.1 serving modes require reruns after the CPU-tested memory
+  profile fix. All workers are stopped; compute is $20.50 reported / $21.57
+  conservatively accounted under the $25 phase cap, with its $3 reserve intact.
+  Keep merge acceptance pending; no numerical kernels or defaults changed.
+
+- Serving follow-up from parent `a56cb7b`, with SGLang `e0d6d500d6dc` and
+  FlashMLA `4e72722671d8`: all four smoke workers loaded their checkpoints.
+  GLM Native passed; Direct captured graphs and became healthy, but its cold
+  chat request timed out. Both V4.1 modes stopped before KV allocation because
+  GLM's 0.86 static memory fraction is below V4.1's observed 0.864 minimum.
+  Give the smoke profile its own fraction (V4.1 0.90, GLM unchanged); the
+  environment regression and independent review pass. Corrective GPU checks
+  remain pending. Preserve the failed runs and all charges in the GLM ledger.
+
+- Parent follow-up from `c0e59ec`, SGLang `e0d6d500d6dc` / FlashMLA
+  `4e72722671d8`: add independent Native/Direct serving workers for GLM and
+  V4.1-Flash-1017, pinned metadata, per-mode artifact ownership, and CPU binary/
+  cache admission. Full parent CPU checks: 116 passed under each integration.
+  Preserve all model/kernel ABIs. The focused V4.1 audit remains unqualified
+  after an internal sanitizer exception; broaden its filter consistently and
+  install the submitting SDK explicitly for legacy CPU image builders.
+  No new four-way serving result or broad sanitizer completion is claimed.
+
+- Integration candidate from parent `8a3d5b2` + V4.1 `d385c1c`; combined SGLang
+  `e0d6d500d6dc` (descends from `6667e5d` and `c470887`) / FlashMLA
+  `4e72722671d8`: merge both model implementations and replace public model-specific
+  selectors with `--kv-cache-format native|direct`. Preserve numerical kernels,
+  persistent ABIs and v0.5.18 pins. Share pinned metadata, source verification,
+  report parsing, launcher normalization/transport and pure timing statistics.
+  Merge CPU and GPU validation is tracked separately in the existing GLM ledger;
+  historical serving/timing records do not qualify this new source automatically.
+  CPU preparation now checks V4.1 Native/Direct allocation coefficients through
+  the production selector; shared fixture cases remove stale pre-migration labels.
+  This correction changes tests only, preserving all numerical/runtime content.
+
+- Measured parent `d3aa23f`, v0.5.22 SGLang `6667e5d` / FlashMLA
+  `3eb8594`: qualify the opt-in 64-row Packed prefill candidate for the full
+  80-case paired H200 benchmark. Both head variants passed focused tools and
+  numerical/graph checks. A source-bound resume recovered the final two cases.
+  Direct was faster in 70 cases, with a 1.11% worst slowdown. Keep the candidate
+  benchmark-only. Modal gross metered $4.01 under the $5 cap.
+
+- Measured parent `8a9a939`, serving fix SGLang `d748fe5` / FlashMLA
+  `3eb8594`: support standalone GLM text-only loading and use the active MLA
+  cache pool from the forward context. Add CPU checkpoint and serving-image
+  preflight and bounded Native/Packed Direct smoke. Four H200s at TP4/EP4
+  loaded the pinned FP8 checkpoint, captured decode graphs, and returned
+  HTTP 200 and a complete response in both modes. The measured source override
+  also contained benchmark-only prefill edits. See the qualification record
+  for source hashes, image, commands, failure history and costs.
+
+- Parent implementation `0e3f94b`, v0.5.22 SGLang `5174462` / FlashMLA
+  `3eb8594`: reject conflicting GLM image modes and resolved non-BF16 Packed
+  activations; bind benchmark resume to complete verified source/artifact
+  identity and raw-sample statistics; terminate owned compiler process groups
+  on failure. Centralize host geometry and document byte expansion. Expand the
+  model-free producer/pool/public-dispatch GPU test. CPU startup/benchmark,
+  targeted orchestration, formatting and independent reviews passed; the new GPU
+  test was not run and historical H100 evidence remains source-bound. Compact
+  the experiment ledger while preserving its immutable Git history and a verified
+  local archive. Native default and other pins remain unchanged.
+
+- Parent preparation `0639722`, v0.5.22 SGLang `979839b` (runtime-tested
+  `9185c6d25115`) / FlashMLA
+  `3eb85944fd7d`: resolve fork lint debt, preserve immutable historical fixtures,
+  register executable CPU tests and explicit custom-build CUDA ownership, and
+  propagate pytest exit codes. Explicit CPU preparation verifies a five-file
+  format-only transition with raw hashes, pinned clang-format and Python3.12 AST
+  identity before retaining base AOT binaries; ordinary reuse remains strict.
+  Independent review and six rebuild regressions pass. Expanded local checks:
+  176 passed, 104 GPU skips and 10 subtests; previously failing lint hooks pass.
+  CPU preparation and fresh focused H100 Direct/Adapter numerical, graph and
+  memcheck/racecheck/synccheck gates pass; broad instrumentation remains incomplete.
+  GitHub lint is green, `run-ci` is applied and its gate passes. Seven missing
+  flag rows fix the newly exposed CPU docs failure; broad GPU CI lacks runners.
+  Canonical evidence preserves both interrupted attempts and all charges.
+  The user added $5 and 15 H100 minutes; retain every previous cost and failure.
+
+
+- Parent integration `4150a42` (runtime fixes `6f83b1f`), v0.5.22 SGLang
+  `fbd8a02269f7` / FlashMLA `3eb85944fd7d`: address review findings in Adapter int64 addressing, effective
+  attention dispatch, single-mode timing, named container configuration, TP/EP/
+  GPU consistency and the CPU budget regression. Move complete SM90 manifests
+  to a fork-owned module; separate parent evidence policy from orchestration,
+  retain immutable legacy hashes and safely CPU-recompile older verified images.
+  Validation: 126 SGLang CPU checks pass, 103 GPU benchmark checks skip; focused
+  parent/independent reviews pass. All 108 parent CPU tests pass under each of
+  v0.5.18 and v0.5.22 after the committed pin update. No image build or GPU run;
+  the new Adapter boundary regression and rebuilt-artifact execution remain
+  unverified. Native and other pins unchanged.
+
+
+- Parent implementation `06f2058` (measured parent `8aea70a`), v0.5.22 SGLang
+  `23e2e08` (tree identical to timed `246ee03`) / FlashMLA `3eb85944fd7d`:
+  cooperative V4-inspired Packed loader with vector loads/stores, register bitmap
+  prefixes, swizzled tile stores and int64 guards. All 32 CPU variants pass SASS/
+  resource gates; Native cubins unchanged, Direct POPC34, no spills, matching two-
+  CTA occupancy. All 48 decode cases/30 paired rounds complete on one H100:
+  batch-weighted overhead 1.6010% (TP4 0.6829%, TP8 2.5192%), no 2× cases.
+  Focused one-CTA numerical/graph/memcheck/racecheck/synccheck passes; full-grid/
+  combine instrumentation and broad qualification remain incomplete. Verified CPU
+  artifact reuse supports harness-only edits. Optional fixture compaction failed
+  its runtime goal and was reverted, preserving its source and incomplete reports.
+  All workers stopped; additional phase $10.335584 under $15, no pushes, Native
+  defaults and other pins unchanged.
+
+- Measured parent `853e4d6`, v0.5.22 SGLang `889edf56b332` / FlashMLA
+  `3eb85944fd7d`: saved56 complete Native FP8 TileLang/Packed Direct H100 cases,
+  30 paired rounds each; all measured TP4 cases favor Native. Descriptive only:
+  72 cases and7 memcheck cases remain unverified. Racecheck/synccheck13 cases
+  each reconcile cleanly. All allocations stopped; conservative cost$19.390829
+  under user-updated$20 cap. Canonical JSON and flat CSV retain raw samples and
+  source-bound resume history. Production kernels/defaults and all pins unchanged.
+
+- Parent based on `5c8b464`; v0.5.22 SGLang `889edf56b332` / FlashMLA
+  `3eb85944fd7d`: add explicit exploratory GLM timing when sanitizer coverage
+  is incomplete, following user authorization. Default qualification remains
+  mandatory; exploratory exports record exact missing cases and an unqualified
+  experiment. Production kernels and all fork pins are unchanged. Seven focused
+  launcher tests and real saved-evidence reconciliation pass (racecheck and
+  synccheck 13 cases each; memcheck unverified). No timing claim yet.
+
 - Decode-only comparison qualified on parent `7710f18`, SGLang `8084dc44` /
   FlashMLA `858bb1c`. The separate upstream Native control `6fbbf3a` corrects
   the divergent output epilogue as well as the consumer barriers. CPU preflight,
@@ -358,3 +514,50 @@ Parent `48bcce5`; SGLang `e21dfe4bf417`; FlashMLA `40a1c73eabc9`.
   and startup integration on SGLang v0.5.18 (SGLang `aac50712c6`).
 - **Added:** SM90 Packed decode/API in FlashMLA (`40a1c73eabc9`) and SGLang
   Direct dispatch (`e21dfe4bf417`). Native remains the default.
+
+## GLM Packed candidate
+
+Author: Winston Cai.
+
+Starting parent: 9419d0e18e1e7677c0e48b8e40ad54bbc30010ca. Starting v0.5.22
+SGLang: 7856615f3fdf02e993f3b40ecdbbed8cb8ac9bf7; FlashMLA remains
+3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8. Current candidate fork pin is recorded
+in the parent tree and canonical GLM qualification JSON. Adds the separate raw
+320-byte codec, producer/pool lifecycle integration, bounded Adapter and TileLang
+Direct, startup guards and model-free GLM fixtures. Local startup contracts pass;
+CPU SM90 compilation passed. Tested parent `5f4754e3015d2268df4b39175ce4622cd305589d`,
+SGLang `9e42a0d8886dd93944dc6b47ef3bffef4e033b5a`, FlashMLA unchanged
+`3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8`: 90 real-H100 numerical tests and
+11 synccheck tests passed with zero reported synchronization errors. Racecheck
+timed out; memcheck and independent fresh-context review remain unverified.
+Physical Direct storage saves 277,364,736 bytes/rank at 131,072 token slots with
+matched KDA reservation. The 54.39% capacity ratio remains a projection.
+See `benchmarks/microbench/glm53-packed/qualification.json` for exact commands,
+source/artifact identities, costs and failed attempts. Retain as an opt-in
+candidate; rollback is Native or the starting SGLang pin. No serving/quality claim.
+
+## GLM two-path TileLang attention measurement
+
+Author: Winston Cai.
+
+Based on parent `4521a1abb359c6e7d2354c4bdef3abc9702368b9`, with FlashMLA
+unchanged at `3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8`. The parent gitlink
+records the benchmark SGLang commit; production runtime/kernel content remains
+identical to `9e42a0d8886dd93944dc6b47ef3bffef4e033b5a`. Adds the 128-case
+Native/Direct graph protocol, independent references, bounded bank rotation,
+shared paired timing and explicit per-tool sanitizer evidence. CPU validation
+and independent review precede GPU execution. Exact outcomes, source/artifact
+IDs and costs belong to the existing GLM qualification ledger; missing gates
+remain incomplete. Rollback omits the GLM benchmark suite; no default changes.
+
+
+Attention implementation commits: parent `9672503` and `d092f85`; SGLang
+`f71841eade02afd1b601d8f1af72786b494bb6cb`, FlashMLA unchanged at
+`3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8`. Two CPU image preparations passed;
+new H100 smoke passed one graph fixture and failed the other at a negative
+reserved-memory delta assertion. Sanitizers and timing did not start. SGLang
+`02cbbd92b802e0437a8597b6b14ec45c994cf98b` repairs accounting using graph-pool
+segments; 10 focused CPU contracts and independent targeted review pass, GPU
+repair validation remains pending. Aggregate conservative cost is $5.25799667,
+50.67854 H100 minutes; all containers stopped. The no-corrective-launch rule
+stopped further execution. No performance result or serving-default change.

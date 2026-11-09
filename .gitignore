@@ -30,3 +30,5 @@ __pycache__/
 # Existing local experiment-work policy.
 /experiments/
 /data/
+# Advisory Modal build lock (see scripts/build_lock.py).
+/.modal-build.lock

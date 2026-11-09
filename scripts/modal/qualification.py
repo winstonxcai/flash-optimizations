@@ -1,4 +1,4 @@
-"""Pure FP4 qualification receipts shared by CPU preflight and GPU recheck.
+"""Pure qualification parsing and FP4 receipt policy for CPU/GPU consumers.
 
 Author: Winston Cai. No Modal, Torch or CUDA imports; existing launcher tests own
 regressions. A failed tool is never equivalent to an interrupted/not-run tool.
@@ -15,6 +15,17 @@ from pathlib import Path
 from typing import Any
 
 TOOLS = frozenset({"memcheck", "racecheck", "synccheck"})
+
+
+def check_fp4_scope_audit(log: str, identity: str) -> None:
+    """Positive Packed decode synchronization trace, separate from zero errors."""
+    check_sanitizer_report(log, "racecheck")
+    if "flash_fwd_splitkv_mla_fp8_sparse_kernel" not in log or not re.search(
+        r"(?i)(block|cta|barrier)", log
+    ):
+        raise RuntimeError(f"Missing positive FP4 synchronization trace: {identity}")
+
+
 FP4_CASE_COUNT = 38
 IDENTITY_FIELDS = (
     "validation_suite",
@@ -70,14 +81,10 @@ class QualificationReceipt:
 
 def qualification_run_ids(value: str) -> tuple[str, ...]:
     ids = tuple(value.split(","))
-    if (
-        not value
-        or len(set(ids)) != len(ids)
-        or any(
-            not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", item) for item in ids
-        )
-    ):
+    if not value or len(set(ids)) != len(ids):
         raise ValueError("FP4 timing requires unique qualification run IDs")
+    for item in ids:
+        validate_run_id(item)
     return ids
 
 
@@ -151,12 +158,14 @@ def read_receipt(
     expected_ids = None
     for tool, state in states.items():
         status = state.get("status")
-        if status in {"not_run", "interrupted"}:
+        if status in {"not_run", "not_selected", "interrupted"}:
             # Older writers left an active tool marked not_run on cancellation.
             # Never treat its artifacts as absent merely because of that label.
             has_artifacts = any(
                 (base / f"{tool}.{ext}").exists() for ext in ("xml", "log")
             )
+            if status == "not_selected" and has_artifacts:
+                raise RuntimeError(f"Unexpected unselected sanitizer artifacts: {run_id}/{tool}")
             if status == "interrupted" or has_artifacts:
                 _check_partial_sanitizer(base, tool)
             continue
@@ -164,7 +173,8 @@ def read_receipt(
             raise RuntimeError(
                 f"Unresolved sanitizer failure: {run_id}/{tool}: {state}"
             )
-        cases = list(ET.parse(base / f"{tool}.xml").getroot().iter("testcase"))
+        verify_sanitizer_artifacts(base, tool, state)
+        cases, _ = read_pytest_report(base / f"{tool}.xml")
         ids = frozenset(
             (case.get("classname", ""), case.get("name", "")) for case in cases
         )
@@ -206,3 +216,61 @@ def qualify_fp4_runs(
         "case_count_per_tool": len(next(iter(case_sets))),
         "identity_sha256": identity.sha256,
     }
+
+
+def validate_run_id(value: str, *, max_length: int = 128) -> None:
+    """Validate one existing path-safe experiment identifier."""
+    if (
+        not isinstance(value, str)
+        or not 1 <= len(value) <= max_length
+        or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", value)
+    ):
+        raise ValueError(f"Invalid experiment run ID: {value!r}")
+
+
+def read_pytest_report(path: Path) -> tuple[list[ET.Element], dict[str, int]]:
+    """Read counts and testcase metadata; callers own their coverage policy."""
+    root = ET.parse(path).getroot()
+    counts = {
+        key: sum(int(suite.get(key, 0)) for suite in root.iter("testsuite"))
+        for key in ("tests", "errors", "failures", "skipped")
+    }
+    return list(root.iter("testcase")), counts
+
+
+def verify_sanitizer_artifacts(root: Path, tool: str, state: dict[str, Any]) -> None:
+    """New receipts bind raw logs/reports; historical receipt policy is unchanged."""
+    if state.get("report_schema") is None:
+        return
+    if state["report_schema"] != "remnant-sanitizer-raw-v1":
+        raise RuntimeError(f"Unknown sanitizer report schema: {tool}")
+    for suffix in ("log", "xml"):
+        path = root / f"{tool}.{suffix}"
+        if hashlib.sha256(path.read_bytes()).hexdigest() != state.get(
+            f"{suffix}_sha256"
+        ):
+            raise RuntimeError(f"Sanitizer raw report changed: {tool}/{suffix}")
+    check_sanitizer_report((root / f"{tool}.log").read_text(), tool)
+
+
+def check_sanitizer_report(output: str, tool: str) -> None:
+    if tool not in TOOLS:
+        raise ValueError(f"Unknown sanitizer tool: {tool}")
+    expected = (
+        "RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)"
+        if tool == "racecheck"
+        else "ERROR SUMMARY: 0 errors"
+    )
+    records = [r.strip() for r in re.findall(r"========= ([^\r\n]*)", output)]
+    summaries = [
+        r for r in records if r.startswith(("ERROR SUMMARY:", "RACECHECK SUMMARY:"))
+    ]
+    if (
+        summaries != [expected]
+        or any(
+            r.startswith(("Warning:", "Error:")) or "Internal Sanitizer Error" in r
+            for r in records
+        )
+        or "terminated before first instrumented API call" in output
+    ):
+        raise RuntimeError(f"Incomplete sanitizer evidence {tool}")

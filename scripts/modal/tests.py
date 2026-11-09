@@ -10,10 +10,13 @@ import inspect
 import io
 import json
 import os
+import runpy
 import shlex
+import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from contextlib import nullcontext
 from dataclasses import dataclass, field
@@ -21,6 +24,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
 
+from scripts import build_lock, validation_tier
+from scripts.modal import kernel_qualification as qualification
 from scripts.modal import kernels
 from scripts.sources import check_sources, integration_profile
 
@@ -427,6 +432,7 @@ class LauncherTests(unittest.TestCase):
             {
                 "_benchmark_worker",
                 "_preflight_fp4_timing",
+                "_preflight_glm_timing",
                 "profile_kernels",
                 "validate_kernels",
             },
@@ -466,11 +472,14 @@ class LauncherTests(unittest.TestCase):
                         str(kernels.SGLANG_ROOT / kernels.BENCHMARK_TESTS[0]),
                     ],
                 )
+                self.assertIn(str(kernels.SGLANG_ROOT / kernels.BENCHMARK_TESTS[0]), argv)
                 self.assertNotIn("--worker", argv)
 
     def test_validation_budget_is_bounded_before_execution(self):
         function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
-        self.assertEqual(function.__defaults__, (False, 1100, ""))
+        parameters = inspect.signature(function).parameters
+        self.assertEqual(parameters["max_seconds"].default, 1100)
+        self.assertEqual(parameters["sanitizer_scope"].default, "all")
         with (
             patch.object(kernels, "_run_context") as run,
             patch.object(kernels, "VALIDATION_TIMEOUT_CAP_S", 2700),
@@ -580,7 +589,7 @@ class LauncherTests(unittest.TestCase):
                     function("fixture", sanitizer=True)
             self.assertEqual([c.args[2] for c in run.call_args_list], ["validation", "synccheck"])
             self.assertEqual(record["sanitizer_results"], {
-                "synccheck": {"status": "passed"},
+                "synccheck": {"status": "passed", "report_schema": "remnant-sanitizer-raw-v1"},
                 "racecheck": {"status": "not_run"},
                 "memcheck": {"status": "not_run"},
             })
@@ -600,7 +609,7 @@ class LauncherTests(unittest.TestCase):
             patch.object(kernels, "_run_context", return_value=nullcontext((self.root, record, 100))),
             patch.object(kernels.time, "monotonic", side_effect=[99.0, 99.01]),
             patch.object(kernels, "_run_pytest", side_effect=validate_or_run) as run,
-            patch.object(kernels.subprocess, "run") as command,
+            patch.object(kernels.subprocess, "Popen") as command,
         ):
             with self.assertRaisesRegex(RuntimeError, "qualification incomplete"):
                 function("fixture", sanitizer=True)
@@ -609,6 +618,93 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual(record["sanitizer_results"], {
             tool: {"status": "not_run"} for tool in ("synccheck", "racecheck", "memcheck")
         })
+
+    def test_sanitizer_tool_selection_parsing(self):
+        available = ("synccheck", "racecheck", "memcheck")
+        self.assertEqual(kernels._select_sanitizer_tools("", available), available)
+        self.assertEqual(kernels._select_sanitizer_tools("  ", available), available)
+        self.assertEqual(kernels._select_sanitizer_tools("memcheck", available), ("memcheck",))
+        self.assertEqual(
+            kernels._select_sanitizer_tools("memcheck, synccheck", available), ("memcheck", "synccheck")
+        )
+        for bad in ("initcheck", "memcheck,memcheck", "memcheck,", ",", "memcheck,racecheck,bogus"):
+            with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, "sanitizer_tools"):
+                kernels._select_sanitizer_tools(bad, available)
+
+    def test_sanitizer_tool_subset_runs_only_those_tools_and_is_marked_incomplete(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        order = ("synccheck", "racecheck", "memcheck")
+        cases = (
+            ("", order, True),
+            ("memcheck,synccheck,racecheck", ("memcheck", "synccheck", "racecheck"), True),
+            ("racecheck", ("racecheck",), False),
+            ("memcheck,synccheck", ("memcheck", "synccheck"), False),
+        )
+        for spec, ran, complete in cases:
+            record = {}
+            with (
+                self.subTest(spec=spec),
+                patch.object(kernels, "INTEGRATION", {"version": "v0.5.18"}),
+                patch.object(kernels, "SANITIZER_ORDER", order),
+                patch.object(kernels, "_run_context", return_value=nullcontext((self.root, record, 100))),
+                patch.object(kernels.time, "monotonic", return_value=0),
+                patch.object(kernels, "_run_pytest") as run,
+            ):
+                function("fixture", sanitizer=True, sanitizer_tools=spec)
+            self.assertEqual([c.args[2] for c in run.call_args_list], ["validation", *ran])
+            self.assertEqual(record["sanitizer_tools"], list(ran))
+            self.assertEqual(record["sanitizer_qualification"], "complete" if complete else "partial")
+            self.assertEqual(
+                {tool: state["status"] for tool, state in record["sanitizer_results"].items()},
+                {tool: "passed" if tool in ran else "not_selected" for tool in order},
+            )
+
+    def test_sanitizer_subset_failure_still_fails_the_run_and_names_only_selected_tools(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        order = ("synccheck", "racecheck", "memcheck")
+        record = {}
+
+        def run_pytest(tests, root, name, deadline, **kwargs):
+            if name == "racecheck":
+                raise RuntimeError("racecheck: hazard")
+
+        with (
+            patch.object(kernels, "INTEGRATION", {"version": "v0.5.18"}),
+            patch.object(kernels, "SANITIZER_ORDER", order),
+            patch.object(kernels, "_run_context", return_value=nullcontext((self.root, record, 100))),
+            patch.object(kernels.time, "monotonic", return_value=0),
+            patch.object(kernels, "_run_pytest", side_effect=run_pytest),
+        ):
+            with self.assertRaisesRegex(RuntimeError, r"incomplete: \['racecheck'\]"):
+                function("fixture", sanitizer=True, sanitizer_tools="racecheck")
+        self.assertEqual(record["sanitizer_results"]["racecheck"]["status"], "failed")
+        self.assertEqual(record["sanitizer_results"]["memcheck"], {"status": "not_selected"})
+        self.assertEqual(record["sanitizer_qualification"], "incomplete")
+
+    def test_sanitizer_subset_deadline_leaves_selected_tool_not_run_and_fails(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        record = {}
+        with (
+            patch.object(kernels, "INTEGRATION", {"version": "v0.5.18"}),
+            patch.object(kernels, "SANITIZER_ORDER", ("synccheck", "racecheck", "memcheck")),
+            patch.object(kernels, "_run_context", return_value=nullcontext((self.root, record, 100))),
+            patch.object(kernels.time, "monotonic", return_value=100),
+            patch.object(kernels, "_run_pytest") as run,
+        ):
+            with self.assertRaisesRegex(RuntimeError, r"incomplete: \['memcheck'\]"):
+                function("fixture", sanitizer=True, sanitizer_tools="memcheck")
+        self.assertEqual([c.args[2] for c in run.call_args_list], ["validation"])
+        self.assertEqual(record["sanitizer_results"]["memcheck"], {"status": "not_run"})
+        self.assertEqual(record["sanitizer_qualification"], "incomplete")
+
+    def test_sanitizer_tools_require_sanitizer_and_are_checked_before_execution(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        with patch.object(kernels, "_run_context") as run:
+            with self.assertRaisesRegex(ValueError, "requires sanitizer"):
+                function("fixture", sanitizer=False, sanitizer_tools="memcheck")
+            with self.assertRaisesRegex(ValueError, "sanitizer_tools must be"):
+                function("fixture", sanitizer=True, sanitizer_tools="initcheck")
+            run.assert_not_called()
 
     def test_binding_check_validates_both_directions_without_unrelated_repairs(self):
         versions = {"cuda-python": "13.0.3", "cuda-bindings": "13.0.3", "cuda-pathfinder": "1.8.3"}
@@ -695,26 +791,117 @@ class LauncherTests(unittest.TestCase):
                     kernels._run_pytest(kernels.VALIDATION_TESTS, self.root, "missing", 100)
 
     def test_command_failures_show_log_path_tail_and_cause(self):
-        with patch.object(kernels.subprocess, "run") as process:
+        with patch.object(kernels.subprocess, "Popen") as process:
             with self.assertRaises(TimeoutError):
                 kernels._run_command(["command"], self.root / "output", 0)
             process.assert_not_called()
-            for failure in (
-                subprocess.CalledProcessError(1, ["command"]),
-                subprocess.TimeoutExpired(["command"], 30),
-                FileNotFoundError("command"),
+        with patch.object(kernels, "SGLANG_ROOT", self.root):
+            with self.assertRaisesRegex(RuntimeError, "specific compiler failure") as raised:
+                kernels._run_command(
+                    [sys.executable, "-c", "print('specific compiler failure'); raise SystemExit(7)"],
+                    self.root / "output", kernels.time.monotonic() + 30,
+                )
+            self.assertIn(str(self.root / "output"), str(raised.exception))
+            self.assertIsInstance(raised.exception.__cause__, subprocess.CalledProcessError)
+            self.assertEqual(raised.exception.__cause__.returncode, 7)
+            with self.assertRaises(RuntimeError) as missing:
+                kernels._run_command(
+                    [str(self.root / "absent")], self.root / "missing-command",
+                    kernels.time.monotonic() + 30,
+                )
+            self.assertIsInstance(missing.exception.__cause__, FileNotFoundError)
+
+    def test_command_timeout_stops_grandchild_after_leader_exits(self):
+        heartbeat = self.root / "heartbeat"
+        child = (
+            "import signal,sys,time\nfrom pathlib import Path\n"
+            "signal.signal(signal.SIGTERM, signal.SIG_IGN)\np=Path(sys.argv[1])\n"
+            "p.write_text('ready\\n')\nwhile True:\n"
+            "    with p.open('a') as stream: stream.write('alive\\n')\n"
+            "    time.sleep(.02)\n"
+        )
+        leader = (
+            "import subprocess,sys,time; "
+            "subprocess.Popen([sys.executable,'-c',sys.argv[1],sys.argv[2]]); "
+            "print('compiler workers started',flush=True); time.sleep(60)"
+        )
+        launched = []
+        real_popen = subprocess.Popen
+
+        def launch(*args, **kwargs):
+            process = real_popen(*args, **kwargs)
+            launched.append(process)
+            return process
+
+        try:
+            with (
+                patch.object(kernels, "SGLANG_ROOT", self.root),
+                patch.object(kernels.subprocess, "Popen", side_effect=launch) as start,
+                self.assertRaisesRegex(RuntimeError, "compiler workers started") as raised,
             ):
+                kernels._run_command(
+                    [sys.executable, "-c", leader, child, str(heartbeat)],
+                    self.root / "timeout.log", kernels.time.monotonic() + 2,
+                )
+            self.assertTrue(start.call_args.kwargs["start_new_session"])
+            self.assertIsInstance(raised.exception.__cause__, subprocess.TimeoutExpired)
+            self.assertLessEqual(raised.exception.__cause__.timeout, 2)
+            self.assertIsNotNone(launched[0].returncode)
+            self.assertIn("ready", heartbeat.read_text())
+            size = heartbeat.stat().st_size
+            kernels.time.sleep(.2)
+            self.assertEqual(heartbeat.stat().st_size, size)
+        finally:
+            for process in launched:
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                process.wait(timeout=5)
 
-                def fail(*args, failure=failure, **kwargs):
-                    kwargs["stdout"].write("specific compiler failure")
-                    raise failure
+    def test_command_interruption_cleans_group_and_preserves_interrupt(self):
+        process = MagicMock(pid=12345)
+        interruption = KeyboardInterrupt()
+        process.wait.side_effect = [interruption, 0, 0]
+        with (
+            patch.object(kernels.subprocess, "Popen", return_value=process),
+            patch.object(kernels.os, "killpg") as kill,
+            self.assertRaises(KeyboardInterrupt) as raised,
+        ):
+            kernels._run_command(["compiler"], self.root / "interrupted.log",
+                                 kernels.time.monotonic() + 30)
+        self.assertIs(raised.exception, interruption)
+        self.assertEqual(kill.call_args_list, [call(12345, signal.SIGTERM), call(12345, signal.SIGKILL)])
+        self.assertEqual(process.wait.call_args_list[-2:], [call(timeout=5), call(timeout=5)])
 
-                process.side_effect = fail
-                with self.assertRaisesRegex(RuntimeError, "specific compiler failure") as raised:
-                    kernels._run_command(["command"], self.root / "output", kernels.time.monotonic() + 30)
-                self.assertIn(str(self.root / "output"), str(raised.exception))
-                self.assertIs(raised.exception.__cause__, failure)
-                self.assertLessEqual(process.call_args.kwargs["timeout"], 30)
+    def test_command_cleanup_escalates_and_reports_failure(self):
+        process = MagicMock(pid=12345)
+        process.wait.side_effect = [subprocess.TimeoutExpired("compiler", 5), 0]
+        with patch.object(kernels.os, "killpg") as kill:
+            kernels._stop_command_group(process)
+        self.assertEqual(kill.call_args_list, [call(12345, signal.SIGTERM), call(12345, signal.SIGKILL)])
+        with (
+            patch.object(kernels.os, "killpg", side_effect=PermissionError("denied")),
+            self.assertRaises(PermissionError),
+        ):
+            kernels._stop_command_group(process)
+
+    def test_command_cleanup_failure_retains_original_exit_status(self):
+        process = MagicMock(pid=12345)
+        process.wait.return_value = 7
+        cleanup_error = PermissionError("denied")
+        with (
+            patch.object(kernels.subprocess, "Popen", return_value=process),
+            patch.object(kernels, "_stop_command_group", side_effect=cleanup_error),
+            self.assertRaises(RuntimeError) as raised,
+        ):
+            kernels._run_command(["compiler"], self.root / "cleanup-failure.log",
+                                 kernels.time.monotonic() + 30)
+        failure = raised.exception.__cause__
+        self.assertIsInstance(failure, subprocess.CalledProcessError)
+        self.assertEqual(failure.returncode, 7)
+        self.assertIs(failure.__cause__, cleanup_error)
+        self.assertIn("Process group cleanup failed", failure.__notes__[0])
 
     def test_records_survive_failure_and_ids_cannot_overwrite(self):
         manifest = self.root / "image.json"
@@ -846,6 +1033,8 @@ class LauncherTests(unittest.TestCase):
             return io.BytesIO(b"config fixture" if url.endswith("config.json") else b"sanitizer fixture")
 
         def build_path(value):
+            if str(value) == "/opt/remnant-launcher.py":
+                return kernels.REPO_ROOT / "scripts/modal/kernels.py"
             if str(value) == "/opt/remnant-0731-config.json":
                 return self.root / "config.json"
             return Path(value)
@@ -1003,7 +1192,7 @@ class LauncherTests(unittest.TestCase):
         from scripts.modal import serve
 
         with (
-            patch.object(serve, "_compiled_source_digest", return_value="matching"),
+            patch("scripts.sources.compiled_source_digest", return_value="matching"),
             patch.dict(os.environ, {"REMNANT_BUILT_INTEGRATION": serve.INTEGRATION["version"]}),
         ):
             serve._verify_compiled_sources("matching")
@@ -1011,7 +1200,7 @@ class LauncherTests(unittest.TestCase):
                 serve._verify_compiled_sources("different")
             wrong = "v0.5.18" if serve.INTEGRATION["version"] == "v0.5.22" else "v0.5.22"
             with patch.dict(os.environ, {"REMNANT_BUILT_INTEGRATION": wrong}):
-                with self.assertRaisesRegex(RuntimeError, "different REMNANT_INTEGRATION"):
+                with self.assertRaisesRegex(RuntimeError, "different integration"):
                     serve._verify_compiled_sources("matching")
         source = self.root / "source"
         source.mkdir()
@@ -1160,12 +1349,42 @@ class LauncherTests(unittest.TestCase):
                 ):
                     serve.inspect_model_cache.local()
 
+    def test_glm_serving_chat_requires_generated_content(self):
+        from scripts.modal import serve
+
+        body = {
+            "model": "glm53-flash",
+            "choices": [
+                {"message": {"content": "1, 2, 3, 4, 5"}, "finish_reason": "stop"}
+            ],
+            "usage": {"completion_tokens": 8},
+        }
+        for content, finish_reason, succeeds in (
+            ("1, 2, 3, 4, 5", "stop", True),
+            (" ", "stop", False),
+            ("One, two", "length", False),
+        ):
+            body["choices"][0]["message"]["content"] = content
+            body["choices"][0]["finish_reason"] = finish_reason
+            response = io.BytesIO(json.dumps(body).encode())
+            response.status = 200
+            with patch.object(serve.urllib.request, "urlopen", return_value=response) as send:
+                deadline = serve.time.monotonic() + 10
+                if succeeds:
+                    result = serve._glm_chat_request("30211", deadline)
+                    self.assertEqual(result["response"], body)
+                    self.assertEqual(send.call_args.args[0].get_method(), "POST")
+                else:
+                    with self.assertRaisesRegex(RuntimeError, "Invalid GLM chat completion"):
+                        serve._glm_chat_request("30211", deadline)
+
     def test_public_commands_import_without_launching_jobs(self):
         code = """
 from unittest.mock import patch
 from pathlib import Path
 import modal
-with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')), \\
+with patch.object(modal.Image, 'pip_install', autospec=True, side_effect=modal.Image.pip_install) as dependencies, \\
+     patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')), \\
      patch.object(modal.Function, 'spawn', side_effect=AssertionError('launch')), \\
      patch.object(modal.Image, 'from_dockerfile', wraps=modal.Image.from_dockerfile) as recipe:
     from scripts.modal import serve, kernels
@@ -1173,6 +1392,7 @@ with patch.object(modal.Function, 'remote', side_effect=AssertionError('launch')
     assert Path(recipe.call_args.args[0]).name == expected
     assert recipe.call_args.kwargs['build_args']['REMNANT_INTEGRATION'] == serve.INTEGRATION['version']
     assert 'benchmark_serving' in serve.app.registered_functions
+    assert any('modal==' + modal.__version__ in call.args for call in dependencies.call_args_list)
     assert {'_benchmark_worker', '_preflight_fp4_timing', 'profile_kernels', 'validate_kernels'} <= set(kernels.app.registered_functions)
     expected_order = ('synccheck', 'racecheck', 'memcheck') if serve.INTEGRATION['version'] == 'v0.5.22' else ('memcheck', 'racecheck', 'synccheck')
     assert kernels.SANITIZER_ORDER == expected_order
@@ -1290,7 +1510,7 @@ class LocalScriptTests(unittest.TestCase):
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                     self.assertIn("production image ready", result.stdout)
                     fields.write_text(fields.read_text().replace(
-                        "dsv4_c4_cache_implementation", "missing_implementation_flag"
+                        "kv_cache_format" if version == "v0.5.22" else "dsv4_c4_cache_implementation", "missing_implementation_flag"
                     ))
                     self.assertNotEqual(prep().returncode, 0)
                     if version == "v0.5.22":
@@ -1891,7 +2111,8 @@ class PrefillReadLauncherTests(unittest.TestCase):
             directory, original = environment["LD_LIBRARY_PATH"].split(":")
             self.assertEqual(original, "/real-driver")
             self.assertTrue(Path(directory, "libcuda.so.1").samefile(stub))
-            with patch.object(kernels.subprocess, "run") as process:
+            with patch.object(kernels.subprocess, "Popen") as process:
+                process.return_value.wait.return_value = 0
                 deadline = kernels.time.monotonic() + 30
                 kernels._run_command(
                     ["cpu-check"],
@@ -2145,6 +2366,661 @@ class PrefillReadLauncherTests(unittest.TestCase):
 
 
 
+class GlmLauncherTests(unittest.TestCase):
+    """GLM selection must stay explicit and fail before remote execution."""
+
+    def test_family_mismatch_never_opens_run_context(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        with patch.object(kernels, "_run_context") as run:
+            with self.assertRaisesRegex(ValueError, "model-family"):
+                function("fixture", model_family="glm53")
+            run.assert_not_called()
+
+    def test_glm_and_v41_local_launcher_resolves_tp_ep_and_gpu_count(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary)
+            command = path / "sglang"
+            command.write_text(
+                "#!/usr/bin/env python3\nimport json,sys\nprint(json.dumps(sys.argv[1:]))\n"
+            )
+            command.chmod(0o755)
+            base = {
+                **os.environ,
+                "PATH": str(path) + os.pathsep + os.environ["PATH"],
+                "MODEL_FAMILY": "glm53",
+                "REMNANT_INTEGRATION": "v0.5.22",
+                "DECODE_CFG": "{}",
+                "MAX_TOTAL_TOKENS": "16384",
+            }
+            for name in (
+                "TP",
+                "EP",
+                "GPUS",
+                "CUDA_VISIBLE_DEVICES",
+                "MODEL_NAME",
+                "SERVER_PID_FILE",
+                "STORE_IMPLEMENTATION",
+                "C4_KEEP_COUNT",
+                "C4_LAYER_KEEP_COUNTS",
+                "HICACHE_RATIO",
+            ):
+                base.pop(name, None)
+            script = str(kernels.REPO_ROOT / "scripts/local/run-server.sh")
+            for family in ("glm53", "dsv41"):
+                for tp in (4, 8):
+                    for mode in ("native", "direct"):
+                        with self.subTest(tp=tp, mode=mode):
+                            result = subprocess.run(
+                                [
+                                    "bash",
+                                    script,
+                                    mode,
+                                    "/config-only",
+                                    "127.0.0.1",
+                                    "30212",
+                                ],
+                                env={**base, "TP": str(tp), "MODEL_FAMILY": family},
+                                capture_output=True,
+                                text=True,
+                                check=True,
+                                timeout=10,
+                            )
+                            args = json.loads(result.stdout)
+                            for flag, expected in (
+                                ("--model-type", "llm"),
+                                ("--max-total-tokens", "16384"),
+                                ("--tp", str(tp)),
+                                ("--ep", str(tp)),
+                                ("--kv-cache-dtype", "fp8_e4m3"),
+                                ("--kv-cache-format", mode),
+                                (
+                                    "--moe-runner-backend",
+                                    "deep_gemm"
+                                    if family == "glm53"
+                                    else "flashinfer_mxfp4",
+                                ),
+                            ):
+                                self.assertEqual(args[args.index(flag) + 1], expected)
+                            if family == "glm53":
+                                self.assertEqual(
+                                    args[args.index("--dsa-prefill-backend") + 1],
+                                    "tilelang",
+                                )
+                                self.assertEqual(
+                                    args[args.index("--dsa-decode-backend") + 1],
+                                    "tilelang",
+                                )
+                            else:
+                                for flag, value in (
+                                    ("--dsv4-attn-backend", "flashmla"),
+                                    ("--reasoning-parser", "deepseek-v41"),
+                                    ("--tool-call-parser", "deepseekv41"),
+                                ):
+                                    self.assertEqual(args[args.index(flag) + 1], value)
+                            self.assertNotIn("--dsv4-c4-cache-format", args)
+                            self.assertIn("--language-model-only", args)
+            for changes, error in (
+                ({"TP": "4", "EP": "8"}, "positive divisor"),
+                ({"TP": "8", "GPUS": "0,1,2,3"}, "visible GPUs"),
+                ({"TP": "4", "GPUS": "0,1,2,"}, "visible GPUs"),
+            ):
+                result = subprocess.run(
+                    ["bash", script, "direct", "/config-only", "127.0.0.1", "30212"],
+                    env={**base, **changes},
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                self.assertIn(error, result.stderr)
+
+    def test_glm_container_launch_transports_named_configuration(self):
+        """Execute serve.sh's real launch block with an isolated Docker stand-in.
+
+        The stand-in retains only explicit -e settings, as docker exec does.
+        No server, GPU, container or long-lived process is created.
+        """
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            output = root / "args.json"
+            tools = root / "tools"
+            tools.mkdir()
+            (tools / "sglang").write_text(
+                f"#!{sys.executable}\nimport json,sys\n"
+                f"from pathlib import Path\np=Path({str(output)!r}); temporary=p.with_suffix('.tmp')\n"
+                "temporary.write_text(json.dumps(sys.argv[1:])); temporary.replace(p)\n"
+            )
+            # macOS has no /proc; process-record lifecycle is tested separately.
+            (tools / "setsid").write_text(
+                '#!/bin/bash\nunset SERVER_PID_FILE\nexec "$@"\n'
+            )
+            (tools / "docker").write_text(
+                f"#!{sys.executable}\nimport os,subprocess,sys,time\n"
+                "args=sys.argv[1:]; assert args[:2]==['exec','-i'],args\n"
+                "args=args[2:]; env={'PATH':os.environ['PATH']}\n"
+                "while args and args[0]=='-e':\n"
+                "    name,value=args[1].split('=',1);env[name]=value;args=args[2:]\n"
+                "assert args[0]=='fixture',args\n"
+                "subprocess.run(args[1:],env=env,check=True,timeout=5)\n"
+                f"output={str(output)!r}\n"
+                "for _ in range(100):\n"
+                "    if os.path.exists(output): break\n"
+                "    time.sleep(.02)\n"
+                "assert os.path.exists(output),'launcher did not reach sglang'\n"
+            )
+            for tool in tools.iterdir():
+                tool.chmod(0o755)
+            serve = (kernels.REPO_ROOT / "scripts/local/serve.sh").read_text()
+            start = serve.index(
+                'REQUEST_METRICS_DIR="$REQUEST_METRICS_DIR_CT" ct_launch_script'
+            )
+            end = serve.index("\nBASH", start) + len("\nBASH")
+            prefix = (
+                '. "$1"\nTREE="$2"; SGLANG_PY="$2/python"; REPO_CT="$2"; MODE=direct\n'
+            )
+            prefix += (
+                'MODEL_CT="/model with spaces"; SERVE_LOG_CT="$3"; NSYS_OUTPUT_CT=\n'
+            )
+            prefix += 'REQUEST_METRICS_DIR_CT="$4"\n'
+            metrics = root / "container metrics with spaces"
+            metrics.mkdir()
+            for tp in (4, 8):
+                env = {
+                    **os.environ,
+                    "MODEL_FAMILY": "glm53",
+                "REMNANT_INTEGRATION": "v0.5.22",
+                    "TP": str(tp),
+                    "EP": "2",
+                    "CONTAINER": "fixture",
+                    "GPUS": ",".join(map(str, range(tp))),
+                    "DECODE_CFG": '{"decode": {"bs": [1, 8]}}',
+                    "MAX_TOTAL_TOKENS": "16384",
+                    "GLM_REASONING_PARSER": "parser with spaces;$(do-not-run)",
+                    "PATH": str(tools) + os.pathsep + os.environ["PATH"],
+                }
+                for name in (
+                    "SERVER_SEED",
+                    "STORE_IMPLEMENTATION",
+                    "C4_KEEP_COUNT",
+                    "C4_LAYER_KEEP_COUNTS",
+                    "HICACHE_RATIO",
+                ):
+                    env.pop(name, None)
+                output.unlink(missing_ok=True)
+                result = subprocess.run(
+                    [
+                        "bash",
+                        "-c",
+                        prefix + serve[start:end],
+                        "launch-test",
+                        str(kernels.REPO_ROOT / "scripts/local/env.sh"),
+                        str(kernels.REPO_ROOT),
+                        str(root / "launch.log"),
+                        str(metrics),
+                    ],
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                self.assertEqual(
+                    result.returncode,
+                    0,
+                    result.stdout + result.stderr + (root / "launch.log").read_text(),
+                )
+                args = json.loads(output.read_text())
+                for flag, expected in (
+                    ("--tp", str(tp)),
+                    ("--ep", "2"),
+                    ("--model-path", "/model with spaces"),
+                    ("--kv-cache-format", "direct"),
+                    ("--cuda-graph-config", env["DECODE_CFG"]),
+                    ("--max-total-tokens", "16384"),
+                    ("--reasoning-parser", env["GLM_REASONING_PARSER"]),
+                    ("--export-metrics-to-file-dir", str(metrics)),
+                ):
+                    self.assertEqual(args[args.index(flag) + 1], expected)
+                self.assertNotIn("--dsv4-c4-cache-format", args)
+
+
+class GLMCPURebuildTests(unittest.TestCase):
+    """The explicit rebuild excludes exactly two JIT inputs, never AOT sources."""
+
+    def test_compile_owner_digest_excludes_only_harness_edits(self):
+        from scripts.sources import glm_compile_owner_digest
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            owners = [
+                root / "python/sglang/benchmark/remnant/glm_artifacts.py",
+                root / "python/sglang/srt/remnant/glm.py",
+            ]
+            test = root / "test/registered/attention/unittests/test_glm5_remnant.py"
+            for path in [*owners, test]:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("original")
+            expected = glm_compile_owner_digest(root)
+            test.write_text("unrelated fixture edits")
+            self.assertEqual(glm_compile_owner_digest(root), expected)
+            for path in owners:
+                path.write_text("changed owner")
+                self.assertNotEqual(glm_compile_owner_digest(root), expected)
+                path.write_text("original")
+            owners[0].unlink()
+            with self.assertRaisesRegex(RuntimeError, "Missing GLM CPU compile owner"):
+                glm_compile_owner_digest(root)
+
+    def test_legacy_image_snapshot_requires_fresh_cpu_preparation(self):
+        from scripts import sources
+
+        real_path = Path
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            base = root / "base.json"
+            output = root / "snapshot.json"
+            import hashlib
+
+            binary = root / "qualified.so"
+            binary.write_bytes(b"qualified artifact")
+            base.write_text(
+                json.dumps(
+                    {
+                        "glm_compile": {"tilelang": []},
+                        "binaries": {
+                            str(binary): hashlib.sha256(binary.read_bytes()).hexdigest()
+                        },
+                    }
+                )
+            )
+
+            def mapped(path):
+                if str(path) == "/opt/remnant-build.json":
+                    return base
+                if str(path) == "/opt/remnant-glm-reuse-base.json":
+                    return output
+                return real_path(path)
+
+            with patch.object(sources, "Path", side_effect=mapped):
+                sources.snapshot_glm_artifacts(str(root))
+            self.assertIsNone(json.loads(output.read_text())["compile_owner_digest"])
+            owner = root / "python/sglang/benchmark/remnant/glm_artifacts.py"
+            runtime = root / "python/sglang/srt/remnant/glm.py"
+            for path in (owner, runtime):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("current owner")
+            with patch.object(sources, "Path", side_effect=mapped):
+                sources.snapshot_glm_artifacts(str(root))
+            self.assertEqual(
+                json.loads(output.read_text())["compile_owner_digest"],
+                sources.glm_compile_owner_digest(root),
+            )
+
+            binary.write_bytes(b"changed artifact")
+            with patch.object(sources, "Path", side_effect=mapped):
+                with self.assertRaisesRegex(
+                    RuntimeError, "Compiled base binary changed"
+                ):
+                    sources.snapshot_glm_artifacts(str(root))
+
+    def test_format_transition_checks_raw_hashes_ast_and_formatter(self):
+        import hashlib
+
+        from scripts.sources import verify_glm_formatting
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            python = root / "aot/python/sgl_kernel/flash_mla.py"
+            cpp = root / "aot/csrc/flashmla_extension.cc"
+            for path in (python, cpp):
+                path.parent.mkdir(parents=True, exist_ok=True)
+            old_py, new_py = b"x=1\n", b"x = 1\n"
+            old_cpp, new_cpp = b"int x=1;\n", b"int x = 1;\n"
+            def sha(data):
+                return hashlib.sha256(data).hexdigest()
+            proof = dict(
+                schema="remnant-glm-format-transition-v1",
+                ast_python_minor=list(sys.version_info[:2]),
+                files={
+                    "0/aot/python/sgl_kernel/flash_mla.py": dict(
+                        before=sha(old_py),
+                        after=sha(new_py),
+                        ast_sha256=sha(
+                            ast.dump(
+                                ast.parse(old_py), include_attributes=False
+                            ).encode()
+                        ),
+                    ),
+                    "0/aot/csrc/flashmla_extension.cc": dict(
+                        before=sha(old_cpp), after=sha(new_cpp)
+                    ),
+                },
+            )
+            python.write_bytes(old_py)
+            cpp.write_bytes(old_cpp)
+            with self.assertRaisesRegex(RuntimeError, "Python minor"):
+                verify_glm_formatting(
+                    {**proof, "ast_python_minor": [0, 0]}, [str(root)], candidate=True
+                )
+
+            def formatter(args, **kwargs):
+                return "clang-format version 20.1.7" if "--version" in args else new_cpp
+
+            with patch(
+                "scripts.sources.subprocess.check_output", side_effect=formatter
+            ):
+                verify_glm_formatting(proof, [str(root)], candidate=False)
+            python.write_bytes(new_py)
+            cpp.write_bytes(new_cpp)
+            verify_glm_formatting(proof, [str(root)], candidate=True)
+            python.write_bytes(b"x = 2\n")
+            with self.assertRaisesRegex(RuntimeError, "source changed"):
+                verify_glm_formatting(proof, [str(root)], candidate=True)
+            proof["files"]["0/aot/python/sgl_kernel/flash_mla.py"]["after"] = sha(
+                python.read_bytes()
+            )
+            with self.assertRaisesRegex(RuntimeError, "Python semantics"):
+                verify_glm_formatting(proof, [str(root)], candidate=True)
+            with self.assertRaisesRegex(RuntimeError, "Unsupported"):
+                verify_glm_formatting(
+                    dict(
+                        schema=proof["schema"],
+                        ast_python_minor=list(sys.version_info[:2]),
+                        files={"0/../unsafe": {}},
+                    ),
+                    [str(root)],
+                    candidate=True,
+                )
+
+    def test_image_source_resolver_requires_one_explicit_mode(self):
+        for environment, expected in (
+            ({}, (None, None)),
+            ({"REMNANT_COMPILED_IMAGE": "ordinary"}, ("ordinary", None)),
+            ({"REMNANT_GLM_CPU_REBUILD_FROM": "rebuild"}, (None, "rebuild")),
+            ({"REMNANT_COMPILED_IMAGE": "", "REMNANT_GLM_CPU_REBUILD_FROM": "rebuild"}, (None, "rebuild")),
+        ):
+            with self.subTest(environment=environment):
+                self.assertEqual(kernels._resolve_image_sources("glm53", environment), expected)
+                self.assertEqual(kernels._resolve_image_sources("dsv4", environment), (None, None))
+        conflicting = {
+            "REMNANT_COMPILED_IMAGE": "inherited", "REMNANT_GLM_CPU_REBUILD_FROM": "explicit",
+        }
+        self.assertEqual(kernels._resolve_image_sources("dsv4", conflicting), (None, None))
+        with self.assertRaisesRegex(ValueError, "mutually exclusive"):
+            kernels._resolve_image_sources("glm53", conflicting)
+
+    def test_conflicting_image_recipe_fails_before_source_or_image_work(self):
+        with (
+            patch.dict(os.environ, REMNANT_INTEGRATION="v0.5.22", REMNANT_MODEL_FAMILY="glm53",
+                       REMNANT_COMPILED_IMAGE="inherited", REMNANT_GLM_CPU_REBUILD_FROM="explicit"),
+            patch("scripts.sources.check_sources") as sources,
+            patch.object(kernels.modal, "Image") as image,
+            self.assertRaisesRegex(ValueError, "mutually exclusive"),
+        ):
+            runpy.run_path(str(kernels.REPO_ROOT / "scripts/modal/kernels.py"))
+        sources.assert_not_called()
+        self.assertEqual(image.mock_calls, [])
+
+    def test_explicit_cpu_rebuild_never_uses_inherited_ordinary_cache(self):
+        with (
+            patch.dict(
+                os.environ,
+                REMNANT_GLM_CPU_REBUILD_FROM="explicit",
+                REMNANT_COMPILED_IMAGE="inherited",
+            ),
+            patch.object(kernels, "_glm_launch_metadata") as metadata,
+        ):
+            self.assertFalse(kernels._reuse_glm_cpu_artifacts(Path("/unused"), 0, {}))
+            metadata.assert_not_called()
+
+    def test_compiled_source_allowlist(self):
+        from scripts.sources import glm_rebuild_source_digest
+
+        with tempfile.TemporaryDirectory() as tmp:
+            roots = [Path(tmp) / "kernels", Path(tmp) / "flash"]
+            for root in roots:
+                root.mkdir()
+            loader = roots[0] / "ops/attention/dsa/tilelang_kernel.py"
+            helper = roots[0] / "jit/include/sgl_kernel/glm_packed_decode.cuh"
+            for path in (loader, helper):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("before")
+            native = roots[0] / "aot.cu"
+            native.write_text("native")
+            flash = roots[1] / "kernel.cuh"
+            flash.write_text("flash")
+            expected = glm_rebuild_source_digest(roots)
+            loader.write_text("after")
+            helper.write_text("after")
+            self.assertEqual(glm_rebuild_source_digest(roots), expected)
+            native.write_text("changed")
+            self.assertNotEqual(glm_rebuild_source_digest(roots), expected)
+            native.write_text("native")
+            flash.write_text("changed")
+            self.assertNotEqual(glm_rebuild_source_digest(roots), expected)
+
+    def test_base_identity_and_artifacts(self):
+        import hashlib
+
+        from scripts import sources
+
+        real_path = Path
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            roots = [root / "kernels", root / "flash"]
+            for folder in roots:
+                folder.mkdir()
+            binary, cache = root / "aot.so", root / "jit.cubin"
+            binary.write_bytes(b"native")
+            cache.write_bytes(b"cached")
+            manifest = dict(
+                source_identities={
+                    "sglang": {"commit": "sg"},
+                    "flashmla": {"commit": "fm"},
+                },
+                binaries={str(binary): hashlib.sha256(binary.read_bytes()).hexdigest()},
+                glm_compile={
+                    "cache_files": {
+                        str(cache): hashlib.sha256(cache.read_bytes()).hexdigest()
+                    }
+                },
+            )
+            base = root / "manifest.json"
+            base.write_text(json.dumps(manifest))
+
+            def mapped(path):
+                if str(path) == "/opt/remnant-build.json":
+                    return base
+                if str(path) == "/opt/remnant-cpu-rebuild-base.json":
+                    return root / "verified.json"
+                return real_path(path)
+
+            with (
+                patch.object(sources, "Path", side_effect=mapped),
+                patch.dict(os.environ, REMNANT_BUILT_INTEGRATION="v0.5.22"),
+            ):
+                digest = sources.glm_rebuild_source_digest(roots)
+                expected = dict(sglang="sg", flashmla="fm")
+                sources.verify_glm_cpu_rebuild(expected, digest, list(map(str, roots)))
+                with self.assertRaises(RuntimeError):
+                    sources.verify_glm_cpu_rebuild(
+                        {**expected, "sglang": "wrong"}, digest, list(map(str, roots))
+                    )
+                for artifact in (binary, cache):
+                    original = artifact.read_bytes()
+                    artifact.write_bytes(b"changed")
+                    with self.assertRaises(RuntimeError):
+                        sources.verify_glm_cpu_rebuild(
+                            expected, digest, list(map(str, roots))
+                        )
+                    artifact.write_bytes(original)
+                with (
+                    patch.dict(os.environ, REMNANT_BUILT_INTEGRATION="v0.5.18"),
+                    self.assertRaises(RuntimeError),
+                ):
+                    sources.verify_glm_cpu_rebuild(
+                        expected, digest, list(map(str, roots))
+                    )
+
+
+class GLMAttentionProtocolTests(unittest.TestCase):
+    """Coverage identities and model-specific dispatch must fail closed."""
+
+    def test_qualification_import_needs_no_historical_git_objects(self):
+        import importlib
+
+        from scripts.modal import kernel_qualification
+
+        with patch("subprocess.check_output", side_effect=AssertionError("no Git at import")):
+            policy = importlib.reload(kernel_qualification)
+        self.assertEqual(len(policy.GLM_BASELINE_RUNTIME_HASHES), 5)
+        self.assertTrue(all(len(value) == 64 for value in policy.GLM_BASELINE_RUNTIME_HASHES.values()))
+
+    def test_scoped_audit_requires_helper_and_handoff_trace(self):
+        for text in ("glm_packed_bytes", "glm_packed_bytes warp", "other_kernel warp CTA barrier"):
+            with self.assertRaises(RuntimeError):
+                kernels._check_glm_scope_audit(text, "test")
+        kernels._check_glm_scope_audit("glm_packed_bytes WarpSync CTA barrier", "test")
+
+    def test_preparation_reports_already_built_image_without_second_build(self):
+        source = ast.parse((kernels.REPO_ROOT / "scripts/modal/kernels.py").read_text())
+        function = next(n for n in source.body if isinstance(n, ast.FunctionDef) and n.name == "prepare_kernels")
+        function.decorator_list = []
+        image = MagicMock(object_id="im-built")
+        namespace = dict(MODEL_FAMILY="glm53", kernel_image=image, SOURCE_IDENTITIES={}, json=json)
+        exec(compile(ast.Module([function], type_ignores=[]), "prepare", "exec"), namespace)
+        with patch("builtins.print"):
+            namespace["prepare_kernels"]("glm53")
+        image.build.assert_not_called()
+
+    def test_explicit_sanitizer_selection_preserves_full_gate(self):
+        self.assertEqual(kernels._selected_sanitizer_tools('racecheck', True), ('racecheck',))
+        self.assertEqual(kernels._selected_sanitizer_tools('', True), kernels.SANITIZER_ORDER)
+        for value, enabled in [('memcheck', False), ('memcheck,memcheck', True), ('unknown', True)]:
+            with self.assertRaises(ValueError):
+                kernels._selected_sanitizer_tools(value, enabled)
+
+    def test_sanitizer_count_cannot_replace_required_case_identities(self):
+        import xml.etree.ElementTree as ET
+
+        # Construct independent fixtures instead of relying on ignored artifacts.
+        names = ['test_producer_reconstruction', 'test_native_fp8_conversion',
+                 'test_allocator_accounting', 'test_invalid_attention', 'test_partial_outputs',
+                 'test_attention[3-8-8]', 'test_changing_input_graph[adapter]',
+                 'test_changing_input_graph[direct]', 'test_production_backend_constructor',
+                 'test_attention[0-1-64]', 'test_pool_lifecycle']
+        root = ET.Element('testsuites')
+        suite = ET.SubElement(root, 'testsuite', tests='11', errors='0', failures='0', skipped='0')
+        for name in names:
+            ET.SubElement(suite, 'testcase', name=name, classname='registered.attention.unittests.test_glm5_remnant')
+        tree = ET.ElementTree(root)
+        qualification.check_glm_sanitizer_cases(tree, 'historical', historical=True)
+        with self.assertRaisesRegex(RuntimeError, 'missing'):
+            qualification.check_glm_sanitizer_cases(tree, 'current', historical=False)
+        for dimensions in ((8,2,2,33),(16,4,2,66)):
+            name = 'test_benchmark_sanitizer_bank_graph[' + '-'.join(map(str, dimensions)) + ']'
+            node = ET.SubElement(suite, 'testcase', name=name, classname='registered.attention.unittests.test_glm5_remnant')
+            geometry = dict(zip(('heads','banks','queries','forced_inner'), dimensions), warmup_calls=1, measured_warmup_calls=10, actual_warmup_calls_per_mode=dimensions[1])
+            ET.SubElement(ET.SubElement(node, 'properties'), 'property', name='probe_geometry', value=json.dumps(geometry))
+        suite.set('tests', '13')
+        qualification.check_glm_sanitizer_cases(tree, 'current', historical=False)
+        suite[0].set('name', 'unrelated_test')
+        with self.assertRaisesRegex(RuntimeError, 'missing'):
+            qualification.check_glm_sanitizer_cases(tree, 'spoofed', historical=False)
+        suite[0].set('name', names[0])
+        ET.SubElement(suite[0], 'skipped')
+        with self.assertRaises(RuntimeError):
+            qualification.check_glm_sanitizer_cases(tree, 'skipped', historical=False)
+
+    def test_glm_command_does_not_load_deepseek_native_library(self):
+        with patch.object(kernels, 'MODEL_FAMILY', 'glm53'):
+            command = kernels._benchmark_command('--model-family', 'glm53', '--suite', 'glm-attention')
+        self.assertNotIn('--native-library', command)
+        self.assertIn('glm-attention', command)
+
+    def test_glm_sanitizer_merge_requires_clean_explicit_complete_union(self):
+        import hashlib
+        import xml.etree.ElementTree as ET
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = dict(glm_compile=dict(triton=[], tilelang=[], attention_scale=0.0625), sanitizer={'binary_sha256':'tool'})
+            manifest_path = root / 'manifest.json'
+            manifest_path.write_text(json.dumps(manifest))
+            original = qualification.required_glm_sanitizer_cases(historical=True)
+            focused = qualification.required_glm_sanitizer_cases(historical=False) - original
+            def write_group(run, tool, names, interrupted=False):
+                folder = root / 'microbench' / run / 'validation'
+                folder.mkdir(parents=True)
+                (folder / 'build-manifest.json').write_text(json.dumps(manifest))
+                (folder / 'result.json').write_text(json.dumps(dict(model_family='glm53', status='failed' if interrupted else 'passed', runtime_hashes={'kernel':'same'}, sanitizer_results={name:{'status':('failed' if interrupted else 'passed') if name==tool else 'not_selected'} for name in ('memcheck','racecheck','synccheck')})))
+                log = ('KeyboardInterrupt\n' if interrupted else '') + ('========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)\n' if tool=='racecheck' else '========= ERROR SUMMARY: 0 errors\n')
+                (folder / f'{tool}.log').write_text(log)
+                suite = ET.Element('testsuite', tests=str(len(names)), errors='0', failures='0', skipped='0')
+                for name in sorted(names):
+                    node = ET.SubElement(suite,'testcase',name=name,classname='registered.attention.unittests.test_glm5_remnant')
+                    if name.startswith('test_benchmark_sanitizer_bank_graph['):
+                        dimensions = tuple(map(int,name.split('[')[1][:-1].split('-')))
+                        geometry = dict(zip(('heads','banks','queries','forced_inner'),dimensions), warmup_calls=1,measured_warmup_calls=10,actual_warmup_calls_per_mode=dimensions[1])
+                        ET.SubElement(ET.SubElement(node,'properties'),'property',name='probe_geometry',value=json.dumps(geometry))
+                if interrupted:
+                    ET.SubElement(suite, 'testcase', time='0.001')  # pytest interrupted-node placeholder
+                ET.ElementTree(suite).write(folder / f'{tool}.xml')
+                if interrupted:
+                    note = dict(schema='remnant-glm-sanitizer-checkpoint-v1',run_id=run,tool=tool,action='intentional SIGINT to owned pytest')
+                    note.update({f'{suffix}_sha256':hashlib.sha256((folder / f'{tool}.{suffix}').read_bytes()).hexdigest() for suffix in ('log','xml')})
+                    (folder / f'{tool}-coverage-checkpoint.json').write_text(json.dumps(note))
+                return folder
+            interrupted = write_group('race-original','racecheck',original,True)
+            write_group('race-focused','racecheck',focused)
+            write_group('sync-original','synccheck',original)
+            write_group('sync-focused','synccheck',focused)
+            write_group('mem-all','memcheck',original|focused)
+            ids = 'race-original,race-focused,sync-original,sync-focused,mem-all'
+            with patch.object(kernels,'RESULTS_ROOT',root), patch.object(kernels,'MANIFEST',manifest_path), patch.object(kernels,'_glm_benchmark_contract') as contract:
+                contract.return_value.runtime_hashes.return_value = {'kernel':'same'}
+                result = kernels._glm_timing_qualification(ids)
+                self.assertEqual(set(result['tools']['racecheck']['cases']),original|focused)
+                with self.assertRaisesRegex(RuntimeError,'missing sanitizer gates'):
+                    kernels._glm_timing_qualification(ids.replace(',race-focused',''))
+                exploratory = kernels._glm_timing_qualification(
+                    ids.replace(',mem-all', ''), allow_incomplete=True
+                )
+                self.assertEqual(exploratory['status'], 'incomplete')
+                self.assertEqual(set(exploratory['missing']['memcheck']), original | focused)
+                self.assertFalse(exploratory['missing']['racecheck'])
+                self.assertFalse(exploratory['missing']['synccheck'])
+                note = interrupted / 'racecheck-coverage-checkpoint.json'
+                saved = note.read_text()
+                note.unlink()
+                with self.assertRaisesRegex(RuntimeError,'missing sanitizer gates'):
+                    kernels._glm_timing_qualification(ids)
+                note.write_text(saved)
+                (interrupted / 'racecheck.log').write_text('KeyboardInterrupt\n========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)\nchanged')
+                with self.assertRaisesRegex(RuntimeError,'report changed'):
+                    kernels._glm_timing_qualification(ids)
+                with self.assertRaisesRegex(RuntimeError,'report changed'):
+                    kernels._glm_timing_qualification(ids, allow_incomplete=True)
+
+    def test_glm_checkpoint_path_rejects_traversal_and_missing_records(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(kernels, 'RESULTS_ROOT', Path(directory)):
+            for name in ('../other', 'bad/path', ''):
+                with self.assertRaises(ValueError):
+                    kernels._glm_timing_checkpoint(name)
+            with self.assertRaises(FileNotFoundError):
+                kernels._glm_timing_checkpoint('prior')
+            expected = Path(directory) / 'microbench/prior/timing/timing.json'
+            expected.parent.mkdir(parents=True)
+            expected.write_text('{}')
+            self.assertEqual(kernels._glm_timing_checkpoint('prior'), expected)
+
+    def test_glm_qualified_timing_rejects_missing_tools(self):
+        with self.assertRaises(ValueError):
+            kernels._glm_timing_qualification('')
+        with self.assertRaises(ValueError):
+            kernels._glm_timing_qualification('../invalid')
+
+
+
+
 class FP4QualificationTests(unittest.TestCase):
     """Fail-closed receipt aggregation, independent of GPU/native dependencies."""
 
@@ -2157,13 +3033,13 @@ class FP4QualificationTests(unittest.TestCase):
         self.root = Path(temporary.name)
         self.manifest = {key: {"fixture": key} for key in q.IDENTITY_FIELDS}
 
-    def receipt(self, name, passed=(), failed=None, manifest=None, count=None):
+    def receipt(self, name, passed=(), failed=None, manifest=None, count=None, omitted_status="not_run"):
         count = self.q.FP4_CASE_COUNT if count is None else count
         root = self.root / "microbench" / name / "validation"
         root.mkdir(parents=True)
         (root / "build-manifest.json").write_text(json.dumps(manifest or self.manifest))
         states = {
-            tool: {"status": "passed" if tool in passed else "not_run"}
+            tool: {"status": "passed" if tool in passed else omitted_status}
             for tool in self.q.TOOLS
         }
         if failed:
@@ -2196,6 +3072,16 @@ class FP4QualificationTests(unittest.TestCase):
         self.assertEqual(set(result["tools"]), self.q.TOOLS)
         self.assertEqual(result["case_count_per_tool"], self.q.FP4_CASE_COUNT)
         self.assertEqual(len(result["identity_sha256"]), 64)
+
+    def test_unselected_tools_need_no_reports_and_clean_single_tool_runs_combine(self):
+        for tool in self.q.TOOLS:
+            self.receipt(tool, (tool,), omitted_status="not_selected")
+        result = self.q.qualify_fp4_runs(
+            self.root, ",".join(sorted(self.q.TOOLS)), self.manifest
+        )
+        self.assertEqual(set(result["tools"]), self.q.TOOLS)
+        with self.assertRaisesRegex(RuntimeError, "incomplete/different sanitizer coverage"):
+            self.q.qualify_fp4_runs(self.root, "memcheck", self.manifest)
 
     def partial_tool(self, name, status="interrupted", *, xml=None, log=None):
         base = self.root / "microbench" / name / "validation"
@@ -2421,7 +3307,361 @@ class FP4PreflightTests(unittest.TestCase):
             )
             self.assertEqual(actual, "result")
             cpu.assert_called_once_with("run", "clean")
-            self.assertEqual(gpu.call_args.args[-1], proof)
+            bound = inspect.signature(inspect.unwrap(kernels._benchmark_worker.get_raw_f())).bind(*gpu.call_args.args, **gpu.call_args.kwargs)
+            self.assertEqual(bound.arguments["preflight"], proof)
+
+
+
+class SharedModelContractsTests(unittest.TestCase):
+    def test_profiles_are_pure_and_preserve_assets(self):
+        from scripts.model_profiles import model_profile
+
+        for family in ("dsv4", "dsv41", "glm53"):
+            profile = model_profile(family, "v0.5.22")
+            self.assertIn(profile.revision, profile.config_url)
+            self.assertEqual(len(profile.config_sha256), 64)
+        self.assertEqual(
+            model_profile("glm53", "v0.5.22").checkpoint_bytes, 328337455672
+        )
+        self.assertEqual(model_profile("glm53", "v0.5.22").volume, "glm53-flash")
+        for family, version in (
+            ("glm53", "v0.5.18"),
+            ("dsv41", "v0.5.18"),
+            ("unknown", "v0.5.22"),
+        ):
+            with self.assertRaises(ValueError):
+                model_profile(family, version)
+
+    def test_fp4_focused_scope_has_positive_instrumentation_and_no_full_gate(self):
+        from scripts.modal.qualification import check_fp4_scope_audit
+
+        summary = (
+            "========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)\n"
+        )
+        with self.assertRaises(RuntimeError):
+            check_fp4_scope_audit(summary, "empty")
+        check_fp4_scope_audit(
+            summary + "flash_fwd_splitkv_mla_fp8_sparse_kernel CTA barrier", "covered"
+        )
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        with (
+            patch.object(kernels, "MODEL_FAMILY", "dsv4"),
+            patch.object(kernels, "VALIDATION_SUITE", "v41-fp4"),
+            patch.object(kernels, "_run_context") as run,
+        ):
+            with self.assertRaisesRegex(ValueError, "exact FP4"):
+                function(
+                    "wrong",
+                    stage="corrective",
+                    sanitizer=True,
+                    sanitizer_scope="v41-merge",
+                    cases=kernels.V41_MERGE_SANITIZER[0],
+                )
+            run.assert_not_called()
+        import re
+        for tool, trace in (("memcheck", False), ("synccheck", False), ("racecheck", False), ("racecheck", True)):
+            prefix = kernels._fp4_sanitizer_prefix(tool, trace=trace)
+            pattern = prefix[prefix.index("--kernel-name")+1].removeprefix("regex=")
+            for name in ("_store", "_read", "flash_fwd_splitkv_mla_fp8_sparse_kernel",
+                         "sparse_attn_fwd_kernel", "flash_fwd_mla_combine_kernel"):
+                self.assertIsNotNone(re.search(pattern, name))
+            self.assertIsNone(re.search(pattern, "reference_softmax_kernel"))
+        with self.assertRaises(RuntimeError):
+            from scripts.modal.qualification import check_sanitizer_report
+            check_sanitizer_report(summary + "========= Internal Sanitizer Error: failed\n", "racecheck")
+        self.assertEqual(len(kernels.V41_MERGE_SANITIZER), 15)
+        self.assertEqual(len(set(kernels.V41_MERGE_SANITIZER)), 15)
+        self.assertEqual(
+            kernels._resolve_image_sources(
+                "dsv4",
+                {
+                    "REMNANT_VALIDATION_SUITE": "v41-fp4",
+                    "REMNANT_COMPILED_IMAGE": "verified",
+                },
+            ),
+            ("verified", None),
+        )
+        with self.assertRaisesRegex(ValueError, "requires glm53"):
+            kernels._resolve_image_sources(
+                "dsv4",
+                {
+                    "REMNANT_VALIDATION_SUITE": "v41-fp4",
+                    "REMNANT_GLM_CPU_REBUILD_FROM": "wrong",
+                },
+            )
+
+    def test_parallel_smoke_validates_before_scheduling(self):
+        from scripts.modal import serve
+
+        for family, mode in (
+            ("dsv4", "native"),
+            ("glm53", "adapter"),
+            ("dsv41", "packed"),
+        ):
+            with (
+                patch.object(serve, "MODEL_FAMILY", family),
+                patch.object(serve.prepare_serving_smoke, "remote") as prepare,
+                patch.object(serve._smoke_serving_worker, "remote") as worker,
+            ):
+                with self.assertRaises(ValueError):
+                    serve.smoke_serving("fixture", mode)
+                prepare.assert_not_called()
+                worker.assert_not_called()
+
+    def test_v41_resolved_smoke_settings_require_backend_and_tuning(self):
+        from scripts.modal import serve
+
+        settings = dict(
+            kv_cache_format="direct",
+            tp_size=4,
+            ep_size=4,
+            kv_cache_dtype="fp8_e4m3",
+            language_model_only=True,
+            context_length=8192,
+            max_running_requests=4,
+            chunked_prefill_size=256,
+            max_total_num_tokens=16384,
+            dsv4_attn_backend="flashmla",
+            disable_flashinfer_autotune=True,
+            reasoning_parser="deepseek-v41",
+            tool_call_parser="deepseekv41",
+            cuda_graph_config={"decode": {"backend": "full", "bs": [1, 2, 4]}},
+        )
+        for change, succeeds in (
+            ({}, True),
+            ({"kv_cache_format": "native"}, False),
+            ({"dsv4_attn_backend": "auto"}, False),
+            ({"disable_flashinfer_autotune": False}, False),
+        ):
+            with patch.object(
+                serve.urllib.request,
+                "urlopen",
+                return_value=io.BytesIO(json.dumps({**settings, **change}).encode()),
+            ):
+                if succeeds:
+                    self.assertEqual(
+                        serve._smoke_settings(
+                            "30211", "direct", serve.time.monotonic() + 10, "dsv41"
+                        ),
+                        settings,
+                    )
+                else:
+                    with self.assertRaises(RuntimeError):
+                        serve._smoke_settings(
+                            "30211", "direct", serve.time.monotonic() + 10, "dsv41"
+                        )
+
+    def test_single_mode_smoke_owns_only_requested_mode_and_result_directory(self):
+        from contextlib import contextmanager
+
+        from scripts.modal import serve
+
+        with tempfile.TemporaryDirectory() as tmp:
+            for family in ("glm53", "dsv41"):
+                for mode in ("native", "direct"):
+                    exited = []
+
+                    @contextmanager
+                    def boot(environment, log, deadline):
+                        self.assertEqual(
+                            float(environment["MEM_FRAC"]),
+                            {"glm53": 0.86, "dsv41": 0.90}[family],
+                        )
+                        log.write_text(
+                            "\n".join(
+                                f"[2026-11-05 12:00:00 TP{rank} EP{rank}] {marker}"
+                                for rank in range(4)
+                                for marker in (
+                                    "Load weight end.",
+                                    "Capture target decode CUDA graph end.",
+                                )
+                            )
+                        )
+                        try:
+                            yield
+                        finally:
+                            exited.append(True)
+
+                    with (
+                        patch.object(serve, "MODEL_FAMILY", family),
+                        patch.object(serve, "RESULTS_ROOT", Path(tmp)),
+                        patch.object(
+                            serve, "_check_serving_smoke_image", return_value={}
+                        ),
+                        patch.object(
+                            serve, "_check_serving_checkpoint", return_value={}
+                        ),
+                        patch.object(
+                            serve.subprocess,
+                            "check_output",
+                            return_value="NVIDIA H200\n" * 4,
+                        ),
+                        patch.object(
+                            serve, "_running_serving_server", side_effect=boot
+                        ),
+                        patch.object(serve, "_smoke_settings", return_value={}),
+                        patch.object(serve, "_smoke_chat_request", return_value={}),
+                        patch.object(serve.results_volume, "commit"),
+                        patch("builtins.print"),
+                    ):
+                        result = serve._run_serving_smoke(
+                            "shared-pair",
+                            mode,
+                            allocation_seconds=serve._serving_smoke_profile(
+                                family
+                            ).mode_seconds
+                            + 60,
+                            artifact_mode=mode,
+                        )
+                        self.assertEqual(set(result["mode_results"]), {mode})
+                        self.assertEqual(
+                            result["mode_results"][mode]["status"], "passed"
+                        )
+                        self.assertEqual(exited, [True])
+                for mode in ("native", "direct"):
+                    artifact = (
+                        Path(tmp)
+                        / (family + "-serving")
+                        / "shared-pair"
+                        / mode
+                        / "result.json"
+                    )
+                    self.assertEqual(
+                        set(json.loads(artifact.read_text())["mode_results"]), {mode}
+                    )
+
+    def test_shared_report_parsing_and_new_raw_identity(self):
+        import hashlib
+
+        from scripts.modal.qualification import (read_pytest_report,
+                                                 validate_run_id,
+                                                 verify_sanitizer_artifacts)
+
+        for name in ("../bad", "a/b", "", "a" * 129):
+            with self.assertRaises(ValueError):
+                validate_run_id(name)
+        validate_run_id("good-run_1")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "memcheck.xml").write_text(
+                '<testsuite tests="1"><testcase classname="unit" name="case"><properties><property name="shape" value="8"/></properties></testcase></testsuite>'
+            )
+            (root / "memcheck.log").write_text("========= ERROR SUMMARY: 0 errors\n")
+            cases, counts = read_pytest_report(root / "memcheck.xml")
+            self.assertEqual(counts, dict(tests=1, errors=0, failures=0, skipped=0))
+            self.assertEqual(cases[0].find("properties/property").get("value"), "8")
+            state = {
+                "report_schema": "remnant-sanitizer-raw-v1",
+                **{
+                    f"{s}_sha256": hashlib.sha256(
+                        (root / f"memcheck.{s}").read_bytes()
+                    ).hexdigest()
+                    for s in ("log", "xml")
+                },
+            }
+            verify_sanitizer_artifacts(root, "memcheck", state)
+            (root / "memcheck.log").write_text("changed")
+            with self.assertRaisesRegex(RuntimeError, "raw report changed"):
+                verify_sanitizer_artifacts(root, "memcheck", state)
+
+    def test_glm_smoke_requires_all_rank_progress_and_resolved_mode(self):
+        from scripts.modal import serve
+
+        rows = [
+            f"[2026-11-04 13:53:46 TP{rank} EP{rank}] {marker}"
+            for rank in range(4)
+            for marker in ("Load weight end.", "Capture target decode CUDA graph end.")
+        ]
+        stages = serve._glm_smoke_stages("\n".join(rows))
+        for event in ("weight_load_complete", "graph_capture_complete"):
+            self.assertEqual(
+                {s["rank"] for s in stages if s["event"] == event}, set(range(4))
+            )
+        settings = dict(
+            kv_cache_format="direct",
+            tp_size=4,
+            ep_size=4,
+            kv_cache_dtype="fp8_e4m3",
+            dsa_prefill_backend="tilelang",
+            dsa_decode_backend="tilelang",
+            language_model_only=True,
+            context_length=8192,
+            max_running_requests=4,
+            chunked_prefill_size=2048,
+            max_total_num_tokens=16384,
+            cuda_graph_config={"decode": {"backend": "full", "bs": [1, 2, 4]}},
+        )
+        response = io.BytesIO(json.dumps(settings).encode())
+        with patch.object(serve.urllib.request, "urlopen", return_value=response):
+            self.assertEqual(
+                serve._glm_smoke_settings(
+                    "30211", "direct", serve.time.monotonic() + 10
+                ),
+                settings,
+            )
+        response = io.BytesIO(json.dumps(settings).encode())
+        with (
+            patch.object(serve.urllib.request, "urlopen", return_value=response),
+            self.assertRaisesRegex(RuntimeError, "kv_cache_format"),
+        ):
+            serve._glm_smoke_settings("30211", "native", serve.time.monotonic() + 10)
+
+    def test_ambiguous_sanitizers_fail_before_run_context(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        with patch.object(kernels, "_run_context") as context:
+            with self.assertRaises(ValueError):
+                function(
+                    "ambiguous",
+                    sanitizer=True,
+                    sanitizer_tools="memcheck",
+                    sanitizer_order="memcheck,racecheck,synccheck",
+                )
+            context.assert_not_called()
+
+    def test_merge_sanitizer_scope_and_fp4_allowlist_fail_before_execution(self):
+        function = inspect.unwrap(kernels.validate_kernels.get_raw_f())
+        with (
+            patch.object(kernels, "MODEL_FAMILY", "glm53"),
+            patch.object(kernels, "_run_context") as context,
+        ):
+            with self.assertRaisesRegex(ValueError, "exact loader/decode/prefill"):
+                function(
+                    "merge-scope",
+                    model_family="glm53",
+                    stage="corrective",
+                    sanitizer=True,
+                    sanitizer_scope="glm-merge",
+                    cases=kernels.GLM_MERGE_SANITIZER[0],
+                )
+            context.assert_not_called()
+        with (
+            patch.object(kernels, "MODEL_FAMILY", "dsv4"),
+            patch.object(kernels, "VALIDATION_SUITE", "v41-fp4"),
+            patch.object(kernels, "_run_context") as context,
+        ):
+            with self.assertRaisesRegex(ValueError, "allowlisted"):
+                function(
+                    "fp4-case",
+                    stage="corrective",
+                    cases=kernels.TEST_ROOT + "test_remnant_fp4.py::test_not_owned",
+                )
+            context.assert_not_called()
+
+    def test_cpu_preflight_does_not_commit_gpu_cache(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest = root / "manifest.json"
+            manifest.write_text("{}")
+            with (
+                patch.object(kernels, "MANIFEST", manifest),
+                patch.object(kernels, "RESULTS_ROOT", root),
+                patch.object(kernels, "results_volume"),
+                patch.object(kernels, "triton_volume") as cache,
+            ):
+                with kernels._run_context("cpu", "preflight", 1, resource="cpu"):
+                    pass
+                cache.commit.assert_not_called()
+
 
 class LswbSweepTests(unittest.TestCase):
     """Author: Winston Cai. Replay and server boundaries are CPU-only fakes."""
@@ -2454,7 +3694,7 @@ class LswbSweepTests(unittest.TestCase):
         }
 
     def args(self, *extra):
-        return self.sweep.parse_args(["kernel", "--concurrencies", "2,3", "--tag", "screen",
+        return self.sweep.parse_args(["direct", "--concurrencies", "2,3", "--tag", "screen",
                                       "--expected-image-id", self.image, *extra])
 
     def manifest(self, args):
@@ -2574,12 +3814,12 @@ class LswbSweepTests(unittest.TestCase):
             self.sweep.check_owner_record(self.env)
 
     def test_hicache_requires_bound_reset_evidence(self):
-        env = {**self.env, "HICACHE_RATIO": "2", "SWEEP_MODE": "kernel"}
+        env = {**self.env, "HICACHE_RATIO": "2", "SWEEP_MODE": "direct"}
         with self.assertRaisesRegex(ValueError, "HICACHE_RESET_RECEIPT"):
             self.sweep.validate_hicache_receipt(env, self.image, self.sources)
         evidence = self.root / "reset.json"
         evidence.write_text("GPU reset observation")
-        receipt = {"image_id": self.image, "integration": "v0.5.18", "mode": "kernel", "hicache_ratio": 2.,
+        receipt = {"image_id": self.image, "integration": "v0.5.18", "mode": "direct", "hicache_ratio": 2.,
                    "fork_commits": {"sglang": "fork"}, "checks": {key: True for key in (
                        "gpu_cache_empty", "host_cache_empty", "transfers_drained")},
                    "evidence_path": str(evidence), "evidence_sha256": self.sweep.sha256(evidence)}
@@ -2649,7 +3889,7 @@ class LswbSweepTests(unittest.TestCase):
     def test_one_boot_cleanup_repeat_order_and_continue_measured_failures(self):
         root, calls = self.run_sweep()
         serve = [c for c in calls if "serve.sh" in str(c)]
-        self.assertEqual([c[-1] for c in serve], ["kernel", "stop"])
+        self.assertEqual([c[-1] for c in serve], ["direct", "stop"])
         rows = json.loads((root / "summary.json").read_text())["points"]
         self.assertEqual([(r["concurrency"], r["repeat"]) for r in rows], [(2, 1), (2, 2), (3, 1), (3, 2)])
         self.assertTrue(all(r["measurement_complete"] for r in rows))
@@ -2681,7 +3921,7 @@ class LswbSweepTests(unittest.TestCase):
                 calls = []
                 def fake(arguments, env, **kwargs):
                     calls.append(arguments)
-                    if boot_fails and str(arguments[-1]) == "kernel":
+                    if boot_fails and str(arguments[-1]) == "direct":
                         raise RuntimeError("startup failed")
                     return subprocess.CompletedProcess(arguments, 0, "")
                 with (patch.object(self.sweep, "command", side_effect=fake),
@@ -2696,7 +3936,38 @@ class LswbSweepTests(unittest.TestCase):
             self.sweep.check_frozen({"sources": self.sources, "source_hashes": {}}, self.env)
         for change in ({"tp_size": 2}, {"enable_hierarchical_cache": True}, {"dsv4_c4_cache_implementation": "triton"}):
             with self.subTest(change=change), self.assertRaisesRegex(ValueError, "Server configuration mismatch"):
-                self.sweep.check_server({**self.info, **change}, {**self.env, "SERVER_SEED": "20260919"}, "kernel", 3)
+                self.sweep.check_server({**self.info, **change}, {**self.env, "SERVER_SEED": "20260919"}, "direct", 3)
+
+    def test_shared_launch_configuration_changes_invalidate_source_hashes(self):
+        with patch.object(self.sweep, "sha256", return_value="probe"):
+            paths = self.sweep.source_hashes(self.env)
+        helper = self.root / "scripts/local/launch-config.sh"
+        self.assertIn(str(helper.resolve()), paths)
+        for name in paths:
+            path = Path(name)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("baseline")
+        baseline = self.sweep.source_hashes(self.env)
+        helper.write_text("changed launch settings")
+        self.assertNotEqual(self.sweep.source_hashes(self.env), baseline)
+
+    def test_unsupported_models_fail_before_preflight_or_startup(self):
+        for family in ("glm53", "dsv41"):
+            with self.subTest(family=family), patch.object(self.sweep, "command") as command:
+                with self.assertRaisesRegex(ValueError, "MODEL_FAMILY=dsv4 only"):
+                    self.sweep.prepare(self.args(), {**self.env, "MODEL_FAMILY": family})
+                command.assert_not_called()
+
+    def test_generic_selector_is_verified_for_both_v0522_modes(self):
+        env = {**self.env, "REMNANT_INTEGRATION": "v0.5.22", "SERVER_SEED": "20260919"}
+        info = {key: value for key, value in self.info.items()
+                if key not in {"dsv4_c4_cache_format", "dsv4_c4_cache_implementation"}}
+        for mode in ("native", "direct"):
+            with self.subTest(mode=mode):
+                resolved = self.sweep.check_server({**info, "kv_cache_format": mode}, env, mode, 3)
+                self.assertEqual(resolved["kv_cache_format"], mode)
+                with self.assertRaisesRegex(ValueError, "kv_cache_format"):
+                    self.sweep.check_server({**info, "kv_cache_format": "wrong"}, env, mode, 3)
 
     def test_dry_run_does_not_execute_or_create_results(self):
         args = self.args("--dry-run")
@@ -2800,37 +4071,26 @@ class LswbSweepTests(unittest.TestCase):
         return {"PATH": str(tools) + os.pathsep + os.environ["PATH"], "DECODE_CFG": "{}"}
 
     def test_run_server_v41_modes_select_only_the_v41_layout(self):
-        """V4.1 modes pass one layout flag, V4.1 parsers and no V4 C4 arguments."""
         script = kernels.REPO_ROOT / "scripts/local/run-server.sh"
-        environment = self._fake_sglang()
-
-        def argv(mode: str, **extra: str) -> subprocess.CompletedProcess:
-            return subprocess.run(["bash", str(script), mode, "/model", "127.0.0.1", "1"],
-                                  env={**environment, **extra}, capture_output=True, text=True, timeout=10)
-
-        for mode in ("fp4", "remnant"):
-            with self.subTest(mode=mode):
-                result = argv(f"v41-{mode}")
-                self.assertEqual(result.returncode, 0, result.stderr)
-                words = result.stdout.split()
-                self.assertEqual(words[words.index("--dsv41-main-kv-cache-format") + 1], mode)
-                self.assertEqual(words[words.index("--dsv4-attn-backend") + 1], "flashmla")
-                self.assertEqual(words[words.index("--reasoning-parser") + 1], "deepseek-v41")
-                self.assertEqual(words[words.index("--tool-call-parser") + 1], "deepseekv41")
-                self.assertFalse([w for w in words if w.startswith("--dsv4-c4-")])
-        for name in ("STORE_IMPLEMENTATION", "C4_KEEP_COUNT", "C4_LAYER_KEEP_COUNTS", "HICACHE_RATIO"):
-            with self.subTest(conflict=name):
-                result = argv("v41-fp4", **{name: "1"})
-                self.assertEqual(result.returncode, 2)
-                self.assertIn(f"{name} is incompatible", result.stderr)
-        words = argv("v41-fp4", EP_SIZE="4").stdout.split()
-        self.assertEqual(words[words.index("--ep-size") + 1], "4")
-        self.assertNotIn("--ep-size", argv("v41-fp4").stdout.split())
-        self.assertEqual(argv("v41-fp4", EP_SIZE="0").returncode, 2)
-        native = argv("native").stdout.split()
-        self.assertEqual(native[native.index("--dsv4-c4-cache-format") + 1], "native")
-        self.assertEqual(native[native.index("--reasoning-parser") + 1], "deepseek-v4")
-        self.assertNotIn("--dsv41-main-kv-cache-format", native)
+        environment = {
+            **self._fake_sglang(), "MODEL_FAMILY": "dsv41",
+            "REMNANT_INTEGRATION": "v0.5.22", "TP": "4", "EP": "4",
+        }
+        for mode in ("native", "direct"):
+            result = subprocess.run(
+                ["bash", str(script), mode, "/model", "127.0.0.1", "1"],
+                env=environment, capture_output=True, text=True, timeout=10,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            words = result.stdout.split()
+            for flag, value in (
+                ("--kv-cache-format", mode), ("--ep", "4"),
+                ("--dsv4-attn-backend", "flashmla"),
+                ("--reasoning-parser", "deepseek-v41"),
+                ("--tool-call-parser", "deepseekv41"),
+            ):
+                self.assertEqual(words[words.index(flag) + 1], value)
+            self.assertFalse([w for w in words if w.startswith("--dsv4-c4-")])
 
     def test_replay_direct_execution_skips_git_check_and_names_v41_modes(self):
         """LSWB_EXECUTION=direct needs no git checkout and reports the V4.1 layout."""
@@ -2876,14 +4136,14 @@ class LswbSweepTests(unittest.TestCase):
         result = run({**graphs, "dsv4_c4_cache_format": "native"}, "bogus", "bogus")
         self.assertEqual(result.returncode, 2)
         self.assertIn("LSWB_EXECUTION must be docker or direct", result.stderr)
-        for fmt in ("fp4", "remnant"):
+        for fmt in ("native", "direct"):
             with self.subTest(v41=fmt):
-                info = {**graphs, "dsv4_c4_cache_format": "native", "dsv41_main_kv_cache_format": fmt}
+                info = {**graphs, "dsv4_c4_cache_format": "native", "kv_cache_format": fmt}
                 result = run(info, "direct", f"direct-{fmt}")
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 config = json.loads((repo / f"results/lswb-replay/direct-{fmt}/collection-config.json").read_text())
-                self.assertEqual(config["mode"], f"v41-{fmt}")
-        result = run({**graphs, "dsv4_c4_cache_format": "native", "dsv41_main_kv_cache_format": "auto"}, "direct", "direct-v4")
+                self.assertEqual(config["mode"], fmt)
+        result = run({**graphs, "dsv4_c4_cache_format": "native", "kv_cache_format": "auto"}, "direct", "direct-v4")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         config = json.loads((repo / "results/lswb-replay/direct-v4/collection-config.json").read_text())
         self.assertEqual(config["mode"], "native")
@@ -2936,17 +4196,17 @@ class LswbReplayPlanTests(unittest.TestCase):
         from scripts.modal import serve
 
         good = {
-            "tp_size": 4, "ep_size": 4, "dsv41_main_kv_cache_format": "fp4", "random_seed": serve.LSWB_SEED,
+            "tp_size": 4, "ep_size": 4, "kv_cache_format": "native", "random_seed": serve.LSWB_SEED,
             "max_running_requests": serve.LSWB_MAX_RUN, "mem_fraction_static": 0.92,
             "cuda_graph_config": {"decode": {"bs": [1, 48, 136]}},
         }
-        serve._check_server_info(good, "fp4")
-        for key, value in (("dsv41_main_kv_cache_format", "remnant"), ("tp_size", 8),
+        serve._check_server_info(good, "native")
+        for key, value in (("kv_cache_format", "direct"), ("tp_size", 8),
                            ("random_seed", 1), ("max_running_requests", 256), ("ep_size", 1)):
             with self.subTest(key=key), self.assertRaisesRegex(RuntimeError, key):
-                serve._check_server_info({**good, key: value}, "fp4")
+                serve._check_server_info({**good, key: value}, "native")
         with self.assertRaisesRegex(RuntimeError, "decode graphs"):
-            serve._check_server_info({**good, "cuda_graph_config": {"decode": {"bs": [1, 8]}}}, "fp4")
+            serve._check_server_info({**good, "cuda_graph_config": {"decode": {"bs": [1, 8]}}}, "native")
 
     def test_replay_stall_detection(self):
         from scripts.modal import serve
@@ -2965,15 +4225,16 @@ class LswbReplayPlanTests(unittest.TestCase):
         from scripts.modal import serve
 
         with patch.object(serve, "_check_devices") as devices:
-            with patch.object(serve, "MODEL_KEY", "0731"), self.assertRaisesRegex(ValueError, "REMNANT_MODEL"):
-                serve.benchmark_lswb.local("v41-fp4")
-            with patch.object(serve, "MODEL_KEY", "v41-1017"):
+            with patch.object(serve, "MODEL_FAMILY", "dsv4"), self.assertRaisesRegex(ValueError, "REMNANT_MODEL"):
+                serve.benchmark_lswb.local("native")
+            with patch.object(serve, "MODEL_FAMILY", "dsv41"):
                 with self.assertRaisesRegex(ValueError, "mode must be"):
-                    serve.benchmark_lswb.local("native")
+                    serve.benchmark_lswb.local("invalid")
                 for low, high in ((10, 0), (0, 10), (20, 10), (10, 49)):
                     with self.subTest(low=low, high=high), self.assertRaisesRegex(ValueError, "c_low"):
-                        serve.benchmark_lswb.local("v41-fp4", c_low=low, c_high=high)
+                        serve.benchmark_lswb.local("native", c_low=low, c_high=high)
             devices.assert_not_called()
+
 
     def _run_lswb(self, mode: str, pool: int = 5_000_000, **kwargs):
         from scripts.modal import serve
@@ -2984,14 +4245,14 @@ class LswbReplayPlanTests(unittest.TestCase):
         (lswb / "replay/manifest.json").write_text(json.dumps(self._manifest([[100_000] * 6 for _ in range(60)])))
         (lswb / "prepare-receipt.json").write_text("{}")
         info = {
-            "tp_size": 4, "ep_size": 4, "dsv41_main_kv_cache_format": serve.LSWB_SERVER_MODES[mode],
+            "tp_size": 4, "ep_size": 4, "kv_cache_format": serve.LSWB_SERVER_MODES[mode],
             "random_seed": serve.LSWB_SEED, "max_running_requests": serve.LSWB_MAX_RUN,
             "mem_fraction_static": 0.92, "cuda_graph_config": {"decode": {"bs": [136]}},
             "max_total_num_tokens": pool,
         }
         points = []
         with (
-            patch.object(serve, "MODEL_KEY", "v41-1017"), patch.object(serve, "LSWB_ROOT", lswb),
+            patch.object(serve, "MODEL_FAMILY", "dsv41"), patch.object(serve, "LSWB_ROOT", lswb),
             patch.object(serve, "RESULTS_ROOT", self.root / "results"),
             patch.object(serve, "REMOTE_REPO", kernels.REPO_ROOT),
             patch.object(serve, "_kernel_extensions_ready", return_value=True),
@@ -3006,27 +4267,392 @@ class LswbReplayPlanTests(unittest.TestCase):
         return run, points, boot
 
     def test_lswb_boots_once_and_replays_matched_points_low_then_high(self):
-        run, points, boot = self._run_lswb("v41-fp4")
+        run, points, boot = self._run_lswb("native")
         plan = json.loads((run / "c-plan.json").read_text())
         # Each live session holds 100K..600K tokens; the plan comes from the 5M-token pool.
-        self.assertEqual([p[0] for p in points], [f"v41-fp4-c{plan['c_low']}", f"v41-fp4-c{plan['c_high']}"])
+        self.assertEqual([p[0] for p in points], [f"native-c{plan['c_low']}", f"native-c{plan['c_high']}"])
         self.assertEqual([p[1] for p in points], [plan["c_low"], plan["c_high"]])
         self.assertLess(plan["c_low"], plan["c_high"])
         self.assertLessEqual(plan["peak_high"], 0.9 * 5_000_000)
         boot.assert_called_once()
         env = boot.call_args.args[0]
         self.assertEqual((env["SERVING_MODE"], env["LSWB_EXECUTION"], env["MAX_RUN"], env["MEM_FRAC"]),
-                         ("v41-fp4", "direct", "48", "0.92"))
+                         ("native", "direct", "48", "0.92"))
         self.assertEqual(boot.call_args.args[3], serve_markers := boot.call_args.args[3])
         self.assertIn("CUDA out of memory", serve_markers)
 
     def test_second_arm_reuses_given_c_and_fails_if_it_cannot_fit(self):
-        run, points, _ = self._run_lswb("v41-remnant", c_low=2, c_high=3)
+        run, points, _ = self._run_lswb("direct", c_low=2, c_high=3)
         self.assertEqual([p[1] for p in points], [2, 3])
         self.assertTrue(json.loads((run / "c-plan.json").read_text())["given"])
         with self.assertRaisesRegex(RuntimeError, "above the 3000000-token pool"):
-            self._run_lswb("v41-remnant", pool=3_000_000, c_low=30, c_high=48)
+            self._run_lswb("direct", pool=3_000_000, c_low=30, c_high=48)
 
+
+
+
+
+
+
+
+
+class BuildLockTests(unittest.TestCase):
+    """Real lock files in a temporary repository; no Modal process is started."""
+
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix="remnant-lock-")
+        self.addCleanup(temporary.cleanup)
+        self.repo = Path(temporary.name)
+
+    def test_live_owner_blocks_second_acquire_and_dead_owner_is_stale(self):
+        parent = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+        self.addCleanup(parent.wait)
+        self.addCleanup(parent.kill)
+        (self.repo / build_lock.LOCK_NAME).write_text(json.dumps({"pid": parent.pid}))
+        self.assertEqual(build_lock.lock_owner(self.repo), parent.pid)
+        with self.assertRaisesRegex(RuntimeError, "already running"):
+            build_lock.acquire(self.repo)
+        parent.kill()
+        parent.wait()
+        self.assertIsNone(build_lock.lock_owner(self.repo))
+        with patch("atexit.register"):
+            build_lock.acquire(self.repo)
+        self.assertEqual(build_lock.lock_owner(self.repo), os.getpid())
+        build_lock.release(self.repo)
+        self.assertFalse((self.repo / build_lock.LOCK_NAME).exists())
+
+    def test_only_the_modal_cli_takes_the_lock(self):
+        self.assertIsNone(build_lock.acquire_for_modal_cli(self.repo, "/usr/bin/pytest"))
+        self.assertFalse((self.repo / build_lock.LOCK_NAME).exists())
+        with patch("atexit.register"):
+            build_lock.acquire_for_modal_cli(self.repo, "/opt/venv/bin/modal")
+        self.assertEqual(json.loads((self.repo / build_lock.LOCK_NAME).read_text())["pid"], os.getpid())
+        build_lock.release(self.repo)
+        with patch("atexit.register"):
+            self.assertIsNotNone(build_lock.acquire_for_modal_cli(self.repo, "/site/modal/__main__.py"))
+        self.assertIsNone(build_lock.acquire_for_modal_cli(self.repo, "/site/other/__main__.py"))
+
+    def test_stale_locks_are_ignored_and_replaced(self):
+        lock = self.repo / build_lock.LOCK_NAME
+        for content in ("", "{not json", json.dumps({"pid": 0}), json.dumps({"pid": -1}), json.dumps({"x": 1})):
+            lock.write_text(content)
+            self.assertIsNone(build_lock.lock_owner(self.repo), content)
+            with patch("atexit.register"):
+                build_lock.acquire(self.repo)
+            self.assertEqual(build_lock.lock_owner(self.repo), os.getpid())
+            build_lock.release(self.repo)
+
+    def test_reused_pid_with_different_start_time_is_stale(self):
+        lock = self.repo / build_lock.LOCK_NAME
+        lock.write_text(json.dumps({"pid": os.getpid(), "start": "Mon Jan  1 00:00:00 1990"}))
+        self.assertIsNone(build_lock.lock_owner(self.repo))
+        lock.write_text(json.dumps({"pid": os.getpid(), "start": build_lock._start_time(os.getpid())}))
+        self.assertEqual(build_lock.lock_owner(self.repo), os.getpid())
+
+    def test_simultaneous_launchers_admit_exactly_one(self):
+        code = (
+            "import sys, time\nfrom pathlib import Path\nfrom scripts import build_lock\n"
+            "time.sleep(max(0.0, float(sys.argv[2]) - time.time()))  # release all racers together\n"
+            "try:\n    build_lock.acquire(Path(sys.argv[1]))\nexcept RuntimeError:\n    print('REFUSED')\n"
+            "else:\n    print('HELD'); sys.stdout.flush(); time.sleep(6)\n"
+        )
+        start = str(time.time() + 3)
+        procs = [
+            subprocess.Popen(
+                [sys.executable, "-c", code, str(self.repo), start],
+                cwd=kernels.REPO_ROOT, stdout=subprocess.PIPE, text=True,
+            )
+            for _ in range(6)
+        ]
+        results = [p.communicate(timeout=30)[0].strip() for p in procs]
+        self.assertEqual(sorted(results), ["HELD"] + ["REFUSED"] * 5)
+        self.assertFalse((self.repo / build_lock.LOCK_NAME).exists(), "owner exit must release")
+
+    def test_settings_register_the_hook_for_edit_tools(self):
+        settings = json.loads((kernels.REPO_ROOT / ".claude/settings.json").read_text())
+        (entry,) = settings["hooks"]["PreToolUse"]
+        self.assertTrue({"Edit", "Write"} <= set(entry["matcher"].split("|")))
+        (hook,) = entry["hooks"]
+        self.assertEqual(hook["type"], "command")
+        self.assertIn(".claude/hooks/deny-edit-during-build.py", hook["command"])
+        self.assertTrue((kernels.REPO_ROOT / ".claude/hooks/deny-edit-during-build.py").is_file())
+
+    def test_hook_denies_image_inputs_only_while_locked(self):
+        hook = kernels.REPO_ROOT / ".claude/hooks/deny-edit-during-build.py"
+        env = {**os.environ, "CLAUDE_PROJECT_DIR": str(self.repo)}
+        (self.repo / ".claude/hooks").mkdir(parents=True)
+        (self.repo / "scripts").mkdir()
+        (self.repo / "scripts/build_lock.py").write_text((kernels.REPO_ROOT / "scripts/build_lock.py").read_text())
+
+        def run(name):
+            call = json.dumps({"tool_input": {"file_path": str(self.repo / name)}})
+            return subprocess.run(
+                [sys.executable, str(hook)], input=call, env=env, text=True, capture_output=True, timeout=15
+            )
+
+        self.assertEqual(run("scripts/modal/kernels.py").returncode, 0)
+        (self.repo / build_lock.LOCK_NAME).write_text(json.dumps({"pid": os.getpid()}))
+        blocked = run("scripts/modal/kernels.py")
+        self.assertEqual(blocked.returncode, 2)
+        self.assertIn("build is running", blocked.stderr)
+        self.assertEqual(run("third_party/sglang/x.py").returncode, 2)
+        for image_input in ("scripts/local/serve.sh", "Dockerfile.v0.5.22", ".dockerignore", "scripts/sources.py", "scripts/model_profiles.py"):
+            self.assertEqual(run(image_input).returncode, 2, image_input)
+        self.assertEqual(run("docs/report.md").returncode, 0)
+
+
+class ValidationTierTests(unittest.TestCase):
+    """Pure path classification; the tier is guidance, so these pin the rules."""
+
+    def test_parent_paths(self):
+        expected = {
+            "docs/report.md": "low",
+            "docs/agents/modal.md": "low",
+            "docs/figures/a.png": "low",
+            "AGENTS.md": "low",
+            ".github/pull_request_template.md": "low",
+            "transfer/run-1/SHA256SUMS": "low",
+            "transfer/run-1/summary.json": "low",
+            "benchmarks/microbench/x/runs/r1/result.json": "low",
+            "third_party/README.md": "low",
+            "scripts/modal/kernels.py": "medium",
+            "scripts/local/serve.sh": "medium",
+            "benchmarks/microbench/x/run_matrix.py": "medium",
+            ".claude/settings.json": "medium",
+            ".claude/commands/x.md": "medium",
+            ".github/workflows/ci.yml": "medium",
+            "requirements.txt": "medium",
+            "transfer/x/run.sh": "medium",
+            "scripts/modal/runs/a.py": "medium",
+            "something/unrecognized.bin": "medium",
+            "Dockerfile.v0.5.22": "high",
+            "Dockerfile": "high",
+            ".dockerignore": "high",
+            ".gitmodules": "high",
+            "docs/NOTES.MD": "low",
+            "third_party/sglang-v0.5.22": "high",
+            "third_party/flashmla-v0.5.18": "high",
+        }
+        for path, tier in expected.items():
+            self.assertEqual(validation_tier.classify_path(path), tier, path)
+
+    def test_fork_paths(self):
+        expected = {
+            "csrc/sm90/decode/sparse/splitkv_mla.cuh": "high",
+            "CMakeLists.txt": "high",
+            "sgl-kernel/CMakeLists.txt": "high",
+            "python/sglang/srt/remnant/pack.py": "high",
+            "python/sglang/srt/server_args.py": "high",
+            "test/registered/attention/unittests/dsv4/test_remnant_pool.py": "medium",
+            "python/sglang/benchmark/remnant/calibrate.py": "medium",
+            "benchmark/remnant/microbench.py": "medium",
+            "README.md": "low",
+            "docs/notes.md": "low",
+        }
+        for path, tier in expected.items():
+            self.assertEqual(validation_tier.classify_path(path, "fork"), tier, path)
+
+    def test_overall_tier_is_the_highest_and_unknown_never_low(self):
+        empty = validation_tier.classify([])
+        self.assertEqual(empty["tier"], "low")
+        self.assertIn("No changes found", empty["note"])
+        self.assertEqual(validation_tier.classify(["docs/a.md"])["tier"], "low")
+        self.assertEqual(validation_tier.classify(["docs/a.md", "scripts/sources.py"])["tier"], "medium")
+        mixed = validation_tier.classify(["docs/a.md", "scripts/sources.py", "third_party/sglang-v0.5.18"])
+        self.assertEqual(mixed["tier"], "high")
+        self.assertEqual(mixed["required_checks"], validation_tier.REQUIRED_CHECKS["high"])
+        self.assertEqual(validation_tier.classify(["new/place/file.py"])["tier"], "medium")
+
+    def test_changed_paths_sees_renames_deletes_uncommitted_untracked_and_unicode(self):
+        with tempfile.TemporaryDirectory(prefix="remnant-tier-") as temporary:
+            repo = Path(temporary)
+
+            def git(*arguments):
+                subprocess.run(["git", "-C", str(repo), *arguments], check=True, capture_output=True, timeout=30)
+
+            git("init", "-q", "-b", "main")
+            git("config", "user.email", "t@example.invalid")
+            git("config", "user.name", "t")
+            (repo / "scripts/modal").mkdir(parents=True)
+            (repo / "docs").mkdir()
+            (repo / "scripts/modal/x.py").write_text("print(1)\n" * 20)
+            (repo / "scripts/modal/gone.py").write_text("print(2)\n" * 20)
+            (repo / "base.txt").write_text("base\n")
+            git("add", "-A")
+            git("commit", "-q", "-m", "base")
+            git("switch", "-q", "-c", "work")
+            git("mv", "scripts/modal/x.py", "docs/x.md")  # an executable moved to a doc path
+            git("rm", "-q", "scripts/modal/gone.py")
+            git("commit", "-q", "-am", "work")
+            (repo / "base.txt").write_text("edited, uncommitted\n")
+            (repo / "scripts/modal").mkdir(parents=True, exist_ok=True)
+            (repo / "scripts/modal/untracked.py").write_text("print(3)\n")
+            (repo / "docs/caf\u00e9.md").write_text("x\n")
+            previous = os.getcwd()
+            os.chdir(repo)
+            try:
+                paths = validation_tier.changed_paths("main")
+            finally:
+                os.chdir(previous)
+            self.assertEqual(
+                paths,
+                sorted([
+                    "base.txt", "docs/caf\u00e9.md", "docs/x.md", "scripts/modal/gone.py",
+                    "scripts/modal/untracked.py", "scripts/modal/x.py",
+                ]),
+            )
+            result = validation_tier.classify(paths)
+            self.assertEqual(result["tier"], "medium")
+            self.assertEqual(result["paths"]["scripts/modal/x.py"], "medium")
+            self.assertEqual(result["paths"]["docs/caf\u00e9.md"], "low")
+
+    def test_changed_paths_is_root_relative_from_any_subdirectory(self):
+        with tempfile.TemporaryDirectory(prefix="remnant-tier-sub-") as temporary:
+            repo = Path(temporary).resolve()
+
+            def git(*arguments):
+                subprocess.run(["git", "-C", str(repo), *arguments], check=True, capture_output=True, timeout=30)
+
+            git("init", "-q", "-b", "main")
+            git("config", "user.email", "t@example.invalid")
+            git("config", "user.name", "t")
+            (repo / "docs").mkdir()
+            (repo / "scripts").mkdir()
+            (repo / "docs/a.md").write_text("a\n")
+            git("add", "-A")
+            git("commit", "-q", "-m", "base")
+            (repo / ".gitmodules").write_text("[submodule]\n")  # untracked, outside both subdirectories
+            (repo / "scripts/new.py").write_text("print(1)\n")
+            (repo / "docs/a.md").write_text("edited\n")
+            expected = [".gitmodules", "docs/a.md", "scripts/new.py"]
+            previous = os.getcwd()
+            try:
+                for subdirectory in (".", "docs", "scripts"):
+                    os.chdir(repo / subdirectory)
+                    with self.subTest(cwd=subdirectory):
+                        paths = validation_tier.changed_paths("main")
+                        self.assertEqual(paths, expected)
+                        self.assertEqual(validation_tier.classify(paths)["tier"], "high")
+            finally:
+                os.chdir(previous)
+
+    def test_cli_reports_a_bad_base_without_a_traceback(self):
+        result = subprocess.run(
+            [sys.executable, str(kernels.REPO_ROOT / "scripts/validation_tier.py"), "--base", "no-such-ref"],
+            cwd=kernels.REPO_ROOT, capture_output=True, text=True, timeout=60,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("validation_tier:", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+
+class GLMUpstreamDecodeTests(unittest.TestCase):
+    """Upstream dispatch and source-bound evidence; no remote calls or CUDA."""
+
+    def test_public_dispatch_rejects_incompatible_scope_before_scheduling(self):
+        base = dict(run_id="upstream", keep_count=256, modes="", suite="glm-upstream-decode",
+                    prefill_reader="split", qualification_runs="qualified", model_family="glm53",
+                    phase="decode", max_seconds=180)
+        with (patch.object(kernels, "MODEL_FAMILY", "glm53"),
+              patch.object(kernels, "_UPSTREAM_DECODE", True),
+              patch.object(kernels, "_preflight_glm_timing") as preflight,
+              patch.object(kernels, "_benchmark_worker") as worker):
+            for changed in ({"phase": "all"}, {"modes": "native,direct"},
+                            {"packed_prefill_tile": 64}, {"allow_incomplete_qualification": True},
+                            {"max_seconds": 1}):
+                with self.subTest(changed=changed), self.assertRaises(ValueError):
+                    kernels._dispatch_benchmark(**{**base, **changed})
+            preflight.remote.assert_not_called()
+            worker.remote.assert_not_called()
+            preflight.remote.side_effect = RuntimeError("qualification failed")
+            with self.assertRaisesRegex(RuntimeError, "qualification failed"):
+                kernels._dispatch_benchmark(**base)
+            worker.remote.assert_not_called()
+            preflight.remote.side_effect = None
+            kernels._dispatch_benchmark(**base)
+            self.assertEqual(preflight.remote.call_args.kwargs, {"suite": "glm-upstream-decode"})
+            self.assertEqual(worker.remote.call_args.args[3], "glm-upstream-decode")
+
+    def test_upstream_cpu_delta_owns_its_driver_stub_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            build = Path(directory)
+            (build / "cpu-driver-stubs").mkdir()
+            manifest = build / "manifest.json"
+            manifest.write_text("{}")
+
+            def environment(work):
+                (work / "cpu-driver-stubs").mkdir()
+                return {"driver": str(work)}
+
+            with (patch.object(kernels, "_cpu_preflight_environment", side_effect=environment) as prepare,
+                  patch.object(kernels, "_run_command"), patch.object(kernels, "_run_pytest"),
+                  patch.object(kernels, "MANIFEST", manifest), patch.object(kernels, "Path") as paths):
+                paths.return_value.read_text.return_value = '{"baseline": "compiled"}'
+                kernels._prepare_upstream_decode(build, 100)
+            self.assertEqual(prepare.call_args.args[0], build / "upstream")
+            self.assertTrue((build / "cpu-driver-stubs").is_dir())
+            self.assertEqual(json.loads(manifest.read_text())["upstream_compile"], {"baseline": "compiled"})
+
+    def test_reused_scope_allows_harness_changes_but_keeps_compiler_and_cache_identity(self):
+        import hashlib
+        import xml.etree.ElementTree as ET
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            folder = root / "microbench/fixture/validation"
+            folder.mkdir(parents=True)
+            variants = [dict(heads=h, inner=i, packed=p, cubin_sha256=f"cubin-{h}-{i}-{p}")
+                        for h in (8, 16) for i in (1, 2) for p in (False, True)]
+            manifest = dict(sources={"harness": "old"}, nvcc="compiler",
+                            glm_compile=dict(triton=[], tilelang=variants, attention_scale=.0625,
+                                             cache_files={"cached-direct": "same"},
+                                             scope_symbol_audit={"trace": "bound"}),
+                            sanitizer={"binary_sha256": "sanitizer"})
+            (folder / "build-manifest.json").write_text(json.dumps(manifest))
+            trace = ("glm_packed_bytes WarpSync CTA barrier\n"
+                     "========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)\n")
+            (folder / "scope-audit.log").write_text(trace)
+            result = dict(model_family="glm53", status="passed", runtime_hashes={"kernel": "same"},
+                          sanitizer_scope="glm-merge",
+                          sanitizer_results={t: {"status": "passed"} for t in kernels.SANITIZER_ORDER},
+                          scope_audit=dict(status="passed", filter="regex=glm_packed_(partial|bytes)",
+                                           log_sha256=hashlib.sha256(trace.encode()).hexdigest(),
+                                           entrypoints={"trace": "bound"}))
+            (folder / "result.json").write_text(json.dumps(result))
+            for tool in kernels.SANITIZER_ORDER:
+                (folder / f"{tool}.log").write_text(trace if tool == "racecheck" else "========= ERROR SUMMARY: 0 errors\n")
+                suite = ET.Element("testsuite")
+                for name in sorted(qualification.GLM_DECODE_REQUIRED | {
+                    "test_prefill_partial_graph[64]", "test_prefill_partial_graph_h8"
+                }):
+                    node = ET.SubElement(suite, "testcase", name=name,
+                                         classname="registered.attention.unittests.test_glm5_remnant")
+                    if name.startswith("test_decode_partial_graph["):
+                        h, i = map(int, name.split("[")[1][:-1].split("-"))
+                        props = ET.SubElement(node, "properties")
+                        for key, value in {
+                            "partial_cubins": {str(p): f"cubin-{h}-{i}-{p}" for p in (False, True)},
+                            "decode_geometry": dict(heads=h, inner=i, banks=2, queries=1, tails=[0,1,2,3],
+                                                    nondefault_stream=True, launched_partitions=1,
+                                                    binary_partitions=66 // i),
+                        }.items():
+                            ET.SubElement(props, "property", name=key, value=json.dumps(value))
+                ET.ElementTree(suite).write(folder / f"{tool}.xml")
+            current = copy.deepcopy(manifest)
+            current["sources"] = {"harness": "new"}
+            def qualify(candidate):
+                context = qualification.QualificationContext(root, candidate, {"kernel": "same"}, kernels.SANITIZER_ORDER)
+                return qualification.qualify_glm_timing("fixture", context=context, phase="upstream-decode")
+            self.assertEqual(qualify(current)["status"], "passed")
+            for change in ("compiler", "cache", "kernel"):
+                changed = copy.deepcopy(current)
+                if change == "compiler":
+                    changed["nvcc"] = "different"
+                elif change == "cache":
+                    changed["glm_compile"]["cache_files"] = {"different": "cache"}
+                else:
+                    changed["glm_compile"]["tilelang"][0]["cubin_sha256"] = "different"
+                with self.subTest(change=change), self.assertRaises(RuntimeError):
+                    qualify(changed)
 
 
 if __name__ == "__main__":

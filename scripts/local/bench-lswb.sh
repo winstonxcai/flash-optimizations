@@ -3,7 +3,7 @@
 # bench-lswb.sh <tag> [port] [concurrency] [duration_s] [nsys_windows]
 # Author: Winston Cai.
 #   LongSWE-Bench replay client against an ALREADY-RUNNING server (bring it
-#   up first with serve.sh native|packed). Replays 4,916 recorded Claude
+#   up first with serve.sh native|direct). Replays 4,916 recorded Claude
 #   business conversations (~144k prompt tok/req, short decodes) over OpenAI
 #   SSE for a fixed window -- a prefix-reuse workload that shows whether the
 #   larger packed KV pool retains more shared prefixes (device cache hits).
@@ -152,16 +152,13 @@ if decode.get("backend") != "full" or not covered:
 print(f"[lswb] decode graph preflight OK: c{concurrency}, captured sizes={sizes}")
 if seed and info.get("random_seed") != int(seed):
     raise SystemExit(f"Server seed mismatch: expected {seed}, got {info.get('random_seed')}")
-# V4.1 selects its layout with --dsv41-main-kv-cache-format and leaves the V4
-# C4 arguments at their defaults, so it must be identified before the C4 fields.
-v41_format = info.get("dsv41_main_kv_cache_format") or "auto"
-if v41_format != "auto":
-    mode = f"v41-{v41_format}"
-elif info.get("dsv4_c4_cache_format") == "native":
-    mode = "native"
-else:
-    mode = info.get("dsv4_c4_cache_implementation")
-if mode not in ("native", "triton", "kernel", "v41-fp4", "v41-remnant"):
+mode = info.get("kv_cache_format")
+if mode is None:
+    if info.get("dsv4_c4_cache_format") == "native":
+        mode = "native"
+    else:
+        mode = info.get("dsv4_c4_cache_implementation")
+if mode not in ("native", "direct", "triton", "kernel"):
     raise SystemExit(f"Unknown server cache mode: {mode!r}")
 metrics_dir = None
 if info.get("export_metrics_to_file"):

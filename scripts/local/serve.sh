@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
 # =====================================================================
-# serve.sh -- boot (or stop) a production-fork DeepSeek-V4-Flash-0731 TP server
+# serve.sh -- boot (or stop) a production-fork Native/Packed TP server
 # on the local GPU node, inside the reproducible SGLang container.
 # Author: Winston Cai.
 #
 #   serve.sh native             untouched 0731, stock 584-byte C4 (default)
-#   serve.sh triton             Packed C4 with Triton packing/reconstruction
-#   serve.sh kernel             Packed C4 with current optimized dispatch
-#   serve.sh packed             compatibility alias for kernel
+#   serve.sh direct             Packed with the model-specific Direct kernel
 #   serve.sh <mode> profile     Nsight Systems, capture waits for profiler API
 #   serve.sh <mode> stop        kill the server on $PORT
 #
@@ -15,16 +13,16 @@
 # They use the fp4-native MoE runner (flashinfer_mxfp4), mem-frac 0.88,
 # 1M ctx cap, fp8 KV, and DeepSeek reasoning/tool parsers (needed by the
 # agentic evals; harmless for benches). Native uses the fork's default cache
-# format; triton/kernel default to 328-byte Packed records. Triton also supports
-# startup per-layer survivor counts with smaller/larger value planes.
+# format; direct selects the model-specific Packed storage and reader.
 #
-# Env overrides (all optional): PORT, GPUS, MASTER_PORT, TP, DECODE_CFG,
+# GLM: MODEL_FAMILY=glm53 uses raw FP8 TileLang; TP/EP/GPUS resolve together.
+# Env overrides (all optional): MODEL_FAMILY, EP, PORT, GPUS, MASTER_PORT, TP, DECODE_CFG,
 # MEM_FRAC, CTX_LEN, MAX_RUN, CHUNK, SERVER_SEED, REQUEST_METRICS_DIR,
 # C4_KEEP_COUNT, C4_LAYER_KEEP_COUNTS, FRONTEND_DIAGNOSTICS (0 or 1),
 # DSV4_ASYNC_PREPARATION (0 or 1; default off),
 # DSV4_PREPARATION_WORKERS (1, 2 or 4; default 1), HICACHE_RATIO (positive
 # CPU-L2/device pool ratio; unset disables HiCache). Boot log:
-#   <LOG_HOST>/serve_<native|triton|kernel>.log
+#   <LOG_HOST>/serve_<native|direct>.log
 # Server is left RUNNING; use "serve.sh <mode> stop" to tear it down.
 # =====================================================================
 set -u
@@ -36,12 +34,12 @@ DECODE_CFG_WAS_SET=${DECODE_CFG+x}
 
 MODE=${1:-}; ACTION=${2:-boot}
 case "$MODE" in
-  native|triton|kernel|packed) ;;
-  *) echo "usage: $0 <native|triton|kernel> [boot|profile|stop] (packed aliases kernel)"; exit 1 ;;
+  native|direct) ;;
+  *) echo "usage: $0 <native|direct> [boot|profile|stop]"; exit 1 ;;
 esac
 case "$ACTION" in
   boot|profile|stop) ;;
-  *) echo "usage: $0 <native|triton|kernel> [boot|profile|stop]"; exit 1 ;;
+  *) echo "usage: $0 <native|direct> [boot|profile|stop]"; exit 1 ;;
 esac
 SERVE_LOG="$LOG_HOST/serve_${MODE}.log"  # host-side log path
 SERVE_LOG_CT=$(to_ct "$SERVE_LOG")             # same file inside container
@@ -262,53 +260,23 @@ TREE="$SGLANG_ROOT_CT"
 echo "== serve $MODE on gpus=$GPUS port=$PORT master=$MASTER_PORT (log: $SERVE_LOG) =="
 : > "$SERVE_LOG"   # truncate for a clean boot log (host side)
 
-ct_script "$TREE" "$GPUS" "$MASTER_PORT" "$MODEL_NAME" "$TP" "$MEM_FRAC" \
-  "$CTX_LEN" "$MAX_RUN" "$CHUNK" "$DECODE_CFG" "$SGLANG_PY" "$REPO_CT" \
-  "$MODE" "$MODEL_CT" "$PORT" "$SERVE_LOG_CT" "$SERVER_PID_FILE_CT" "$NSYS_OUTPUT_CT" "${NSYS_GRAPH_TRACE:-node}" \
-  "${SERVER_SEED:-}" "$REQUEST_METRICS_DIR_CT" "${STORE_IMPLEMENTATION:-}" "${C4_KEEP_COUNT:-}" "${C4_LAYER_KEEP_COUNTS:-}" "${HICACHE_RATIO:-}" "${FRONTEND_DIAGNOSTICS:-0}" "${DSV4_ASYNC_PREPARATION:-0}" "${DSV4_PREPARATION_WORKERS:-1}" <<'BASH'
+REQUEST_METRICS_DIR="$REQUEST_METRICS_DIR_CT" ct_launch_script "$TREE" "$SGLANG_PY" "$REPO_CT" "$MODE" "$MODEL_CT" "$PORT" \
+  "$SERVE_LOG_CT" "$SERVER_PID_FILE_CT" "$NSYS_OUTPUT_CT" <<'BASH'
 set -u
 tree=$1
-gpus=$2
-master_port=$3
-model_name=$4
-tp=$5
-mem_frac=$6
-ctx_len=$7
-max_run=$8
-chunk=$9
-decode_cfg=${10}
-sglang_py=${11}
-repo_ct=${12}
-mode=${13}
-model_ct=${14}
-port=${15}
-serve_log_ct=${16}
-pid_file=${17}
-nsys_output=${18}
-nsys_graph_trace=${19}
-server_seed=${20}
-request_metrics_dir=${21}
-store_implementation=${22}
-c4_keep_count=${23}
-c4_layer_keep_counts=${24}
-hicache_ratio=${25}
-frontend_diagnostics=${26}
-dsv4_async_preparation=${27}
-dsv4_preparation_workers=${28}
+sglang_py=$2
+repo_ct=$3
+mode=$4
+model_ct=$5
+port=$6
+serve_log_ct=$7
+export SERVER_PID_FILE=$8 NSYS_OUTPUT=$9
 
 cd -- "$tree"
-export CUDA_VISIBLE_DEVICES="$gpus" MASTER_PORT="$master_port"
-export MODEL_NAME="$model_name" TP="$tp" MEM_FRAC="$mem_frac" CTX_LEN="$ctx_len"
-export MAX_RUN="$max_run" CHUNK="$chunk" DECODE_CFG="$decode_cfg"
-export SERVER_PID_FILE="$pid_file" NSYS_OUTPUT="$nsys_output"
-export NSYS_GRAPH_TRACE="$nsys_graph_trace"
-export SERVER_SEED="$server_seed" REQUEST_METRICS_DIR="$request_metrics_dir"
-export STORE_IMPLEMENTATION="$store_implementation"
-export C4_KEEP_COUNT="$c4_keep_count" C4_LAYER_KEEP_COUNTS="$c4_layer_keep_counts"
-export HICACHE_RATIO="$hicache_ratio"
-export SGLANG_FRONTEND_DIAGNOSTICS="$frontend_diagnostics"
-export SGLANG_DSV4_ASYNC_PREPARATION="$dsv4_async_preparation"
-export SGLANG_DSV4_PREPARATION_WORKERS="$dsv4_preparation_workers"
+export CUDA_VISIBLE_DEVICES="$GPUS"
+export SGLANG_FRONTEND_DIAGNOSTICS="${FRONTEND_DIAGNOSTICS:-0}"
+export SGLANG_DSV4_ASYNC_PREPARATION="${DSV4_ASYNC_PREPARATION:-0}"
+export SGLANG_DSV4_PREPARATION_WORKERS="${DSV4_PREPARATION_WORKERS:-1}"
 export PYTHONPATH="/opt/sglang-runtime-fixes:$sglang_py:$repo_ct"
 export NCCL_IB_DISABLE=1 NCCL_SOCKET_IFNAME=lo NCCL_P2P_LEVEL=NVL NCCL_PROTO=Simple NCCL_ALGO=Ring
 # All TP workers are local; keep Gloo off hostname-selected external interfaces.

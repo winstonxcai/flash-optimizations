@@ -31,7 +31,7 @@ else:
 
 # Explicitly record relevant knobs, never the complete process environment.
 SETTING_NAMES = (
-    "REMNANT_INTEGRATION CONTAINER HOST_REPO REPO_CT RESULTS_HOST SGLANG_ROOT_CT SGLANG_PY "
+    "MODEL_FAMILY REMNANT_INTEGRATION CONTAINER HOST_REPO REPO_CT RESULTS_HOST SGLANG_ROOT_CT SGLANG_PY "
     "MODEL_CT MODEL_NAME MEM_FRAC TP PORT MASTER_PORT CTX_LEN MAX_RUN CHUNK DECODE_CFG "
     "SERVER_SEED C4_KEEP_COUNT C4_LAYER_KEEP_COUNTS STORE_IMPLEMENTATION "
     "FRONTEND_DIAGNOSTICS DSV4_ASYNC_PREPARATION DSV4_PREPARATION_WORKERS "
@@ -87,7 +87,7 @@ def concurrencies(value: str) -> list[int]:
 def parse_args(arguments: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="sweep-lswb.sh", description=__doc__,
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("mode", choices=("native", "kernel"), help="server mode; one boot per sweep")
+    parser.add_argument("mode", choices=("native", "direct"), help="server mode; one boot per sweep")
     parser.add_argument("--concurrencies", type=concurrencies, required=True, help="ordered distinct counts, e.g. 20,22,24,26,28,30")
     parser.add_argument("--duration-s", type=positive, default=1200, help="dispatch window per replay in seconds")
     parser.add_argument("--repeats", type=positive, default=1, help="consecutive repetitions per concurrency")
@@ -187,7 +187,7 @@ def source_hashes(env: dict[str, str]) -> dict[str, str]:
     root = Path(env["HOST_REPO"])
     files = [root / "scripts" / name for name in (
         "sources.py", "local/env.sh", "local/eval-env.sh", "local/serve.sh",
-        "local/run-server.sh", "local/bench-lswb.sh", "local/sweep-lswb.sh",
+        "local/run-server.sh", "local/launch-config.sh", "local/bench-lswb.sh", "local/sweep-lswb.sh",
         "local/business_replay/sweep.py", "local/business_replay/request_slots.py",
     )]
     files.extend(Path(env[name]) for name in ("REPLAY_RUNNER", "REPLAY_ADAPTER", "REPLAY_MANIFEST"))
@@ -224,6 +224,8 @@ def validate_hicache_receipt(env: dict[str, str], image: str, sources: dict) -> 
 
 def prepare(args: argparse.Namespace, supplied: dict[str, str]) -> tuple[dict, dict[str, str]]:
     env = dict(supplied)
+    if env.get("MODEL_FAMILY", "dsv4") != "dsv4":
+        raise ValueError("LongSWE sweep supports MODEL_FAMILY=dsv4 only")
     for key in ("HOST_REPO", "RESULTS_HOST", "REPLAY_RUNNER", "REPLAY_ADAPTER", "REPLAY_DATASET", "REPLAY_MANIFEST"):
         env[key] = str(Path(env[key]).resolve())
     if not Path(env["RESULTS_HOST"]).is_relative_to(Path(env["HOST_REPO"])):
@@ -236,10 +238,10 @@ def prepare(args: argparse.Namespace, supplied: dict[str, str]) -> tuple[dict, d
     if env.get("NSYS_OUTPUT") or env.get("REMNANT_CAPTURE_DIR"):
         raise ValueError("Sweep does not support profiling or latent-capture overrides")
     if env.get("C4_KEEP_COUNT", "256") != "256" or env.get("C4_LAYER_KEEP_COUNTS"):
-        raise ValueError("Native/Kernel sweeps require the default 256-survivor profile")
-    if args.mode == "kernel":
+        raise ValueError("Native/Direct sweeps require the default 256-survivor profile")
+    if args.mode == "direct":
         if env.get("STORE_IMPLEMENTATION", "kernel") != "kernel":
-            raise ValueError("Packed Kernel sweep requires STORE_IMPLEMENTATION=kernel")
+            raise ValueError("Packed Direct sweep requires STORE_IMPLEMENTATION=kernel")
         env["STORE_IMPLEMENTATION"] = "kernel"
     tp = positive(env["TP"])
     devices = env.get("CUDA_VISIBLE_DEVICES", "").split(",") if env.get("CUDA_VISIBLE_DEVICES") else []
@@ -317,10 +319,15 @@ def check_server(info: dict, env: dict[str, str], mode: str, highest: int) -> di
         "random_seed": int(env["SERVER_SEED"]), "chunked_prefill_size": int(env["CHUNK"]),
         "context_length": int(env["CTX_LEN"]), "max_running_requests": int(env["MAX_RUN"]),
         "enable_hierarchical_cache": bool(env.get("HICACHE_RATIO")),
-        "dsv4_c4_cache_format": "native" if mode == "native" else "remnant",
     }
-    if mode == "kernel":
-        expected.update(dsv4_c4_cache_implementation="kernel", dsv4_c4_cache_store_implementation="kernel",
+    if env["REMNANT_INTEGRATION"] == "v0.5.22":
+        expected["kv_cache_format"] = mode
+    else:
+        expected["dsv4_c4_cache_format"] = "native" if mode == "native" else "remnant"
+        if mode == "direct":
+            expected["dsv4_c4_cache_implementation"] = "kernel"
+    if mode == "direct":
+        expected.update(dsv4_c4_cache_store_implementation="kernel",
                         dsv4_c4_cache_keep_count=256, dsv4_c4_cache_layer_keep_counts=None)
     if env.get("HICACHE_RATIO"):
         expected.update(hicache_ratio=float(env["HICACHE_RATIO"]), hicache_write_policy="write_through",
@@ -446,7 +453,8 @@ def save_report(root: Path, rows: list[dict], status: str, error: str | None = N
 def print_report(rows: list[dict]) -> None:
     print("C   REPEAT COMPLETE RESPONSE SLO     REQ/S   OUTPUT TOK/S TTFT-p90(s)")
     for row in rows:
-        render = lambda key: "N/A" if row.get(key) is None else ("PASS" if row[key] else "FAIL")
+        def render(key):
+            return "N/A" if row.get(key) is None else ("PASS" if row[key] else "FAIL")
         print(f"{row['concurrency']:<3} {row['repeat']:<6} {render('measurement_complete'):<8} "
               f"{render('response_success_pass'):<8} {render('ttft_slo_pass'):<7} "
               f"{row.get('request_throughput', 0):.4f}  {row.get('completion_token_throughput', 0):10.2f} "
