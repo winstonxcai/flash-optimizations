@@ -83,7 +83,7 @@ case "${MODEL_FAMILY:-dsv4}" in
     [ "${REMNANT_INTEGRATION:-v0.5.18}" = v0.5.22 ] || {
       echo "V4.1 requires v0.5.22" >&2; exit 2;
     }
-    [ -z "${HICACHE_RATIO:-}${C4_KEEP_COUNT:-}${C4_LAYER_KEEP_COUNTS:-}${STORE_IMPLEMENTATION:-}" ] || {
+    [ -z "${HICACHE_RATIO:-}${C4_KEEP_COUNT:-}${C4_LAYER_KEEP_COUNTS:-}${STORE_IMPLEMENTATION:-}${REMNANT_CAPTURE_DIR:-}" ] || {
       echo "V4.1 does not support HiCache or C4 codec overrides" >&2; exit 2;
     }
     args+=(--model-type llm --language-model-only
@@ -138,6 +138,12 @@ if [ -n "${HICACHE_RATIO:-}" ]; then
     --hicache-mem-layout layer_first)
 fi
 
+if [ -n "${EP_SIZE:-}" ]; then
+  # Expert parallelism keeps each expert's full width on one rank; V4.1's 2304
+  # does not split into 128-aligned TP4 shards for the FlashInfer MXFP4 kernels.
+  [[ "$EP_SIZE" =~ ^[1-9][0-9]*$ ]] || { echo "EP_SIZE must be a positive integer" >&2; exit 2; }
+  args+=(--ep-size "$EP_SIZE")
+fi
 if [ -n "${SERVER_SEED:-}" ]; then
   args+=(--random-seed "$SERVER_SEED")
 fi

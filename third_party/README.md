@@ -17,8 +17,8 @@ Folder suffixes identify the SGLang integration pair, not a FlashMLA release.
 |---|---|---|---|
 | `sglang-v0.5.18/` | `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` | `6687a7c` |
 | `flashmla-v0.5.18/` | `05e26647fe840b8baedae486c2d86d5ce4efeb7c` | `remnant/flashmla-v0518` | `97f3faa` |
-| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `main` (combined GLM/V4.1 history) | `e0d6d500d6dc` |
-| `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `ds41-flash-packed` | `4e72722671d8` |
+| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `exp/ds41-flash/upstream-decode` | `6ba5517ea595` |
+| `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `exp/ds41-flash/upstream-decode` | `858bb1c` |
 
 Both FlashMLA checkouts pin CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`.
 The default remains v0.5.18; `REMNANT_INTEGRATION=v0.5.22` selects the other pair.
@@ -51,8 +51,50 @@ that an existing container's loaded binaries match; source changes need a rebuil
 
 ## Experimental V4.1 FP4 on SM90
 
-Review-fix integration: SGLang `c4708870`, FlashMLA `4e72722`, based on parent
-`af12dd9`. The current pins add effective Q8KV8 override rejection, retained
+Qualified decode-only follow-up: SGLang `8084dc44`, FlashMLA `858bb1c` unchanged.
+The isolated original Native control now carries synchronization-only corrections
+at `6fbbf3a`; the complete patch and original base are preserved in the experiment
+record. It is identified as synchronization-corrected upstream Native, not the
+untouched failed binary. Protocol v5 and `v41-decode` qualify two production-page
+decode graph/stream cases per sanitizer before the ten-case timing matrix.
+CPU preflight, three ordinary H100 cases, all three strict decode sanitizers and
+independent reviews passed. Packed took 2.56× as long as synchronization-corrected
+Native across ten cases (range 1.72×–3.42×). Observed follow-up spend was $1.63.
+
+
+Upstream comparison candidate: SGLang `3c595a2b`, FlashMLA `858bb1c` unchanged.
+The v4 microbenchmark defines Native as the original upstream H100 auto
+FP8/BF16 path (584 bytes), built separately at FlashMLA `3620b63`; the previous
+custom dense FP4 control is now `dense_fp4` (288 bytes). Packed remains 224
+bytes. Prior v1–v3 ratios and allocator fixtures used the custom dense FP4
+control and do not measure upstream Native. CPU matrix, ratios and rounding
+contracts passed. On frozen parent `7e913f5`, the completed Modal CPU preflight
+passed 27 tests + 15 subtests, followed by 43 ordinary H100 numerical/graph/stream
+cases. Strict synccheck then reported 4,192 divergent-thread barrier errors in
+the original upstream H64 sparse kernel (`splitkv_mla.cuh:418`); no complete
+synccheck XML was produced. Racecheck was interrupted after 7/38 cases, memcheck
+was not run, and timing stayed blocked. This comparison is unqualified;
+independent fresh review is also pending. The baseline remains unchanged.
+No runtime or kernel arithmetic changes. Source/binary identities bind the
+separate control to the new receipts; the required sanitizer matrix includes
+both global page sizes (38 cases/tool). All task containers are stopped;
+conservative cumulative compute is $18.15 under the approved $25 ceiling,
+retaining the $2 reserve. Prior allocator results compare custom dense FP4
+against Packed, not upstream `auto`.
+See the single [experiment record](../benchmarks/microbench/dsv41-flash-packed-fp4/README.md).
+Rollback omits the timing suite or restores SGLang `4f8fb091`; runtime `auto`
+continues to select its existing path.
+
+Follow-up candidate: SGLang `4f8fb091`, FlashMLA `858bb1c`. Effective prefill
+resolution now accepts a Q8 CLI choice disabled by the environment; shared page
+validation and named CUDA dispatch modes reduce duplicate contracts. A synthetic
+C2 decode test exercises the actual producer, request ring and FP4 store.
+Interrupted sanitizer evidence is audited before complete sibling receipts can
+be reused. These pins are pending fresh validation; prior qualification does not
+transfer automatically. See the experiment record for budget and deferred gates.
+
+Previous review-fix integration: SGLang `c4708870`, FlashMLA `4e72722`, based on
+parent `af12dd9`. Those pins added effective Q8KV8 override rejection, retained
 prefill policy, aligned cache base/page checks, named FP4 layouts and explicit
 fixed-matrix CLI validation. Parent qualification uses
 `scripts/modal/qualification.py` to reject failed tools, compare complete runtime
@@ -118,7 +160,7 @@ transfer, speculation/DSpark, replay and legacy layout overrides are rejected.
   Full-history prefill scratch scaling above remains a serving limitation.
   Select `--kv-cache-format native` or restore recorded baseline pins to roll back.
 
-See the [single experiment record](../benchmarks/microbench/v41-packed-fp4/README.md)
+See the [single experiment record](../benchmarks/microbench/dsv41-flash-packed-fp4/README.md)
 for exact sources, commands, all cases, costs, failed attempts and limitations.
 Broader GitHub lint/gating statuses are separate from these focused Modal gates.
 
@@ -153,7 +195,7 @@ The separate experimental V4.1 candidate above extends this baseline.
 V4 synchronization corrections `31877b4..3eb8594` replace divergent aligned
 barriers and add explicit local/peer KV-ready acquires. Arithmetic and persistent
 layout are unchanged, but v0.5.22 Native is **not the untouched historical
-binary**. The [qualification record](../benchmarks/microbench/v0522-qualification-20261023/README.md)
+binary**. The [qualification record](https://github.com/winstonxcai/flash-optimizations/blob/83530552f0e10bc08c03e1e69a928e3ccdc14d99/benchmarks/microbench/v0522-qualification-20261023/README.md)
 retains failed baselines as well as completed core numerical, allocation and
 memcheck/racecheck/synccheck gates. HiCache GPU, full-model, distributed execution
 and serving remain pending.
@@ -354,8 +396,8 @@ reusing its conclusions. Test presence and CUDA skips are not passes.
 
 | Scope | Evidence | Limits |
 |---|---|---|
-| Default-256 decode/store | [H100 three-mode reference](../benchmarks/microbench/decode-store-h100-three-mode-20261014/README.md): 114 GPU checks, 33 timing cases, 12 Compute captures; recorded SGLang `7b2592eb9048`, FlashMLA `57e9560`, plus submitted-content hashes | Model-free; not qualification of the current pin pair or serving TPOT |
-| Prefill reconstruction | [Split-reader study](../benchmarks/microbench/prefill-read-20261018/README.md) and [fused-reader study](../benchmarks/microbench/prefill-read-fused-rope-20261018/README.md): fused study reports 291 validation checks, 67 under each sanitizer, 36 timing cases and 108 profiles, including all-count read parity and changing-input graphs | Dirty source snapshot based on SGLang `0098b4277f` / FlashMLA `57e9560`, not a clean current-pin run; no production promotion or serving/quality gain |
+| Default-256 decode/store | [H100 three-mode reference](../benchmarks/microbench/dsv4-flash-decode-store/README.md): 114 GPU checks, 33 timing cases, 12 Compute captures; recorded SGLang `7b2592eb9048`, FlashMLA `57e9560`, plus submitted-content hashes | Model-free; not qualification of the current pin pair or serving TPOT |
+| Prefill reconstruction | [Split-reader study](../benchmarks/microbench/dsv4-flash-prefill-read/README.md) and [fused-reader study](../benchmarks/microbench/dsv4-flash-prefill-read-fused-rope/README.md): fused study reports 291 validation checks, 67 under each sanitizer, 36 timing cases and 108 profiles, including all-count read parity and changing-input graphs | Dirty source snapshot based on SGLang `0098b4277f` / FlashMLA `57e9560`, not a clean current-pin run; no production promotion or serving/quality gain |
 | Matched-load serving | [C24 triplicate](../benchmarks/lswb-replay/c24-native-packed256-n3-20261018/README.md): three independent unprofiled runs per mode, all meeting the 99% success criterion and TTFT p90 below 10 s; [128k/8k study](../benchmarks/serving/random-128k-8k-c24-capacity-n1-20261018/README.md): six error-free single-run cells with exact output lengths | Triplicate still has 15–21 failures/run. Collections use different images and lack full loaded-runtime/extension identity; no statistical equivalence, task-quality or replicated SLO-capacity claim |
 | Capture/configuration/HiCache | Focused regression entry points in the file map | No complete retained qualification of the current pair's live TP4 capture or all host-cache/non-256 serving combinations; historical CPU capture checks are not GPU validation |
 
@@ -432,7 +474,7 @@ The attention benchmark uses `--model-family glm53 --suite glm-attention`;
 `--phase decode` runs 48 cases, while default `all` requires 128. Resume requires
 a complete verified build manifest plus matching source, artifact and fixture
 identities. Individual sanitizer-tool runs remain partial qualification.
-See [the experiment index](../benchmarks/microbench/glm53-packed/README.md) for
+See [the experiment index](../benchmarks/microbench/glm53-flash-packed/README.md) for
 commands, all cases, budget, source identities and historical evidence.
 
 Historical optimized decode at SGLang `246ee03c1ad5`: all 48 paired cases and
@@ -452,7 +494,7 @@ uses two splits and reuses the unpacked latent tile in QK and PV. The H200
 suite completed 80 paired cases at both local head counts with focused
 sanitizers. Packed Direct was faster in 70 cases and missed the strict
 per-case parity criterion. The serving launcher uses its production dispatch.
-See the [GLM experiment guide](../benchmarks/microbench/glm53-packed/README.md)
+See the [GLM experiment guide](../benchmarks/microbench/glm53-flash-packed/README.md)
 for reproduction and the source-bound evidence.
 
 ### Full-model H200 smoke test
@@ -494,7 +536,7 @@ Each response contained `1, 2, 3, 4, 5` with finish reason `stop`. The tested
 Modal serving image is `im-VvBWmlcKXOGyVuHTE6kVxx` in `caiw`. It used an
 explicit source override with benchmark-only prefill edits alongside the
 serving fixes. The 64-row prefill experiment was outside this smoke scope.
-The [qualification record](../benchmarks/microbench/glm53-packed/qualification.json)
+The [qualification record](../benchmarks/microbench/glm53-flash-packed/qualification.json)
 contains the exact image and source identities, commands, response bodies,
 log hashes and costs. This was a single-request smoke per mode. Serving
 performance, capacity and multimodal behavior remain unverified.
@@ -538,7 +580,7 @@ verification by `scripts/sources.py`; pure report parsing by
 separate. Shared numerical timing statistics live in the fork's `timing.py`.
 
 The current merge-validation status and $26 phase ledger are recorded in the
-existing GLM [qualification record](../benchmarks/microbench/glm53-packed/qualification.json).
+existing GLM [qualification record](../benchmarks/microbench/glm53-flash-packed/qualification.json).
 Historical qualification and prefill parity misses stay bound to their measured
 sources. The 64-row prefill candidate remains benchmark-only.
 
@@ -555,3 +597,13 @@ captured decode graphs and returned the exact expected chat answer with `stop`.
 The separate $15 phase spent $6.24 reported / $6.68 conservatively accounted;
 all workers exited. The full-batch racecheck gap prevents complete merge acceptance;
 the historical 34-case qualification above does not qualify this merge.
+
+The upstream-decode experiment adds only benchmark/provenance code. It loads
+the exact upstream v0.5.22 attention module alongside production Direct on one
+H200, with 16-head TP4 geometry and 24 decode cases. It does not establish
+full-model serving performance. See the GLM experiment README and ledger.
+
+The source-pinned 24-case upstream decode comparison passed on H200: Direct
+adds +1.28947% batch-weighted complete-call overhead, with all numerical and
+changing-input graph checks passed. These are attention-only results; see the
+[per-case table](../benchmarks/microbench/glm53-flash-packed/README.md#completed-upstream-decode-result).

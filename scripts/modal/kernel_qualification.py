@@ -71,8 +71,8 @@ def qualify_glm_timing(
     remain incomplete as full qualifications until merged here.
     """
     ids = qualification_run_ids(run_ids)
-    if phase not in ("all", "decode"):
-        raise ValueError("GLM qualification phase must be all or decode")
+    if phase not in ("all", "decode", "upstream-decode"):
+        raise ValueError("GLM qualification phase must be all, decode or upstream-decode")
     manifest = context.manifest
     current = context.runtime_hashes
     groups = {}
@@ -92,8 +92,10 @@ def qualify_glm_timing(
             raise RuntimeError(
                 f"Cannot establish unchanged historical GLM runtime: {run_id}"
             )
-        if phase == "decode" and (
-            old.get("sources") != manifest.get("sources")
+        # The upstream scope changes only benchmark/baseline sources. Keep
+        # the existing Direct compiler and artifact equality gates intact.
+        if phase in ("decode", "upstream-decode") and (
+            (phase == "decode" and old.get("sources") != manifest.get("sources"))
             or old["glm_compile"].get("cache_files")
             != manifest["glm_compile"].get("cache_files")
             or old.get("nvcc") != manifest.get("nvcc")
@@ -136,7 +138,7 @@ def qualify_glm_timing(
                 )
             verify_sanitizer_artifacts(root, tool, status)
             check_sanitizer_report(log, tool)
-            if phase == "decode" and result.get("sanitizer_scope") == "glm-decode":
+            if phase in ("decode", "upstream-decode") and result.get("sanitizer_scope") in ("glm-decode", "glm-merge"):
                 audit = result.get("scope_audit", {})
                 audit_log = (root / "scope-audit.log").read_text()
                 if (
@@ -152,12 +154,12 @@ def qualify_glm_timing(
                     )
                 check_sanitizer_report(audit_log, "racecheck")
                 check_glm_scope_audit(audit_log, run_id)
-            if phase == "decode":
+            if phase in ("decode", "upstream-decode"):
                 tests, _ = read_pytest_report(root / f"{tool}.xml")
                 names = {x.attrib["name"] for x in tests}
                 if (
                     not names
-                    or not names <= GLM_DECODE_REQUIRED
+                    or not names <= (GLM_DECODE_REQUIRED | ({"test_prefill_partial_graph[64]", "test_prefill_partial_graph_h8"} if phase == "upstream-decode" else set()))
                     or len(names) != len(tests)
                     or any(
                         not x.get("classname", "").endswith(
@@ -230,7 +232,7 @@ def qualify_glm_timing(
             )
     required = (
         GLM_DECODE_REQUIRED
-        if phase == "decode"
+        if phase in ("decode", "upstream-decode")
         else required_glm_sanitizer_cases(historical=False)
     )
     missing = {

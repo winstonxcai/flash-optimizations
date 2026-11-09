@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "passed_model_free_correctness_and_timing",
+  "status": "historical_pass_current_upstream_native_comparison_unqualified",
   "experiment": "V4.1 Packed FP4 SM90 engineering validation",
   "model_load": false,
   "budget": {
@@ -4181,5 +4181,1277 @@
       "baseline_dirty_files": "Preserved parent third_party/.DS_Store, CUTLASS .DS_Store and original worktree changes"
     }
   },
-  "current_milestone": "review_fixes"
+  "current_milestone": "review_fixes",
+  "upstream_native_comparison": {
+    "status": "unqualified_upstream_native_synccheck_failure",
+    "protocol": "remnant-v41-fp4-decode-v4",
+    "candidate_sglang": "3c595a2b70b9c6d9e45843d5884acc3ea5c3322c",
+    "candidate_flashmla": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208",
+    "upstream_flashmla": "3620b63fc4ebe33950c50e1b7701b6607f44150e",
+    "cutlass": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+    "cpu": {
+      "commands": [
+        {
+          "argv": [
+            "isort",
+            "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py",
+            "scripts/modal/kernels.py",
+            "scripts/modal/qualification.py"
+          ],
+          "returncode": 0,
+          "stdout": "Fixing /work/third_party/sglang-v0.5.22/benchmark/remnant/microbench.py\nFixing /work/scripts/modal/kernels.py\n",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "ruff",
+            "format",
+            "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py",
+            "scripts/modal/kernels.py",
+            "scripts/modal/qualification.py"
+          ],
+          "returncode": 0,
+          "stdout": "3 files reformatted, 3 files left unchanged\n",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "ruff",
+            "check",
+            "--select",
+            "F401,F821,F823,UP037",
+            "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py",
+            "scripts/modal/kernels.py",
+            "scripts/modal/qualification.py"
+          ],
+          "returncode": 0,
+          "stdout": "All checks passed!\n",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "python3",
+            "-m",
+            "compileall",
+            "-q",
+            "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py",
+            "scripts/modal/kernels.py",
+            "scripts/modal/qualification.py"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "python3",
+            "-m",
+            "pytest",
+            "-q",
+            "--disable-warnings",
+            "--tb=short",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "-k",
+            "established_matrix_and_profile_coverage or paired_ratios_and_round_percentile or v41_native_reference or v41_three_path_ratios or v41_native_call or v41_fp4_matrix_and_timing_gate"
+          ],
+          "returncode": 0,
+          "stdout": "......                                                                   [100%]\n6 passed, 176 deselected in 3.37s\n",
+          "stderr": ""
+        }
+      ],
+      "app_id": "ap-eWIMVXuSpdOHI4DD6sM12V",
+      "sandbox_id": "sb-RFT5LivdRPRuQEjTa4uRFZ",
+      "image_id": "im-m8PLjs2g4OTkQGaY4z3GsG",
+      "returncode": 0,
+      "stderr": ""
+    },
+    "tested_formatted_copy_sha256": {
+      "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py": "3a1f4831fbe723be1f86df1a0efb104d45a31acd7558a56c46a219db490ec006",
+      "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py": "60859911a295761b40ced0924f47a7a32c6b8d043b4bdcc07b478b8673593397",
+      "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py": "b3a598f111d6a338b33632bd131c9be4a60e05fcf2d2a2d7d70a618746d560c4",
+      "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py": "cb8b7ff0d693961b3921d45f317823417e8d3ed20e7c8678bab14b7907a53f36",
+      "scripts/modal/kernels.py": "7042bf62896312e8a930874cd77f395d84917f10c8e7cd94f5e698148de8f922",
+      "scripts/modal/qualification.py": "e7085830fb69712b1c2bf87bb764d27972811b6a5ea5666129ca61aa75960a3a"
+    },
+    "cpu_reproduction_invocation": "\"\"\"Temporary invocation of existing CPU tests/formatters. Author: Winston Cai.\"\"\"\nimport json\nimport base64\nimport shutil\nimport tempfile\nfrom pathlib import Path\n\nimport modal\n\nroot = Path('/Users/poohthewinnie/Documents/Programming/flash-optimizations')\nsglang = 'third_party/sglang-v0.5.22/'\nfiles = [\n    sglang + path for path in (\n        'benchmark/remnant/microbench.py', 'benchmark/remnant/test_microbench.py',\n        'python/sglang/benchmark/remnant/cases.py',\n        'python/sglang/benchmark/remnant/quantization.py',\n    )\n] + ['scripts/modal/kernels.py', 'scripts/modal/qualification.py']\nimage = modal.Image.from_id('im-MZqnw8UUhUxovTFl16mxln').pip_install('ruff==0.15.1', 'isort==7.0.0')\ntemporary = tempfile.TemporaryDirectory(prefix='remnant-v41-native-cpu-input-')\nfor path in files:\n    target = Path(temporary.name, path)\n    target.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copyfile(root / path, target)\nconfig = sglang + '.isort.cfg'\ntarget = Path(temporary.name, config)\ntarget.parent.mkdir(parents=True, exist_ok=True)\nshutil.copyfile(root / config, target)\nimage = image.add_local_dir(temporary.name, '/work', copy=True)\ncode = '''\nimport base64\nimport json\nfrom pathlib import Path\nimport subprocess\nfiles = FILES\ncommands = [\n    ['isort', *files], ['ruff', 'format', *files],\n    ['ruff', 'check', '--select', 'F401,F821,F823,UP037', *files],\n    ['python3', '-m', 'compileall', '-q', *files],\n    ['python3', '-m', 'pytest', '-q', '--disable-warnings', '--tb=short',\n     'third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py',\n     '-k', 'established_matrix_and_profile_coverage or paired_ratios_and_round_percentile or v41_native_reference or v41_three_path_ratios or v41_native_call or v41_fp4_matrix_and_timing_gate'],\n]\nresults = []\nfor command in commands:\n    result = subprocess.run(command, cwd='/work', text=True, capture_output=True, timeout=120)\n    results.append({'argv': command, 'returncode': result.returncode, 'stdout': result.stdout, 'stderr': result.stderr})\n    if result.returncode:\n        break\nprint('REMNANT_CPU_RESULT=' + json.dumps({'commands': results}))\nfor path in files:\n    data = base64.b64encode(Path('/work', path).read_bytes()).decode()\n    for offset in range(0, len(data), 4096):\n        print('REMNANT_CPU_FILE=' + json.dumps([path, data[offset:offset+4096]]))\n'''.replace('FILES', repr(files))\napp = modal.App('remnant-v41-upstream-native-cpu')\nwith app.run():\n    sandbox = modal.Sandbox.create('python3', '-c', code, image=image, app=app,\n                                   cpu=1, memory=4096, timeout=240, block_network=True)\n    try:\n        raw = sandbox.stdout.read()\n        errors = sandbox.stderr.read()\n        sandbox.wait()\n        payload = json.JSONDecoder().raw_decode(raw.split('REMNANT_CPU_RESULT=', 1)[1])[0]\n        chunks = {}\n        for line in raw.splitlines():\n            if line.startswith('REMNANT_CPU_FILE='):\n                path, data = json.loads(line.split('=', 1)[1])\n                chunks.setdefault(path, []).append(data)\n        payload['files'] = {path: base64.b64decode(''.join(data)).decode() for path, data in chunks.items()}\n        payload.update(app_id=app.app_id, sandbox_id=sandbox.object_id, image_id=image.object_id,\n                       returncode=sandbox.returncode, stderr=errors)\n        Path('/tmp/remnant-v41-native-cpu-result.json').write_text(json.dumps(payload, indent=2))\n        print(json.dumps({key: value for key, value in payload.items() if key != 'files'}, indent=2))\n    finally:\n        sandbox.terminate(wait=True)\n        temporary.cleanup()\n",
+    "prior_cpu_attempt": {
+      "app_id": "ap-XRNJU0D1QHW9nQjZvi5S3Y",
+      "checks": "5 passed; lint and syntax passed",
+      "collection": "formatted-source export failed at the log line size limit; superseded by successful chunked export"
+    },
+    "inventory": {
+      "app_id": "ap-vhh7mWndYQrfeIYqHUJuze",
+      "result": "No standalone upstream flash_mla package in the cached image; stopped successfully",
+      "reproduction_invocation": "\"\"\"Temporary CPU inventory of the existing build image. Author: Winston Cai.\"\"\"\nimport json\nimport modal\n\napp = modal.App(\"remnant-native-control-inventory\")\nimage = modal.Image.from_id(\"im-MZqnw8UUhUxovTFl16mxln\")\ncode = \"\"\"\nimport importlib.metadata as metadata\nimport importlib.util\nimport json\nfrom pathlib import Path\nresult = {}\nfor name in ('flash_mla', 'sgl_kernel'):\n    spec = importlib.util.find_spec(name)\n    result[name] = None if spec is None else {'origin': spec.origin, 'paths': list(spec.submodule_search_locations or [])}\nfor name in ('flash-mla', 'sgl-kernel', 'sglang'):\n    try:\n        result[name + '_version'] = metadata.version(name)\n    except metadata.PackageNotFoundError:\n        result[name + '_version'] = None\nprint(json.dumps(result, indent=2))\n\"\"\"\nwith modal.enable_output(), app.run():\n    sandbox = modal.Sandbox.create(\"python3\", \"-c\", code, image=image, app=app,\n                                   cpu=1, memory=2048, timeout=90, block_network=True)\n    try:\n        print(json.dumps({'sandbox_id': sandbox.object_id, 'app_id': app.app_id}))\n        print(sandbox.stdout.read())\n        print(sandbox.stderr.read())\n        sandbox.wait()\n        if sandbox.returncode != 0:\n            raise RuntimeError(f\"Inventory failed: {sandbox.returncode}\")\n    finally:\n        sandbox.terminate(wait=True)\n"
+    },
+    "budget": {
+      "ceiling_usd": 25,
+      "reserve_usd": 2,
+      "prior_conservative_phase_usd": 14.86730972,
+      "prior_interrupted_build_usd": 0.04578652,
+      "extension_request": {
+        "ceiling_usd": 25,
+        "reserve_usd": 2,
+        "status": "approved_by_user",
+        "reason": "Full current-source qualification plus timing estimated about 6 USD; about 2.5 USD of work allowance remains",
+        "approved_reply": "Raise the ceiling to $25; keep the $2 reserve",
+        "approved_date": "2026-11-06"
+      },
+      "conservative_phase_compute_usd": "18.14965811",
+      "remaining_work_usd": "4.85034189",
+      "work_ceiling_usd": 23,
+      "max_projected_work_usd": 23,
+      "conservative_phase_before_this_continuation_usd": "15.46969128",
+      "continuation_cpu_preflight_usd": "0.35721953",
+      "continuation_gpu_validation_usd": "2.32274730",
+      "continuation_compute_usd": "2.67996683",
+      "billing_lag": true,
+      "continuation_billing": [
+        {
+          "app_id": "ap-aPTqaH1sTVezb91Hb0nDhT",
+          "cost_usd": "0.35721953"
+        },
+        {
+          "app_id": "ap-G1IvP0SRm3PgcypwsALP6s",
+          "cost_usd": "2.32274730"
+        }
+      ],
+      "preparation_settled_cpu_usd_before_final_check": 0.00282954,
+      "preparation_compute_usd": "0.55659504",
+      "preparation_billing": [
+        {
+          "object_id": "ap-0kO7GeNg8yuPC74oGbA1tU",
+          "description": "remnant-v41-upstream-native-cpu",
+          "environment": "main",
+          "interval_start": "2026-11-06T00:00:00",
+          "cost": "0.00095969"
+        },
+        {
+          "object_id": "ap-3aCCm3gJHFSFoiQ4KTQFH5",
+          "description": "remnant-kernel-dev",
+          "environment": "main",
+          "interval_start": "2026-11-06T00:00:00",
+          "cost": "0.29592454"
+        },
+        {
+          "object_id": "ap-ARVqkOUWOhHrsptFiunH3I",
+          "description": "remnant-v41-upstream-native-cpu",
+          "environment": "main",
+          "interval_start": "2026-11-06T00:00:00",
+          "cost": "0.00052868"
+        },
+        {
+          "object_id": "ap-XRNJU0D1QHW9nQjZvi5S3Y",
+          "description": "remnant-v41-upstream-native-cpu",
+          "environment": "main",
+          "interval_start": "2026-11-06T00:00:00",
+          "cost": "0.00183639"
+        },
+        {
+          "object_id": "ap-eWIMVXuSpdOHI4DD6sM12V",
+          "description": "remnant-v41-upstream-native-cpu",
+          "environment": "main",
+          "interval_start": "2026-11-06T00:00:00",
+          "cost": "0.00055515"
+        },
+        {
+          "object_id": "ap-g1saJgl1HC7PUrEG2esBhC",
+          "description": "remnant-kernel-dev",
+          "environment": "main",
+          "interval_start": "2026-11-06T00:00:00",
+          "cost": "0.25632612"
+        },
+        {
+          "object_id": "ap-t6JxrQ4CWg4fQC3XW5y7Yp",
+          "description": "remnant-kernel-dev",
+          "environment": "main",
+          "interval_start": "2026-11-06T00:00:00",
+          "cost": "0.00025346"
+        },
+        {
+          "object_id": "ap-vhh7mWndYQrfeIYqHUJuze",
+          "description": "remnant-native-control-inventory",
+          "environment": "main",
+          "interval_start": "2026-11-06T00:00:00",
+          "cost": "0.00021101"
+        }
+      ],
+      "remaining_work_before_preparation_under_20_usd": 3.08690376
+    },
+    "pending": [
+      "CPU native build/preflight",
+      "GPU numerical, graph and nondefault stream checks",
+      "38 cases per strict sanitizer tool",
+      "ten-case paired timing",
+      "independent review"
+    ],
+    "limitations": "No upstream Native latency result; historical v1-v3 Native labels mean custom dense FP4, not unchanged upstream.",
+    "cpu_prior_pass": {
+      "commands": [
+        {
+          "argv": [
+            "isort",
+            "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py",
+            "scripts/modal/kernels.py",
+            "scripts/modal/qualification.py"
+          ],
+          "returncode": 0,
+          "stdout": "Fixing /work/third_party/sglang-v0.5.22/benchmark/remnant/microbench.py\nFixing /work/third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py\nFixing /work/scripts/modal/kernels.py\n",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "ruff",
+            "format",
+            "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py",
+            "scripts/modal/kernels.py",
+            "scripts/modal/qualification.py"
+          ],
+          "returncode": 0,
+          "stdout": "4 files reformatted, 2 files left unchanged\n",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "ruff",
+            "check",
+            "--select",
+            "F401,F821,F823,UP037",
+            "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py",
+            "scripts/modal/kernels.py",
+            "scripts/modal/qualification.py"
+          ],
+          "returncode": 0,
+          "stdout": "All checks passed!\n",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "python3",
+            "-m",
+            "compileall",
+            "-q",
+            "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py",
+            "scripts/modal/kernels.py",
+            "scripts/modal/qualification.py"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "python3",
+            "-m",
+            "pytest",
+            "-q",
+            "--disable-warnings",
+            "--tb=short",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "-k",
+            "established_matrix_and_profile_coverage or paired_ratios_and_round_percentile or v41_native_reference or v41_three_path_ratios or v41_fp4_matrix_and_timing_gate"
+          ],
+          "returncode": 0,
+          "stdout": ".....                                                                    [100%]\n5 passed, 176 deselected in 2.21s\n",
+          "stderr": ""
+        }
+      ],
+      "app_id": "ap-ARVqkOUWOhHrsptFiunH3I",
+      "sandbox_id": "sb-5H6WKyewsHUsobVluruAYc",
+      "image_id": "im-FbCAbXMyRvL14SXBO2K7Sc",
+      "returncode": 0
+    },
+    "native_schedule_policy": "fresh metadata per standalone call; include first-use scheduler in graph; subsequent layers may reuse metadata and are not a measured model average",
+    "cancelled_cpu_preflight": {
+      "app_id": "ap-t6JxrQ4CWg4fQC3XW5y7Yp",
+      "parent_commit": "c97170f",
+      "status": "stopped before native compilation and GPU allocation",
+      "reason": "Corrected Native graph scheduling boundary after verifying SGLang on_after_cuda_graph_warmup resets C1/C2 metadata",
+      "stop_command": "MODAL_PROFILE=peroace360 modal app stop ap-t6JxrQ4CWg4fQC3XW5y7Yp --yes",
+      "last_stage": "vendor image registry pull",
+      "metered_cost_usd": 0.00025346
+    },
+    "native_build_attempts": [
+      {
+        "app_id": "ap-3aCCm3gJHFSFoiQ4KTQFH5",
+        "parent_commit": "7597930",
+        "sglang": "26489ab0",
+        "status": "failed_cpu_preflight_no_gpu",
+        "reason": "Native upstream setup.py build_ext hit the remaining CPU deadline after 658 seconds at 54/62 steps",
+        "image": "im-j5NIbyrD9M2qCVKA4o7eGz",
+        "fork_extensions": "built successfully on CPU",
+        "max_jobs": 2,
+        "nvcc_threads": 1,
+        "error": "subprocess.TimeoutExpired: upstream-native-build timed out after 657.999972207 seconds",
+        "last_compilation": "sm90/decode/sparse/instantiations/v32_persistent_h64.cu",
+        "command": "MODAL_PROFILE=peroace360 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_UPSTREAM_FLASHMLA_SOURCE=/tmp/remnant-v41-native-upstream modal run scripts/modal/kernels.py::preflight_kernels",
+        "metered_cost_usd": 0.29592454
+      },
+      {
+        "app_id": "ap-g1saJgl1HC7PUrEG2esBhC",
+        "parent_commit": "2655739",
+        "sglang": "26489ab0",
+        "current_sglang_difference": "3c595a2b adds one import separator; no arithmetic or fixture behavior change",
+        "status": "failed_total_cpu_deadline_no_gpu",
+        "image": "im-CpF4Qa2NczY8sWiwgmFfGX",
+        "upstream_build": "62/62 steps; binary and wrapper hashes verified; original SM90a control imported successfully",
+        "collection": "43 GPU qualification cases collected on CPU in 55.63 seconds",
+        "remaining_gate_failure": "CPU pytest was interrupted by the shared build deadline after two tests; CPU test gate and remaining collections did not complete",
+        "remedy": "Increase outer CPU build cap from 900 to 1200 seconds; retain 200 seconds for cleanup and reporting. Prepared, not rerun.",
+        "max_jobs": 4,
+        "gpu_allocations": 0,
+        "control_manifest": {
+          "source_commit": "3620b63fc4ebe33950c50e1b7701b6607f44150e",
+          "source_sha256": "5a29e72bcea53f389736b48b60d7c72907d8f2a762083d1bb5e59cd348cad7d0",
+          "binary_sha256": "4a0369c3d28742b4745b451c6bf4d19d58a61c63d93289c6231e4c0e59669971",
+          "python_sha256": "68516b8e7350ef72282443d737daa81381e5ce07b7bcc889ddbb92a6eb4a1db7",
+          "architectures": [
+            "sm_90a"
+          ],
+          "build_flags": {
+            "FLASH_MLA_DISABLE_SM100": "1",
+            "FLASH_MLA_DISABLE_SM90": "0",
+            "MAX_JOBS": "4",
+            "NVCC_THREADS": "1"
+          }
+        },
+        "metered_cost_usd": 0.25632612
+      }
+    ],
+    "cpu_formatted_prior": {
+      "commands": [
+        {
+          "argv": [
+            "isort",
+            "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py",
+            "scripts/modal/kernels.py",
+            "scripts/modal/qualification.py"
+          ],
+          "returncode": 0,
+          "stdout": "Fixing /work/third_party/sglang-v0.5.22/benchmark/remnant/microbench.py\nFixing /work/scripts/modal/kernels.py\n",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "ruff",
+            "format",
+            "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py",
+            "scripts/modal/kernels.py",
+            "scripts/modal/qualification.py"
+          ],
+          "returncode": 0,
+          "stdout": "4 files reformatted, 2 files left unchanged\n",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "ruff",
+            "check",
+            "--select",
+            "F401,F821,F823,UP037",
+            "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py",
+            "scripts/modal/kernels.py",
+            "scripts/modal/qualification.py"
+          ],
+          "returncode": 0,
+          "stdout": "All checks passed!\n",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "python3",
+            "-m",
+            "compileall",
+            "-q",
+            "third_party/sglang-v0.5.22/benchmark/remnant/microbench.py",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/cases.py",
+            "third_party/sglang-v0.5.22/python/sglang/benchmark/remnant/quantization.py",
+            "scripts/modal/kernels.py",
+            "scripts/modal/qualification.py"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "argv": [
+            "python3",
+            "-m",
+            "pytest",
+            "-q",
+            "--disable-warnings",
+            "--tb=short",
+            "third_party/sglang-v0.5.22/benchmark/remnant/test_microbench.py",
+            "-k",
+            "established_matrix_and_profile_coverage or paired_ratios_and_round_percentile or v41_native_reference or v41_three_path_ratios or v41_native_call or v41_fp4_matrix_and_timing_gate"
+          ],
+          "returncode": 0,
+          "stdout": "......                                                                   [100%]\n6 passed, 176 deselected in 3.28s\n",
+          "stderr": ""
+        }
+      ],
+      "app_id": "ap-0kO7GeNg8yuPC74oGbA1tU",
+      "sandbox_id": "sb-00OIsWsszhol4dC2HyKUpY",
+      "image_id": "im-5xaIDft0ZH2Btx246EG12x",
+      "returncode": 0,
+      "stderr": ""
+    },
+    "formatting_configuration": "SGLang .isort.cfg copied alongside sources; only task formatting applied",
+    "pricing_reference": {
+      "url": "https://modal.com/pricing",
+      "checked": "2026-11-06",
+      "h100_per_second_usd": 0.001097,
+      "function_cpu_core_per_second_usd": 1.31e-05,
+      "function_memory_gib_per_second_usd": 2.22e-06
+    },
+    "decision": "Stop unqualified after unchanged upstream Native synccheck failure. Preserve the original source and historical measurements; do not patch or relabel the baseline, relax sanitizer gates, or launch timing.",
+    "allocations_at_handoff": {
+      "active_containers": [],
+      "confirmation": "modal container list --json returned []; own app stop --yes exited 0",
+      "all_task_gpu_allocations_stopped": true,
+      "gpu_function_seconds": 2004.395015139
+    },
+    "cpu_raw_artifacts": {
+      "volume": "remnant-stage2a-results",
+      "path": "microbench/v41-upstream-native-20261106-cpu",
+      "files": {
+        "cancelled-preflight.log": {
+          "bytes": 7666,
+          "sha256": "56f0967ef5773624ed1cc1f86285aeb5b4677760eede69e030012592d5a9dd77"
+        },
+        "focused-cpu-checks.log": {
+          "bytes": 3129,
+          "sha256": "2eb77ff8f2d72ded167411ae8172b9accc788207190755fb7297ef3f299ba95a"
+        },
+        "preflight-two-jobs.log": {
+          "bytes": 68311,
+          "sha256": "67caf0137774e7f79ee373d3530933508e7d741dbcb1557c638d5cb6e7c9a10f"
+        },
+        "preflight-four-jobs.log": {
+          "bytes": 11588,
+          "sha256": "0086ce277dcf5b2a7db850e0af51a932b31e65c4443e250ab60c02319320556c"
+        },
+        "control-manifest.json": {
+          "bytes": 506,
+          "sha256": "a8c44b2733f036237bc803ceb5334d9fd7f194e1ab08bbddd71e68c5a00496b9"
+        },
+        "preflight-1200.log": {
+          "bytes": 57130,
+          "sha256": "a65ff6c136714d3968aa0d03298dd18dd491f30912ef9010f4b1f496a08e716f"
+        }
+      },
+      "upload_status": "Earlier files remotely listed; successful 1200-second preflight console upload acknowledged by Modal CLI"
+    },
+    "candidate_parent": "7e913f5fbe05b09d3d00d45110b1aa22d69a69c6",
+    "completed_cpu_preflight": {
+      "app_id": "ap-aPTqaH1sTVezb91Hb0nDhT",
+      "status": "passed",
+      "image_id": "im-ev6fT7rDhSeuaU95l2p7zb",
+      "compiled_base_image": "im-lpbCUXtT6SYbppGBtDYhFa",
+      "native_extensions_built_on": "Modal CPU image-build workers",
+      "outer_timeout_seconds": 1200,
+      "work_timeout_seconds": 1000,
+      "tests_passed": 27,
+      "subtests_passed": 15,
+      "warnings": 23,
+      "pytest_seconds": 171.88,
+      "gpu_tests_collected": 43,
+      "sanitizer_cases_collected_per_tool": 38,
+      "manifest_sha256": "84e78a849fcfd2db9743b4fac37305f9236dcdece686f83a33463d0356743842",
+      "upstream_native_control": {
+        "source_commit": "3620b63fc4ebe33950c50e1b7701b6607f44150e",
+        "source_sha256": "5a29e72bcea53f389736b48b60d7c72907d8f2a762083d1bb5e59cd348cad7d0",
+        "binary": "/opt/flashmla-upstream-native/flash_mla/cuda.cpython-312-x86_64-linux-gnu.so",
+        "binary_sha256": "a9a73f98b01b170629847da67870868c23e56f2f163d6f6690a5281f978c220a",
+        "python": "/opt/flashmla-upstream-native/flash_mla/flash_mla_interface.py",
+        "python_sha256": "68516b8e7350ef72282443d737daa81381e5ce07b7bcc889ddbb92a6eb4a1db7",
+        "architectures": [
+          "sm_90a"
+        ],
+        "build_flags": {
+          "FLASH_MLA_DISABLE_SM100": "1",
+          "FLASH_MLA_DISABLE_SM90": "0",
+          "MAX_JOBS": "4",
+          "NVCC_THREADS": "1"
+        }
+      },
+      "command": "MODAL_PROFILE=peroace360 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_UPSTREAM_FLASHMLA_SOURCE=/tmp/remnant-v41-native-upstream modal run scripts/modal/kernels.py::preflight_kernels",
+      "console_log_volume_path": "microbench/v41-upstream-native-20261106-cpu/preflight-1200.log",
+      "console_log_sha256": "a65ff6c136714d3968aa0d03298dd18dd491f30912ef9010f4b1f496a08e716f"
+    },
+    "gpu_validation": {
+      "run_id": "v41-upstream-native-20261106-a",
+      "app_id": "ap-G1IvP0SRm3PgcypwsALP6s",
+      "container_id": "ta-01M6QRFS4XHQC8JM94QP9MHNGR",
+      "profile": "peroace360",
+      "gpu": "NVIDIA H100 80GB HBM3",
+      "driver_version": "610.57.04",
+      "cpu_cores": 2,
+      "memory_gib": 16,
+      "platform_timeout_seconds": 5400,
+      "work_timeout_seconds": 5000,
+      "function_seconds": 2004.395015139,
+      "ordinary_tests": {
+        "passed": 43,
+        "failed": 0,
+        "warnings": 21,
+        "seconds": 47.67,
+        "xml_sha256": "9b33ceff104a2f0645070791211fac6b98a0b79c93c87bb5d5645e2f79add759"
+      },
+      "allocation": {
+        "status": "passed",
+        "baseline": "custom dense FP4, not upstream auto FP8/BF16",
+        "capacity_gain_percent": 21.957878315132607,
+        "serving_capacity_verified": false
+      },
+      "sanitizers": {
+        "synccheck": {
+          "status": "failed",
+          "required_cases": 38,
+          "preceding_cases_completed": 36,
+          "complete_xml_exists": false,
+          "error_summary_count": 4192,
+          "errors_printed": 100,
+          "errors_suppressed": 4092,
+          "diagnostic": "Barrier error detected. Divergent thread(s) in block.",
+          "reported_at": "cutlass::arch::NamedBarrier::arrive_and_wait_internal, barrier.h:286; upstream sm90/decode/sparse/splitkv_mla.cuh:418",
+          "kernel": "sm90::decode::sparse::KernelTemplate<(ModelType)1, (int)64>",
+          "host_binary": "cuda.cpython-312-x86_64-linux-gnu.so (separately verified original upstream package)",
+          "case_inference": "First upstream Native comparison [128], inferred from the 36 preceding pytest progress marks and collection order; no complete XML was produced.",
+          "qualification": "failed; preceding progress marks do not qualify partial coverage"
+        },
+        "racecheck": {
+          "status": "interrupted",
+          "completed_cases": 7,
+          "required_cases": 38,
+          "seconds": 85.7,
+          "reason": "Own app stopped after synccheck failure; not qualified"
+        },
+        "memcheck": {
+          "status": "not_run",
+          "required_cases": 38
+        }
+      },
+      "command": "MODAL_PROFILE=peroace360 REMNANT_INTEGRATION=v0.5.22 REMNANT_VALIDATION_SUITE=v41-fp4 REMNANT_UPSTREAM_FLASHMLA_SOURCE=/tmp/remnant-v41-native-upstream modal run scripts/modal/kernels.py::validate_kernels --run-id v41-upstream-native-20261106-a --sanitizer --sanitizer-order synccheck,racecheck,memcheck --max-seconds 5000",
+      "stop_command": "MODAL_PROFILE=peroace360 modal app stop --yes ap-G1IvP0SRm3PgcypwsALP6s",
+      "stop_exit_code": 0,
+      "result_status": "failed",
+      "result_error": "KeyboardInterrupt()"
+    },
+    "raw_gpu_artifacts": {
+      "volume": "remnant-stage2a-results",
+      "path": "microbench/v41-upstream-native-20261106-a/validation",
+      "files": {
+        "racecheck.log": {
+          "bytes": 418,
+          "sha256": "ed2259612ae0ba00ae6c0076521765e43bf0192dae4f58e33545b0823597d3e8"
+        },
+        "result.json": {
+          "bytes": 13093,
+          "sha256": "c7f906027a91637a5293fe6a5a0c2c0dbad1dc53dc8bc8f5001de37d0d0b6ab5"
+        },
+        "racecheck.xml": {
+          "bytes": 1245,
+          "sha256": "74bc5374fb33f615af0274944a60c02a4ec284254c32584f70e34e74f46b53e9"
+        },
+        "synccheck.log": {
+          "bytes": 1187699,
+          "sha256": "00fbbc47433be4962d063b4ae6077f493d2acd4641947e3b16e3b627196d3197"
+        },
+        "validation.log": {
+          "bytes": 193,
+          "sha256": "088125d3fd64729ff4cb516fdf415f4244078cb7e38da7a705e44b4cac39003f"
+        },
+        "validation.xml": {
+          "bytes": 6031,
+          "sha256": "9b33ceff104a2f0645070791211fac6b98a0b79c93c87bb5d5645e2f79add759"
+        },
+        "allocation.json": {
+          "bytes": 4710,
+          "sha256": "6fcb6bf0cdf3f2b80337f731c0d2fd65f0d2144ee253553e4d3f24dc2e4798c0"
+        },
+        "sanitizer-version.log": {
+          "bytes": 125,
+          "sha256": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673"
+        },
+        "sanitizer-control-empty.log": {
+          "bytes": 124,
+          "sha256": "fb8d9ea8d2be1a0fc356e4685eab89b230d089597899abc6f9cde9b1b6cc3900"
+        },
+        "sanitizer-control-bindings-query.log": {
+          "bytes": 139,
+          "sha256": "a518617e603ae9e3659eecdf4257ea7eca94fb82a98faf99a78827514ec53fc4"
+        },
+        "sanitizer-control-bindings-import.log": {
+          "bytes": 240,
+          "sha256": "4806c657afdb0ef7bbbb2360916bf4ad14b5d2a0aac0e56710f31a9d1cfecc07"
+        },
+        "model-config.json": {
+          "bytes": 1888,
+          "sha256": "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023"
+        },
+        "driver-version.log": {
+          "bytes": 54,
+          "sha256": "641baa7aef4714d620d9cb838ee74134559d52457e2f5803efc69bd52a40a065"
+        },
+        "cpu-preflight/upstream-native-build.log": {
+          "bytes": 228037,
+          "sha256": "fb1e548dca762494a0651e731ba9edfc20cc2f719c44aa57148ec4401e9ce3e3"
+        },
+        "cpu-preflight/upstream-native-architectures.log": {
+          "bytes": 2562,
+          "sha256": "352fad12253d99f74790cb04f4b37f0bfdcfb8efcbfb41f6f42cd9836ac5dd42"
+        },
+        "cpu-preflight/sgl_kernel_jit_dpsk_v4_store_flashmla_bf16_t_int64_t_256_V4_true.so.architectures.log": {
+          "bytes": 95,
+          "sha256": "62a58373cf811992a7212069d4c2b1462d5ca90231275e7bb100fa66fcf86a37"
+        },
+        "cpu-preflight/sgl_kernel_jit_dpsk_v4_store_flashmla_bf16_t_int64_t_128_V4_true.so.architectures.log": {
+          "bytes": 95,
+          "sha256": "fffb65eeb447a42e6159ed65f3a27a104c4d32156a5124af300c9b1e1346f44c"
+        },
+        "cpu-preflight/sgl_kernel_jit_dpsk_v4_fused_norm_rope_v2_fp32_t_512_64_64_0_false_V4_true.so.architectures.log": {
+          "bytes": 105,
+          "sha256": "4eb685fff5f7f192d09de967027b61c9c3da6e99fe0310c037d81a28921438b3"
+        },
+        "cpu-preflight/sanitizer-version.log": {
+          "bytes": 125,
+          "sha256": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673"
+        },
+        "cpu-preflight/sanitizer-extract.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "cpu-preflight/sanitizer-collection.log": {
+          "bytes": 3610,
+          "sha256": "a1a4350d3b8ab81b3868b487be403452a58921a49bbee33e5d3bafee5b9a286c"
+        },
+        "cpu-preflight/remnant_ops.cpython-312-x86_64-linux-gnu.so.architectures.log": {
+          "bytes": 70,
+          "sha256": "48127697569bc605f8e446d1b6c954aae0ae9ee636b0699e4bfb0f677ad679a9"
+        },
+        "cpu-preflight/remnant-native-store.so.architectures.log": {
+          "bytes": 51,
+          "sha256": "890f8fc3b6ca5a8a5765d3d2111c3f4cee284903daaf75fc70eab8afabc2ed61"
+        },
+        "cpu-preflight/qualification-tests.log": {
+          "bytes": 2534,
+          "sha256": "89ad5e8295739497e20d7ccb40b9bd8932963bde7c4e1c030584e8aad7f63e55"
+        },
+        "cpu-preflight/prefill-imports.log": {
+          "bytes": 478,
+          "sha256": "976b9fc1a6daa9b4c7b742e80cc18ee6bca69f556fb25275007483104978f3ac"
+        },
+        "cpu-preflight/nvcc.log": {
+          "bytes": 211,
+          "sha256": "fc7ce0c80d28ed925fd490dc4e3915ce620fcf115f965189688c6f049243aad5"
+        },
+        "cpu-preflight/imports.log": {
+          "bytes": 506,
+          "sha256": "3c631aebdcf6ac09dab568e56332b6ed0b71cafe1a1c38bdc715f1bf7e3e8c64"
+        },
+        "cpu-preflight/fp4-precompile.log": {
+          "bytes": 448,
+          "sha256": "d33a945f1bf85e63ebc2dc3318c143e3652ffd88461dc44c6ef20dfb8941b880"
+        },
+        "cpu-preflight/fp4-benchmark-imports.log": {
+          "bytes": 509,
+          "sha256": "ab49313e59ffca1a4e58144d8fbb36825576bd02870ee4619c1d093789c52c91"
+        },
+        "cpu-preflight/flashmla_ops.cpython-312-x86_64-linux-gnu.so.architectures.log": {
+          "bytes": 1743,
+          "sha256": "335d24f88bbc3a4b8ffdab9f57203e6c679e2951d8794444ba1cce1e1871e654"
+        },
+        "cpu-preflight/cuda.cpython-312-x86_64-linux-gnu.so.architectures.log": {
+          "bytes": 2562,
+          "sha256": "352fad12253d99f74790cb04f4b37f0bfdcfb8efcbfb41f6f42cd9836ac5dd42"
+        },
+        "cpu-preflight/cpu-tests.xml": {
+          "bytes": 4077,
+          "sha256": "85e266998cf748ed4b2f2a779d51fa7b83a398f67a93e1ef481c0bd47ad34836"
+        },
+        "cpu-preflight/cpu-tests.log": {
+          "bytes": 209,
+          "sha256": "23f4b91e13b7e914e28523896e1707ca5dd145ac51d255f37b91b1657d0b7ef3"
+        },
+        "cpu-preflight/collection.log": {
+          "bytes": 4174,
+          "sha256": "e21bf4a29fd2a21398b1f8f20eb9d32e51d83bb8a4be01486cbebc6c1d2610bd"
+        },
+        "cpu-preflight/benchmark-collection.log": {
+          "bytes": 17435,
+          "sha256": "bf69e96ecb7f9420588918114c722ad4e6ce7eb71e64971dd3338ec42e17bd32"
+        },
+        "cpu-preflight/base-imports.log": {
+          "bytes": 490,
+          "sha256": "f1399efdd581336843265027192957a36020e50ef1340ac2081cb3ff8f350252"
+        },
+        "build-manifest.json": {
+          "bytes": 28696,
+          "sha256": "84e78a849fcfd2db9743b4fac37305f9236dcdece686f83a33463d0356743842"
+        }
+      },
+      "collection": "37 files downloaded and hashed; 1514781 bytes; no tensors or binaries added to Git"
+    },
+    "timing": {
+      "status": "not_run",
+      "reason": "Required original Native synchronization gate failed; no timing allocation or new v4 latency measurement",
+      "required_cases": 10,
+      "required_paths": [
+        "native",
+        "dense_fp4",
+        "kernel"
+      ]
+    },
+    "independent_review": {
+      "status": "pending",
+      "note": "No fresh independent review completed for this comparison; no qualification or production promotion claimed."
+    },
+    "next_step": "Review the original Native barrier failure and agree a baseline/acceptance policy before further GPU work. A synchronization-fixed control must have a separate name and cannot be called unchanged Native.",
+    "cleanup": {
+      "retained": "Canonical benchmark code and independent references; exact original Native source at /tmp/remnant-v41-native-upstream for reproduction; all raw evidence in existing Modal volume prefixes",
+      "consolidated": "Current question, outcome, commands and budget in this README/JSON; historical CPU attempts remain in this JSON and Git",
+      "local_raw_downloads": "Remove after evidence commit; canonical remote copies remain",
+      "source_cleanup_deferred": "Isolated upstream checkout remains active because the comparison is blocked rather than completed",
+      "code_or_pin_changes_this_continuation": false,
+      "pushed": false
+    }
+  },
+  "decode_sync_followup": {
+    "status": "passed_decode_only_native_vs_direct",
+    "budget": {
+      "authorized_usd": 15,
+      "reserve_usd": 2,
+      "max_projected_work_usd": 13,
+      "account": "peroace360",
+      "account_compute_baseline_usd": 3.23656187,
+      "prior_phase_cumulative_usd": 18.14965811,
+      "spent_followup_usd": 1.62836037,
+      "note": "New user-authorized follow-up allowance; preserve earlier phase spend separately.",
+      "remaining_work_usd": 11.37163963,
+      "billing_lag": true,
+      "all_containers_stopped": true,
+      "observed_app_costs_usd": {
+        "ap-nOvTrxvaARiYkA2Xu6QS9K": 0.00141706,
+        "ap-0iifUcSrEc4TC75oF6k7mC": 0.35068699,
+        "ap-BlNsEvcKYjtZIwi70f8XuE": 0.34124495,
+        "ap-MTpeJsKERxQGDKDbY7FHeh": 0.58032322,
+        "ap-UuHqS7jefRlb7T1AtoYIyF": 0.00087125,
+        "ap-UzxeDmlCkdj6abvjTcWtRk": 0.26005783,
+        "ap-akbCpNnTzCyrHi1HZIoAtk": 0.00139963,
+        "ap-dF4ENGmZXnyxnlBeWjrkFH": 0.09235944
+      }
+    },
+    "upstream_base": "3620b63fc4ebe33950c50e1b7701b6607f44150e",
+    "native_sync_commit": "6fbbf3a61285d4078b8ac0f2874e99b7b0b11866",
+    "native_sync_patch_sha256": "72b0fe0695a177f94c5223f0949c401ee16c8c9f5139ad269e480b4fc4d48e30",
+    "scope": "Decode only; existing two production-page graph/stream controls under all three strict sanitizers; ten final timing cases; no prefill/producer GPU tests",
+    "protocol": "remnant-v41-fp4-decode-v5",
+    "sglang": "8084dc44ef35666da52195368c96046693714858",
+    "flashmla": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208",
+    "validation_suite": "v41-decode",
+    "result": "Packed slower than sync-corrected Native in all ten measured cases",
+    "concurrency": 1,
+    "automatic_retries": false,
+    "cpu_attempts": [
+      {
+        "app_id": "ap-nOvTrxvaARiYkA2Xu6QS9K",
+        "status": "terminated_during_image_unpack",
+        "cost_usd": 0.00141706,
+        "control_commit": "ee0f8718fdaab4eaaef9f3bb61cdd470ff650d32"
+      },
+      {
+        "app_id": "ap-hV9AEizzA8HmC5X5q9zJgG",
+        "status": "stopped_after_detecting_fixture_packaging_bug"
+      },
+      {
+        "app_id": "ap-BlNsEvcKYjtZIwi70f8XuE",
+        "status": "passed",
+        "image": "im-UlUgS4e8mdqGs2mHpXYeLK",
+        "cost_usd_observed": 0.34092364,
+        "control_commit": "3332c1bad8075ecb8083dd5732ed3110cdc3947e"
+      },
+      {
+        "app_id": "ap-0iifUcSrEc4TC75oF6k7mC",
+        "status": "passed",
+        "image": "im-TNl7jdYtXFkA5sx2TXv7qz",
+        "tests_passed": 27,
+        "subtests_passed": 15,
+        "cost_usd_observed": 0.35068699
+      }
+    ],
+    "gpu_attempts": [
+      {
+        "app_id": "ap-55CIjiZdNGPqBGV3x7TIPm",
+        "status": "stopped_before_allocation_after_connection_error"
+      },
+      {
+        "app_id": "ap-UzxeDmlCkdj6abvjTcWtRk",
+        "run_id": "v41-native-sync-20261109-b",
+        "control_commit": "3332c1bad8075ecb8083dd5732ed3110cdc3947e",
+        "ordinary_passed": 3,
+        "synccheck_errors": 10240,
+        "fault_pc": "0x88f0",
+        "sass": "BAR.SYNC.DEFER_BLOCKING 0xb, 0x100",
+        "status": "stopped_after_synccheck_failure",
+        "artifact_prefix": "microbench/v41-native-sync-20261109-b/validation/"
+      }
+    ],
+    "parent": "7710f1880fb363c7f95245133ce78ec9f4b88238",
+    "native_control": {
+      "source_commit": "6fbbf3a61285d4078b8ac0f2874e99b7b0b11866",
+      "source_sha256": "7d325420a946f6a5192f00a9de1d139bbfc274e86aa2bfd9203186aaaca9e552",
+      "binary": "/opt/flashmla-upstream-native/flash_mla/cuda.cpython-312-x86_64-linux-gnu.so",
+      "binary_sha256": "e3ba0744a657de866ceb8da599b035fa822cf62d81832f9a69e5ba7015c75db6",
+      "python": "/opt/flashmla-upstream-native/flash_mla/flash_mla_interface.py",
+      "python_sha256": "68516b8e7350ef72282443d737daa81381e5ce07b7bcc889ddbb92a6eb4a1db7",
+      "architectures": [
+        "sm_90a"
+      ],
+      "build_flags": {
+        "FLASH_MLA_DISABLE_SM100": "1",
+        "FLASH_MLA_DISABLE_SM90": "0",
+        "MAX_JOBS": "4",
+        "NVCC_THREADS": "1"
+      }
+    },
+    "review": {
+      "native_sync": "Independent review found no blocker in synchronization, lifetime or arithmetic/layout isolation.",
+      "benchmark": "Independent review found no blocker in timing boundary, fixture fairness or receipt identity. Sanitizer coverage is B8 for both page sizes."
+    },
+    "validation": {
+      "app_id": "ap-MTpeJsKERxQGDKDbY7FHeh",
+      "run_id": "v41-native-sync-20261109-c",
+      "gpu": "NVIDIA H100 80GB HBM3",
+      "ordinary_cases_passed": 3,
+      "sanitizer_cases_per_tool": 2,
+      "sanitizers": {
+        "synccheck": {
+          "status": "passed"
+        },
+        "racecheck": {
+          "status": "passed"
+        },
+        "memcheck": {
+          "status": "passed"
+        }
+      },
+      "gpu_function_seconds": 497.10883973800003,
+      "artifacts": {
+        "result.json": {
+          "bytes": 6853,
+          "sha256": "11afad4eff98217448aacdf739a5c08ef4841d74c467aa8701a3ea774ae7c6df"
+        },
+        "memcheck.xml": {
+          "bytes": 493,
+          "sha256": "fcea71d21dfe9972629f227c876ee94c33a3cc35623aab97a39e31f224b04e20"
+        },
+        "memcheck.log": {
+          "bytes": 185,
+          "sha256": "0d690471a42816dc13ddd3b2e1326e1890df681544d85aa7c27fc78129e784ba"
+        },
+        "racecheck.log": {
+          "bytes": 223,
+          "sha256": "248d42b2cb9ca20e9d71d0f0158f12d21863edf39f95daf1ada64a9a62ba7477"
+        },
+        "racecheck.xml": {
+          "bytes": 491,
+          "sha256": "898dc5d65689ababaf9e13d255a9db59d529e25ebd8c0dc4dd16ca511d3e260c"
+        },
+        "synccheck.xml": {
+          "bytes": 490,
+          "sha256": "0ceb22508630057e7a7ba8f6cdded1563dd962bca3f8e4a7d3702d8361387587"
+        },
+        "synccheck.log": {
+          "bytes": 184,
+          "sha256": "1f80ef018a4ab70cb43b57a880da87b81635963c203f951a154dddc99c159625"
+        },
+        "validation.log": {
+          "bytes": 192,
+          "sha256": "9f729cd62f68f145e1f2647d4d05bc5347e5d658de87059b3bcfd996f7d7be7c"
+        },
+        "validation.xml": {
+          "bytes": 545,
+          "sha256": "deaaebdd24e70153c5088f09c1155691031e3b30a6894fa2733c835fe0ad6347"
+        },
+        "allocation.json": {
+          "bytes": 4710,
+          "sha256": "6fcb6bf0cdf3f2b80337f731c0d2fd65f0d2144ee253553e4d3f24dc2e4798c0"
+        },
+        "sanitizer-version.log": {
+          "bytes": 125,
+          "sha256": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673"
+        },
+        "sanitizer-control-empty.log": {
+          "bytes": 124,
+          "sha256": "fb8d9ea8d2be1a0fc356e4685eab89b230d089597899abc6f9cde9b1b6cc3900"
+        },
+        "sanitizer-control-bindings-query.log": {
+          "bytes": 139,
+          "sha256": "a518617e603ae9e3659eecdf4257ea7eca94fb82a98faf99a78827514ec53fc4"
+        },
+        "sanitizer-control-bindings-import.log": {
+          "bytes": 240,
+          "sha256": "4806c657afdb0ef7bbbb2360916bf4ad14b5d2a0aac0e56710f31a9d1cfecc07"
+        },
+        "model-config.json": {
+          "bytes": 1888,
+          "sha256": "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023"
+        },
+        "driver-version.log": {
+          "bytes": 54,
+          "sha256": "641baa7aef4714d620d9cb838ee74134559d52457e2f5803efc69bd52a40a065"
+        },
+        "cpu-preflight/upstream-native-build.log": {
+          "bytes": 230338,
+          "sha256": "81b9fbd340ce21e68d194c223f90ba4eaab243f71511720a0fca78db7f9c512e"
+        },
+        "cpu-preflight/upstream-native-architectures.log": {
+          "bytes": 2562,
+          "sha256": "352fad12253d99f74790cb04f4b37f0bfdcfb8efcbfb41f6f42cd9836ac5dd42"
+        },
+        "cpu-preflight/sgl_kernel_jit_dpsk_v4_store_flashmla_bf16_t_int64_t_256_V4_true.so.architectures.log": {
+          "bytes": 95,
+          "sha256": "62a58373cf811992a7212069d4c2b1462d5ca90231275e7bb100fa66fcf86a37"
+        },
+        "cpu-preflight/sgl_kernel_jit_dpsk_v4_store_flashmla_bf16_t_int64_t_128_V4_true.so.architectures.log": {
+          "bytes": 95,
+          "sha256": "fffb65eeb447a42e6159ed65f3a27a104c4d32156a5124af300c9b1e1346f44c"
+        },
+        "cpu-preflight/sgl_kernel_jit_dpsk_v4_fused_norm_rope_v2_fp32_t_512_64_64_0_false_V4_true.so.architectures.log": {
+          "bytes": 105,
+          "sha256": "4eb685fff5f7f192d09de967027b61c9c3da6e99fe0310c037d81a28921438b3"
+        },
+        "cpu-preflight/sanitizer-version.log": {
+          "bytes": 125,
+          "sha256": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673"
+        },
+        "cpu-preflight/sanitizer-extract.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "cpu-preflight/sanitizer-collection.log": {
+          "bytes": 194,
+          "sha256": "988641c6d73aee24de1be3b5199e0b513537bfbf7ebd905dab15dc439494a4d9"
+        },
+        "cpu-preflight/remnant_ops.cpython-312-x86_64-linux-gnu.so.architectures.log": {
+          "bytes": 70,
+          "sha256": "48127697569bc605f8e446d1b6c954aae0ae9ee636b0699e4bfb0f677ad679a9"
+        },
+        "cpu-preflight/remnant-native-store.so.architectures.log": {
+          "bytes": 51,
+          "sha256": "890f8fc3b6ca5a8a5765d3d2111c3f4cee284903daaf75fc70eab8afabc2ed61"
+        },
+        "cpu-preflight/qualification-tests.log": {
+          "bytes": 2534,
+          "sha256": "adede462114253c7602cc095363e9e264661595408727a770e44caec04b09f25"
+        },
+        "cpu-preflight/prefill-imports.log": {
+          "bytes": 478,
+          "sha256": "976b9fc1a6daa9b4c7b742e80cc18ee6bca69f556fb25275007483104978f3ac"
+        },
+        "cpu-preflight/nvcc.log": {
+          "bytes": 211,
+          "sha256": "fc7ce0c80d28ed925fd490dc4e3915ce620fcf115f965189688c6f049243aad5"
+        },
+        "cpu-preflight/imports.log": {
+          "bytes": 506,
+          "sha256": "3c631aebdcf6ac09dab568e56332b6ed0b71cafe1a1c38bdc715f1bf7e3e8c64"
+        },
+        "cpu-preflight/fp4-precompile.log": {
+          "bytes": 448,
+          "sha256": "d33a945f1bf85e63ebc2dc3318c143e3652ffd88461dc44c6ef20dfb8941b880"
+        },
+        "cpu-preflight/fp4-benchmark-imports.log": {
+          "bytes": 509,
+          "sha256": "ab49313e59ffca1a4e58144d8fbb36825576bd02870ee4619c1d093789c52c91"
+        },
+        "cpu-preflight/flashmla_ops.cpython-312-x86_64-linux-gnu.so.architectures.log": {
+          "bytes": 1743,
+          "sha256": "335d24f88bbc3a4b8ffdab9f57203e6c679e2951d8794444ba1cce1e1871e654"
+        },
+        "cpu-preflight/cuda.cpython-312-x86_64-linux-gnu.so.architectures.log": {
+          "bytes": 2562,
+          "sha256": "352fad12253d99f74790cb04f4b37f0bfdcfb8efcbfb41f6f42cd9836ac5dd42"
+        },
+        "cpu-preflight/cpu-tests.xml": {
+          "bytes": 4078,
+          "sha256": "3bf412d4e371d5e332d47aeb36adfb9058cecccd624cacc50e125cb9f620c0ab"
+        },
+        "cpu-preflight/cpu-tests.log": {
+          "bytes": 209,
+          "sha256": "aafb59522d87b31fdf55bbe4588f03e93b0605b384a23246122d4f572ae50235"
+        },
+        "cpu-preflight/collection.log": {
+          "bytes": 286,
+          "sha256": "71e775b88550389503460a0dd572a08f7b370670f51e0c996f6289176f12700a"
+        },
+        "cpu-preflight/benchmark-collection.log": {
+          "bytes": 17435,
+          "sha256": "8f7b05ee091b63aa72b64a5a9bde5875a0b8492cf6c2787f26ef6088ad1faa22"
+        },
+        "cpu-preflight/base-imports.log": {
+          "bytes": 490,
+          "sha256": "f1399efdd581336843265027192957a36020e50ef1340ac2081cb3ff8f350252"
+        },
+        "build-manifest.json": {
+          "bytes": 27811,
+          "sha256": "42eb4e3db5c2becfca5d430b825657ecbf200fcb5acc5dbfb2a6036bc0c5a785"
+        }
+      },
+      "path": "microbench/v41-native-sync-20261109-c/validation/"
+    },
+    "timing": {
+      "app_id": "ap-dF4ENGmZXnyxnlBeWjrkFH",
+      "run_id": "v41-native-sync-20261109-timing",
+      "gpu_function_seconds": 63.824603135,
+      "qualification": {
+        "receipts": {
+          "v41-native-sync-20261109-c": "11afad4eff98217448aacdf739a5c08ef4841d74c467aa8701a3ea774ae7c6df"
+        },
+        "tools": [
+          "memcheck",
+          "racecheck",
+          "synccheck"
+        ],
+        "case_count_per_tool": 2,
+        "identity_sha256": "e12e2b0b8e53ffc7426df6f3c67df11af01d868a9ec5dc2287da5f24eadb08bb"
+      },
+      "raw_samples": 900,
+      "replays_per_sample": 100,
+      "packed_over_native_geomean": 2.5615894240420114,
+      "packed_over_dense_fp4_geomean": 1.0318621687566636,
+      "cases": [
+        {
+          "name": "v41_h64_b8_k512_swa128_p256_g256",
+          "batch": 8,
+          "global_page": 256,
+          "mean_us": {
+            "native": 42.19447501500448,
+            "dense_fp4": 72.97062412897745,
+            "kernel": 72.72566366195679
+          },
+          "p95_us": {
+            "native": 42.65411305427551,
+            "dense_fp4": 73.63372707366945,
+            "kernel": 73.28879857063293
+          },
+          "packed_over_native": 1.7235826168259074
+        },
+        {
+          "name": "v41_h64_b16_k512_swa128_p256_g256",
+          "batch": 16,
+          "global_page": 256,
+          "mean_us": {
+            "native": 45.81182909011841,
+            "dense_fp4": 101.71432526906331,
+            "kernel": 104.11842060089111
+          },
+          "p95_us": {
+            "native": 46.53942322731018,
+            "dense_fp4": 102.88419485092162,
+            "kernel": 105.37915182113647
+          },
+          "packed_over_native": 2.272740963825638
+        },
+        {
+          "name": "v41_h64_b24_k512_swa128_p256_g256",
+          "batch": 24,
+          "global_page": 256,
+          "mean_us": {
+            "native": 50.05173317591349,
+            "dense_fp4": 130.18442630767822,
+            "kernel": 133.54589875539145
+          },
+          "p95_us": {
+            "native": 50.51652717590332,
+            "dense_fp4": 131.37980747222903,
+            "kernel": 134.5963363647461
+          },
+          "packed_over_native": 2.668157330057414
+        },
+        {
+          "name": "v41_h64_b28_k512_swa128_p256_g256",
+          "batch": 28,
+          "global_page": 256,
+          "mean_us": {
+            "native": 51.72354094187419,
+            "dense_fp4": 159.00704034169516,
+            "kernel": 163.82490857442218
+          },
+          "p95_us": {
+            "native": 52.308464765548706,
+            "dense_fp4": 160.2438259124756,
+            "kernel": 164.75307559967038
+          },
+          "packed_over_native": 3.167318122294162
+        },
+        {
+          "name": "v41_h64_b32_k512_swa128_p256_g256",
+          "batch": 32,
+          "global_page": 256,
+          "mean_us": {
+            "native": 52.42814954121908,
+            "dense_fp4": 159.45180733998617,
+            "kernel": 165.02689043680826
+          },
+          "p95_us": {
+            "native": 53.136608362197876,
+            "dense_fp4": 161.26707744598386,
+            "kernel": 166.91973972320557
+          },
+          "packed_over_native": 3.147677190228961
+        },
+        {
+          "name": "v41_h64_b8_k512_swa128_p256_g128",
+          "batch": 8,
+          "global_page": 128,
+          "mean_us": {
+            "native": 42.10411739349365,
+            "dense_fp4": 72.90016047159831,
+            "kernel": 72.88869349161783
+          },
+          "p95_us": {
+            "native": 42.506335496902466,
+            "dense_fp4": 73.55659294128418,
+            "kernel": 73.53328037261963
+          },
+          "packed_over_native": 1.7311535784118186
+        },
+        {
+          "name": "v41_h64_b16_k512_swa128_p256_g128",
+          "batch": 16,
+          "global_page": 128,
+          "mean_us": {
+            "native": 45.6045757929484,
+            "dense_fp4": 101.54741446177165,
+            "kernel": 104.18653869628906
+          },
+          "p95_us": {
+            "native": 46.27201581001282,
+            "dense_fp4": 102.73333168029785,
+            "kernel": 105.4861626625061
+          },
+          "packed_over_native": 2.2845632677148786
+        },
+        {
+          "name": "v41_h64_b24_k512_swa128_p256_g128",
+          "batch": 24,
+          "global_page": 128,
+          "mean_us": {
+            "native": 49.83772818247477,
+            "dense_fp4": 130.65924231211346,
+            "kernel": 135.62389214833578
+          },
+          "p95_us": {
+            "native": 50.55291175842285,
+            "dense_fp4": 132.06910467147824,
+            "kernel": 137.07385540008542
+          },
+          "packed_over_native": 2.72130968032422
+        },
+        {
+          "name": "v41_h64_b28_k512_swa128_p256_g128",
+          "batch": 28,
+          "global_page": 128,
+          "mean_us": {
+            "native": 51.663295427958175,
+            "dense_fp4": 159.11260859171549,
+            "kernel": 163.73646990458172
+          },
+          "p95_us": {
+            "native": 52.21121430397034,
+            "dense_fp4": 161.22844028472903,
+            "kernel": 165.21536159515378
+          },
+          "packed_over_native": 3.1692997620119656
+        },
+        {
+          "name": "v41_h64_b32_k512_swa128_p256_g128",
+          "batch": 32,
+          "global_page": 128,
+          "mean_us": {
+            "native": 52.25801610946655,
+            "dense_fp4": 159.82053407033283,
+            "kernel": 178.85155042012533
+          },
+          "p95_us": {
+            "native": 52.94537568092346,
+            "dense_fp4": 161.4413061141968,
+            "kernel": 180.49803733825684
+          },
+          "packed_over_native": 3.4224711103743246
+        }
+      ],
+      "artifacts": {
+        "timing.log": {
+          "bytes": 1151,
+          "sha256": "fff0b153fcc38838007dcc1648dca4ed2204ee24d6a251c66004d6f1cde8d475"
+        },
+        "result.json": {
+          "bytes": 794,
+          "sha256": "315d3fc94b9671402f461cb71bb04a8ebcd1d08cb711f89402354406bcd2de28"
+        },
+        "timing.json": {
+          "bytes": 173600,
+          "sha256": "2e8dbef57e1676749d59cb8f8d8d104b648cf3651e3c5b951c8d52b22d4f6210"
+        },
+        "timing.csv": {
+          "bytes": 2442696,
+          "sha256": "9e5e9f653429a3a40face949129f153f16293e3694db71960ece89ee04fcab07"
+        },
+        "build-manifest.json": {
+          "bytes": 27811,
+          "sha256": "42eb4e3db5c2becfca5d430b825657ecbf200fcb5acc5dbfb2a6036bc0c5a785"
+        }
+      },
+      "path": "microbench/v41-native-sync-20261109-timing/timing/"
+    },
+    "volume": "remnant-stage2a-results",
+    "commands": {
+      "env": {
+        "MODAL_PROFILE": "peroace360",
+        "REMNANT_INTEGRATION": "v0.5.22",
+        "REMNANT_VALIDATION_SUITE": "v41-decode",
+        "REMNANT_UPSTREAM_FLASHMLA_SOURCE": "/tmp/remnant-v41-native-upstream"
+      },
+      "cpu": "modal run --detach scripts/modal/kernels.py::preflight_kernels",
+      "validation": "modal run --detach scripts/modal/kernels.py::validate_kernels --run-id v41-native-sync-20261109-c --sanitizer --max-seconds 1800",
+      "timing": "modal run scripts/modal/kernels.py::benchmark_kernels --run-id v41-native-sync-20261109-timing --suite v41-fp4-decode --qualification-runs v41-native-sync-20261109-c"
+    }
+  }
 }

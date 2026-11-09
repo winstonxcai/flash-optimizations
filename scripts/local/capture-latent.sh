@@ -203,6 +203,7 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 common=(--pull never --rm --network host
+  -e "REMNANT_INTEGRATION=$integration"
   --mount "type=bind,src=$scratch,dst=/capture"
   --mount "type=bind,src=$published,dst=/published"
   --mount "type=bind,src=$model,dst=/model,readonly"

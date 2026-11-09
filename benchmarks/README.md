@@ -11,7 +11,8 @@ alone do not establish a repeatable speedup.
 
 | Question | Collection | Evidence and appropriate use |
 |---|---|---|
-| v0.5.22 core correctness and matched-capacity allocation | [v0.5.22 qualification](microbench/v0522-qualification-20261023/README.md) | **Source-bound qualification, not timing.** 457 H100 numerical cases plus subtests, exact allocation reconciliation and 58 cases per sanitizer. Same qualified fork sources; reorganized parent image not rebuilt. HiCache GPU and full-model/serving remain pending. |
+| v0.5.22 Native/Kernel C20–C30 | [H100 sweep](lswb-replay/ds4-flash-0731/c20-30-native-kernel-v0522-h100-n1-20261025/README.md) | One measurement per point; all points missed the 99% response-success gate. Diagnostic evidence, not an SLO-qualified capacity. |
+| v0.5.22 core correctness and matched-capacity allocation | [v0.5.22 qualification](https://github.com/winstonxcai/flash-optimizations/blob/83530552f0e10bc08c03e1e69a928e3ccdc14d99/benchmarks/microbench/v0522-qualification-20261023/README.md) | **Source-bound qualification, not timing.** 457 H100 numerical cases plus subtests, exact allocation reconciliation and 58 cases per sanitizer. Same qualified fork sources; reorganized parent image not rebuilt. HiCache GPU and full-model/serving remain pending. |
 | Can frontend preparation delay an already-sent output? | [CPU frontend blocking diagnostic](lswb-replay/frontend-event-loop-20261022/README.md) | Source-isolated SGLang methods and real 0731 tokenizer; 216 trials across two invocations reproduce blocking. Cached OpenHands inputs, not LongSWE; no full HTTP server or GPU, and no attribution of the Triton/Kernel TTFT gap. |
 | Same-concurrency serving overhead | [C24 Native / Packed-256, n=3](lswb-replay/c24-native-packed256-n3-20261018/README.md) | **Preferred repeated C24 reference.** Nine fresh-server, unprofiled 1,200 s replays; three per mode. Recorded settings, image, dataset and harness identities match. All nine TTFT p90 values pass 10 s. Full loaded runtime identity was not captured. |
 | Packed serving at C27 | [C27 Packed-256 Triton / Kernel, n=3](lswb-replay/c27-packed256-n3-20261020/README.md) | **Repeated SLO probe.** Six fresh-server 1,200 s replays. Triton passes the 10 s TTFT-p90 threshold in 2/3 runs; Kernel in 0/3. Neither is a consistently passing ceiling. Candidate-level harness audit; no paired overnight Native control. |
@@ -20,9 +21,9 @@ alone do not establish a repeatable speedup.
 | Long-input serving at matched load and capacity | [Random 128k input / 8k output, n=1](serving/random-128k-8k-c24-capacity-n1-20261018/README.md) | **Single-run study.** Six cells: C24 and each mode's allocator ceiling. Available source identities and recorded settings match. Repeat before treating a gain as stable; allocator capacity is not an SLO ceiling. |
 | Shared-prefix retention under increasing working sets | [Shared-prefix C16, G16/G32/G40, n=1](serving/shared-prefix-c16-n1-20261019/README.md) | **Single-run synthetic screening.** Nine cells at fixed C16, sweeping distinct prefix groups. Exact completions, input lengths and cache accounting passed review. Packed gains at G32/G40 accompany higher device hits; overlapping allocations and incomplete runtime identity limit attribution. Not LongSWE replay or a replicated production gain. |
 | Repeated shared-prefix retention at G32 | [Shared-prefix G32/C16, three modes, n=3](serving/shared-prefix-g32-c16-n3-20261020/README.md) | **Preferred repeated synthetic mechanism reference.** Nine measurements with a successful cache flush before each, one resident server per mode. Packed observes approximately 2.4× Native throughput and 72% fewer uncached prompt tokens. One fixed dataset seed and a capacity-sensitive working set; not a general coding-agent speedup. |
-| Decode/store operation cost and GPU counters | [H100 three-mode decode/store](microbench/decode-store-h100-three-mode-20261014/README.md) | **Validated operation reference.** 33 timing cases, documented 114 passing GPU checks and 12 Compute reports. Timing samples are not independent serving runs. |
-| Native / Packed192 / Packed256 prefill-read cost | [Original split reader](microbench/prefill-read-20261018/README.md) | **Model-free operation study.** 36 timing cases and 108 captured operations on shared inputs; Packed reconstruction adds cost. This is not a serving-speed measurement. |
-| Fusing Packed prefill unpack and RoPE | [Fused-reader candidate](microbench/prefill-read-fused-rope-20261018/README.md) | **Validated opt-in experiment.** All-count parity, graph/sanitizer checks, 36 timing cases and 108 captures. Fusion removes part of the penalty but remains slower than Native. CSV export recovery and cross-run comparison limits are recorded. |
+| Decode/store operation cost and GPU counters | [H100 three-mode decode/store](microbench/dsv4-flash-decode-store/README.md) | **Validated operation reference.** 33 timing cases, documented 114 passing GPU checks and 12 Compute reports. Timing samples are not independent serving runs. |
+| Native / Packed192 / Packed256 prefill-read cost | [Original split reader](microbench/dsv4-flash-prefill-read/README.md) | **Model-free operation study.** 36 timing cases and 108 captured operations on shared inputs; Packed reconstruction adds cost. This is not a serving-speed measurement. |
+| Fusing Packed prefill unpack and RoPE | [Fused-reader candidate](microbench/dsv4-flash-prefill-read-fused-rope/README.md) | **Validated opt-in experiment.** All-count parity, graph/sanitizer checks, 36 timing cases and 108 captures. Fusion removes part of the penalty but remains slower than Native. CSV export recovery and cross-run comparison limits are recorded. |
 | Historical C24 execution profiles | [C24 three-mode timing and profiles, n=1](lswb-replay/c24-three-mode-profiles-n1-20261013/README.md) | **Historical diagnostic.** One unprofiled run per mode plus separate Systems captures. Pairing was not established; preserve event-loss and source-identity caveats. Prefer the repeated C24 collection for serving comparisons. |
 | Packed store/decode interaction at C24 | [C24 Packed-256 ablation, n=1](lswb-replay/c24-packed256-store-decode-ablation-n1-20261014/README.md) | **Single-run diagnostic.** Four store/decode combinations. Session and source-plumbing differences limit causal conclusions. |
 | Packed store/decode interaction at C28 | [C28 Packed-256 ablation, n=1](lswb-replay/c28-packed256-store-decode-ablation-n1-20261014/README.md) | **Single-run diagnostic.** Four sequential combinations; all four full-run TTFT p90 values exceed 10 s. Useful for investigation, not a passing concurrency reference. |
@@ -33,10 +34,11 @@ Existing additional studies retain their own documented acceptance status.
 
 ## Naming and layout
 
-Collection names describe the workload or operation, comparison, repetition
-count when applicable, and collection date. `n3` means three independent runs
-per configuration; `n1` means one. Warm-up waves, measured request waves, graph
-replays and profiler captures do not increase that repetition count.
+The [microbench index](microbench/README.md) uses stable model and experiment
+names. Serving and replay collection names include the workload, comparison,
+repetition count when applicable, and collection date. `n3` means three
+independent runs per configuration. Warm-up waves, measured request waves,
+graph replays and profiler captures do not increase that repetition count.
 
 ```text
 benchmarks/
@@ -54,10 +56,7 @@ benchmarks/
 │   ├── shared-prefix-c16-n1-20261019/
 │   └── shared-prefix-g32-c16-n3-20261020/
 └── microbench/
-    ├── v0522-qualification-20261023/
-    ├── decode-store-h100-three-mode-20261014/
-    ├── prefill-read-20261018/
-    └── prefill-read-fused-rope-20261018/
+    └── README.md
 ```
 
 Original run IDs, source paths, comparison IDs and archive locations remain
