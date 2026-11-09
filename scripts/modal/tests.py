@@ -4630,6 +4630,29 @@ class GLMUpstreamDecodeTests(unittest.TestCase):
     def test_reused_scope_allows_harness_changes_but_keeps_compiler_and_cache_identity(self):
         self._check_reused_decode_scope(combine=False)
 
+    def test_tuned_preflight_requires_the_exact_partial_variant_matrix(self):
+        base = [
+            {"heads": h, "inner": i, "packed": p}
+            for h in (8, 16, 32, 64)
+            for i in (1, 2, 33, 66)
+            for p in (False, True)
+        ]
+        extra = [
+            {"heads": 16, "inner": i, "packed": p}
+            for i in (3, 6, 11)
+            for p in (False, True)
+        ]
+        variants = {key: {} for key in ("66x128", "33x512", "22x512", "11x512", "6x512")}
+        qualification.verify_glm_tile32_variants({"tilelang": base})
+        compiled = {"tilelang": base + extra, "decode_combine": variants}
+        qualification.verify_glm_tile32_variants(compiled)
+        with self.assertRaisesRegex(RuntimeError, "Incomplete CPU-compiled"):
+            qualification.verify_glm_tile32_variants({**compiled, "tilelang": base})
+        with self.assertRaisesRegex(RuntimeError, "Incomplete GLM decode combine"):
+            qualification.verify_glm_tile32_variants({
+                **compiled, "decode_combine": {k: v for k, v in variants.items() if k != "6x512"}
+            })
+
     def test_candidate_decode_qualification_requires_both_combine_cubins(self):
         self._check_reused_decode_scope(combine=True)
 

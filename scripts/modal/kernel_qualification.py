@@ -39,11 +39,13 @@ GLM_DECODE_REQUIRED = {
 
 
 def glm_decode_combine_cases(manifest: dict) -> dict[str, dict]:
-    """Map both exact candidate shapes to the expected sanitizer case IDs."""
+    """Map the exact prepared candidate shapes to their sanitizer case IDs."""
     variants = manifest["glm_compile"].get("decode_combine", {})
     if not variants:
         return {}
-    if set(variants) != {"66x128", "33x512"}:
+    stock_splits = {"66x128", "33x512"}
+    tuned_splits = stock_splits | {"22x512", "11x512", "6x512"}
+    if variants.keys() not in (stock_splits, tuned_splits):
         raise RuntimeError("Incomplete GLM decode combine manifest")
     return {
         f"test_packed_decode_combine_graph[{shape.replace('x', '-')}]": variant
@@ -51,8 +53,28 @@ def glm_decode_combine_cases(manifest: dict) -> dict[str, dict]:
     }
 
 
+def glm_tuned_inner_splits(compiled: dict) -> set[int]:
+    variants = glm_decode_combine_cases({"glm_compile": compiled})
+    return {3, 6, 11} if len(variants) == 5 else set()
+
+
+def verify_glm_tile32_variants(compiled: dict) -> None:
+    expected = {
+        (heads, inner, packed)
+        for heads in (8, 16, 32, 64)
+        for inner in (1, 2, 33, 66)
+        for packed in (False, True)
+    } | {(16, inner, packed) for inner in glm_tuned_inner_splits(compiled) for packed in (False, True)}
+    actual = [
+        (v["heads"], v["inner"], v["packed"])
+        for v in compiled.get("tilelang", []) if v.get("block_i", 32) == 32
+    ]
+    if len(actual) != len(expected) or set(actual) != expected:
+        raise RuntimeError("Incomplete CPU-compiled GLM TileLang variants")
+
+
 def glm_decode_scope_filter(*, combine: bool = False) -> str:
-    return "regex=glm_packed_(partial|bytes|decode_combine)" if combine else "regex=glm_packed_(partial|bytes)"
+    return r"regex=glm_packed_(partial|bytes|decode_combine_kernel\b)" if combine else "regex=glm_packed_(partial|bytes)"
 
 
 @dataclass(frozen=True)
@@ -93,6 +115,12 @@ def qualify_glm_timing(
     manifest = context.manifest
     current = context.runtime_hashes
     combine_cases = glm_decode_combine_cases(manifest) if phase == "upstream-decode" else {}
+    decode_cases = GLM_DECODE_REQUIRED | combine_cases.keys()
+    if phase == "upstream-decode":
+        decode_cases |= {
+            f"test_decode_partial_graph[16-{inner}]"
+            for inner in glm_tuned_inner_splits(manifest["glm_compile"])
+        }
     groups = {}
     for run_id in ids:
         root = context.results_root / "microbench" / run_id / "validation"
@@ -181,7 +209,7 @@ def qualify_glm_timing(
                 names = {x.attrib["name"] for x in tests}
                 if (
                     not names
-                    or not names <= (GLM_DECODE_REQUIRED | combine_cases.keys() | ({"test_prefill_partial_graph[64]", "test_prefill_partial_graph_h8"} if phase == "upstream-decode" else set()))
+                    or not names <= (decode_cases | ({"test_prefill_partial_graph[64]", "test_prefill_partial_graph_h8"} if phase == "upstream-decode" else set()))
                     or len(names) != len(tests)
                     or any(
                         not x.get("classname", "").endswith(
@@ -260,7 +288,7 @@ def qualify_glm_timing(
                 )
             )
     required = (
-        GLM_DECODE_REQUIRED | combine_cases.keys()
+        decode_cases
         if phase in ("decode", "upstream-decode")
         else required_glm_sanitizer_cases(historical=False)
     )
@@ -286,7 +314,7 @@ def check_glm_scope_audit(log: str, identity: str, *, combine: bool = False) -> 
     """Pinned tool trace proves helper warp and handoff CTA synchronization."""
     if (
         "glm_packed_bytes" not in log
-        or (combine and "glm_packed_decode_combine" not in log)
+        or (combine and not re.search(r"glm_packed_decode_combine_kernel\b", log))
         or not re.search(r"(?i)(warp|warpsync)", log)
         or not re.search(r"(?i)(block|cta|barrier)", log)
     ):

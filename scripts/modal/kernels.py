@@ -60,7 +60,8 @@ from scripts.modal.kernel_qualification import \
 from scripts.modal.kernel_qualification import (glm_decode_combine_cases,
                                                 glm_decode_scope_filter,
                                                 qualification_run_ids,
-                                                qualify_glm_timing)
+                                                qualify_glm_timing,
+                                                verify_glm_tile32_variants)
 from scripts.modal.qualification import check_fp4_scope_audit
 from scripts.modal.qualification import \
     check_sanitizer_report as _check_sanitizer_report
@@ -543,9 +544,7 @@ def _reuse_glm_cpu_artifacts(build: Path, deadline: float, binding_requirements:
     if _run_command(["nvcc","--version"],build / "nvcc.log",deadline) != previous["nvcc"]:
         raise RuntimeError("Harness-only CPU reuse NVCC changed")
     compiled = previous["glm_compile"]
-    expected = {(h,i,p) for h in (8,16,32,64) for i in (1,2,33,66) for p in (False,True)}
-    if {(v["heads"],v["inner"],v["packed"]) for v in compiled["tilelang"] if v.get("block_i", 32) == 32} != expected:
-        raise RuntimeError("Harness-only CPU reuse lacks maintained SM90 variants")
+    verify_glm_tile32_variants(compiled)
     Path("/opt/remnant-glm-compile.json").write_text(json.dumps(compiled,indent=2)+"\n")
     environment = _cpu_preflight_environment(build)
     _glm_launch_metadata(build,deadline,environment)
@@ -1971,9 +1970,9 @@ def validate_kernels(
             record["sanitizer_tool"] = tool
             if MODEL_FAMILY == "glm53":
                 compiled = manifest.get("glm_compile")
-                expected_variants = {(h, i, p) for h in (8, 16, 32, 64) for i in (1, 2, 33, 66) for p in (False, True)}
-                if not compiled or compiled.get("attention_scale") != 0.0625 or {(v["heads"], v["inner"], v["packed"]) for v in compiled["tilelang"] if v.get("block_i", 32) == 32} != expected_variants:
-                    raise RuntimeError("Incomplete CPU-compiled GLM TileLang variants")
+                if not compiled or compiled.get("attention_scale") != 0.0625:
+                    raise RuntimeError("GLM compile manifest has an unexpected attention scale")
+                verify_glm_tile32_variants(compiled)
                 for path, expected in compiled["cache_files"].items():
                     if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
                         raise RuntimeError(f"GLM compiled cache artifact changed: {path}")
@@ -2565,6 +2564,7 @@ def _verify_glm_compiled_artifacts() -> dict:
     manifest = json.loads(MANIFEST.read_text())
     if manifest.get("model_family") != "glm53" or manifest["source_identities"] != SOURCE_IDENTITIES or manifest["sources"] != _source_hashes():
         raise RuntimeError("GLM timing image source identity mismatch")
+    verify_glm_tile32_variants(manifest["glm_compile"])
     for artifacts in (manifest["binaries"], manifest["glm_compile"]["cache_files"]):
         for path, expected in artifacts.items():
             if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
