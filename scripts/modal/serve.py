@@ -330,7 +330,10 @@ def _stop_serving_server(process: subprocess.Popen) -> None:
 
 @contextmanager
 def _running_serving_server(
-    env: dict[str, str], log: Path, deadline: float
+    env: dict[str, str],
+    log: Path,
+    deadline: float,
+    fatal_markers: tuple[str, ...] = (),
 ) -> Iterator[None]:
     """The Modal caller owns server lifetime; the benchmark is only a client."""
     # Refuse an existing listener rather than accepting its health response.
@@ -356,12 +359,22 @@ def _running_serving_server(
             stderr=subprocess.STDOUT,
             start_new_session=True,
         )
+        scanned = 0
         try:
             while True:
                 if process.poll() is not None:
                     raise RuntimeError(
                         f"serving process exited during startup; see {log}"
                     )
+                if fatal_markers:
+                    # A wedged worker can log its failure and keep the port closed.
+                    with log.open("rb") as written:
+                        written.seek(scanned)
+                        fresh = written.read().decode(errors="replace")
+                        scanned = written.tell()
+                    for marker in fatal_markers:
+                        if marker in fresh:
+                            raise RuntimeError(f"startup log reports {marker!r}; see {log}")
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     raise TimeoutError(

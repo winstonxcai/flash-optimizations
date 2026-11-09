@@ -426,13 +426,14 @@ class LauncherTests(unittest.TestCase):
         self.results_volume = volume.start()
         self.addCleanup(volume.stop)
 
-    def test_only_three_remote_functions_and_no_model_volumes(self):
+    def test_registered_remote_functions_have_no_model_volumes(self):
         self.assertEqual(
             set(kernels.app.registered_functions),
             {
                 "_benchmark_worker",
                 "_preflight_fp4_timing",
                 "_preflight_glm_timing",
+                "preflight_kernels",
                 "profile_kernels",
                 "validate_kernels",
             },
@@ -3180,6 +3181,17 @@ class FP4QualificationTests(unittest.TestCase):
             with self.subTest(corruption=corruption), self.assertRaises(RuntimeError):
                 self.q.qualify_fp4_runs(self.root, f"{name},good", self.manifest)
 
+    def test_decode_receipts_require_two_cases_and_cannot_qualify_broad_scope(self):
+        decode = {**self.manifest, "validation_suite": "v41-decode"}
+        self.receipt("short-decode", self.q.TOOLS, manifest=decode, count=1)
+        with self.assertRaisesRegex(RuntimeError, "Incomplete qualification XML"):
+            self.q.qualify_fp4_runs(self.root, "short-decode", decode)
+        self.receipt("complete-decode", self.q.TOOLS, manifest=decode, count=2)
+        result = self.q.qualify_fp4_runs(self.root, "complete-decode", decode)
+        self.assertEqual(result["case_count_per_tool"], 2)
+        with self.assertRaisesRegex(RuntimeError, "Qualification identity changed"):
+            self.q.qualify_fp4_runs(self.root, "complete-decode", self.manifest)
+
     def test_a_later_pass_does_not_erase_a_sanitizer_failure(self):
         self.receipt("bad", ("memcheck",), failed="racecheck")
         self.receipt("good", self.q.TOOLS)
@@ -4143,7 +4155,7 @@ class LswbSweepTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 config = json.loads((repo / f"results/lswb-replay/direct-{fmt}/collection-config.json").read_text())
                 self.assertEqual(config["mode"], fmt)
-        result = run({**graphs, "dsv4_c4_cache_format": "native", "kv_cache_format": "auto"}, "direct", "direct-v4")
+        result = run({**graphs, "dsv4_c4_cache_format": "native"}, "direct", "direct-v4")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         config = json.loads((repo / "results/lswb-replay/direct-v4/collection-config.json").read_text())
         self.assertEqual(config["mode"], "native")
@@ -4238,7 +4250,6 @@ class LswbReplayPlanTests(unittest.TestCase):
 
     def _run_lswb(self, mode: str, pool: int = 5_000_000, **kwargs):
         from scripts.modal import serve
-        from scripts.local.business_replay import capacity_plan
 
         lswb = self.root / "lswb"
         (lswb / "replay").mkdir(parents=True, exist_ok=True)

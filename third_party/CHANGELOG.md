@@ -13,6 +13,14 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Upstream decode integration of parent tips `d186b9e` and `fb1a708` uses
+  SGLang `6ba5517ea595` and FlashMLA `858bb1ccac6f`. Both benchmark protocols
+  retain their own Native controls and receipt identities. V4.1 replay uses
+  the shared serving selector and retains its historical captures. Local
+  benchmark and launcher tests cover the combined source. The existing GPU
+  results apply to the original measured revisions. Fresh qualification of the
+  combined image remains pending.
+
 - Parent baseline `1b19ad9`, SGLang `99499fb02c86` / FlashMLA
   `4e72722671d8`: add a source-verified pristine upstream FP8 attention baseline
   and a separate 24-case TP4 decode protocol on one H200. Production kernels,

@@ -2111,11 +2111,12 @@ def validate_kernels(
                     record["sanitizer_results"][tool] = {"status": "passed"}
                 finally:
                     state = record["sanitizer_results"][tool]
-                    state["report_schema"] = "remnant-sanitizer-raw-v1"
-                    for suffix in ("log", "xml"):
-                        path = root / f"{tool}.{suffix}"
-                        if path.is_file():
-                            state[f"{suffix}_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+                    if state["status"] != "not_run":
+                        state["report_schema"] = "remnant-sanitizer-raw-v1"
+                        for suffix in ("log", "xml"):
+                            path = root / f"{tool}.{suffix}"
+                            if path.is_file():
+                                state[f"{suffix}_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
                     # Preserve completed evidence even if a later tool is cancelled.
                     (root / "result.json").write_text(json.dumps(record, indent=2) + "\n")
                     results_volume.commit()
