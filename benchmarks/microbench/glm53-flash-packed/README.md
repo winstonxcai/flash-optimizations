@@ -88,6 +88,23 @@ model checked all 32,768 bytes against the generated SW128 and SW64 layouts.
 The Packed ABI and FP8 attention arithmetic stay fixed. Check generated
 matrix instructions, register use and output parity before measuring it.
 
+The compiled transpose used 16 transposed matrix loads and 16 non-transposed
+matrix stores per specialization, with no spills. Batch-64 register use
+fell from 243 to 141 per thread, and shared memory still allowed two CTAs
+per SM. All eight H200 diagnostics passed. Batch-64 Direct partial attention
+fell from 76.84–77.54 µs to 63.59–65.15 µs. The equal-case speedup on summed
+stage traces rose from 1.551× to 1.751×. Keep this image as the control for
+the next experiment. Conservative compute spend is $3.38.
+
+Test whether warp-level PV can read FP8 inputs from the same expanded SW128
+K tile while keeping warpgroup QK. This removes the 32 KiB V allocation
+and the transpose.
+The two GEMMs distribute heads across different lanes, so publish the
+16 FP32 scale factors through shared memory. CPU preparation must confirm
+the QK and PV instruction families, any FP16 conversion, SW128 layout,
+register use and actual shared-memory footprint before running the same
+H200 diagnostic.
+
 ### Original 1.20× target
 
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched
