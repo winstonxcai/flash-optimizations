@@ -137,6 +137,14 @@ identities. It checks first-partition graph replay, the short final splits,
 and a positive WGMMA barrier trace on H200. These gates and the full
 paired result are pending.
 
+The first H200 qualification exposed a missing optional field in the small
+graph fixture. The fixture-only fix preserved every compiled kernel artifact
+and passed all five smoke cases. The next run reached the 180-second
+racecheck trace limit after logging 9,984 combine events. The trace audit
+now uses one representative combine case. The three sanitizer tools still
+require all 23 focused cases each. Both attempts and raw report identities are
+in the ledger. Conservative compute spend through the trace timeout is $4.49.
+
 ### Original 1.20× target
 
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched

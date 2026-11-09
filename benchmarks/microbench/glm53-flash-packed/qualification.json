@@ -6307,7 +6307,7 @@
     "status": "in_progress",
     "target_direct_over_upstream": 0.5,
     "budget_usd": 20,
-    "conservative_compute_usd": 3.95028265,
+    "conservative_compute_usd": 4.49128857,
     "decision": "The half-V path admits three theoretical CTAs per SM and passes the diagnostic checks, but loses overall. Restore the exact full-V matrix kernel and qualify it for the 24-case paired run.",
     "diagnostics": {
       "wgmma_disjoint": {
@@ -11474,6 +11474,134 @@
           }
         ]
       }
+    },
+    "full_paired_wgmma": {
+      "status": "qualification_pending",
+      "attempts": [
+        {
+          "argv": [
+            "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+            "run",
+            "scripts/modal/kernels.py::validate_kernels",
+            "--run-id",
+            "glm53-decode-full-v-qualification-20261110",
+            "--model-family",
+            "glm53",
+            "--stage",
+            "corrective",
+            "--cases",
+            "test/registered/attention/unittests/test_glm5_remnant.py::test_packed_loader_bytes,test/registered/attention/unittests/test_glm5_remnant.py::test_decode_bank_graph",
+            "--sanitizer",
+            "--sanitizer-scope",
+            "glm-decode",
+            "--max-seconds",
+            "1200"
+          ],
+          "account": "winstoncai",
+          "image": "im-r67hBmuitGua0pJICyQESv",
+          "run_id": "glm53-decode-full-v-qualification-20261110",
+          "seconds": 165.97498183300195,
+          "returncode": 1,
+          "app_id": "ap-pVJdr9cGXu6lTaoVPK6pRP",
+          "remote_artifacts": "winstoncai/remnant-stage2a-results/microbench/glm53-decode-full-v-qualification-20261110/validation",
+          "source_identities": {
+            "parent": "463f8083500199f7c226b941e840454d63a55b32",
+            "sglang": "e9e94f8391de7ec5420e1dc5f226f870c6f78732",
+            "flashmla/csrc/cutlass": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "flashmla": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208"
+          },
+          "cpu_manifest_sha256": "edacdd96f916f0f91698c73785c33d9979c55946bbdf3ddd395cb7bfc6d64e36",
+          "artifact_sha256": {
+            "build-manifest.json": "edacdd96f916f0f91698c73785c33d9979c55946bbdf3ddd395cb7bfc6d64e36",
+            "corrective.log": "6c3f538bfba6145e1d9cbb591ea25028a4e94995de225d3850a0c76e0fbd148b",
+            "corrective.xml": "a5e50cb91078023e54063570950185e9cd6eaa3f763a097fa5518b0330ed9251",
+            "driver-version.log": "0669b8ab347d66404efe0fe45c4a2433da7b7ca025d51547c8d1b702e7b7f8b8",
+            "model-config.json": "bb8f01c42cb92a52ca72e65afb4d5bd8d11aef083cd210e8de25dfb904f23e9f",
+            "result.json": "4e0a12b483824f0140f6fe12ee2d7c834d0026d895f9a6d99f9d3f00fd06cebb",
+            "sanitizer-control-bindings-import.log": "4806c657afdb0ef7bbbb2360916bf4ad14b5d2a0aac0e56710f31a9d1cfecc07",
+            "sanitizer-control-bindings-query.log": "a518617e603ae9e3659eecdf4257ea7eca94fb82a98faf99a78827514ec53fc4",
+            "sanitizer-control-empty.log": "fb8d9ea8d2be1a0fc356e4685eab89b230d089597899abc6f9cde9b1b6cc3900",
+            "sanitizer-version.log": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673"
+          },
+          "status": "failed",
+          "sanitizer_results": {
+            "synccheck": {
+              "status": "not_run"
+            },
+            "racecheck": {
+              "status": "not_run"
+            },
+            "memcheck": {
+              "status": "not_run"
+            }
+          },
+          "decision": "Graph probe bypassed Fixture.__init__ and did not initialize wgmma_kernels. Loader bytes passed; four graph cases failed before sanitizer.",
+          "ephemeral_apps_usd_after": "13.78128608"
+        },
+        {
+          "argv": [
+            "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+            "run",
+            "scripts/modal/kernels.py::validate_kernels",
+            "--run-id",
+            "glm53-decode-full-v-fixture-qualification-20261110",
+            "--model-family",
+            "glm53",
+            "--stage",
+            "corrective",
+            "--cases",
+            "test/registered/attention/unittests/test_glm5_remnant.py::test_packed_loader_bytes,test/registered/attention/unittests/test_glm5_remnant.py::test_decode_bank_graph",
+            "--sanitizer",
+            "--sanitizer-scope",
+            "glm-decode",
+            "--max-seconds",
+            "1200"
+          ],
+          "account": "winstoncai",
+          "image": "im-IKv0Yu8z2LqhnpYqZSdgs5",
+          "run_id": "glm53-decode-full-v-fixture-qualification-20261110",
+          "seconds": 324.07874829199864,
+          "returncode": 1,
+          "app_id": "ap-zSGYTZYAOMrVSoKQoTVb8d",
+          "remote_artifacts": "winstoncai/remnant-stage2a-results/microbench/glm53-decode-full-v-fixture-qualification-20261110/validation",
+          "source_identities": {
+            "parent": "3124a07c05172f6df4fb4c93122939cf18b9cb7f",
+            "sglang": "d355f3196cc9ea0b1324f14a3a0af39ed1270f6c",
+            "flashmla/csrc/cutlass": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+            "flashmla": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208"
+          },
+          "cpu_manifest_sha256": "a5ccbb509430ae2658b4d84ecd70a992852af229143a718223461f0bbc5692f8",
+          "artifact_sha256": {
+            "build-manifest.json": "a5ccbb509430ae2658b4d84ecd70a992852af229143a718223461f0bbc5692f8",
+            "corrective.log": "5c3d6a4c23bb044344d8480ad1a130c88aef5e3d514561a4e19392b6336ecc3e",
+            "corrective.xml": "6aece6aa178241af69737f0e4a75530dc24c1e6fc651ed522ac6a5025d8155be",
+            "driver-version.log": "0669b8ab347d66404efe0fe45c4a2433da7b7ca025d51547c8d1b702e7b7f8b8",
+            "model-config.json": "bb8f01c42cb92a52ca72e65afb4d5bd8d11aef083cd210e8de25dfb904f23e9f",
+            "result.json": "f315497e922648953f7658b48622e78ca0cd54c26c3c5e00e4964af1b200ef68",
+            "sanitizer-control-bindings-import.log": "4806c657afdb0ef7bbbb2360916bf4ad14b5d2a0aac0e56710f31a9d1cfecc07",
+            "sanitizer-control-bindings-query.log": "a518617e603ae9e3659eecdf4257ea7eca94fb82a98faf99a78827514ec53fc4",
+            "sanitizer-control-empty.log": "fb8d9ea8d2be1a0fc356e4685eab89b230d089597899abc6f9cde9b1b6cc3900",
+            "sanitizer-version.log": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673",
+            "scope-audit.log": "9e756698c725ef826b7f238af24dfbc5f84b2d293698e5272f1636816661baf5"
+          },
+          "status": "failed",
+          "sanitizer_results": {
+            "synccheck": {
+              "status": "not_run"
+            },
+            "racecheck": {
+              "status": "not_run"
+            },
+            "memcheck": {
+              "status": "not_run"
+            }
+          },
+          "decision": "Five smoke cases passed. The 180-second positive racecheck audit timed out before the WGMMA probe after 9984 combine-kernel trace records.",
+          "ephemeral_apps_usd_after": "14.19744335"
+        }
+      ],
+      "decision": "Keep the full-V binaries. Bound the positive trace audit to one combine representative while preserving all 23 cases per sanitizer tool.",
+      "conservative_compute_usd_through_attempts": 4.49128857
     }
   }
 }

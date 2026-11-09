@@ -2100,7 +2100,10 @@ def validate_kernels(
                     *combine_tests, *wgmma_tests,
                 )
                 record["coverage"]["sanitizer"] = decode_tests
-            _run_pytest((GLM_TEST + "::test_packed_loader_bytes", *combine_tests, *wgmma_audit), root, "scope-audit",
+            # The trace establishes instrumentation for each entry point.
+            # Every combine specialization still runs under each tool below.
+            combine_audit = (combine_tests[0] + "[6-512]",) if combine_tests else ()
+            _run_pytest((GLM_TEST + "::test_packed_loader_bytes", *combine_audit, *wgmma_audit), root, "scope-audit",
                         min(deadline, time.monotonic() + 180), prefix=audit_prefix)
             audit_log = (root / "scope-audit.log").read_text()
             _check_sanitizer_report(audit_log, "racecheck")
