@@ -4583,6 +4583,30 @@ class GLMUpstreamDecodeTests(unittest.TestCase):
             self.assertEqual(preflight.remote.call_args.kwargs, {"suite": "glm-upstream-decode"})
             self.assertEqual(worker.remote.call_args.args[3], "glm-upstream-decode")
 
+    def test_decode_profile_preflight_is_separate_from_timing(self):
+        options = dict(
+            run_id="profile", keep_count=256, modes="", suite="glm-upstream-decode",
+            prefill_reader="split", qualification_runs="", model_family="glm53",
+            phase="decode", max_seconds=180, profile_decode=True,
+        )
+        with (patch.object(kernels, "MODEL_FAMILY", "glm53"),
+              patch.object(kernels, "_UPSTREAM_DECODE", True),
+              patch.object(kernels, "_preflight_glm_timing") as preflight,
+              patch.object(kernels, "_benchmark_worker") as worker):
+            for change in ({"qualification_runs": "old"}, {"resume_run": "old"}):
+                with self.assertRaises(ValueError):
+                    kernels._dispatch_benchmark(**{**options, **change})
+            preflight.remote.assert_not_called()
+            worker.remote.assert_not_called()
+            preflight.remote.side_effect = RuntimeError("changed artifact")
+            with self.assertRaisesRegex(RuntimeError, "changed artifact"):
+                kernels._dispatch_benchmark(**options)
+            worker.remote.assert_not_called()
+            preflight.remote.side_effect = None
+            kernels._dispatch_benchmark(**options)
+            self.assertTrue(preflight.remote.call_args.kwargs["profile_decode"])
+            self.assertTrue(worker.remote.call_args.args[-1])
+
     def test_upstream_cpu_delta_owns_its_driver_stub_directory(self):
         with tempfile.TemporaryDirectory() as directory:
             build = Path(directory)

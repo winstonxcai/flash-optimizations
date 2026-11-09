@@ -1481,8 +1481,12 @@ def _preflight_fp4_timing(run_id: str, qualification_runs: str) -> dict:
 def _preflight_glm_timing(
     run_id: str, qualification_runs: str, phase: str,
     allow_incomplete: bool, resume_run: str, suite: str = "glm-attention",
+    profile_decode: bool = False,
 ) -> dict | None:
-    """Check existing GLM receipts before scheduling its GPU worker."""
+    """Check GLM image and evidence before scheduling its GPU worker."""
+    if profile_decode and (suite != "glm-upstream-decode" or phase != "decode"
+                           or qualification_runs or allow_incomplete or resume_run):
+        raise ValueError("Decode profiling requires a fresh diagnostic run")
     results_volume.reload()
     if resume_run:
         _glm_timing_checkpoint(resume_run)
@@ -1499,6 +1503,10 @@ def _preflight_glm_timing(
 
         verify_compilation(json.loads(MANIFEST.read_text()).get("upstream_compile", {}))
     with _run_context(run_id, "preflight", 120, resource="cpu") as (_, record, _):
+        if profile_decode:
+            _verify_glm_compiled_artifacts()
+            record["qualification"] = {"status": "diagnostic", "artifact_verification": "passed"}
+            return record["qualification"]
         record["qualification"] = _glm_timing_qualification(
             qualification_runs, allow_incomplete=allow_incomplete,
             phase="upstream-decode" if suite == "glm-upstream-decode" else phase
@@ -1518,7 +1526,7 @@ def _dispatch_benchmark(
         raise ValueError("--model-family must match REMNANT_MODEL_FAMILY")
     preflight = None
     upstream = suite == "glm-upstream-decode"
-    if profile_decode and (not upstream or resume_run):
+    if profile_decode and (not upstream or resume_run or qualification_runs):
         raise ValueError("Decode profiling requires a fresh upstream decode run")
     if upstream and (not _UPSTREAM_DECODE or model_family != "glm53" or phase != "decode"
                      or packed_prefill_tile != 32 or allow_incomplete_qualification):
@@ -1544,6 +1552,7 @@ def _dispatch_benchmark(
         preflight = _preflight_glm_timing.remote(
             run_id, qualification_runs, phase, allow_incomplete_qualification, resume_run,
             **({"suite": suite} if upstream else {}),
+            **({"profile_decode": True} if profile_decode else {}),
         )
     elif suite == "v41-fp4-decode":
         if (
@@ -1609,7 +1618,7 @@ def _benchmark_worker(
     if model_family != MODEL_FAMILY:
         raise ValueError("--model-family must match REMNANT_MODEL_FAMILY")
     upstream = suite == "glm-upstream-decode"
-    if profile_decode and (not upstream or resume_run):
+    if profile_decode and (not upstream or resume_run or qualification_runs):
         raise ValueError("Decode profiling requires a fresh upstream decode run")
     if upstream and (not _UPSTREAM_DECODE or model_family != "glm53" or phase != "decode"
                      or packed_prefill_tile != 32 or allow_incomplete_qualification):
@@ -1637,7 +1646,11 @@ def _benchmark_worker(
         stage = "decode-profile" if profile_decode else "timing"
         with _run_context(run_id, stage, max_seconds) as (root, record, deadline):
             _verify_glm_image()
-            if phase == "prefill-small":
+            if profile_decode:
+                if preflight != {"status": "diagnostic", "artifact_verification": "passed"}:
+                    raise RuntimeError("Missing CPU artifact verification for decode profiling")
+                record["qualification"] = preflight
+            elif phase == "prefill-small":
                 if qualification_runs or resume_run:
                     raise ValueError("Small prefill qualifies and confirms within a fresh run")
                 _qualify_glm_prefill(root, record, deadline, packed_prefill_tile)
@@ -1650,8 +1663,9 @@ def _benchmark_worker(
                     qualification_runs, allow_incomplete=allow_incomplete_qualification, phase="upstream-decode" if upstream else phase
                 )
             record["experiment_status"] = (
-                "unqualified" if record["qualification"]["status"] != "passed"
-                else "qualified"
+                "diagnostic" if profile_decode
+                else "qualified" if record["qualification"]["status"] == "passed"
+                else "unqualified"
             )
             if not prefill_h200 and not upstream:
                 _run_pytest((GLM_DECODE_GRAPH if phase == "decode" else GLM_BENCHMARK_GRAPH,), root, "benchmark-graphs", deadline)
@@ -2532,8 +2546,8 @@ def _glm_benchmark_contract():
     return module
 
 
-def _verify_glm_image() -> None:
-    """Verify image inputs and CPU-produced binaries before benchmark work."""
+def _verify_glm_compiled_artifacts() -> dict:
+    """Check image sources and CPU-produced binaries without initializing CUDA."""
     manifest = json.loads(MANIFEST.read_text())
     if manifest.get("model_family") != "glm53" or manifest["source_identities"] != SOURCE_IDENTITIES or manifest["sources"] != _source_hashes():
         raise RuntimeError("GLM timing image source identity mismatch")
@@ -2541,7 +2555,13 @@ def _verify_glm_image() -> None:
         for path, expected in artifacts.items():
             if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
                 raise RuntimeError(f"GLM timing artifact changed: {path}")
+    return manifest
+
+
+def _verify_glm_image() -> None:
     from sglang.srt.remnant.glm import compile_kernels
+
+    manifest = _verify_glm_compiled_artifacts()
     if [k.hash for k in compile_kernels()] != manifest["glm_compile"]["triton"]:
         raise RuntimeError("GLM timing Triton variant mismatch")
 
