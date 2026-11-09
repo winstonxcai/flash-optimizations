@@ -2881,6 +2881,13 @@ class GLMAttentionProtocolTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 kernels._check_glm_scope_audit(text, "test")
         kernels._check_glm_scope_audit("glm_packed_bytes WarpSync CTA barrier", "test")
+        probes = ("glm_packed_bytes_kernel", "glm_packed_bytes_rank_table_kernel")
+        trace = "glm_packed_bytes_kernel WarpSync CTA barrier"
+        with self.assertRaises(RuntimeError):
+            kernels._check_glm_scope_audit(trace, "test", required_probe_symbols=probes)
+        kernels._check_glm_scope_audit(
+            trace + " glm_packed_bytes_rank_table_kernel", "test", required_probe_symbols=probes
+        )
 
     def test_preparation_reports_already_built_image_without_second_build(self):
         source = ast.parse((kernels.REPO_ROOT / "scripts/modal/kernels.py").read_text())

@@ -179,6 +179,23 @@ and numerical checks. A promising candidate proceeds to the same focused
 sanitizers and full 24-case, 30-round comparison. Stop at the existing $20
 cap. Roll back to SGLang `d355f3196cc9` for the qualified full-V control.
 
+Register-fed PV passed all eight H200 diagnostic cases. The summed
+stage-trace speedup rose from 1.751× to 1.855×. Batch-64 Direct partial
+attention fell from 63.59–65.15 µs to 56.48–56.95 µs. The compiled kernel
+used 53.5 KiB of dynamic shared memory, 112–138 registers, and no spills.
+Keep this candidate as the control for a bitmap expansion experiment.
+
+### Nibble lookup for bitmap expansion
+
+Partial attention still dominates the large batches. Replace the repeated
+bitmap selector arithmetic in the register-fed loader with a 64-byte shared
+table. Each nibble selects four bytes from a compact payload word and an
+explicit zero source. Preserve history order, rank bounds, and the Packed
+ABI. Verify exact expansion with the existing byte probe and compare SM90a
+instructions and resources before profiling. Qualify the full matrix only
+after identifying a candidate that can plausibly reach 2.0×. The measured
+register-fed control is SGLang `4479b36e430f`.
+
 ### Original 1.20× target
 
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched

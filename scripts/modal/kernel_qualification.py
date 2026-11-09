@@ -239,7 +239,10 @@ def qualify_glm_timing(
                     )
                 check_sanitizer_report(audit_log, "racecheck")
                 check_glm_scope_audit(
-                    audit_log, run_id, combine=bool(combine_cases), wgmma=bool(wgmma_cases)
+                    audit_log, run_id, combine=bool(combine_cases), wgmma=bool(wgmma_cases),
+                    required_probe_symbols=manifest["glm_compile"]["scope_symbol_audit"].get(
+                        "required_probe_symbols", ()
+                    ),
                 )
             if phase in ("decode", "upstream-decode"):
                 tests, _ = read_pytest_report(root / f"{tool}.xml")
@@ -362,7 +365,12 @@ def qualify_glm_timing(
 
 
 def check_glm_scope_audit(
-    log: str, identity: str, *, combine: bool = False, wgmma: bool = False
+    log: str,
+    identity: str,
+    *,
+    combine: bool = False,
+    wgmma: bool = False,
+    required_probe_symbols: tuple[str, ...] | list[str] = (),
 ) -> None:
     """Pinned tool trace proves helper warp and handoff CTA synchronization."""
     wgmma_barrier = wgmma and any(
@@ -373,6 +381,10 @@ def check_glm_scope_audit(
     )
     if (
         "glm_packed_bytes" not in log
+        or any(
+            not re.search(rf"\b{re.escape(symbol)}\b", log)
+            for symbol in required_probe_symbols
+        )
         or (combine and not re.search(r"glm_packed_decode_combine_kernel\b", log))
         or (wgmma and not wgmma_barrier)
         or not re.search(r"(?i)(warp|warpsync)", log)
