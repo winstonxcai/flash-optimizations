@@ -1221,7 +1221,7 @@ elif rebuild_image_id:
         if transition
         else dict(
             sglang=rebuild_base_sglang,
-            flashmla="3eb85944fd7dfa66a39fbb6fbb9a3560339c57f8",
+            flashmla=SOURCE_IDENTITIES["flashmla"]["commit"],
         )
     )
     remote_roots = [
