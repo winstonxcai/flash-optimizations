@@ -72,6 +72,22 @@ from 8.5 to 17 KiB so each wave owns its staging area. The bitmap ranking,
 swizzled FP8 tiles, PV schedule and baseline stay fixed. Verify the copy and
 wait instructions, shared ranges and register usage before profiling.
 
+CPU preparation verified eight async copy sites per variant, no stack or
+local traffic and unchanged upstream Native artifacts. All eight H200
+diagnostics passed numerical and changing-input replay checks. The traced
+speedup fell to 1.542× and batch-64 partial attention rose to
+78.52–79.99 µs. Keep the results in the ledger and return to the batched
+kernel and its original gather for the next comparison. Conservative compute
+accounting through the async diagnostic is $3.07.
+
+The next candidate replaces the per-lane K-to-V transpose with Hopper matrix
+loads and stores. Each warp owns 16 history rows. It transposes pairs of FP8
+bytes with a 16-bit matrix load, then uses byte permutations to put each
+feature's consecutive history bytes into the SW64 PV operand. A CPU address
+model checked all 32,768 bytes against the generated SW128 and SW64 layouts.
+The Packed ABI and FP8 attention arithmetic stay fixed. Check generated
+matrix instructions, register use and output parity before measuring it.
+
 ### Original 1.20× target
 
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched
