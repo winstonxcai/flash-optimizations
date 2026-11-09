@@ -27,6 +27,10 @@ per-tile transpose. Its CPU evidence is under
 `data/modal/glm53-decode-speed/wgmma-cpu-artifacts` in the experiment worktree.
 The next revision uses a per-lane 16×16 register transpose and verifies the
 CTA barrier count before H200 profiling.
+It reduced the count to 39 without spilling. The generated batch-8 kernel
+overlapped its transpose destination with Q and KV, so that revision remained
+CPU-only. The next build disables TileLang shared-memory reuse for this
+kernel and rejects overlapping generated buffer ranges during preparation.
 
 ### Original 1.20× target
 
