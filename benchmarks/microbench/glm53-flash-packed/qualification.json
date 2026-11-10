@@ -6307,7 +6307,7 @@
     "status": "full_paired_result_below_target",
     "target_direct_over_upstream": 0.5,
     "budget_usd": 20,
-    "conservative_compute_usd": 9.15109450182802,
+    "conservative_compute_usd": 9.895559432594084,
     "decision": "Retain the qualified full-V WGMMA candidate as the measured control for further optimization. The 2.0x goal remains open.",
     "diagnostics": {
       "wgmma_disjoint": {
@@ -13485,6 +13485,488 @@
           "conservative_compute_usd": 9.15109450182802,
           "all_workers_stopped": true
         }
+      },
+      "wgmma_query_fusion_cuda": {
+        "status": "diagnostic_passed",
+        "decision": "Keep fused query staging. Exact CUDA conversion passed. The eight-case aggregate improved, with the largest gain at batch 8. Full timing and focused sanitizers remain pending.",
+        "run_id": "glm53-decode-wgmma-qfuse-cuda-profile-20261110",
+        "account": "winstoncai",
+        "app_id": "ap-Jswu3YqX8iDMVEBafxAxcc",
+        "image": "im-zsdbsQbDxRJM8klv8UblPO",
+        "gpu": "NVIDIA H200",
+        "gpu_function_seconds": 66.173584064,
+        "controller": {
+          "argv": [
+            "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+            "run",
+            "scripts/modal/kernels.py::benchmark_kernels",
+            "--run-id",
+            "glm53-decode-wgmma-qfuse-cuda-profile-20261110",
+            "--model-family",
+            "glm53",
+            "--suite",
+            "glm-upstream-decode",
+            "--phase",
+            "decode",
+            "--profile-decode",
+            "--max-seconds",
+            "240"
+          ],
+          "account": "winstoncai",
+          "run_id": "glm53-decode-wgmma-qfuse-cuda-profile-20261110",
+          "image": "im-zsdbsQbDxRJM8klv8UblPO",
+          "seconds": 240.6540912920027,
+          "returncode": 0
+        },
+        "command": [
+          "/opt/sglang/bin/python",
+          "/sgl-workspace/sglang-remnant/benchmark/remnant/microbench.py",
+          "--model-family",
+          "glm53",
+          "--suite",
+          "glm-upstream-decode",
+          "--phase",
+          "decode",
+          "--packed-prefill-tile",
+          "32",
+          "--output",
+          "/results/microbench/glm53-decode-wgmma-qfuse-cuda-profile-20261110/decode-profile/profile",
+          "--max-seconds",
+          "201",
+          "--profile-decode"
+        ],
+        "source_identities": {
+          "parent": "c4235e26559f400f4d52c221a51d2b895bc3cb46",
+          "sglang": "e9b0a07bf048a84b1d6dd207c59db4e59a1d81ed",
+          "flashmla/csrc/cutlass": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "flashmla": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208"
+        },
+        "native": {
+          "commit": "baa9befa381511cd4d56f83980951e5a45fffc6d",
+          "files": {
+            "kernels/ops/attention/dsa/tilelang_kernel.py": "3d288dc04676b304e1a4d1a44703a8281762ebe789ca7cdd745b0c80fcac591e",
+            "kernels/ops/quantization/fp8_kernel.py": "f5b428f2cb51b7707b19dd7b55e9ef61818a5f99b1cb382cd5e811429dd46806",
+            "srt/utils/__init__.py": "d4c887ce6d68fb14d2f870c50dabc621da1c67a85823e8c8cf704392865963c8",
+            "srt/utils/common.py": "5423d1bb153e72852306934ab56ee0b3eccab8b3ec6395dc9da0fea79f7e74da"
+          },
+          "scope": "attention-module"
+        },
+        "environment": {
+          "MODAL_PROFILE": "winstoncai",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_GLM_UPSTREAM_DECODE": "1",
+          "REMNANT_GLM_CPU_REBUILD_FROM": "im-Ze2dhPXTzQEwaF4jrWbzLQ",
+          "REMNANT_GLM_CPU_REBUILD_BASE_SGLANG": "4479b36e430fa74da43a5845661f74965f4915e6",
+          "REMNANT_VALIDATION_TIMEOUT_S": "1260"
+        },
+        "artifact_volume": "winstoncai/remnant-stage2a-results/microbench/glm53-decode-wgmma-qfuse-cuda-profile-20261110",
+        "artifacts": {
+          "decode-profile/build-manifest.json": "2b3df40d377bd3f27b68321ef6e9ad113f1e736aafc73c70ed929631af7c9743",
+          "decode-profile/profile.json": "291b31cf1b5e1e84aedb75d137d18132d7e4e517a4145887308539cb9d267706",
+          "decode-profile/profile.log": "3b9e18718320d55a432930cd500291fc6f9752b0fb30f2503e2760e82dfb5055",
+          "decode-profile/profile.traces/decode_h16_q1_t0_independent_rotating-direct.json": "34bb399723df038df1094b1d8b4bbb7660ae69c1c729298d8a6cdcf2ce0074e5",
+          "decode-profile/profile.traces/decode_h16_q1_t0_independent_rotating-upstream.json": "b7479539910bfc4e328a55e4e0a59ef354d5977aea66f3ee993c5dd917af00bb",
+          "decode-profile/profile.traces/decode_h16_q1_t0_independent_warm-direct.json": "f3632cd18fd7eeb46cfeca57860ba5984ce12a5a23c89072d159a79dcec48d0a",
+          "decode-profile/profile.traces/decode_h16_q1_t0_independent_warm-upstream.json": "84d6ff22ac0c9da2f5a95505acf6c8ae9953463d3a6f9fc9020a3a4f708a85ea",
+          "decode-profile/profile.traces/decode_h16_q32_t0_independent_rotating-direct.json": "06b27f7794ea4c50de0acffb1ec2a01f786a7db2f58e4bbe0e686511da14565c",
+          "decode-profile/profile.traces/decode_h16_q32_t0_independent_rotating-upstream.json": "00d04d7f897edd742f6c6f2386aa47564cb15975d16cfe9edf9658a0052471ac",
+          "decode-profile/profile.traces/decode_h16_q32_t0_independent_warm-direct.json": "4db6a109447cdd67d9cc28afc2ab8c6019de240ba8cfec37ea00a5d7f21ba4a4",
+          "decode-profile/profile.traces/decode_h16_q32_t0_independent_warm-upstream.json": "9feef30471d8150b95b8d04b3f263b5c8e47dd329121e17490d8ec2945880a72",
+          "decode-profile/profile.traces/decode_h16_q64_t0_independent_rotating-direct.json": "c1dfb969f5327ed18b53ac76411a917d8c6219d49b7d19dffe32d6b3d0ebe37c",
+          "decode-profile/profile.traces/decode_h16_q64_t0_independent_rotating-upstream.json": "b76e76f312a108f089bf8cbce65e5beb0497af403903d4293af30e097f74d97b",
+          "decode-profile/profile.traces/decode_h16_q64_t0_independent_warm-direct.json": "a219c5e8908fba579dfcf624a8886c9e106b593bcfa880c84af691cbcab2edaa",
+          "decode-profile/profile.traces/decode_h16_q64_t0_independent_warm-upstream.json": "25682232fb4bf4c084c6935fb04e0af4e2bac0f847decb0472a6e540e9acdb58",
+          "decode-profile/profile.traces/decode_h16_q8_t0_independent_rotating-direct.json": "57c27874ac83bbb016336bdbaba0796c2d98f2942780bd579263f2ad38bf632a",
+          "decode-profile/profile.traces/decode_h16_q8_t0_independent_rotating-upstream.json": "03d6319bb6b08d892d1955762746acf7ebb4e9cbf9725757643f5c22784cda3c",
+          "decode-profile/profile.traces/decode_h16_q8_t0_independent_warm-direct.json": "def89c51f7d1257a9f2dae8863d4b9d98d4dca5ab5227b9cf3d1957997191dd2",
+          "decode-profile/profile.traces/decode_h16_q8_t0_independent_warm-upstream.json": "250110a2aafd8734fd4dd92d77021579b4363d69708b018b6add260826998eda",
+          "decode-profile/result.json": "cbdbad054591e8168b24d1e013cbebe39a39460ad3a58539dce6e15617a12707",
+          "local-reconciliation.json": "f0b888d87d6ab984df8fa527c9f44de1592f0ce04ce940ada24791ee3e891780",
+          "preflight/build-manifest.json": "2b3df40d377bd3f27b68321ef6e9ad113f1e736aafc73c70ed929631af7c9743",
+          "preflight/result.json": "6e677bb06be0a94e9db1986cc467a12140c1a2e46b50e790ecd7a68c89272cc0"
+        },
+        "cpu_preparation": {
+          "argv": [
+            "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+            "run",
+            "scripts/modal/kernels.py::prepare_kernels",
+            "--model-family",
+            "glm53"
+          ],
+          "account": "winstoncai",
+          "base_image": "im-Ze2dhPXTzQEwaF4jrWbzLQ",
+          "seconds": 540.1976722090039,
+          "returncode": 0,
+          "app_id": "ap-dJQEALjY8MB21PM5auQXZu"
+        },
+        "cpu_export_app_id": "ap-seyhwElUz5wi5KoKVHPl0D",
+        "cpu_manifest_sha256": "2b3df40d377bd3f27b68321ef6e9ad113f1e736aafc73c70ed929631af7c9743",
+        "cpu_resource_summary": {
+          "query_probe": {
+            "source_sha256": "b6d91b189fd3da6ff72fa119e6e1fd191712d5bd5f0f2afe0eff228d2fb973e4",
+            "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/d267d9b2f3da74611f2294b78e87f83bb9f955ede5b4c6571d76de6b62ca23f0.cubin",
+            "cubin_sha256": "933f54ac1ab1978c1e501fa147892a59e91a7fdd24b678bcc26929d8ca9df123",
+            "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/097bd22a23bc85f9dbedc412cd0c8ec36a2c22b964b22e3629a37405863548ac/executable.so",
+            "library_sha256": "cdc79c1a076eb6d1a25fb3783bbb5dd0e32073529c8f24e5039bdade489172e2"
+          },
+          "batches": {
+            "8": {
+              "registers": 112,
+              "dynamic_shared_bytes": 54784,
+              "local_sites": 0,
+              "query_vector_load_sites": 8,
+              "query_vector_store_sites": 8,
+              "query_fp8_pair_conversion_sites": 32,
+              "artifacts_sha256": {
+                "batch8-device.cu": "cabc6692b01b64038bbb5a2790bd0a2ec87ddfc5c5cd4548ac853657becc0a8b",
+                "batch8-sass.sass": "2028791dc732dca3f7453c9d3145af9fa11da667f056ce4f16a5bd8a2dd2a9a9"
+              }
+            },
+            "16": {
+              "registers": 134,
+              "dynamic_shared_bytes": 54784,
+              "local_sites": 0,
+              "query_vector_load_sites": 8,
+              "query_vector_store_sites": 8,
+              "query_fp8_pair_conversion_sites": 32,
+              "artifacts_sha256": {
+                "batch16-device.cu": "d33b6503e8489fc8c0324ff5ae372ca92a51c72da1273700ce74c5baf8fae832",
+                "batch16-sass.sass": "6f15361449ac302e1a3d4f35df5f08969d1b5e238b6a6e5d9ee0e20cf0f24350"
+              }
+            },
+            "24": {
+              "registers": 133,
+              "dynamic_shared_bytes": 54784,
+              "local_sites": 0,
+              "query_vector_load_sites": 8,
+              "query_vector_store_sites": 8,
+              "query_fp8_pair_conversion_sites": 32,
+              "artifacts_sha256": {
+                "batch24-device.cu": "9bcc312b1ca03d7f63133a731b0fba42a5c0e398cbb435bc83dc98e5ce414790",
+                "batch24-sass.sass": "f97406a6c369fa19782fc2d699247e7668a87c5612b4cdb61c6d10419e9b2863"
+              }
+            },
+            "32": {
+              "registers": 134,
+              "dynamic_shared_bytes": 54784,
+              "local_sites": 0,
+              "query_vector_load_sites": 8,
+              "query_vector_store_sites": 8,
+              "query_fp8_pair_conversion_sites": 32,
+              "artifacts_sha256": {
+                "batch32-device.cu": "0bb1cbcbe7675a8b4b01b96a865a920735ffddb01deb9baa19e4ac952b13ec04",
+                "batch32-sass.sass": "27c2e46f6878dff3f8042e59e9fa47b7457f2e8cd245d69082bf12226ce12433"
+              }
+            },
+            "64": {
+              "registers": 134,
+              "dynamic_shared_bytes": 54784,
+              "local_sites": 0,
+              "query_vector_load_sites": 8,
+              "query_vector_store_sites": 8,
+              "query_fp8_pair_conversion_sites": 32,
+              "artifacts_sha256": {
+                "batch64-device.cu": "fd4d6f4bc5c40c8f72ae5992469f3cea8c69261d58f559767c466d50e9c12008",
+                "batch64-sass.sass": "16dda2559961ee4b3f7801b4a64b17a18abc826af8ac2ab714cc693a4c1ef023"
+              }
+            }
+          },
+          "native_and_batch1_unchanged": true
+        },
+        "partial_cubin_sha256": {
+          "8": "c88e14d700844c27c562c281c5a5d64d452e8c1f17b62fd2f716cbfc7823e8a7",
+          "16": "ef872687911231a5de3c006f4543805429f2d9b91a716c5a912473d38c86494a",
+          "24": "4beb840a843acc97dbaa267403ac1da893b99d9ffc9bd872f182a5227559d421",
+          "32": "db09105bad45d240f54b66a464c5ea567eed8a38b701222b63a4d872e7d1bf51",
+          "64": "267040cb8ac0dcc16e3915eece01b92a2114fb9ada96d4f3a6bb6f4cb91fcd81"
+        },
+        "exact_query_bytes": {
+          "argv": [
+            "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+            "run",
+            "scripts/modal/kernels.py::validate_kernels",
+            "--run-id",
+            "glm53-decode-wgmma-qfuse-cuda-bytes-20261110",
+            "--model-family",
+            "glm53",
+            "--stage",
+            "corrective",
+            "--cases",
+            "test/registered/attention/unittests/test_glm5_remnant.py::test_wgmma_query_conversion_bytes",
+            "--max-seconds",
+            "160"
+          ],
+          "account": "winstoncai",
+          "run_id": "glm53-decode-wgmma-qfuse-cuda-bytes-20261110",
+          "image": "im-zsdbsQbDxRJM8klv8UblPO",
+          "seconds": 137.80032262500026,
+          "returncode": 0,
+          "app_id": "ap-EMI7V17ZvKWnE138WpoDJY",
+          "status": "passed",
+          "total_codes": 65536,
+          "mismatched_codes": 0,
+          "torch": "2.14.1+cu130",
+          "artifact_volume": "winstoncai/remnant-stage2a-results/microbench/glm53-decode-wgmma-qfuse-cuda-bytes-20261110/validation",
+          "artifact_sha256": {
+            "build-manifest.json": "2b3df40d377bd3f27b68321ef6e9ad113f1e736aafc73c70ed929631af7c9743",
+            "corrective.log": "b5c9847412902a4536ce1cf562e333e44c67ac500cf07497defc5d99b8056e6f",
+            "corrective.xml": "6cac64ce3105cd615707535ee568bf3be3789f0cfb55ff1e1c86e2e567640811",
+            "model-config.json": "bb8f01c42cb92a52ca72e65afb4d5bd8d11aef083cd210e8de25dfb904f23e9f",
+            "result.json": "d434e40067b6075e661f469519ca336b9dafede7faed14411168ce92cb0bf119"
+          }
+        },
+        "account_compute": {
+          "ephemeral_apps_usd": {
+            "before-wgmma-qfuse-cuda-prep": "16.67123346",
+            "before-wgmma-qfuse-cuda-export": "16.83672685",
+            "before-wgmma-qfuse-cuda-bytes": "16.77991147",
+            "after-wgmma-qfuse-cuda-bytes": "16.82246403",
+            "before-wgmma-qfuse-cuda-profile": "16.90518324",
+            "after-wgmma-qfuse-cuda-profile": "16.97466832"
+          },
+          "conservative_compute_usd": 9.895559432594084,
+          "all_workers_stopped": true
+        },
+        "numerical_and_graph_checks": "passed_all_8",
+        "control_speedup": 1.8545347342375507,
+        "candidate_speedup": 1.9214431239612062,
+        "cases": [
+          {
+            "case": "decode_h16_q1_t0_independent_warm",
+            "fixture_sha256": "701cb8f67b0f8f5ea7eee9c56020db5e7896b776517957edab7bd5e3ceea6593",
+            "control": {
+              "upstream": {
+                "query_conversion": 1.024,
+                "partial_attention": 5.312,
+                "combine": 13.184
+              },
+              "direct": {
+                "query_conversion": 1.056,
+                "partial_attention": 5.568,
+                "combine": 2.176
+              }
+            },
+            "candidate": {
+              "upstream": {
+                "query_conversion": 1.057,
+                "partial_attention": 5.216,
+                "combine": 13.472
+              },
+              "direct": {
+                "query_conversion": 1.088,
+                "partial_attention": 5.664,
+                "combine": 2.144
+              }
+            },
+            "control_ratio": 0.4508196721311476,
+            "candidate_ratio": 0.4505444416307926
+          },
+          {
+            "case": "decode_h16_q1_t0_independent_rotating",
+            "fixture_sha256": "8e7d6210911dbfa3139e71eb1fae267654932b766292952622d2fd1f977b3b82",
+            "control": {
+              "upstream": {
+                "query_conversion": 1.0361502590673575,
+                "partial_attention": 5.89140932642487,
+                "combine": 13.053518134715027
+              },
+              "direct": {
+                "query_conversion": 1.0289430051813473,
+                "partial_attention": 5.946870466321244,
+                "combine": 1.947119170984456
+              }
+            },
+            "candidate": {
+              "upstream": {
+                "query_conversion": 1.047062176165803,
+                "partial_attention": 5.937233160621761,
+                "combine": 13.177642487046631
+              },
+              "direct": {
+                "query_conversion": 1.0305492227979276,
+                "partial_attention": 6.02540932642487,
+                "combine": 1.9348756476683937
+              }
+            },
+            "control_ratio": 0.44656913743261767,
+            "candidate_ratio": 0.4459310546163268
+          },
+          {
+            "case": "decode_h16_q8_t0_independent_warm",
+            "fixture_sha256": "a306d9c66c9161e387a4eb6141eb9cab3ffad325190c0ceced4366656ab0d9d1",
+            "control": {
+              "upstream": {
+                "query_conversion": 1.12,
+                "partial_attention": 12.001,
+                "combine": 8.832
+              },
+              "direct": {
+                "query_conversion": 1.12,
+                "partial_attention": 9.44,
+                "combine": 3.968
+              }
+            },
+            "candidate": {
+              "upstream": {
+                "query_conversion": 1.153,
+                "partial_attention": 11.905,
+                "combine": 8.801
+              },
+              "direct": {
+                "partial_attention": 9.094,
+                "combine": 3.97
+              }
+            },
+            "control_ratio": 0.6617774336081629,
+            "candidate_ratio": 0.597648565808134
+          },
+          {
+            "case": "decode_h16_q8_t0_independent_rotating",
+            "fixture_sha256": "8a37d174e52cbcbec756f53a03b0ec3e2967dcf2e4eb5f03ff66295c20e46f7d",
+            "control": {
+              "upstream": {
+                "query_conversion": 1.12264,
+                "partial_attention": 13.212200000000001,
+                "combine": 8.45576
+              },
+              "direct": {
+                "query_conversion": 1.12884,
+                "partial_attention": 10.287160000000002,
+                "combine": 3.7207999999999997
+              }
+            },
+            "candidate": {
+              "upstream": {
+                "query_conversion": 1.13928,
+                "partial_attention": 13.207080000000001,
+                "combine": 8.59844
+              },
+              "direct": {
+                "partial_attention": 10.25836,
+                "combine": 3.69752
+              }
+            },
+            "control_ratio": 0.664168560722403,
+            "candidate_ratio": 0.6082371604895227
+          },
+          {
+            "case": "decode_h16_q32_t0_independent_warm",
+            "fixture_sha256": "4dbf8d4abdb05cf647687adfb156f1ed4566c6ab7be07743c104a034822cf1ac",
+            "control": {
+              "upstream": {
+                "query_conversion": 1.664,
+                "partial_attention": 49.047,
+                "combine": 12.062
+              },
+              "direct": {
+                "query_conversion": 1.632,
+                "partial_attention": 29.568,
+                "combine": 2.24
+              }
+            },
+            "candidate": {
+              "upstream": {
+                "query_conversion": 1.695,
+                "partial_attention": 49.508,
+                "combine": 12.026
+              },
+              "direct": {
+                "partial_attention": 30.016,
+                "combine": 2.304
+              }
+            },
+            "control_ratio": 0.5327131091392797,
+            "candidate_ratio": 0.5111578547818248
+          },
+          {
+            "case": "decode_h16_q32_t0_independent_rotating",
+            "fixture_sha256": "2c0e5c76a42f10dd830e5b7e76c1fefa85e0d403b7b80279e83ff15057652f24",
+            "control": {
+              "upstream": {
+                "query_conversion": 1.705142857142857,
+                "partial_attention": 49.30871428571429,
+                "combine": 12.04257142857143
+              },
+              "direct": {
+                "query_conversion": 1.6147142857142855,
+                "partial_attention": 31.482428571428574,
+                "combine": 2.0765714285714285
+              }
+            },
+            "candidate": {
+              "upstream": {
+                "query_conversion": 1.6912857142857143,
+                "partial_attention": 49.516571428571424,
+                "combine": 12.168714285714286
+              },
+              "direct": {
+                "partial_attention": 32.99357142857143,
+                "combine": 2.2277142857142858
+              }
+            },
+            "control_ratio": 0.5578132964804767,
+            "candidate_ratio": 0.5557461522509445
+          },
+          {
+            "case": "decode_h16_q64_t0_independent_warm",
+            "fixture_sha256": "97d47b391fd5342417e11581abe1feef14e5de8c8ff2cdc7ac43e8b5ea2eeec5",
+            "control": {
+              "upstream": {
+                "query_conversion": 2.016,
+                "partial_attention": 95.745,
+                "combine": 19.329
+              },
+              "direct": {
+                "query_conversion": 1.824,
+                "partial_attention": 56.479,
+                "combine": 2.56
+              }
+            },
+            "candidate": {
+              "upstream": {
+                "query_conversion": 1.997,
+                "partial_attention": 98.117,
+                "combine": 20.158
+              },
+              "direct": {
+                "partial_attention": 57.852,
+                "combine": 2.848
+              }
+            },
+            "control_ratio": 0.5197967375523102,
+            "candidate_ratio": 0.5046893707596115
+          },
+          {
+            "case": "decode_h16_q64_t0_independent_rotating",
+            "fixture_sha256": "29aa19055b005f5f691c46e2b76181f03a21aa1b0a536e8b4ca551b890e23715",
+            "control": {
+              "upstream": {
+                "query_conversion": 2.11975,
+                "partial_attention": 95.405,
+                "combine": 19.607
+              },
+              "direct": {
+                "query_conversion": 1.84,
+                "partial_attention": 56.945,
+                "combine": 2.46375
+              }
+            },
+            "candidate": {
+              "upstream": {
+                "query_conversion": 2.24,
+                "partial_attention": 96.009,
+                "combine": 19.688
+              },
+              "direct": {
+                "partial_attention": 58.033,
+                "combine": 2.59175
+              }
+            },
+            "control_ratio": 0.5229047632260254,
+            "candidate_ratio": 0.5140435147578792
+          }
+        ]
       }
     },
     "full_paired_wgmma": {

@@ -233,6 +233,21 @@ negative-NaN cases changed by the CPU-inspired correction. The next
 build uses Hopper's saturating conversion directly. Rerun the same
 65,536-pattern byte gate before measuring it.
 
+The corrected H200 byte gate matched Torch CUDA for all 65,536 patterns.
+The eight-case trace speedup rose from 1.855× to 1.921×. For batches 8–64,
+the Direct graph has two kernels per bank. Query conversion is inside
+the partial and remains in the measured time. Batch-8 trace ratios fell
+from 0.662–0.664 to 0.598–0.608. All eight numerical and replay checks
+passed. Retain fusion as the current experiment. The full paired matrix
+and focused sanitizer qualification for this candidate are pending.
+Conservative compute through the fused-query diagnostic is $9.90.
+
+Next, collect stage traces for batches 16 and 24 as well as the existing
+shapes. Test narrower output-column slices in the batch-8 combine to
+distribute its work across more CTAs. Keep the exact partial and query
+conversion artifacts, and use the unchanged 24-case protocol for any
+full paired comparison.
+
 ### Original 1.20× target
 
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched
