@@ -6307,7 +6307,7 @@
     "status": "full_paired_result_below_target",
     "target_direct_over_upstream": 0.5,
     "budget_usd": 20,
-    "conservative_compute_usd": 8.748401317078093,
+    "conservative_compute_usd": 9.15109450182802,
     "decision": "Retain the qualified full-V WGMMA candidate as the measured control for further optimization. The 2.0x goal remains open.",
     "diagnostics": {
       "wgmma_disjoint": {
@@ -13405,6 +13405,86 @@
             "candidate_ratio": 0.5219631386102042
           }
         ]
+      },
+      "wgmma_query_fusion_initial": {
+        "status": "exact_byte_gate_failed",
+        "decision": "Remove the CPU-inspired overflow and NaN correction and repeat the exhaustive comparison with the actual Torch CUDA conversion.",
+        "mismatched_codes": 30639,
+        "total_codes": 65536,
+        "run_id": "glm53-decode-wgmma-qfuse-bytes-20261110",
+        "account": "winstoncai",
+        "app_id": "ap-dux3c0YUSHiwWrv5Wp7G75",
+        "image": "im-4rAWbK1lq2w5ouc6VBx5am",
+        "gpu": "NVIDIA H200",
+        "controller": {
+          "argv": [
+            "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+            "run",
+            "scripts/modal/kernels.py::validate_kernels",
+            "--run-id",
+            "glm53-decode-wgmma-qfuse-bytes-20261110",
+            "--model-family",
+            "glm53",
+            "--stage",
+            "corrective",
+            "--cases",
+            "test/registered/attention/unittests/test_glm5_remnant.py::test_wgmma_query_conversion_bytes",
+            "--max-seconds",
+            "160"
+          ],
+          "account": "winstoncai",
+          "run_id": "glm53-decode-wgmma-qfuse-bytes-20261110",
+          "image": "im-4rAWbK1lq2w5ouc6VBx5am",
+          "seconds": 141.45919958299783,
+          "returncode": 1
+        },
+        "source_identities": {
+          "parent": "77071540984bd5ea23dc650ca96616d1e82027c2",
+          "sglang": "c6fa7f13c02e65ee12ff16b51ce8aa02366a4171",
+          "flashmla/csrc/cutlass": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "flashmla": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208"
+        },
+        "artifact_volume": "winstoncai/remnant-stage2a-results/microbench/glm53-decode-wgmma-qfuse-bytes-20261110/validation",
+        "artifacts": {
+          "build-manifest.json": "f7360cf1fa4324d1b19ceee18a32b5c20a89fe265f07bff592b75311b15f9d41",
+          "corrective.log": "4ac255b57b105a1d6bf7d463662c5e09550e9fd2036ef4491530ac2de9de0b3f",
+          "corrective.xml": "318dc00246ec552a818ddb9250f0f71e9dc655b88467a501e34c88fe6cf41278",
+          "model-config.json": "bb8f01c42cb92a52ca72e65afb4d5bd8d11aef083cd210e8de25dfb904f23e9f",
+          "result.json": "5e8db3b911b341bbadc7b1ed4195a6232cb10fa3a56eddfc196657d6844df8c4"
+        },
+        "cpu_preparation": {
+          "argv": [
+            "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+            "run",
+            "scripts/modal/kernels.py::prepare_kernels",
+            "--model-family",
+            "glm53"
+          ],
+          "account": "winstoncai",
+          "base_image": "im-Ze2dhPXTzQEwaF4jrWbzLQ",
+          "seconds": 501.6496400839969,
+          "returncode": 0,
+          "app_id": "ap-4i84gRyP08PztmW4kMfbCe"
+        },
+        "cpu_export_app_id": "ap-S271FgiVJON4jsTMOf3BcK",
+        "cpu_manifest_sha256": "f7360cf1fa4324d1b19ceee18a32b5c20a89fe265f07bff592b75311b15f9d41",
+        "query_conversion_probe": {
+          "source_sha256": "538c7c14148e793f8a9f0ddc37cf3f545e4a6bd8bc7a811bb01236c14b6b8370",
+          "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/dcebc49f0e6d1c58107e739ad0cbc37d0a8bcbcc17669520bd15c7c673974ce7.cubin",
+          "cubin_sha256": "fb0db2c6cd20a60203806e667d552a66b05340df0a27006896507c7647ba7720",
+          "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a1667c695cf9675b761947f6b4fcb243d79352c02b8833b83f973d68b03a8529/executable.so",
+          "library_sha256": "036c77ad08c59a2a824bfc294990009a32daadee1a87ac2ce7da2326b71a8540"
+        },
+        "account_compute": {
+          "ephemeral_apps_usd": {
+            "before-wgmma-qfuse-prep": "16.54537526",
+            "before-wgmma-qfuse-export": "16.64921736",
+            "before-wgmma-qfuse-bytes": "16.59112117",
+            "after-wgmma-qfuse-bytes": "16.70744442"
+          },
+          "conservative_compute_usd": 9.15109450182802,
+          "all_workers_stopped": true
+        }
       }
     },
     "full_paired_wgmma": {

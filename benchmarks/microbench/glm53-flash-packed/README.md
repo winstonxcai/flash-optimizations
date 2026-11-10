@@ -227,6 +227,12 @@ kernel in the graph. Use the serial register-fed candidate as the
 control. Keep batch 1, the pristine Native path and all fixture shapes
 as recorded for that control.
 
+The first H200 byte gate exposed a difference between CPU Torch and the
+pinned CUDA conversion. Its 30,639 mismatches matched the overflow and
+negative-NaN cases changed by the CPU-inspired correction. The next
+build uses Hopper's saturating conversion directly. Rerun the same
+65,536-pattern byte gate before measuring it.
+
 ### Original 1.20× target
 
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched
