@@ -6304,11 +6304,11 @@
     ]
   },
   "decode_wgmma_followup": {
-    "status": "full_paired_result_below_target",
+    "status": "qualified_target_missed",
     "target_direct_over_upstream": 0.5,
     "budget_usd": 20,
-    "conservative_compute_usd": 10.879449972015422,
-    "decision": "Use 128 columns at batch 8. Partial attention dominates batch 16. Full paired timing and focused sanitizers for the fused-query candidate remain pending.",
+    "conservative_compute_usd": 16.315931142814456,
+    "decision": "Keep the verified BF16x2 measurements and continue toward the 0.5000 target.",
     "diagnostics": {
       "wgmma_disjoint": {
         "run_id": "glm53-decode-wgmma-profile-20261110",
@@ -15486,6 +15486,1859 @@
         "conservative_compute_usd": 6.875333656416611,
         "accounting": "High-water observed compute through qualification plus full timing controller interval at H200 worker rate when billing is still settling.",
         "worker_release_verified": true
+      }
+    },
+    "full_paired_bf16x2": {
+      "status": "qualified_target_missed",
+      "image": "im-qdUjEjfOAyMsNIpeobeT9P",
+      "source_identities": {
+        "parent": "f2c0c01fb756b66ae8a7d0f421442df4e6f82f5a",
+        "sglang": "6265e0a179874e41ae01290aa5f630da75ee567e",
+        "flashmla/csrc/cutlass": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+        "flashmla": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208"
+      },
+      "native": {
+        "commit": "baa9befa381511cd4d56f83980951e5a45fffc6d",
+        "files": {
+          "kernels/ops/attention/dsa/tilelang_kernel.py": "3d288dc04676b304e1a4d1a44703a8281762ebe789ca7cdd745b0c80fcac591e",
+          "kernels/ops/quantization/fp8_kernel.py": "f5b428f2cb51b7707b19dd7b55e9ef61818a5f99b1cb382cd5e811429dd46806",
+          "srt/utils/__init__.py": "d4c887ce6d68fb14d2f870c50dabc621da1c67a85823e8c8cf704392865963c8",
+          "srt/utils/common.py": "5423d1bb153e72852306934ab56ee0b3eccab8b3ec6395dc9da0fea79f7e74da"
+        },
+        "scope": "attention-module"
+      },
+      "cpu_preparation": {
+        "argv": [
+          "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::prepare_kernels",
+          "--model-family",
+          "glm53"
+        ],
+        "account": "winstoncai",
+        "base_image": "im-u3qjKaUnxXy8WCAoMxEz9p",
+        "seconds": 445.69238741700246,
+        "returncode": 0,
+        "app_id": "ap-gIAeyMND3VyTgBziWkXFLg"
+      },
+      "cpu_export_app_id": "ap-mB3wpoZu5dfC9BMpUSi32j",
+      "offline_verification": {
+        "image": "im-qdUjEjfOAyMsNIpeobeT9P",
+        "control_image": "im-u3qjKaUnxXy8WCAoMxEz9p",
+        "source_identities": {
+          "parent": "f2c0c01fb756b66ae8a7d0f421442df4e6f82f5a",
+          "sglang": "6265e0a179874e41ae01290aa5f630da75ee567e",
+          "flashmla/csrc/cutlass": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "flashmla": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208"
+        },
+        "manifest_sha256": "c5177fb58547b7ce1c5a2d9c71d1d159059d646e6b29aeb4da734a54b537ddb9",
+        "batches": {
+          "8": {
+            "registers": 128,
+            "previous_registers": 112,
+            "static_shared_bytes": 1024,
+            "dynamic_shared_bytes": 54784,
+            "scalar_bf16_stores": 0,
+            "prior_scalar_bf16_stores": 64,
+            "paired_bf16_conversions": 32,
+            "store_sites": 36,
+            "local_memory_sites": 0,
+            "cubin_sha256": "94d7c2756db6771ca1f0d7e761de3f07376fddde72fda1f5188ca3f5593480f6",
+            "artifacts_sha256": {
+              "batch8-device.cu": "56ad4b6b1940aa395886303185d115ac59cd34d1b74bde9c1e60ea5db954f803",
+              "batch8-sass.sass": "03f427e2360d2753a1304a397ceb77b8193a883b43230597803d01b6f04bb0fd",
+              "batch8-host.cu": "5ac8d80a8119031924db18729eebd52372ad389c1e91e7ff95d4cf4dc400c801"
+            }
+          },
+          "16": {
+            "registers": 134,
+            "previous_registers": 134,
+            "static_shared_bytes": 1024,
+            "dynamic_shared_bytes": 54784,
+            "scalar_bf16_stores": 0,
+            "prior_scalar_bf16_stores": 64,
+            "paired_bf16_conversions": 32,
+            "store_sites": 36,
+            "local_memory_sites": 0,
+            "cubin_sha256": "e94d105b1812e146a16b38d85d5b591b133d17d84bd6412d5c43f7072195156f",
+            "artifacts_sha256": {
+              "batch16-device.cu": "6d73faf8bb382181886eca9c3068d2864635b0fe7cd1d05b5697513229ec0293",
+              "batch16-sass.sass": "b384fe0f53869eaa43298bcc2c2f377fa75338edfd16c917643fe9f8f4244a42",
+              "batch16-host.cu": "7c1a13795a2bf79c67e545963a06ad50a0e7460a590aa3b4f754133ace3d839e"
+            }
+          },
+          "24": {
+            "registers": 133,
+            "previous_registers": 133,
+            "static_shared_bytes": 1024,
+            "dynamic_shared_bytes": 54784,
+            "scalar_bf16_stores": 0,
+            "prior_scalar_bf16_stores": 64,
+            "paired_bf16_conversions": 32,
+            "store_sites": 36,
+            "local_memory_sites": 0,
+            "cubin_sha256": "36bc680c67c6ee7524b6c180a10014ce8f1ff0fc0c0b3bf91ac5bd8e4f560372",
+            "artifacts_sha256": {
+              "batch24-device.cu": "c70640f5d3d18d33b5f31b103445e2859ab8ea67361737b0a73cc51320467e3d",
+              "batch24-sass.sass": "2ea3499eebbdab2a1b9e4ae018a65dcd5d6bb41443d07b5979e78156979cbbd1",
+              "batch24-host.cu": "3eeefc0ab425018fc80937e2e749998fa048a4ce4b8a4afa710a7f60599c550b"
+            }
+          },
+          "32": {
+            "registers": 134,
+            "previous_registers": 134,
+            "static_shared_bytes": 1024,
+            "dynamic_shared_bytes": 54784,
+            "scalar_bf16_stores": 0,
+            "prior_scalar_bf16_stores": 64,
+            "paired_bf16_conversions": 32,
+            "store_sites": 36,
+            "local_memory_sites": 0,
+            "cubin_sha256": "a650b1cf2c2fe380c586f087543d1025f1757eb3e85e381684134773e9b85489",
+            "artifacts_sha256": {
+              "batch32-device.cu": "aed817926ea45ee860d826435e910ce7d9ae7c1da174530d7960d6fb11618cfb",
+              "batch32-sass.sass": "7c87cb8ca9f00dc782ee0c465b3e372c2e59e22eba9dccbf189d22b446da781e",
+              "batch32-host.cu": "ce5a62da4050806b5284bebd86691b2a6c8a99738da82004ea8681cda3812bac"
+            }
+          },
+          "64": {
+            "registers": 134,
+            "previous_registers": 134,
+            "static_shared_bytes": 1024,
+            "dynamic_shared_bytes": 54784,
+            "scalar_bf16_stores": 0,
+            "prior_scalar_bf16_stores": 64,
+            "paired_bf16_conversions": 32,
+            "store_sites": 36,
+            "local_memory_sites": 0,
+            "cubin_sha256": "9fa2c49b2b94c1a0b07cd12f7097eadc7014f2ac78161cc715486d6046e7a5aa",
+            "artifacts_sha256": {
+              "batch64-device.cu": "47d3ebcee127900273db6a212ccb38a77be711a547ef537ecede79dc15ea62c1",
+              "batch64-sass.sass": "331c3f1768dac230452de0dc2a1aa18babae3991fb726740fd2fa54ccd71e194",
+              "batch64-host.cu": "d4ba43d9c70388c2e0141e169b78d9f8c22d3c1de18409dbecd7cacb65dc3d78"
+            }
+          }
+        },
+        "unchanged": [
+          "upstream Native",
+          "Packed B1",
+          "other TileLang variants",
+          "combine cubins",
+          "query probe",
+          "AOT binaries",
+          "toolchain",
+          "sanitizer",
+          "model configuration"
+        ]
+      },
+      "environment": {
+        "REMNANT_MODEL_FAMILY": "glm53",
+        "REMNANT_INTEGRATION": "v0.5.22",
+        "REMNANT_GLM_UPSTREAM_DECODE": "1",
+        "REMNANT_GLM_CPU_REBUILD_FROM": "im-u3qjKaUnxXy8WCAoMxEz9p",
+        "REMNANT_GLM_CPU_REBUILD_BASE_SGLANG": "f3b90867d03016f1c96784632d8e1bb5390e4905",
+        "REMNANT_VALIDATION_TIMEOUT_S": "1260"
+      },
+      "diagnostics": [
+        {
+          "run_id": "glm53-decode-wgmma-paired-output-profile-20261110",
+          "app_id": "ap-wiZMRElG6VYeocb4ZVwlTF",
+          "controller": {
+            "argv": [
+              "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+              "run",
+              "scripts/modal/kernels.py::benchmark_kernels",
+              "--run-id",
+              "glm53-decode-wgmma-paired-output-profile-20261110",
+              "--model-family",
+              "glm53",
+              "--suite",
+              "glm-upstream-decode",
+              "--phase",
+              "decode",
+              "--profile-decode",
+              "--max-seconds",
+              "420"
+            ],
+            "account": "winstoncai",
+            "image": "im-qdUjEjfOAyMsNIpeobeT9P",
+            "run_id": "glm53-decode-wgmma-paired-output-profile-20261110",
+            "seconds": 187.8075145000039,
+            "returncode": 1
+          },
+          "status": "failed",
+          "command": [
+            "/opt/sglang/bin/python",
+            "/sgl-workspace/sglang-remnant/benchmark/remnant/microbench.py",
+            "--model-family",
+            "glm53",
+            "--suite",
+            "glm-upstream-decode",
+            "--phase",
+            "decode",
+            "--packed-prefill-tile",
+            "32",
+            "--output",
+            "/results/microbench/glm53-decode-wgmma-paired-output-profile-20261110/decode-profile/profile",
+            "--max-seconds",
+            "388",
+            "--profile-decode"
+          ],
+          "gpu_function_seconds": 58.777827921000004,
+          "volume": "winstoncai/remnant-stage2a-results/microbench/glm53-decode-wgmma-paired-output-profile-20261110",
+          "artifact_sha256": {
+            "decode-profile/build-manifest.json": "c5177fb58547b7ce1c5a2d9c71d1d159059d646e6b29aeb4da734a54b537ddb9",
+            "decode-profile/profile.json": "ce9c9ddbeb012f496bbf0c24fcb2103c13e3ecf8aaab450947afc94492c6acd1",
+            "decode-profile/profile.log": "3eab5d4800425fce67433975724b992990f6b2f6a069460c05b1f8131504c54c",
+            "decode-profile/profile.traces/decode_h16_q1_t0_independent_rotating-direct.json": "37535d8eabb3b25d631518ef82d75dcbb4b54c4f19b46e71ed82432e936ce7e5",
+            "decode-profile/profile.traces/decode_h16_q1_t0_independent_rotating-upstream.json": "b85719ff7a04596c4982ce6e4e6bc17564df9b41a3987eae0a475e30b11f941f",
+            "decode-profile/profile.traces/decode_h16_q1_t0_independent_warm-direct.json": "635e194e6e04757bfb489a42987404c1fd82bdc80900d485bc170c69eaa635e2",
+            "decode-profile/profile.traces/decode_h16_q1_t0_independent_warm-upstream.json": "7eeaf5971c5fa97a33d7f3f2333bdbfe0a248aaf2fce8a20ce305e4706497119",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_rotating-c256-direct.json": "a6cd0e192808f01f6be930991015d00f6b41ce01af024c203ef0637088defab9",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_rotating-c256-upstream.json": "dbb626d785a56b799791ddc421daeb576b091c8d1e7d84ffbf00177fba0fb275",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_rotating-c512-direct.json": "bfd3bb74d04810fbfcfdcb4c81064ec52da89530c288c16657cbb353f6910fe9",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_rotating-c512-upstream.json": "1a78f7ff9be1019593495628b1561ac87b6f1e7640cd5c48a07b5a1940c99223",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_rotating-upstream.json": "4541b50003500571ad4cd4e26ea7fa7528f0f9ddccc9ca2d1a8f49aeb8557712",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_warm-c256-direct.json": "5f690969911f3ffcb150a234e9e9800c43c331ff84ccd206656ddc56dcc74821",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_warm-c256-upstream.json": "0e1eff7410c422b96cdba4d28dc523333d5bbfdbec913d607de1adb4d3ff00b1",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_warm-c512-direct.json": "544347a7474f4773633504397e5ef18a09563c34475dec28cf174047fd97ca34",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_warm-c512-upstream.json": "79d7ade7de7c30f09dd6e43166e07627ca58b44bf5f2f5e9c7e8ad11f93a94de",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_warm-direct.json": "2d84660f00a1d235c5a0465b39a0b28a6c13704e1bb32a1cdeb36076ac54c33d",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_warm-upstream.json": "c196bab3a7c62bc65c70530624187a294f0cf15e5fc480328ff1b7e1cb46ec78",
+            "decode-profile/result.json": "2752cccd7f0ee8e405483a60f91a4d0e4f5d858831e68955106fa880be6c060e",
+            "preflight/build-manifest.json": "c5177fb58547b7ce1c5a2d9c71d1d159059d646e6b29aeb4da734a54b537ddb9",
+            "preflight/result.json": "5445f57654e0d7c3f2c859c4dc5717307c1174a7e5ef0dc0bb91886029d418a9"
+          },
+          "error": "The batch-8 rotating Native profile contained no CUDA kernel events.",
+          "completed_primary_cases": 3
+        },
+        {
+          "run_id": "glm53-decode-wgmma-paired-output-profile-retry-20261110",
+          "app_id": "ap-sVuwxNviuGhVavgXPhQyGv",
+          "controller": {
+            "argv": [
+              "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+              "run",
+              "scripts/modal/kernels.py::benchmark_kernels",
+              "--run-id",
+              "glm53-decode-wgmma-paired-output-profile-retry-20261110",
+              "--model-family",
+              "glm53",
+              "--suite",
+              "glm-upstream-decode",
+              "--phase",
+              "decode",
+              "--profile-decode",
+              "--max-seconds",
+              "420"
+            ],
+            "account": "winstoncai",
+            "image": "im-qdUjEjfOAyMsNIpeobeT9P",
+            "run_id": "glm53-decode-wgmma-paired-output-profile-retry-20261110",
+            "seconds": 190.91724333299499,
+            "returncode": 0
+          },
+          "status": "passed",
+          "command": [
+            "/opt/sglang/bin/python",
+            "/sgl-workspace/sglang-remnant/benchmark/remnant/microbench.py",
+            "--model-family",
+            "glm53",
+            "--suite",
+            "glm-upstream-decode",
+            "--phase",
+            "decode",
+            "--packed-prefill-tile",
+            "32",
+            "--output",
+            "/results/microbench/glm53-decode-wgmma-paired-output-profile-retry-20261110/decode-profile/profile",
+            "--max-seconds",
+            "380",
+            "--profile-decode"
+          ],
+          "gpu_function_seconds": 72.647115981,
+          "volume": "winstoncai/remnant-stage2a-results/microbench/glm53-decode-wgmma-paired-output-profile-retry-20261110",
+          "artifact_sha256": {
+            "decode-profile/build-manifest.json": "c5177fb58547b7ce1c5a2d9c71d1d159059d646e6b29aeb4da734a54b537ddb9",
+            "decode-profile/profile.json": "30c52ebda03780c3e2bd2c87754a688401f61a8c8417d3be81afa37313c63c3e",
+            "decode-profile/profile.log": "e375165d4c52e05dbb4e595e8d9ad4294e50a89d04a7e2a8b336f02dfb37ae9c",
+            "decode-profile/profile.traces/decode_h16_q16_t0_independent_rotating-direct.json": "51cb5a0f507b9141441bc74862992cef11f65f2340d1da54bc1e4e0c01f6d4d9",
+            "decode-profile/profile.traces/decode_h16_q16_t0_independent_rotating-upstream.json": "ceb620b98b44ca66401e8ea5ba0306ed5e9fbee3978f6d9326de68d8eadfcbb0",
+            "decode-profile/profile.traces/decode_h16_q16_t0_independent_warm-direct.json": "4593e7d0e7bd1c7f357d7e1e8b96ec95281b9e72b540bde6019e2571f6fcece6",
+            "decode-profile/profile.traces/decode_h16_q16_t0_independent_warm-upstream.json": "e93ab157b88ef367ffe9f6be82db176225d05921d398add5a675049500120492",
+            "decode-profile/profile.traces/decode_h16_q1_t0_independent_rotating-direct.json": "09b813651b693d2aee346ec2d7a4ad4fef54c2c8afd1c368233b6d670346b1e1",
+            "decode-profile/profile.traces/decode_h16_q1_t0_independent_rotating-upstream.json": "a8a9d0d155bfa58e6129419edb6b9eb6a8e7fa11c010054cc94083bcd4c2861c",
+            "decode-profile/profile.traces/decode_h16_q1_t0_independent_warm-direct.json": "9d4f957173b2d13844fb6ad5cb1a61153b61b2c309b2bf40d1993f7630fbd1b9",
+            "decode-profile/profile.traces/decode_h16_q1_t0_independent_warm-upstream.json": "5ff3758bad6e740887bec19c25a2024145ba94592b70473ca16aebc1221cdaac",
+            "decode-profile/profile.traces/decode_h16_q24_t0_independent_rotating-direct.json": "096593c7bcab2a1d0ca4489f50007f36c8da0ebd4b0f9f0af069c14493e54d7a",
+            "decode-profile/profile.traces/decode_h16_q24_t0_independent_rotating-upstream.json": "707f5bd03ea9dd3f4364e8939ee95d2542dc310006030ad289d0be1c395651de",
+            "decode-profile/profile.traces/decode_h16_q24_t0_independent_warm-direct.json": "2f42a27088c270aceb804b2b415f5e67e0b083135d692e30fd7d01918aa3a930",
+            "decode-profile/profile.traces/decode_h16_q24_t0_independent_warm-upstream.json": "c0bd4a9422f26166d5953a43e3103a3d537e5ba5c0a11499a1a4fbb01f265482",
+            "decode-profile/profile.traces/decode_h16_q32_t0_independent_rotating-direct.json": "8ef98abbc5f990403374e0b2b210dee0f54e20cebc899328549c935b9508fd2f",
+            "decode-profile/profile.traces/decode_h16_q32_t0_independent_rotating-upstream.json": "0c86afcb4ce90509548b0a254904d9f19eb3f2e15d1832419797160cc5519641",
+            "decode-profile/profile.traces/decode_h16_q32_t0_independent_warm-direct.json": "97e911cbf7e494b1b05635f01e1ebf27a7367920b1092eae316525f66deff3f0",
+            "decode-profile/profile.traces/decode_h16_q32_t0_independent_warm-upstream.json": "01b8996071d3f5278556a772e1d57639271f493a25cce5027c5176bc4f7b4d52",
+            "decode-profile/profile.traces/decode_h16_q64_t0_independent_rotating-direct.json": "f0b2da47d80d5e4ff84c715ae2f5cdad50fbfa4c23c9a9df1f78b773f756efe3",
+            "decode-profile/profile.traces/decode_h16_q64_t0_independent_rotating-upstream.json": "369446f1af80325a852332bb4a6afcc528b8b4ab1828b2d12ed5f3cb24922ec9",
+            "decode-profile/profile.traces/decode_h16_q64_t0_independent_warm-direct.json": "299d259326b9b204280e4e7bc32fcd81d1205509e8fa3dfddb0c29c32e9ac774",
+            "decode-profile/profile.traces/decode_h16_q64_t0_independent_warm-upstream.json": "8e6f6b2119040ddcac357f01f0086be7f5860da5906741893564c2e6ad20ab50",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_rotating-c256-direct.json": "75b3ad43d5c99d8ee1428a4800b1c5ec27a2ed4e801888611b5da5fd0a14513c",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_rotating-c256-upstream.json": "6033bbe214362f74a9f561eedc5965b2c78cb43557233a7e4e763fdec9f80ddd",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_rotating-c512-direct.json": "a72d1fa8d72b816c24b24ea863521e2afc3743ce124064ca2919c810efe59bcb",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_rotating-c512-upstream.json": "c85310e0def5dea7a0297e4c18eb244b6b6a1cb675b8c96432a072895e1861d1",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_rotating-direct.json": "b7a9efeae8b218eca41c2113a303d669499db2ed785cc7ad1360ad9311f281ea",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_rotating-upstream.json": "d72c873ca78779b4428bf11ae15a1972b24d983ee2727520ba28608e7e7aa61d",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_warm-c256-direct.json": "e045267d253e6c8b44e25855dbc4c957006a742fbc0872db766523060b042d39",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_warm-c256-upstream.json": "5f1d53d983e89475472789f970f96c760ec56ddbaa642aea82a4466fd56da13f",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_warm-c512-direct.json": "f8b148bbb823f3fc1aa953f54478cceec2a989fbcb08b5ae460cc72b1b409050",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_warm-c512-upstream.json": "6dd6bb258a6fab77b44bddf90f23cfa758d6650c880c4fc621dad6a397406495",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_warm-direct.json": "61eb8c3d82f5f851600950b4c6b7a0b22935e85962395dc7cdc33ee3aacf7b0f",
+            "decode-profile/profile.traces/decode_h16_q8_t0_independent_warm-upstream.json": "712b1fff7397a397135f4e7afc344370dbebc1432bd00cf98663a5dbf4738be3",
+            "decode-profile/result.json": "34d39ffd2bacb12ed77785e729497b31eb1146aad3548fc29c7dadd55ca286c2",
+            "local-reconciliation.json": "8b391ec3aed17313e6740b2748d67db28e3df243260f83665551cad9b328cf43",
+            "preflight/build-manifest.json": "c5177fb58547b7ce1c5a2d9c71d1d159059d646e6b29aeb4da734a54b537ddb9",
+            "preflight/result.json": "619c83622de7c07a385a66ecbe6beaec0bd46108623c9568e288776cf0561bd2"
+          },
+          "trace_speedup": 2.0821084988696343,
+          "selected_columns": 128,
+          "cases": [
+            {
+              "case": "decode_h16_q1_t0_independent_warm",
+              "fixture_sha256": "701cb8f67b0f8f5ea7eee9c56020db5e7896b776517957edab7bd5e3ceea6593",
+              "banks": 1,
+              "stage_us": {
+                "upstream": {
+                  "query_conversion": 1.024,
+                  "partial_attention": 5.376,
+                  "combine": 13.311
+                },
+                "direct": {
+                  "query_conversion": 1.089,
+                  "partial_attention": 5.603,
+                  "combine": 2.177
+                }
+              },
+              "trace_ratio": 0.44995180356146314
+            },
+            {
+              "case": "decode_h16_q1_t0_independent_rotating",
+              "fixture_sha256": "8e7d6210911dbfa3139e71eb1fae267654932b766292952622d2fd1f977b3b82",
+              "banks": 193,
+              "stage_us": {
+                "upstream": {
+                  "query_conversion": 1.029321243523316,
+                  "partial_attention": 5.887808290155441,
+                  "combine": 13.056326424870466
+                },
+                "direct": {
+                  "query_conversion": 1.0324715025906737,
+                  "partial_attention": 5.972062176165803,
+                  "combine": 1.9245336787564766
+                }
+              },
+              "trace_ratio": 0.44704668916803303
+            },
+            {
+              "case": "decode_h16_q8_t0_independent_warm",
+              "fixture_sha256": "a306d9c66c9161e387a4eb6141eb9cab3ffad325190c0ceced4366656ab0d9d1",
+              "banks": 1,
+              "stage_us": {
+                "upstream": {
+                  "query_conversion": 1.568,
+                  "partial_attention": 12.351,
+                  "combine": 8.832
+                },
+                "direct": {
+                  "partial_attention": 8.384,
+                  "combine": 2.432
+                }
+              },
+              "trace_ratio": 0.475407674387939
+            },
+            {
+              "case": "decode_h16_q8_t0_independent_rotating",
+              "fixture_sha256": "8a37d174e52cbcbec756f53a03b0ec3e2967dcf2e4eb5f03ff66295c20e46f7d",
+              "banks": 25,
+              "stage_us": {
+                "upstream": {
+                  "query_conversion": 1.2108800000000002,
+                  "partial_attention": 13.11484,
+                  "combine": 8.46712
+                },
+                "direct": {
+                  "partial_attention": 7.04944,
+                  "combine": 1.6199199999999998
+                }
+              },
+              "trace_ratio": 0.38035453238824124
+            },
+            {
+              "case": "decode_h16_q16_t0_independent_warm",
+              "fixture_sha256": "b03cc384b50e7d942a0c9ed9f521991a3714daf27f163f4ebd2d55374de42da1",
+              "banks": 1,
+              "stage_us": {
+                "upstream": {
+                  "query_conversion": 1.664,
+                  "partial_attention": 23.748,
+                  "combine": 8.77
+                },
+                "direct": {
+                  "partial_attention": 16.352,
+                  "combine": 2.432
+                }
+              },
+              "trace_ratio": 0.5495289918670645
+            },
+            {
+              "case": "decode_h16_q16_t0_independent_rotating",
+              "fixture_sha256": "b133cbdc9c5099dead9759faad9ece099cf0e7a6121c9554f8bb15d3134b0cde",
+              "banks": 13,
+              "stage_us": {
+                "upstream": {
+                  "query_conversion": 1.5875384615384616,
+                  "partial_attention": 25.456384615384614,
+                  "combine": 8.711
+                },
+                "direct": {
+                  "partial_attention": 17.001153846153844,
+                  "combine": 2.122
+                }
+              },
+              "trace_ratio": 0.5348397423485522
+            },
+            {
+              "case": "decode_h16_q24_t0_independent_warm",
+              "fixture_sha256": "847a8e0cc30694b1c1d24ee3aadbde4246ff2456726381a659960442c46c71ad",
+              "banks": 1,
+              "stage_us": {
+                "upstream": {
+                  "query_conversion": 1.664,
+                  "partial_attention": 36.256,
+                  "combine": 9.985
+                },
+                "direct": {
+                  "partial_attention": 19.905,
+                  "combine": 2.24
+                }
+              },
+              "trace_ratio": 0.46226907420937274
+            },
+            {
+              "case": "decode_h16_q24_t0_independent_rotating",
+              "fixture_sha256": "520bae18231515ce4ccacbc1af01e91725e25bb54e63b96288459e25702e626e",
+              "banks": 9,
+              "stage_us": {
+                "upstream": {
+                  "query_conversion": 1.646,
+                  "partial_attention": 37.24077777777777,
+                  "combine": 9.759888888888888
+                },
+                "direct": {
+                  "partial_attention": 22.179444444444442,
+                  "combine": 1.9842222222222223
+                }
+              },
+              "trace_ratio": 0.49671782924489516
+            },
+            {
+              "case": "decode_h16_q32_t0_independent_warm",
+              "fixture_sha256": "4dbf8d4abdb05cf647687adfb156f1ed4566c6ab7be07743c104a034822cf1ac",
+              "banks": 1,
+              "stage_us": {
+                "upstream": {
+                  "query_conversion": 1.696,
+                  "partial_attention": 49.118,
+                  "combine": 12.384
+                },
+                "direct": {
+                  "partial_attention": 28.096,
+                  "combine": 2.272
+                }
+              },
+              "trace_ratio": 0.48052153549162946
+            },
+            {
+              "case": "decode_h16_q32_t0_independent_rotating",
+              "fixture_sha256": "2c0e5c76a42f10dd830e5b7e76c1fefa85e0d403b7b80279e83ff15057652f24",
+              "banks": 7,
+              "stage_us": {
+                "upstream": {
+                  "query_conversion": 1.723285714285714,
+                  "partial_attention": 49.26214285714286,
+                  "combine": 11.977285714285713
+                },
+                "direct": {
+                  "partial_attention": 30.44585714285714,
+                  "combine": 2.0571428571428574
+                }
+              },
+              "trace_ratio": 0.5162261565234753
+            },
+            {
+              "case": "decode_h16_q64_t0_independent_warm",
+              "fixture_sha256": "97d47b391fd5342417e11581abe1feef14e5de8c8ff2cdc7ac43e8b5ea2eeec5",
+              "banks": 1,
+              "stage_us": {
+                "upstream": {
+                  "query_conversion": 1.984,
+                  "partial_attention": 96.322,
+                  "combine": 19.642
+                },
+                "direct": {
+                  "partial_attention": 55.489,
+                  "combine": 2.624
+                }
+              },
+              "trace_ratio": 0.4927001729575745
+            },
+            {
+              "case": "decode_h16_q64_t0_independent_rotating",
+              "fixture_sha256": "29aa19055b005f5f691c46e2b76181f03a21aa1b0a536e8b4ca551b890e23715",
+              "banks": 4,
+              "stage_us": {
+                "upstream": {
+                  "query_conversion": 2.15225,
+                  "partial_attention": 95.80425,
+                  "combine": 19.54475
+                },
+                "direct": {
+                  "partial_attention": 56.467,
+                  "combine": 2.536
+                }
+              },
+              "trace_ratio": 0.5021478494909629
+            }
+          ],
+          "batch8_trials": {
+            "decode_h16_q8_t0_independent_warm": {
+              "128": {
+                "upstream_us": 23.367786566416424,
+                "direct_us": 11.829429268836975,
+                "mean_paired_ratio": 0.5062283008188484,
+                "rounds": 30,
+                "trace_ratio": 0.475407674387939
+              },
+              "256": {
+                "upstream_us": 23.217983961105347,
+                "direct_us": 12.3542507092158,
+                "mean_paired_ratio": 0.5320983081996719,
+                "rounds": 30,
+                "trace_ratio": 0.5025780189959296
+              },
+              "512": {
+                "upstream_us": 23.27393062909444,
+                "direct_us": 13.358783960342407,
+                "mean_paired_ratio": 0.5739810016576748,
+                "rounds": 30,
+                "trace_ratio": 0.550838339460235
+              }
+            },
+            "decode_h16_q8_t0_independent_rotating": {
+              "128": {
+                "upstream_us": 22.919466654459637,
+                "direct_us": 11.389941334724426,
+                "mean_paired_ratio": 0.4969551253174966,
+                "rounds": 30,
+                "trace_ratio": 0.38035453238824124
+              },
+              "256": {
+                "upstream_us": 22.874112208684284,
+                "direct_us": 11.902464032173157,
+                "mean_paired_ratio": 0.5203466564750231,
+                "rounds": 30,
+                "trace_ratio": 0.520545226196854
+              },
+              "512": {
+                "upstream_us": 22.922368049621582,
+                "direct_us": 13.045141220092773,
+                "mean_paired_ratio": 0.5691009586937232,
+                "rounds": 30,
+                "trace_ratio": 0.5717712573032591
+              }
+            }
+          },
+          "batch8_paired_ratio_geomeans": {
+            "128": 0.5015702828843572,
+            "256": 0.5261896764358985,
+            "512": 0.5715357716848232
+          }
+        }
+      ],
+      "qualification": {
+        "status": "passed",
+        "receipt_sha256": "fac959b78986558d60181499047af11013ab4320869b087aa55fcaf28786a3b8",
+        "runtime_hashes": {
+          "kernels/ops/attention/dsa/tilelang_kernel.py": "e5d70f2174f45bf51938d2cf565d2f754e0df5edc73d3ba34aedd3238a5c4686",
+          "kernels/jit/include/sgl_kernel/glm_packed_decode.cuh": "39714719c741cae197c88dc940d39dc09065d483befacf84e1e4aa907eada8a6",
+          "kernels/jit/include/sgl_kernel/glm_wgmma_pv.cuh": "6914ba4441a862c2b2952b491b38f5c743564a4a4f5d75eddc668401486bba3a",
+          "kernels/jit/include/sgl_kernel/glm_wgmma_query.cuh": "7c09d8e5ae1d8dc2877f524c9dcb28ab03437c37d3524ea9eb4aa4111ff59f38",
+          "srt/remnant/glm.py": "50565426fe36070791743987cf41d177081874c9a52d9bfa6f30805b7ae307aa",
+          "srt/remnant/glm_pool.py": "cfc36ad197037879867417df91e8cfb91f128fa24bc1cbfa88ae89eeae4e301d",
+          "srt/remnant/reference.py": "6231ec9622623643eba8ab50d714f9433cd13672be927030c4070ae05452021e",
+          "srt/layers/layernorm.py": "98072d836e0c77312058521ee1015c80177b2c370da7408fd066eec61015ff21"
+        },
+        "stages": {
+          "synccheck": {
+            "run_id": "glm53-decode-wgmma-paired-output-qualification-20261110",
+            "gpu_function_seconds": 1200.645136293,
+            "status": "passed",
+            "pytest": {
+              "corrective": {
+                "cases": 5,
+                "seconds": 25.538
+              },
+              "scope-audit": {
+                "cases": 3,
+                "seconds": 83.825
+              },
+              "synccheck": {
+                "cases": 23,
+                "seconds": 642.599
+              }
+            },
+            "scope_audit": {
+              "status": "passed",
+              "filter": "regex=glm_packed_(partial|bytes|decode_combine_kernel\\b)",
+              "log_sha256": "c298d61d3533b36565e8039ba755a956be4a86d1e08efbf15f3a30f546c29a91",
+              "entrypoints": {
+                "filter": "regex=glm_packed_(partial|bytes|decode_combine_kernel\\b)",
+                "partial_sources": {
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/0e280654d0a41298fa83683c67c34a62f1040e5559c598d3c1083cc475eca873/device_kernel.cu": {
+                    "sha256": "1b6476e076a249c0ca5eefa5ef092607f6ce97919e3e45a35332bbf2fac4b60e",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/106f6c2e8ecbe7eb59b1deed2112bbd009ae0a42fbf14d1d6a412f9df5591e76/device_kernel.cu": {
+                    "sha256": "a0254c02425c8c7998c41b9e148998128c021a260be61674745e559bcc975c77",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/1351f236875b4c9b205aa4bf28f013501aaadb486471ef89722c8486967e148e/device_kernel.cu": {
+                    "sha256": "25ee7b59171312d30e57ed9b5ba67c5b48296175b8138ec00ebd6260eb2d107a",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/15e3b075d88275ed5ebbb1b599b139e78489ed83b05a0526cea039465dd95862/device_kernel.cu": {
+                    "sha256": "d3754a265f31521ea79c71a5b8081a0e61f4b83d71f7cad15d6ef568fc2e890b",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/1751b7f25ffbbd1b1c1a71d8f2e2b8c008c86e369e378ab5f56e6801abda1df3/device_kernel.cu": {
+                    "sha256": "3bbafea08ff5d1cae666e37196425552e33d90be66edb821bfcf422f5d6a7f0e",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/21049c5e2f378011c46d431c668ac7fded774a4828a807f010c64dc94ff59943/device_kernel.cu": {
+                    "sha256": "3e995c3bd34911132e8f998850dcf7dee381122d082d58409c2d8d3165519f7c",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/2860e249a074abef5916af805f739b11f89a65605f68a02ccb75969c3182ebaa/device_kernel.cu": {
+                    "sha256": "cd3f8829db7ee28ce5254ab6a7f857cb6e231439b59206c1cfa6644f0b61a799",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/3adb7ad2d06c3f8d453b8d45cbdf3b3beba7bde6bd3c56e054305d1f225b2ec3/device_kernel.cu": {
+                    "sha256": "06a3c5e1fc70aa3990d2968e6f87779aac486aea7446685ed6cbab1f78f6aff1",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/3e0b1a5e73fe8c4817dbcc86230fd86f7cf856e1b5b51169be10f73a23ff1c1f/device_kernel.cu": {
+                    "sha256": "21351e89e8506791f512e41ee17717aa911539dbf3a77c42d1828f0b0c7c4624",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/449c267e764f38efd220734e16d4eec2f13a236a11eea4c96e6e484c119c86ae/device_kernel.cu": {
+                    "sha256": "d936b25c58bb71c897dd52e0bd2c439ce1c173dd70a3734df328d91759571b0c",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/45836a2ee859367092339027d3f43afefcdee19fe93a23f4168ed5c580169960/device_kernel.cu": {
+                    "sha256": "30786eeb83c7c9db7b119f256d5616ed3c22e33a3935c7381501990410c7cb1c",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/4b78ee43a313cc8aa30619affeaf8926b278e68bd7728f7d318efb3dd2eff105/device_kernel.cu": {
+                    "sha256": "aab412244ec33f0e0378396e940bd0a3389f82f18f934d751ea70c3de1a23990",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/4e9d7e05afec998ac8d730f493cdec2f9db108e6d77f57b92c1eb2889df0dce5/device_kernel.cu": {
+                    "sha256": "d9ad2ecb9e14f3149525490940b0c7dfe74bcbd558626b4bf21ed5b0ce2963a3",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/51d8403071e7418f40bf33549ee4a28f2d62dfcb2dac871a0598a35a2f486305/device_kernel.cu": {
+                    "sha256": "a3826f50fa9afe2f88771450983050eb14543bc4605332b3e46911747ffbf596",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5d953be98af7b91a636735eb6b0504e0049f3b5cfb48454b7f2e462c1b08cbf4/device_kernel.cu": {
+                    "sha256": "feb46304776292b914e09a1e4676452301ebd7bfafbc02154785d3a84536197e",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/619e9faf52f563117d37041e5ecad73dbc0aaa976dbddc4cafa10c010539951e/device_kernel.cu": {
+                    "sha256": "f4d804aa1e541143451c19772ab5c287454a5cb06be50f22eb2bc35199fad31d",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/653a42e051d0746211a71de8280301fc697e6987c72f23e5f13479aecf06d153/device_kernel.cu": {
+                    "sha256": "4941e4b13a5b3fa6d7aca4f765d8fb598f864cd929f6712617ebd854d0b7a0ba",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6ce5e28c3e4bf36be17d3d8cc70cfc295af83d644dd5cee1ccd4c52a1de9cd34/device_kernel.cu": {
+                    "sha256": "3ce6864095d40eeb27a70efdd1562f4a5601ab0f3399a7fed8c0c610585bb201",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6e60bd963de457d6fd0bab63fca9151dd59220e512a803c1d273bf00ae788d3b/device_kernel.cu": {
+                    "sha256": "d2870333d521daa02b50c88525cd0a2c7156f64697ad28cbf0189040a682ac30",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6ea4d794108a3edf5a8aedcd20b1e3393e9c9d4ac6c29d6ecacf0b43edf2abc0/device_kernel.cu": {
+                    "sha256": "dafa14ba30b0a049341481265214b0ff6e07abc0353dedb5b9826402a1d7defd",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/7270e5ddbbb6258cc3ede5a18bd68bbf75e3bce7a2ab051a821882f1015bfeaa/device_kernel.cu": {
+                    "sha256": "6aad7919fb838729bfd5246f82eb2ffef89bcee3cd772d8b3ac5bb7eb81dcb76",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/737a80244d8ba217439b1cb972052d8140036dfb8facb7c13bcaba3847b9a18d/device_kernel.cu": {
+                    "sha256": "c1a854d91547d667350eeffa1e678e54308987f7eecc82ba9d62071cd5614391",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/749a56e0c8267e1b5f7554b6fe29366576eae961e1b0b1d12629e101cbb01354/device_kernel.cu": {
+                    "sha256": "5943dbe0a8861793d6e1263a376ea1160c4d0014dbc507c647c7cdcc1a4a0831",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/796d2c32e7ff0e6dbb7a418f779ed643b7e3bf66917512e4d12edfc19d8a7a7a/device_kernel.cu": {
+                    "sha256": "f8cc83bc035fbd825893e6b74a0522b97a6b85b1cfd198aa53feece28548aa9a",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/7f235c7b26242902c60c4957f8dc58fbac6fb8ff7669f1feb0d8fc39bba2b48f/device_kernel.cu": {
+                    "sha256": "fd11b80cc56bcb019a81b4f278834090a7fa2196bacc8c192d3e86cfee4e28c3",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/8ab6a0dc831e980387ca2c3fd1146cfa6ad91e95f99bf01b1760375166de9cf7/device_kernel.cu": {
+                    "sha256": "30ad9c8139462f1c1663782d0a2b31e3d97b71d1fb33cacfcb16a5e579bd49a2",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/92cb368b013e8a0b9d9e37adaf5a3e96028c6f01dd727a54ccd1d4afee738add/device_kernel.cu": {
+                    "sha256": "95d050cad100e80d6f95812d835d2f3d3d60052048d0ccb13c943ae7896f2461",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/941122f3091628b7cfad5bd3aa38796470a0732a25238bba29af84a754b49cd4/device_kernel.cu": {
+                    "sha256": "11a0b41a498830d5fd00960a8023bb38e0e1de85a0da0578f607a8be866efd30",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a2fbbfcd8406be3141bbf4dccb55d58f2004fe3452d9a78a804e54c336ed3461/device_kernel.cu": {
+                    "sha256": "68e646ad802ef9214843bf0b7a6acd967370b8bea0445855e216ae56a3150ec9",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/bbdab922d0082ec8d6380e9f6023655e28fbec0c81e5e4040e9a646c49bc12fb/device_kernel.cu": {
+                    "sha256": "7fbe2192d83856d7071cca9995bbc029e5d99281d1392903f502cb3c894dcc01",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/bdde0954d012fc9a8286ef9f2b9f3b99a105ad4442dfbd65a0bdb9d53093476b/device_kernel.cu": {
+                    "sha256": "8fa601ba125feebad478a526d3918aa70e6a7dc1bbbd840d40dde56b08b9efe9",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/c81a82600f63158b87e5963f835cce64093aed421d0bc9b99d49172ebec45f20/device_kernel.cu": {
+                    "sha256": "c2a248aafbd868ee37dc57ca9c072e89aa6ae6f507dfd42de0d44bc87f696a70",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/c9f75fa87a97d2a0821f9317d6cf57293e684b8acaff340928fd5f11846c2c75/device_kernel.cu": {
+                    "sha256": "44ebc5d88af592d1ed412ab479d5d4ff1e40f46fe767e2b7053ac38f773d88a4",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/cedb69811c235a9d9304a2cfda5fea55df96e24e39111ea35fcc27d474651c63/device_kernel.cu": {
+                    "sha256": "f675573f1efce81f410491594ad1be0a9aca1054b3526f22bfca590062d754f9",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/dcd1f54ef0472f97ac70a0534919a6ad359415193902da62f01836917639539d/device_kernel.cu": {
+                    "sha256": "52a2fd54fda30ecce3ec88ede035f39b5f13bc7c9a56e1a5867ad7aef428da72",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/e85f3d4dfe61578c440c3bb40b239f2edebc3ba1b136394a41e332ce0a507c23/device_kernel.cu": {
+                    "sha256": "2493c8e0f0b39b39fc03b315c97c3cd0995a1694d5119e51238429922b3e39f3",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ea34eaa81bacfd16c4c79028afaf7eca316172a40712112cd75e04c16ec3de7a/device_kernel.cu": {
+                    "sha256": "b0dfc63784e2d37cab712872d9ebe89a32df407eee3e3120506f7c58df5feef2",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ebc511484ee6103b0d3854e86c8fca5ab65ba9e8658a027a484852835680fc8c/device_kernel.cu": {
+                    "sha256": "b18b6db8a95bcc29dec414082db8d68fce36ed3865569609686bb7e1ce207b10",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ec23148bcb1ada9c94714d74d3df5888bdb7124b9147b20a7b672c1c57505672/device_kernel.cu": {
+                    "sha256": "c029325b69f77f88493885419b78b0bea6becdfa4f6311c04a96cd505341539b",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ec2e1979fa630b2da356b7be583f2ae3072aa779508a191465b6af16c6c74ca7/device_kernel.cu": {
+                    "sha256": "b409630fb091fcb0caa87c92464e38e452d9a3f3aceddd3163a8f2b0d93489ec",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ee4e192af0ea23a64154bdcb095673651ec9747267150a29513261853e901664/device_kernel.cu": {
+                    "sha256": "df12ceeda831e16f81858a528159b4bfdab27e42021946af592ce86de22c26b8",
+                    "symbol": "main_kernel"
+                  }
+                },
+                "probe_sources": {
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/57e2be83c5a3018af28dbd29b8a0dba1309879c691ad80dd108fd03b851fc05c/device_kernel.cu": {
+                    "sha256": "641b74465517f0278861e3d86cd11db80a3a6e0e644d4b0e41a412a618c32595",
+                    "symbol": "glm_packed_bytes_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6874ccd2e349c1fe630e2b3f8a4f7318a7fd6888ef79e8e562731e2602d69266/device_kernel.cu": {
+                    "sha256": "9ed5e563f397a604f099bd1355851f113c3de6c286acf53f4f78ae77ddb9a7ee",
+                    "symbol": "glm_packed_bytes_kernel"
+                  }
+                },
+                "excluded": "Unchanged Native and framework kernels",
+                "decode_combine": {
+                  "66x128": {
+                    "source_sha256": "5c4752e5a796fc6f9dea29fa7423e5a510ca4f1b8800bd97f2792e4b0b784f75",
+                    "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/ce8b14371d347a8a5093e298869dd1799bd1894cff97823763feb95f71bd1a64.cubin",
+                    "cubin_sha256": "9af4ac810edc0c4efbfeec67ea449b5a1c50d82647418823563ea28b1c1778e8",
+                    "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6394437d7a1fcba2127353977b87ec93fa00a1222babbae17ddcf770370e6dc1/executable.so",
+                    "library_sha256": "4932afd0959df6a91e79d88502310ed88db172bc3edecaccd91fcbd59eb4fef1"
+                  },
+                  "33x512": {
+                    "source_sha256": "102f12c65184edbe69c8c90a998b0af9fe052f70ef25204908934569c7ecd45f",
+                    "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/e5468edb7528f612786a20ff37f0edb061275852123b4040f87b8bdf70924bd5.cubin",
+                    "cubin_sha256": "6e6d676288d5fa3feec1c9e3c062585264e3441e7fbd7747e8d2ab9f100c92e0",
+                    "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/74d82897fbd8cc88784417736c44354bac468dbc7e2d61a53cdf3ee3e6fea615/executable.so",
+                    "library_sha256": "7a78549fba39ac6c00bbf1dcb7cf98e3c5b52cd994d6367c07283f62db3c38b9"
+                  },
+                  "22x512": {
+                    "source_sha256": "c14e4017fe12c41ff29bb4475176cd1163660c724e2457e7144db2e5889cc8c9",
+                    "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/df4fa9948a9bf1c0c1e8bb5747d74eee4ce3f5eabb1447fe90dfdc4545e276a8.cubin",
+                    "cubin_sha256": "9eb4522a9666f9fb854d15a04efb795ccbc765d4b2d30e104d2f05fe6cfb1ad9",
+                    "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/8c5502c8cac05c633be103e4f3118ef5d3c003dd66825e8fb057c51377a96e4f/executable.so",
+                    "library_sha256": "183e9b645b26f7d3c0866915b38e4d83ef3836a631abe3a2ff05120b2208dc2b"
+                  },
+                  "11x512": {
+                    "source_sha256": "65bad8e27b0d3c2ef549b69e403be1a431d5004ba525c4ef42572696c1a82863",
+                    "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/2a2e73c9610abbefa0550a13aba90c9d21e381af0b6b3143c0020696664e9694.cubin",
+                    "cubin_sha256": "7565cbe1073043453962e4eaa69756e8ee6090c843cd55c1e88403e72be5d305",
+                    "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/dffd18d597e579f805e68946e85c943d44b9d6b88573f03d47f37c97adc9bc16/executable.so",
+                    "library_sha256": "d4763ca2b0ee33fbd9772c0b2760409cdbe000215ce1f93dfc6143d91c405efb"
+                  },
+                  "6x512": {
+                    "source_sha256": "dd215fb415a888910091eaf6156f2a71db96b0b78ba3962a2bec62c8f6327b3e",
+                    "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/df2e677c0b6fa3df1e2fb1adaeb679771b2de08cb564c48906319eef4c43a455.cubin",
+                    "cubin_sha256": "8c9129435fec27bb379bb1064456edd6934675aefcdb338b726e0a65d5a83520",
+                    "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/b9061282472f9e7bd38bbe50785151a961eb77c7b3dbe72a40a302cb41a0dddb/executable.so",
+                    "library_sha256": "680944f83a872aa2b2fccf007cf223e113bcfa3d42c7381de81e4448219e4059"
+                  }
+                }
+              },
+              "basis": "Racecheck synchronization trace; other tools use completed tests, identical entrypoints and common filter contract"
+            },
+            "artifact_sha256": {
+              "build-manifest.json": "c5177fb58547b7ce1c5a2d9c71d1d159059d646e6b29aeb4da734a54b537ddb9",
+              "corrective.log": "511cc0e88ed3937d27b536401baaee8238f5698789131aba101accfbd4efa67c",
+              "corrective.xml": "6dd7f8539d671c085107175321ae2f2669c4310f147afd76de2418c83d8d1679",
+              "cpu-preflight/base-imports.log": "f1399efdd581336843265027192957a36020e50ef1340ac2081cb3ff8f350252",
+              "cpu-preflight/collection.log": "b5f403a3479f821c6f7e17a846705a9981e4af95b4d009ca373a98df33745687",
+              "cpu-preflight/cpu-tests.log": "5080ba7dd6a407a2792f4981f8e114060431bdbf813ed6f9e2f4e2686e3956ce",
+              "cpu-preflight/cpu-tests.xml": "77a1a3695a35dd8a7c184a2a90777b4be5d34e23742962569a360c9add56f821",
+              "cpu-preflight/flashmla_ops.cpython-312-x86_64-linux-gnu.so.architectures.log": "335d24f88bbc3a4b8ffdab9f57203e6c679e2951d8794444ba1cce1e1871e654",
+              "cpu-preflight/glm-allocator-cpu.log": "f4a762d12f5a58ffcfdf481e45b9c50c3992028d8f5188adc25b27939d10b006",
+              "cpu-preflight/glm-benchmark-imports.log": "56b9506e9998491939527565d26ca810fd5e0d2b995c8e544e1a633a31dbdcc0",
+              "cpu-preflight/glm-sm90-compile.log": "05b3465f19ec0f6cdc751bde668833f79d1d3086b8091995d3e598b2ead1ffce",
+              "cpu-preflight/nvcc.log": "fc7ce0c80d28ed925fd490dc4e3915ce620fcf115f965189688c6f049243aad5",
+              "cpu-preflight/remnant_ops.cpython-312-x86_64-linux-gnu.so.architectures.log": "48127697569bc605f8e446d1b6c954aae0ae9ee636b0699e4bfb0f677ad679a9",
+              "cpu-preflight/sanitizer-collection.log": "8591cc7745ccd508932f2d6f32545fe1ef41b71a3a2e5d6cf8086d6b645caedc",
+              "cpu-preflight/sanitizer-extract.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "cpu-preflight/sanitizer-help.log": "41cc7bfb60b62288dc4b292a4cbff0a836c9f91d6a9b105eed9cb298f547ecb9",
+              "cpu-preflight/sanitizer-version.log": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673",
+              "driver-version.log": "0669b8ab347d66404efe0fe45c4a2433da7b7ca025d51547c8d1b702e7b7f8b8",
+              "model-config.json": "bb8f01c42cb92a52ca72e65afb4d5bd8d11aef083cd210e8de25dfb904f23e9f",
+              "racecheck.log": "15ae67ee7a80be353c56edf12ae5243e030d913bb99b444cdcc8bc319e416b83",
+              "result.json": "7039fa29b7e264c31613c03a17e30af903590c98936f34454ba0efe6fc689016",
+              "sanitizer-control-bindings-import.log": "4806c657afdb0ef7bbbb2360916bf4ad14b5d2a0aac0e56710f31a9d1cfecc07",
+              "sanitizer-control-bindings-query.log": "a518617e603ae9e3659eecdf4257ea7eca94fb82a98faf99a78827514ec53fc4",
+              "sanitizer-control-empty.log": "fb8d9ea8d2be1a0fc356e4685eab89b230d089597899abc6f9cde9b1b6cc3900",
+              "sanitizer-version.log": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673",
+              "scope-audit.log": "c298d61d3533b36565e8039ba755a956be4a86d1e08efbf15f3a30f546c29a91",
+              "scope-audit.xml": "0b08f785c765b4cac83de258df78ec3648e8d4dd59894426467c048de5488065",
+              "synccheck.log": "de287069c97c21d4d82e4ed2c0e0dbab06acd91b33ef73d65a2537e0ec1cb22a",
+              "synccheck.xml": "6e336241fb252ff1941ac26cd6097dd13d37b2123dff336140fd5752d5b23e6d"
+            },
+            "app_id": "ap-jFatOpoRPtnoKef3Pxm6Xw",
+            "controller": {
+              "argv": [
+                "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+                "run",
+                "scripts/modal/kernels.py::validate_kernels",
+                "--run-id",
+                "glm53-decode-wgmma-paired-output-qualification-20261110",
+                "--model-family",
+                "glm53",
+                "--stage",
+                "corrective",
+                "--cases",
+                "test/registered/attention/unittests/test_glm5_remnant.py::test_packed_loader_bytes,test/registered/attention/unittests/test_glm5_remnant.py::test_decode_bank_graph",
+                "--sanitizer",
+                "--sanitizer-scope",
+                "glm-decode",
+                "--max-seconds",
+                "1200"
+              ],
+              "account": "winstoncai",
+              "image": "im-qdUjEjfOAyMsNIpeobeT9P",
+              "run_id": "glm53-decode-wgmma-paired-output-qualification-20261110",
+              "seconds": 1290.0240874170122,
+              "returncode": 1
+            },
+            "volume": "winstoncai/remnant-stage2a-results/microbench/glm53-decode-wgmma-paired-output-qualification-20261110",
+            "incomplete_tools_in_same_allocation": {
+              "racecheck": "deadline after 18 cases; dedicated full run passed",
+              "memcheck": "not started; dedicated full run passed"
+            }
+          },
+          "racecheck": {
+            "run_id": "glm53-decode-wgmma-paired-output-racecheck-20261110",
+            "gpu_function_seconds": 617.73414228,
+            "status": "passed",
+            "pytest": {
+              "corrective": {
+                "cases": 5,
+                "seconds": 30.679
+              },
+              "scope-audit": {
+                "cases": 3,
+                "seconds": 68.609
+              },
+              "racecheck": {
+                "cases": 23,
+                "seconds": 468.979
+              }
+            },
+            "scope_audit": {
+              "status": "passed",
+              "filter": "regex=glm_packed_(partial|bytes|decode_combine_kernel\\b)",
+              "log_sha256": "f18d79be7f937fb1c0bf6318277048bccb152becb99f02860f64db6a30b13c4f",
+              "entrypoints": {
+                "filter": "regex=glm_packed_(partial|bytes|decode_combine_kernel\\b)",
+                "partial_sources": {
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/0e280654d0a41298fa83683c67c34a62f1040e5559c598d3c1083cc475eca873/device_kernel.cu": {
+                    "sha256": "1b6476e076a249c0ca5eefa5ef092607f6ce97919e3e45a35332bbf2fac4b60e",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/106f6c2e8ecbe7eb59b1deed2112bbd009ae0a42fbf14d1d6a412f9df5591e76/device_kernel.cu": {
+                    "sha256": "a0254c02425c8c7998c41b9e148998128c021a260be61674745e559bcc975c77",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/1351f236875b4c9b205aa4bf28f013501aaadb486471ef89722c8486967e148e/device_kernel.cu": {
+                    "sha256": "25ee7b59171312d30e57ed9b5ba67c5b48296175b8138ec00ebd6260eb2d107a",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/15e3b075d88275ed5ebbb1b599b139e78489ed83b05a0526cea039465dd95862/device_kernel.cu": {
+                    "sha256": "d3754a265f31521ea79c71a5b8081a0e61f4b83d71f7cad15d6ef568fc2e890b",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/1751b7f25ffbbd1b1c1a71d8f2e2b8c008c86e369e378ab5f56e6801abda1df3/device_kernel.cu": {
+                    "sha256": "3bbafea08ff5d1cae666e37196425552e33d90be66edb821bfcf422f5d6a7f0e",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/21049c5e2f378011c46d431c668ac7fded774a4828a807f010c64dc94ff59943/device_kernel.cu": {
+                    "sha256": "3e995c3bd34911132e8f998850dcf7dee381122d082d58409c2d8d3165519f7c",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/2860e249a074abef5916af805f739b11f89a65605f68a02ccb75969c3182ebaa/device_kernel.cu": {
+                    "sha256": "cd3f8829db7ee28ce5254ab6a7f857cb6e231439b59206c1cfa6644f0b61a799",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/3adb7ad2d06c3f8d453b8d45cbdf3b3beba7bde6bd3c56e054305d1f225b2ec3/device_kernel.cu": {
+                    "sha256": "06a3c5e1fc70aa3990d2968e6f87779aac486aea7446685ed6cbab1f78f6aff1",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/3e0b1a5e73fe8c4817dbcc86230fd86f7cf856e1b5b51169be10f73a23ff1c1f/device_kernel.cu": {
+                    "sha256": "21351e89e8506791f512e41ee17717aa911539dbf3a77c42d1828f0b0c7c4624",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/449c267e764f38efd220734e16d4eec2f13a236a11eea4c96e6e484c119c86ae/device_kernel.cu": {
+                    "sha256": "d936b25c58bb71c897dd52e0bd2c439ce1c173dd70a3734df328d91759571b0c",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/45836a2ee859367092339027d3f43afefcdee19fe93a23f4168ed5c580169960/device_kernel.cu": {
+                    "sha256": "30786eeb83c7c9db7b119f256d5616ed3c22e33a3935c7381501990410c7cb1c",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/4b78ee43a313cc8aa30619affeaf8926b278e68bd7728f7d318efb3dd2eff105/device_kernel.cu": {
+                    "sha256": "aab412244ec33f0e0378396e940bd0a3389f82f18f934d751ea70c3de1a23990",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/4e9d7e05afec998ac8d730f493cdec2f9db108e6d77f57b92c1eb2889df0dce5/device_kernel.cu": {
+                    "sha256": "d9ad2ecb9e14f3149525490940b0c7dfe74bcbd558626b4bf21ed5b0ce2963a3",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/51d8403071e7418f40bf33549ee4a28f2d62dfcb2dac871a0598a35a2f486305/device_kernel.cu": {
+                    "sha256": "a3826f50fa9afe2f88771450983050eb14543bc4605332b3e46911747ffbf596",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5d953be98af7b91a636735eb6b0504e0049f3b5cfb48454b7f2e462c1b08cbf4/device_kernel.cu": {
+                    "sha256": "feb46304776292b914e09a1e4676452301ebd7bfafbc02154785d3a84536197e",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/619e9faf52f563117d37041e5ecad73dbc0aaa976dbddc4cafa10c010539951e/device_kernel.cu": {
+                    "sha256": "f4d804aa1e541143451c19772ab5c287454a5cb06be50f22eb2bc35199fad31d",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/653a42e051d0746211a71de8280301fc697e6987c72f23e5f13479aecf06d153/device_kernel.cu": {
+                    "sha256": "4941e4b13a5b3fa6d7aca4f765d8fb598f864cd929f6712617ebd854d0b7a0ba",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6ce5e28c3e4bf36be17d3d8cc70cfc295af83d644dd5cee1ccd4c52a1de9cd34/device_kernel.cu": {
+                    "sha256": "3ce6864095d40eeb27a70efdd1562f4a5601ab0f3399a7fed8c0c610585bb201",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6e60bd963de457d6fd0bab63fca9151dd59220e512a803c1d273bf00ae788d3b/device_kernel.cu": {
+                    "sha256": "d2870333d521daa02b50c88525cd0a2c7156f64697ad28cbf0189040a682ac30",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6ea4d794108a3edf5a8aedcd20b1e3393e9c9d4ac6c29d6ecacf0b43edf2abc0/device_kernel.cu": {
+                    "sha256": "dafa14ba30b0a049341481265214b0ff6e07abc0353dedb5b9826402a1d7defd",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/7270e5ddbbb6258cc3ede5a18bd68bbf75e3bce7a2ab051a821882f1015bfeaa/device_kernel.cu": {
+                    "sha256": "6aad7919fb838729bfd5246f82eb2ffef89bcee3cd772d8b3ac5bb7eb81dcb76",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/737a80244d8ba217439b1cb972052d8140036dfb8facb7c13bcaba3847b9a18d/device_kernel.cu": {
+                    "sha256": "c1a854d91547d667350eeffa1e678e54308987f7eecc82ba9d62071cd5614391",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/749a56e0c8267e1b5f7554b6fe29366576eae961e1b0b1d12629e101cbb01354/device_kernel.cu": {
+                    "sha256": "5943dbe0a8861793d6e1263a376ea1160c4d0014dbc507c647c7cdcc1a4a0831",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/796d2c32e7ff0e6dbb7a418f779ed643b7e3bf66917512e4d12edfc19d8a7a7a/device_kernel.cu": {
+                    "sha256": "f8cc83bc035fbd825893e6b74a0522b97a6b85b1cfd198aa53feece28548aa9a",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/7f235c7b26242902c60c4957f8dc58fbac6fb8ff7669f1feb0d8fc39bba2b48f/device_kernel.cu": {
+                    "sha256": "fd11b80cc56bcb019a81b4f278834090a7fa2196bacc8c192d3e86cfee4e28c3",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/8ab6a0dc831e980387ca2c3fd1146cfa6ad91e95f99bf01b1760375166de9cf7/device_kernel.cu": {
+                    "sha256": "30ad9c8139462f1c1663782d0a2b31e3d97b71d1fb33cacfcb16a5e579bd49a2",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/92cb368b013e8a0b9d9e37adaf5a3e96028c6f01dd727a54ccd1d4afee738add/device_kernel.cu": {
+                    "sha256": "95d050cad100e80d6f95812d835d2f3d3d60052048d0ccb13c943ae7896f2461",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/941122f3091628b7cfad5bd3aa38796470a0732a25238bba29af84a754b49cd4/device_kernel.cu": {
+                    "sha256": "11a0b41a498830d5fd00960a8023bb38e0e1de85a0da0578f607a8be866efd30",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a2fbbfcd8406be3141bbf4dccb55d58f2004fe3452d9a78a804e54c336ed3461/device_kernel.cu": {
+                    "sha256": "68e646ad802ef9214843bf0b7a6acd967370b8bea0445855e216ae56a3150ec9",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/bbdab922d0082ec8d6380e9f6023655e28fbec0c81e5e4040e9a646c49bc12fb/device_kernel.cu": {
+                    "sha256": "7fbe2192d83856d7071cca9995bbc029e5d99281d1392903f502cb3c894dcc01",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/bdde0954d012fc9a8286ef9f2b9f3b99a105ad4442dfbd65a0bdb9d53093476b/device_kernel.cu": {
+                    "sha256": "8fa601ba125feebad478a526d3918aa70e6a7dc1bbbd840d40dde56b08b9efe9",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/c81a82600f63158b87e5963f835cce64093aed421d0bc9b99d49172ebec45f20/device_kernel.cu": {
+                    "sha256": "c2a248aafbd868ee37dc57ca9c072e89aa6ae6f507dfd42de0d44bc87f696a70",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/c9f75fa87a97d2a0821f9317d6cf57293e684b8acaff340928fd5f11846c2c75/device_kernel.cu": {
+                    "sha256": "44ebc5d88af592d1ed412ab479d5d4ff1e40f46fe767e2b7053ac38f773d88a4",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/cedb69811c235a9d9304a2cfda5fea55df96e24e39111ea35fcc27d474651c63/device_kernel.cu": {
+                    "sha256": "f675573f1efce81f410491594ad1be0a9aca1054b3526f22bfca590062d754f9",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/dcd1f54ef0472f97ac70a0534919a6ad359415193902da62f01836917639539d/device_kernel.cu": {
+                    "sha256": "52a2fd54fda30ecce3ec88ede035f39b5f13bc7c9a56e1a5867ad7aef428da72",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/e85f3d4dfe61578c440c3bb40b239f2edebc3ba1b136394a41e332ce0a507c23/device_kernel.cu": {
+                    "sha256": "2493c8e0f0b39b39fc03b315c97c3cd0995a1694d5119e51238429922b3e39f3",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ea34eaa81bacfd16c4c79028afaf7eca316172a40712112cd75e04c16ec3de7a/device_kernel.cu": {
+                    "sha256": "b0dfc63784e2d37cab712872d9ebe89a32df407eee3e3120506f7c58df5feef2",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ebc511484ee6103b0d3854e86c8fca5ab65ba9e8658a027a484852835680fc8c/device_kernel.cu": {
+                    "sha256": "b18b6db8a95bcc29dec414082db8d68fce36ed3865569609686bb7e1ce207b10",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ec23148bcb1ada9c94714d74d3df5888bdb7124b9147b20a7b672c1c57505672/device_kernel.cu": {
+                    "sha256": "c029325b69f77f88493885419b78b0bea6becdfa4f6311c04a96cd505341539b",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ec2e1979fa630b2da356b7be583f2ae3072aa779508a191465b6af16c6c74ca7/device_kernel.cu": {
+                    "sha256": "b409630fb091fcb0caa87c92464e38e452d9a3f3aceddd3163a8f2b0d93489ec",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ee4e192af0ea23a64154bdcb095673651ec9747267150a29513261853e901664/device_kernel.cu": {
+                    "sha256": "df12ceeda831e16f81858a528159b4bfdab27e42021946af592ce86de22c26b8",
+                    "symbol": "main_kernel"
+                  }
+                },
+                "probe_sources": {
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/57e2be83c5a3018af28dbd29b8a0dba1309879c691ad80dd108fd03b851fc05c/device_kernel.cu": {
+                    "sha256": "641b74465517f0278861e3d86cd11db80a3a6e0e644d4b0e41a412a618c32595",
+                    "symbol": "glm_packed_bytes_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6874ccd2e349c1fe630e2b3f8a4f7318a7fd6888ef79e8e562731e2602d69266/device_kernel.cu": {
+                    "sha256": "9ed5e563f397a604f099bd1355851f113c3de6c286acf53f4f78ae77ddb9a7ee",
+                    "symbol": "glm_packed_bytes_kernel"
+                  }
+                },
+                "excluded": "Unchanged Native and framework kernels",
+                "decode_combine": {
+                  "66x128": {
+                    "source_sha256": "5c4752e5a796fc6f9dea29fa7423e5a510ca4f1b8800bd97f2792e4b0b784f75",
+                    "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/ce8b14371d347a8a5093e298869dd1799bd1894cff97823763feb95f71bd1a64.cubin",
+                    "cubin_sha256": "9af4ac810edc0c4efbfeec67ea449b5a1c50d82647418823563ea28b1c1778e8",
+                    "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6394437d7a1fcba2127353977b87ec93fa00a1222babbae17ddcf770370e6dc1/executable.so",
+                    "library_sha256": "4932afd0959df6a91e79d88502310ed88db172bc3edecaccd91fcbd59eb4fef1"
+                  },
+                  "33x512": {
+                    "source_sha256": "102f12c65184edbe69c8c90a998b0af9fe052f70ef25204908934569c7ecd45f",
+                    "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/e5468edb7528f612786a20ff37f0edb061275852123b4040f87b8bdf70924bd5.cubin",
+                    "cubin_sha256": "6e6d676288d5fa3feec1c9e3c062585264e3441e7fbd7747e8d2ab9f100c92e0",
+                    "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/74d82897fbd8cc88784417736c44354bac468dbc7e2d61a53cdf3ee3e6fea615/executable.so",
+                    "library_sha256": "7a78549fba39ac6c00bbf1dcb7cf98e3c5b52cd994d6367c07283f62db3c38b9"
+                  },
+                  "22x512": {
+                    "source_sha256": "c14e4017fe12c41ff29bb4475176cd1163660c724e2457e7144db2e5889cc8c9",
+                    "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/df4fa9948a9bf1c0c1e8bb5747d74eee4ce3f5eabb1447fe90dfdc4545e276a8.cubin",
+                    "cubin_sha256": "9eb4522a9666f9fb854d15a04efb795ccbc765d4b2d30e104d2f05fe6cfb1ad9",
+                    "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/8c5502c8cac05c633be103e4f3118ef5d3c003dd66825e8fb057c51377a96e4f/executable.so",
+                    "library_sha256": "183e9b645b26f7d3c0866915b38e4d83ef3836a631abe3a2ff05120b2208dc2b"
+                  },
+                  "11x512": {
+                    "source_sha256": "65bad8e27b0d3c2ef549b69e403be1a431d5004ba525c4ef42572696c1a82863",
+                    "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/2a2e73c9610abbefa0550a13aba90c9d21e381af0b6b3143c0020696664e9694.cubin",
+                    "cubin_sha256": "7565cbe1073043453962e4eaa69756e8ee6090c843cd55c1e88403e72be5d305",
+                    "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/dffd18d597e579f805e68946e85c943d44b9d6b88573f03d47f37c97adc9bc16/executable.so",
+                    "library_sha256": "d4763ca2b0ee33fbd9772c0b2760409cdbe000215ce1f93dfc6143d91c405efb"
+                  },
+                  "6x512": {
+                    "source_sha256": "dd215fb415a888910091eaf6156f2a71db96b0b78ba3962a2bec62c8f6327b3e",
+                    "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/df2e677c0b6fa3df1e2fb1adaeb679771b2de08cb564c48906319eef4c43a455.cubin",
+                    "cubin_sha256": "8c9129435fec27bb379bb1064456edd6934675aefcdb338b726e0a65d5a83520",
+                    "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/b9061282472f9e7bd38bbe50785151a961eb77c7b3dbe72a40a302cb41a0dddb/executable.so",
+                    "library_sha256": "680944f83a872aa2b2fccf007cf223e113bcfa3d42c7381de81e4448219e4059"
+                  }
+                }
+              },
+              "basis": "Racecheck synchronization trace; other tools use completed tests, identical entrypoints and common filter contract"
+            },
+            "artifact_sha256": {
+              "build-manifest.json": "c5177fb58547b7ce1c5a2d9c71d1d159059d646e6b29aeb4da734a54b537ddb9",
+              "corrective.log": "1e7f8c084a5d589a7fd81e66bdeaf78ed17391421c3d7ab2caae9a2bac3685d0",
+              "corrective.xml": "d3ba5bd82f0071ba58e447f56b5b64da7859e4e10468d6b7bf25cc61e1f47518",
+              "cpu-preflight/base-imports.log": "f1399efdd581336843265027192957a36020e50ef1340ac2081cb3ff8f350252",
+              "cpu-preflight/collection.log": "b5f403a3479f821c6f7e17a846705a9981e4af95b4d009ca373a98df33745687",
+              "cpu-preflight/cpu-tests.log": "5080ba7dd6a407a2792f4981f8e114060431bdbf813ed6f9e2f4e2686e3956ce",
+              "cpu-preflight/cpu-tests.xml": "77a1a3695a35dd8a7c184a2a90777b4be5d34e23742962569a360c9add56f821",
+              "cpu-preflight/flashmla_ops.cpython-312-x86_64-linux-gnu.so.architectures.log": "335d24f88bbc3a4b8ffdab9f57203e6c679e2951d8794444ba1cce1e1871e654",
+              "cpu-preflight/glm-allocator-cpu.log": "f4a762d12f5a58ffcfdf481e45b9c50c3992028d8f5188adc25b27939d10b006",
+              "cpu-preflight/glm-benchmark-imports.log": "56b9506e9998491939527565d26ca810fd5e0d2b995c8e544e1a633a31dbdcc0",
+              "cpu-preflight/glm-sm90-compile.log": "05b3465f19ec0f6cdc751bde668833f79d1d3086b8091995d3e598b2ead1ffce",
+              "cpu-preflight/nvcc.log": "fc7ce0c80d28ed925fd490dc4e3915ce620fcf115f965189688c6f049243aad5",
+              "cpu-preflight/remnant_ops.cpython-312-x86_64-linux-gnu.so.architectures.log": "48127697569bc605f8e446d1b6c954aae0ae9ee636b0699e4bfb0f677ad679a9",
+              "cpu-preflight/sanitizer-collection.log": "8591cc7745ccd508932f2d6f32545fe1ef41b71a3a2e5d6cf8086d6b645caedc",
+              "cpu-preflight/sanitizer-extract.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "cpu-preflight/sanitizer-help.log": "41cc7bfb60b62288dc4b292a4cbff0a836c9f91d6a9b105eed9cb298f547ecb9",
+              "cpu-preflight/sanitizer-version.log": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673",
+              "driver-version.log": "0669b8ab347d66404efe0fe45c4a2433da7b7ca025d51547c8d1b702e7b7f8b8",
+              "model-config.json": "bb8f01c42cb92a52ca72e65afb4d5bd8d11aef083cd210e8de25dfb904f23e9f",
+              "racecheck.log": "213f5f24f3b5f33e0790593721d6a30054385ffd9248ced9d5bfe340717a42b8",
+              "racecheck.xml": "addc6a043641eec287f5a7361ba2d6481896590c8099342231028e8df3144d55",
+              "result.json": "3748cfb3627756274cbb9304cbe37dbebb442c8163c0b5c9e36de9021f80e108",
+              "sanitizer-control-bindings-import.log": "4806c657afdb0ef7bbbb2360916bf4ad14b5d2a0aac0e56710f31a9d1cfecc07",
+              "sanitizer-control-bindings-query.log": "a518617e603ae9e3659eecdf4257ea7eca94fb82a98faf99a78827514ec53fc4",
+              "sanitizer-control-empty.log": "fb8d9ea8d2be1a0fc356e4685eab89b230d089597899abc6f9cde9b1b6cc3900",
+              "sanitizer-version.log": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673",
+              "scope-audit.log": "f18d79be7f937fb1c0bf6318277048bccb152becb99f02860f64db6a30b13c4f",
+              "scope-audit.xml": "913823dcf8b394fa5841acb40825f2b1856cd35658655f357a9727df04a731e3"
+            },
+            "app_id": "ap-l6wkxC3rhJzVf1gotIKjbt",
+            "controller": {
+              "argv": [
+                "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+                "run",
+                "scripts/modal/kernels.py::validate_kernels",
+                "--run-id",
+                "glm53-decode-wgmma-paired-output-racecheck-20261110",
+                "--model-family",
+                "glm53",
+                "--stage",
+                "corrective",
+                "--cases",
+                "test/registered/attention/unittests/test_glm5_remnant.py::test_packed_loader_bytes,test/registered/attention/unittests/test_glm5_remnant.py::test_decode_bank_graph",
+                "--sanitizer",
+                "--sanitizer-tools",
+                "racecheck",
+                "--sanitizer-scope",
+                "glm-decode",
+                "--max-seconds",
+                "1200"
+              ],
+              "account": "winstoncai",
+              "image": "im-qdUjEjfOAyMsNIpeobeT9P",
+              "run_id": "glm53-decode-wgmma-paired-output-racecheck-20261110",
+              "seconds": 720.3275641670043,
+              "returncode": 0
+            },
+            "volume": "winstoncai/remnant-stage2a-results/microbench/glm53-decode-wgmma-paired-output-racecheck-20261110"
+          },
+          "memcheck": {
+            "run_id": "glm53-decode-wgmma-paired-output-memcheck-20261110",
+            "gpu_function_seconds": 914.722010803,
+            "status": "passed",
+            "pytest": {
+              "corrective": {
+                "cases": 5,
+                "seconds": 23.614
+              },
+              "scope-audit": {
+                "cases": 3,
+                "seconds": 45.648
+              },
+              "memcheck": {
+                "cases": 23,
+                "seconds": 809.863
+              }
+            },
+            "scope_audit": {
+              "status": "passed",
+              "filter": "regex=glm_packed_(partial|bytes|decode_combine_kernel\\b)",
+              "log_sha256": "5afcdf9a20b2b3bb5305d8fc9e5828d9c25d907174da3b76d619ae5c304cd584",
+              "entrypoints": {
+                "filter": "regex=glm_packed_(partial|bytes|decode_combine_kernel\\b)",
+                "partial_sources": {
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/0e280654d0a41298fa83683c67c34a62f1040e5559c598d3c1083cc475eca873/device_kernel.cu": {
+                    "sha256": "1b6476e076a249c0ca5eefa5ef092607f6ce97919e3e45a35332bbf2fac4b60e",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/106f6c2e8ecbe7eb59b1deed2112bbd009ae0a42fbf14d1d6a412f9df5591e76/device_kernel.cu": {
+                    "sha256": "a0254c02425c8c7998c41b9e148998128c021a260be61674745e559bcc975c77",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/1351f236875b4c9b205aa4bf28f013501aaadb486471ef89722c8486967e148e/device_kernel.cu": {
+                    "sha256": "25ee7b59171312d30e57ed9b5ba67c5b48296175b8138ec00ebd6260eb2d107a",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/15e3b075d88275ed5ebbb1b599b139e78489ed83b05a0526cea039465dd95862/device_kernel.cu": {
+                    "sha256": "d3754a265f31521ea79c71a5b8081a0e61f4b83d71f7cad15d6ef568fc2e890b",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/1751b7f25ffbbd1b1c1a71d8f2e2b8c008c86e369e378ab5f56e6801abda1df3/device_kernel.cu": {
+                    "sha256": "3bbafea08ff5d1cae666e37196425552e33d90be66edb821bfcf422f5d6a7f0e",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/21049c5e2f378011c46d431c668ac7fded774a4828a807f010c64dc94ff59943/device_kernel.cu": {
+                    "sha256": "3e995c3bd34911132e8f998850dcf7dee381122d082d58409c2d8d3165519f7c",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/2860e249a074abef5916af805f739b11f89a65605f68a02ccb75969c3182ebaa/device_kernel.cu": {
+                    "sha256": "cd3f8829db7ee28ce5254ab6a7f857cb6e231439b59206c1cfa6644f0b61a799",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/3adb7ad2d06c3f8d453b8d45cbdf3b3beba7bde6bd3c56e054305d1f225b2ec3/device_kernel.cu": {
+                    "sha256": "06a3c5e1fc70aa3990d2968e6f87779aac486aea7446685ed6cbab1f78f6aff1",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/3e0b1a5e73fe8c4817dbcc86230fd86f7cf856e1b5b51169be10f73a23ff1c1f/device_kernel.cu": {
+                    "sha256": "21351e89e8506791f512e41ee17717aa911539dbf3a77c42d1828f0b0c7c4624",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/449c267e764f38efd220734e16d4eec2f13a236a11eea4c96e6e484c119c86ae/device_kernel.cu": {
+                    "sha256": "d936b25c58bb71c897dd52e0bd2c439ce1c173dd70a3734df328d91759571b0c",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/45836a2ee859367092339027d3f43afefcdee19fe93a23f4168ed5c580169960/device_kernel.cu": {
+                    "sha256": "30786eeb83c7c9db7b119f256d5616ed3c22e33a3935c7381501990410c7cb1c",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/4b78ee43a313cc8aa30619affeaf8926b278e68bd7728f7d318efb3dd2eff105/device_kernel.cu": {
+                    "sha256": "aab412244ec33f0e0378396e940bd0a3389f82f18f934d751ea70c3de1a23990",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/4e9d7e05afec998ac8d730f493cdec2f9db108e6d77f57b92c1eb2889df0dce5/device_kernel.cu": {
+                    "sha256": "d9ad2ecb9e14f3149525490940b0c7dfe74bcbd558626b4bf21ed5b0ce2963a3",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/51d8403071e7418f40bf33549ee4a28f2d62dfcb2dac871a0598a35a2f486305/device_kernel.cu": {
+                    "sha256": "a3826f50fa9afe2f88771450983050eb14543bc4605332b3e46911747ffbf596",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/5d953be98af7b91a636735eb6b0504e0049f3b5cfb48454b7f2e462c1b08cbf4/device_kernel.cu": {
+                    "sha256": "feb46304776292b914e09a1e4676452301ebd7bfafbc02154785d3a84536197e",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/619e9faf52f563117d37041e5ecad73dbc0aaa976dbddc4cafa10c010539951e/device_kernel.cu": {
+                    "sha256": "f4d804aa1e541143451c19772ab5c287454a5cb06be50f22eb2bc35199fad31d",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/653a42e051d0746211a71de8280301fc697e6987c72f23e5f13479aecf06d153/device_kernel.cu": {
+                    "sha256": "4941e4b13a5b3fa6d7aca4f765d8fb598f864cd929f6712617ebd854d0b7a0ba",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6ce5e28c3e4bf36be17d3d8cc70cfc295af83d644dd5cee1ccd4c52a1de9cd34/device_kernel.cu": {
+                    "sha256": "3ce6864095d40eeb27a70efdd1562f4a5601ab0f3399a7fed8c0c610585bb201",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6e60bd963de457d6fd0bab63fca9151dd59220e512a803c1d273bf00ae788d3b/device_kernel.cu": {
+                    "sha256": "d2870333d521daa02b50c88525cd0a2c7156f64697ad28cbf0189040a682ac30",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6ea4d794108a3edf5a8aedcd20b1e3393e9c9d4ac6c29d6ecacf0b43edf2abc0/device_kernel.cu": {
+                    "sha256": "dafa14ba30b0a049341481265214b0ff6e07abc0353dedb5b9826402a1d7defd",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/7270e5ddbbb6258cc3ede5a18bd68bbf75e3bce7a2ab051a821882f1015bfeaa/device_kernel.cu": {
+                    "sha256": "6aad7919fb838729bfd5246f82eb2ffef89bcee3cd772d8b3ac5bb7eb81dcb76",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/737a80244d8ba217439b1cb972052d8140036dfb8facb7c13bcaba3847b9a18d/device_kernel.cu": {
+                    "sha256": "c1a854d91547d667350eeffa1e678e54308987f7eecc82ba9d62071cd5614391",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/749a56e0c8267e1b5f7554b6fe29366576eae961e1b0b1d12629e101cbb01354/device_kernel.cu": {
+                    "sha256": "5943dbe0a8861793d6e1263a376ea1160c4d0014dbc507c647c7cdcc1a4a0831",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/796d2c32e7ff0e6dbb7a418f779ed643b7e3bf66917512e4d12edfc19d8a7a7a/device_kernel.cu": {
+                    "sha256": "f8cc83bc035fbd825893e6b74a0522b97a6b85b1cfd198aa53feece28548aa9a",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/7f235c7b26242902c60c4957f8dc58fbac6fb8ff7669f1feb0d8fc39bba2b48f/device_kernel.cu": {
+                    "sha256": "fd11b80cc56bcb019a81b4f278834090a7fa2196bacc8c192d3e86cfee4e28c3",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/8ab6a0dc831e980387ca2c3fd1146cfa6ad91e95f99bf01b1760375166de9cf7/device_kernel.cu": {
+                    "sha256": "30ad9c8139462f1c1663782d0a2b31e3d97b71d1fb33cacfcb16a5e579bd49a2",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/92cb368b013e8a0b9d9e37adaf5a3e96028c6f01dd727a54ccd1d4afee738add/device_kernel.cu": {
+                    "sha256": "95d050cad100e80d6f95812d835d2f3d3d60052048d0ccb13c943ae7896f2461",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/941122f3091628b7cfad5bd3aa38796470a0732a25238bba29af84a754b49cd4/device_kernel.cu": {
+                    "sha256": "11a0b41a498830d5fd00960a8023bb38e0e1de85a0da0578f607a8be866efd30",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/a2fbbfcd8406be3141bbf4dccb55d58f2004fe3452d9a78a804e54c336ed3461/device_kernel.cu": {
+                    "sha256": "68e646ad802ef9214843bf0b7a6acd967370b8bea0445855e216ae56a3150ec9",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/bbdab922d0082ec8d6380e9f6023655e28fbec0c81e5e4040e9a646c49bc12fb/device_kernel.cu": {
+                    "sha256": "7fbe2192d83856d7071cca9995bbc029e5d99281d1392903f502cb3c894dcc01",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/bdde0954d012fc9a8286ef9f2b9f3b99a105ad4442dfbd65a0bdb9d53093476b/device_kernel.cu": {
+                    "sha256": "8fa601ba125feebad478a526d3918aa70e6a7dc1bbbd840d40dde56b08b9efe9",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/c81a82600f63158b87e5963f835cce64093aed421d0bc9b99d49172ebec45f20/device_kernel.cu": {
+                    "sha256": "c2a248aafbd868ee37dc57ca9c072e89aa6ae6f507dfd42de0d44bc87f696a70",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/c9f75fa87a97d2a0821f9317d6cf57293e684b8acaff340928fd5f11846c2c75/device_kernel.cu": {
+                    "sha256": "44ebc5d88af592d1ed412ab479d5d4ff1e40f46fe767e2b7053ac38f773d88a4",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/cedb69811c235a9d9304a2cfda5fea55df96e24e39111ea35fcc27d474651c63/device_kernel.cu": {
+                    "sha256": "f675573f1efce81f410491594ad1be0a9aca1054b3526f22bfca590062d754f9",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/dcd1f54ef0472f97ac70a0534919a6ad359415193902da62f01836917639539d/device_kernel.cu": {
+                    "sha256": "52a2fd54fda30ecce3ec88ede035f39b5f13bc7c9a56e1a5867ad7aef428da72",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/e85f3d4dfe61578c440c3bb40b239f2edebc3ba1b136394a41e332ce0a507c23/device_kernel.cu": {
+                    "sha256": "2493c8e0f0b39b39fc03b315c97c3cd0995a1694d5119e51238429922b3e39f3",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ea34eaa81bacfd16c4c79028afaf7eca316172a40712112cd75e04c16ec3de7a/device_kernel.cu": {
+                    "sha256": "b0dfc63784e2d37cab712872d9ebe89a32df407eee3e3120506f7c58df5feef2",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ebc511484ee6103b0d3854e86c8fca5ab65ba9e8658a027a484852835680fc8c/device_kernel.cu": {
+                    "sha256": "b18b6db8a95bcc29dec414082db8d68fce36ed3865569609686bb7e1ce207b10",
+                    "symbol": "glm_packed_partial_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ec23148bcb1ada9c94714d74d3df5888bdb7124b9147b20a7b672c1c57505672/device_kernel.cu": {
+                    "sha256": "c029325b69f77f88493885419b78b0bea6becdfa4f6311c04a96cd505341539b",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ec2e1979fa630b2da356b7be583f2ae3072aa779508a191465b6af16c6c74ca7/device_kernel.cu": {
+                    "sha256": "b409630fb091fcb0caa87c92464e38e452d9a3f3aceddd3163a8f2b0d93489ec",
+                    "symbol": "main_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/ee4e192af0ea23a64154bdcb095673651ec9747267150a29513261853e901664/device_kernel.cu": {
+                    "sha256": "df12ceeda831e16f81858a528159b4bfdab27e42021946af592ce86de22c26b8",
+                    "symbol": "main_kernel"
+                  }
+                },
+                "probe_sources": {
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/57e2be83c5a3018af28dbd29b8a0dba1309879c691ad80dd108fd03b851fc05c/device_kernel.cu": {
+                    "sha256": "641b74465517f0278861e3d86cd11db80a3a6e0e644d4b0e41a412a618c32595",
+                    "symbol": "glm_packed_bytes_kernel"
+                  },
+                  "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6874ccd2e349c1fe630e2b3f8a4f7318a7fd6888ef79e8e562731e2602d69266/device_kernel.cu": {
+                    "sha256": "9ed5e563f397a604f099bd1355851f113c3de6c286acf53f4f78ae77ddb9a7ee",
+                    "symbol": "glm_packed_bytes_kernel"
+                  }
+                },
+                "excluded": "Unchanged Native and framework kernels",
+                "decode_combine": {
+                  "66x128": {
+                    "source_sha256": "5c4752e5a796fc6f9dea29fa7423e5a510ca4f1b8800bd97f2792e4b0b784f75",
+                    "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/ce8b14371d347a8a5093e298869dd1799bd1894cff97823763feb95f71bd1a64.cubin",
+                    "cubin_sha256": "9af4ac810edc0c4efbfeec67ea449b5a1c50d82647418823563ea28b1c1778e8",
+                    "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/6394437d7a1fcba2127353977b87ec93fa00a1222babbae17ddcf770370e6dc1/executable.so",
+                    "library_sha256": "4932afd0959df6a91e79d88502310ed88db172bc3edecaccd91fcbd59eb4fef1"
+                  },
+                  "33x512": {
+                    "source_sha256": "102f12c65184edbe69c8c90a998b0af9fe052f70ef25204908934569c7ecd45f",
+                    "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/e5468edb7528f612786a20ff37f0edb061275852123b4040f87b8bdf70924bd5.cubin",
+                    "cubin_sha256": "6e6d676288d5fa3feec1c9e3c062585264e3441e7fbd7747e8d2ab9f100c92e0",
+                    "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/74d82897fbd8cc88784417736c44354bac468dbc7e2d61a53cdf3ee3e6fea615/executable.so",
+                    "library_sha256": "7a78549fba39ac6c00bbf1dcb7cf98e3c5b52cd994d6367c07283f62db3c38b9"
+                  },
+                  "22x512": {
+                    "source_sha256": "c14e4017fe12c41ff29bb4475176cd1163660c724e2457e7144db2e5889cc8c9",
+                    "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/df4fa9948a9bf1c0c1e8bb5747d74eee4ce3f5eabb1447fe90dfdc4545e276a8.cubin",
+                    "cubin_sha256": "9eb4522a9666f9fb854d15a04efb795ccbc765d4b2d30e104d2f05fe6cfb1ad9",
+                    "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/8c5502c8cac05c633be103e4f3118ef5d3c003dd66825e8fb057c51377a96e4f/executable.so",
+                    "library_sha256": "183e9b645b26f7d3c0866915b38e4d83ef3836a631abe3a2ff05120b2208dc2b"
+                  },
+                  "11x512": {
+                    "source_sha256": "65bad8e27b0d3c2ef549b69e403be1a431d5004ba525c4ef42572696c1a82863",
+                    "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/2a2e73c9610abbefa0550a13aba90c9d21e381af0b6b3143c0020696664e9694.cubin",
+                    "cubin_sha256": "7565cbe1073043453962e4eaa69756e8ee6090c843cd55c1e88403e72be5d305",
+                    "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/dffd18d597e579f805e68946e85c943d44b9d6b88573f03d47f37c97adc9bc16/executable.so",
+                    "library_sha256": "d4763ca2b0ee33fbd9772c0b2760409cdbe000215ce1f93dfc6143d91c405efb"
+                  },
+                  "6x512": {
+                    "source_sha256": "dd215fb415a888910091eaf6156f2a71db96b0b78ba3962a2bec62c8f6327b3e",
+                    "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/df2e677c0b6fa3df1e2fb1adaeb679771b2de08cb564c48906319eef4c43a455.cubin",
+                    "cubin_sha256": "8c9129435fec27bb379bb1064456edd6934675aefcdb338b726e0a65d5a83520",
+                    "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/b9061282472f9e7bd38bbe50785151a961eb77c7b3dbe72a40a302cb41a0dddb/executable.so",
+                    "library_sha256": "680944f83a872aa2b2fccf007cf223e113bcfa3d42c7381de81e4448219e4059"
+                  }
+                }
+              },
+              "basis": "Racecheck synchronization trace; other tools use completed tests, identical entrypoints and common filter contract"
+            },
+            "artifact_sha256": {
+              "build-manifest.json": "c5177fb58547b7ce1c5a2d9c71d1d159059d646e6b29aeb4da734a54b537ddb9",
+              "corrective.log": "42be06571801fa77e37a4de51546e6817c945008f415717c0a30db0767bc94e5",
+              "corrective.xml": "9e4b9a7ec06f5a36ef68c5bf7af8cfacab036c47b50e2944b60030e9dc6c3d03",
+              "cpu-preflight/base-imports.log": "f1399efdd581336843265027192957a36020e50ef1340ac2081cb3ff8f350252",
+              "cpu-preflight/collection.log": "b5f403a3479f821c6f7e17a846705a9981e4af95b4d009ca373a98df33745687",
+              "cpu-preflight/cpu-tests.log": "5080ba7dd6a407a2792f4981f8e114060431bdbf813ed6f9e2f4e2686e3956ce",
+              "cpu-preflight/cpu-tests.xml": "77a1a3695a35dd8a7c184a2a90777b4be5d34e23742962569a360c9add56f821",
+              "cpu-preflight/flashmla_ops.cpython-312-x86_64-linux-gnu.so.architectures.log": "335d24f88bbc3a4b8ffdab9f57203e6c679e2951d8794444ba1cce1e1871e654",
+              "cpu-preflight/glm-allocator-cpu.log": "f4a762d12f5a58ffcfdf481e45b9c50c3992028d8f5188adc25b27939d10b006",
+              "cpu-preflight/glm-benchmark-imports.log": "56b9506e9998491939527565d26ca810fd5e0d2b995c8e544e1a633a31dbdcc0",
+              "cpu-preflight/glm-sm90-compile.log": "05b3465f19ec0f6cdc751bde668833f79d1d3086b8091995d3e598b2ead1ffce",
+              "cpu-preflight/nvcc.log": "fc7ce0c80d28ed925fd490dc4e3915ce620fcf115f965189688c6f049243aad5",
+              "cpu-preflight/remnant_ops.cpython-312-x86_64-linux-gnu.so.architectures.log": "48127697569bc605f8e446d1b6c954aae0ae9ee636b0699e4bfb0f677ad679a9",
+              "cpu-preflight/sanitizer-collection.log": "8591cc7745ccd508932f2d6f32545fe1ef41b71a3a2e5d6cf8086d6b645caedc",
+              "cpu-preflight/sanitizer-extract.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "cpu-preflight/sanitizer-help.log": "41cc7bfb60b62288dc4b292a4cbff0a836c9f91d6a9b105eed9cb298f547ecb9",
+              "cpu-preflight/sanitizer-version.log": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673",
+              "driver-version.log": "0669b8ab347d66404efe0fe45c4a2433da7b7ca025d51547c8d1b702e7b7f8b8",
+              "memcheck.log": "8906cf7a1533c195ac41f1dc333cd5e965e5ac726b1c0221e39feb85daac7e99",
+              "memcheck.xml": "762e9376130864331281d380e150086eba7d8b9fa4e91a74ffbd6c7e9b7f9f84",
+              "model-config.json": "bb8f01c42cb92a52ca72e65afb4d5bd8d11aef083cd210e8de25dfb904f23e9f",
+              "result.json": "4ca75ecc4eb8462cbbbd8af75f4a769cfdd367a6ee5a38fae4c92a39f940f9bc",
+              "sanitizer-control-bindings-import.log": "4806c657afdb0ef7bbbb2360916bf4ad14b5d2a0aac0e56710f31a9d1cfecc07",
+              "sanitizer-control-bindings-query.log": "a518617e603ae9e3659eecdf4257ea7eca94fb82a98faf99a78827514ec53fc4",
+              "sanitizer-control-empty.log": "fb8d9ea8d2be1a0fc356e4685eab89b230d089597899abc6f9cde9b1b6cc3900",
+              "sanitizer-version.log": "923a471866f64f43d7d7cee144d869f0ad040868f2e0b21a6e0064caa242c673",
+              "scope-audit.log": "5afcdf9a20b2b3bb5305d8fc9e5828d9c25d907174da3b76d619ae5c304cd584",
+              "scope-audit.xml": "eaf8256738825bdf661d70d484cf5007084dc596cd8b11fed1c2b794f3b6dcde"
+            },
+            "app_id": "ap-iZKBqiphhh8ViM6t79z5Uo",
+            "controller": {
+              "argv": [
+                "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+                "run",
+                "scripts/modal/kernels.py::validate_kernels",
+                "--run-id",
+                "glm53-decode-wgmma-paired-output-memcheck-20261110",
+                "--model-family",
+                "glm53",
+                "--stage",
+                "corrective",
+                "--cases",
+                "test/registered/attention/unittests/test_glm5_remnant.py::test_packed_loader_bytes,test/registered/attention/unittests/test_glm5_remnant.py::test_decode_bank_graph",
+                "--sanitizer",
+                "--sanitizer-tools",
+                "memcheck",
+                "--sanitizer-scope",
+                "glm-decode",
+                "--max-seconds",
+                "1200"
+              ],
+              "account": "winstoncai",
+              "image": "im-qdUjEjfOAyMsNIpeobeT9P",
+              "run_id": "glm53-decode-wgmma-paired-output-memcheck-20261110",
+              "seconds": 1015.2560892500042,
+              "returncode": 0
+            },
+            "volume": "winstoncai/remnant-stage2a-results/microbench/glm53-decode-wgmma-paired-output-memcheck-20261110"
+          }
+        }
+      },
+      "timing": {
+        "app_id": "ap-xXaaCchPNrZmevkU6tCySk",
+        "gpu": "NVIDIA H200",
+        "heads": 16,
+        "rounds": 30,
+        "controller": {
+          "argv": [
+            "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+            "run",
+            "scripts/modal/kernels.py::benchmark_kernels",
+            "--run-id",
+            "glm53-decode-wgmma-paired-output-paired-20261110",
+            "--model-family",
+            "glm53",
+            "--suite",
+            "glm-upstream-decode",
+            "--phase",
+            "decode",
+            "--qualification-runs",
+            "glm53-decode-wgmma-paired-output-qualification-20261110,glm53-decode-wgmma-paired-output-racecheck-20261110,glm53-decode-wgmma-paired-output-memcheck-20261110",
+            "--max-seconds",
+            "420"
+          ],
+          "account": "winstoncai",
+          "image": "im-qdUjEjfOAyMsNIpeobeT9P",
+          "run_id": "glm53-decode-wgmma-paired-output-paired-20261110",
+          "seconds": 256.4710225000017,
+          "returncode": 0
+        },
+        "command": [
+          "/opt/sglang/bin/python",
+          "/sgl-workspace/sglang-remnant/benchmark/remnant/microbench.py",
+          "--model-family",
+          "glm53",
+          "--suite",
+          "glm-upstream-decode",
+          "--phase",
+          "decode",
+          "--packed-prefill-tile",
+          "32",
+          "--output",
+          "/results/microbench/glm53-decode-wgmma-paired-output-paired-20261110/timing/timing",
+          "--max-seconds",
+          "380"
+        ],
+        "gpu_function_seconds": 96.317117572,
+        "volume": "winstoncai/remnant-stage2a-results/microbench/glm53-decode-wgmma-paired-output-paired-20261110",
+        "csv": "upstream-decode-wgmma-bf16x2.csv",
+        "artifact_sha256": {
+          "local-reconciliation.json": "3e272f130de6926a360936bf75f43c911b472fa5e8386888c84040729f70920a",
+          "preflight/build-manifest.json": "c5177fb58547b7ce1c5a2d9c71d1d159059d646e6b29aeb4da734a54b537ddb9",
+          "preflight/result.json": "e8915b96afe9d4195a523bc4a5b247dce68d7ed1faf2c0a00ef9408926fc0b1c",
+          "timing/build-manifest.json": "c5177fb58547b7ce1c5a2d9c71d1d159059d646e6b29aeb4da734a54b537ddb9",
+          "timing/result.json": "c5e940b759b8248636877d9f13ecbbfe474adcc2c6b13270436307a9acd8c6bb",
+          "timing/timing.csv": "88baa71738612b551100daeb1467df0487172bb37d0a64d724d5fb3bf279ec5a",
+          "timing/timing.json": "6f4e4385f84c89f13bfd7df3af5ac088372f2a9df84eb996652f64d0cdc0c3c2",
+          "timing/timing.log": "eaf7a5f3d419fcad6f002e4fa0e4e0a0dcdd685527f92645e02c6e0c0a6e4001"
+        },
+        "ratio": 0.5013726557103159,
+        "speedup": 1.9945244093602545,
+        "meets_2x": false,
+        "cases": [
+          {
+            "case": "decode_h16_q1_t0_independent_warm",
+            "batch": 1,
+            "tails": 0,
+            "cache": "warm",
+            "upstream_us": 20.601376056671143,
+            "direct_us": 10.044799963633219,
+            "paired_direct_over_upstream": 0.48757907313211574,
+            "input_sha256": "701cb8f67b0f8f5ea7eee9c56020db5e7896b776517957edab7bd5e3ceea6593",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q1_t0_independent_rotating",
+            "batch": 1,
+            "tails": 0,
+            "cache": "rotating",
+            "upstream_us": 20.06941615814578,
+            "direct_us": 8.820808283817376,
+            "paired_direct_over_upstream": 0.43951503880556175,
+            "input_sha256": "8e7d6210911dbfa3139e71eb1fae267654932b766292952622d2fd1f977b3b82",
+            "banks": 193
+          },
+          {
+            "case": "decode_h16_q1_t3_independent_warm",
+            "batch": 1,
+            "tails": 3,
+            "cache": "warm",
+            "upstream_us": 20.253941297531128,
+            "direct_us": 9.935146689414978,
+            "paired_direct_over_upstream": 0.4905293622601389,
+            "input_sha256": "e66f4d233c9991f8e2efb577a639d53c260b745643bc30fcb81ca3a55ef397f2",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q1_t3_independent_rotating",
+            "batch": 1,
+            "tails": 3,
+            "cache": "rotating",
+            "upstream_us": 19.88244445787536,
+            "direct_us": 8.806277790831194,
+            "paired_direct_over_upstream": 0.44291734954285267,
+            "input_sha256": "24e5ca01dd0e779b66d41dabdda0d716530276592ce9fc43fc9bd5cfcea11ccd",
+            "banks": 192
+          },
+          {
+            "case": "decode_h16_q8_t0_independent_warm",
+            "batch": 8,
+            "tails": 0,
+            "cache": "warm",
+            "upstream_us": 22.87938133875529,
+            "direct_us": 11.572437326113382,
+            "paired_direct_over_upstream": 0.5058022836002525,
+            "input_sha256": "a306d9c66c9161e387a4eb6141eb9cab3ffad325190c0ceced4366656ab0d9d1",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q8_t0_independent_rotating",
+            "batch": 8,
+            "tails": 0,
+            "cache": "rotating",
+            "upstream_us": 22.78061858812968,
+            "direct_us": 11.440320054690043,
+            "paired_direct_over_upstream": 0.5021954974600331,
+            "input_sha256": "8a37d174e52cbcbec756f53a03b0ec3e2967dcf2e4eb5f03ff66295c20e46f7d",
+            "banks": 25
+          },
+          {
+            "case": "decode_h16_q8_t3_independent_warm",
+            "batch": 8,
+            "tails": 3,
+            "cache": "warm",
+            "upstream_us": 23.020544211069744,
+            "direct_us": 11.71070925394694,
+            "paired_direct_over_upstream": 0.508707247467813,
+            "input_sha256": "a8b49f59486dd4079ba15fe514ab17a05e8ceac3db3e8c86c41a89930f81bd1b",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q8_t3_independent_rotating",
+            "batch": 8,
+            "tails": 3,
+            "cache": "rotating",
+            "upstream_us": 22.681857612397934,
+            "direct_us": 11.37674672736062,
+            "paired_direct_over_upstream": 0.501579223267129,
+            "input_sha256": "870adaf99fa19cb97fee692419e6ef6d8b409e6413aba1fe8e90b66d645e91ff",
+            "banks": 24
+          },
+          {
+            "case": "decode_h16_q16_t0_independent_warm",
+            "batch": 16,
+            "tails": 0,
+            "cache": "warm",
+            "upstream_us": 34.765578826268516,
+            "direct_us": 19.83351465066274,
+            "paired_direct_over_upstream": 0.5704940139965307,
+            "input_sha256": "b03cc384b50e7d942a0c9ed9f521991a3714daf27f163f4ebd2d55374de42da1",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q16_t0_independent_rotating",
+            "batch": 16,
+            "tails": 0,
+            "cache": "rotating",
+            "upstream_us": 35.73485116163889,
+            "direct_us": 19.78152837508764,
+            "paired_direct_over_upstream": 0.5535645159008686,
+            "input_sha256": "b133cbdc9c5099dead9759faad9ece099cf0e7a6121c9554f8bb15d3134b0cde",
+            "banks": 13
+          },
+          {
+            "case": "decode_h16_q16_t3_independent_warm",
+            "batch": 16,
+            "tails": 3,
+            "cache": "warm",
+            "upstream_us": 34.540234645207725,
+            "direct_us": 19.67795201142629,
+            "paired_direct_over_upstream": 0.5697112478582435,
+            "input_sha256": "15365a88e339d30acdc01f000be059845a68ead590e12e8c9e5d65eb3ead8a7f",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q16_t3_independent_rotating",
+            "batch": 16,
+            "tails": 3,
+            "cache": "rotating",
+            "upstream_us": 35.75379767535646,
+            "direct_us": 19.446775206813108,
+            "paired_direct_over_upstream": 0.5439078575210119,
+            "input_sha256": "50255ac712f14a02893c135dea0257c48a23387f856701fbcd5e4badeff2f717",
+            "banks": 12
+          },
+          {
+            "case": "decode_h16_q24_t0_independent_warm",
+            "batch": 24,
+            "tails": 0,
+            "cache": "warm",
+            "upstream_us": 49.43761030832926,
+            "direct_us": 22.781994660695393,
+            "paired_direct_over_upstream": 0.46082383016338097,
+            "input_sha256": "847a8e0cc30694b1c1d24ee3aadbde4246ff2456726381a659960442c46c71ad",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q24_t0_independent_rotating",
+            "batch": 24,
+            "tails": 0,
+            "cache": "rotating",
+            "upstream_us": 48.57977275495177,
+            "direct_us": 24.245284001032513,
+            "paired_direct_over_upstream": 0.4990821775903758,
+            "input_sha256": "520bae18231515ce4ccacbc1af01e91725e25bb54e63b96288459e25702e626e",
+            "banks": 9
+          },
+          {
+            "case": "decode_h16_q24_t3_independent_warm",
+            "batch": 24,
+            "tails": 3,
+            "cache": "warm",
+            "upstream_us": 49.45737600326538,
+            "direct_us": 22.817280054092407,
+            "paired_direct_over_upstream": 0.46135286019953564,
+            "input_sha256": "b485476cd93e190f2358de66cba040ab136eee9af33849a02bd30a9635791419",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q24_t3_independent_rotating",
+            "batch": 24,
+            "tails": 3,
+            "cache": "rotating",
+            "upstream_us": 48.69058468402961,
+            "direct_us": 24.255241109774662,
+            "paired_direct_over_upstream": 0.49815088128476837,
+            "input_sha256": "12e164ee2632f47fd0060bc5aa001570a47f84eca3059ad367e2af4e855027f0",
+            "banks": 8
+          },
+          {
+            "case": "decode_h16_q32_t0_independent_warm",
+            "batch": 32,
+            "tails": 0,
+            "cache": "warm",
+            "upstream_us": 64.00843747456868,
+            "direct_us": 31.22929056485494,
+            "paired_direct_over_upstream": 0.48789349896271644,
+            "input_sha256": "4dbf8d4abdb05cf647687adfb156f1ed4566c6ab7be07743c104a034822cf1ac",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q32_t0_independent_rotating",
+            "batch": 32,
+            "tails": 0,
+            "cache": "rotating",
+            "upstream_us": 62.416131912715855,
+            "direct_us": 32.60390599568685,
+            "paired_direct_over_upstream": 0.522363839543421,
+            "input_sha256": "2c0e5c76a42f10dd830e5b7e76c1fefa85e0d403b7b80279e83ff15057652f24",
+            "banks": 7
+          },
+          {
+            "case": "decode_h16_q32_t3_independent_warm",
+            "batch": 32,
+            "tails": 3,
+            "cache": "warm",
+            "upstream_us": 64.04004271825154,
+            "direct_us": 30.92578117052714,
+            "paired_direct_over_upstream": 0.482913711227615,
+            "input_sha256": "98cf6bf4fa52c8aa31ed9cae4a6ad0db0f1a6fa28fd174e4c2b411d32a06826c",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q32_t3_independent_rotating",
+            "batch": 32,
+            "tails": 3,
+            "cache": "rotating",
+            "upstream_us": 62.521558026083156,
+            "direct_us": 32.2757021274442,
+            "paired_direct_over_upstream": 0.5162333184556173,
+            "input_sha256": "fe79829b62b5a126009bc1cc6f6f74d66c521099325a7e38983fe4eeb22c6035",
+            "banks": 6
+          },
+          {
+            "case": "decode_h16_q64_t0_independent_warm",
+            "batch": 64,
+            "tails": 0,
+            "cache": "warm",
+            "upstream_us": 117.87389882405598,
+            "direct_us": 59.35745080312093,
+            "paired_direct_over_upstream": 0.5035673323907268,
+            "input_sha256": "97d47b391fd5342417e11581abe1feef14e5de8c8ff2cdc7ac43e8b5ea2eeec5",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q64_t0_independent_rotating",
+            "batch": 64,
+            "tails": 0,
+            "cache": "rotating",
+            "upstream_us": 116.45344003041585,
+            "direct_us": 59.01963726679484,
+            "paired_direct_over_upstream": 0.5068090953255541,
+            "input_sha256": "29aa19055b005f5f691c46e2b76181f03a21aa1b0a536e8b4ca551b890e23715",
+            "banks": 4
+          },
+          {
+            "case": "decode_h16_q64_t3_independent_warm",
+            "batch": 64,
+            "tails": 3,
+            "cache": "warm",
+            "upstream_us": 117.93407948811848,
+            "direct_us": 58.74191967646281,
+            "paired_direct_over_upstream": 0.498091180321695,
+            "input_sha256": "3fa832e88430133d4bb2cd8fc65843729b31f4d8a1a2284b2485900c2405aa5d",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q64_t3_independent_rotating",
+            "batch": 64,
+            "tails": 3,
+            "cache": "rotating",
+            "upstream_us": 116.67054587719487,
+            "direct_us": 58.91475007424947,
+            "paired_direct_over_upstream": 0.5049667982021747,
+            "input_sha256": "949908ff2ea8abdfff7f79d5edf0954f8a472be7be65cf4ba53864541ba88510",
+            "banks": 3
+          }
+        ],
+        "regressions": []
+      },
+      "account_compute": {
+        "account": "winstoncai",
+        "conservative_compute_usd": 16.315931142814456,
+        "h200_worker_usd_per_hour": "4.98520",
+        "ephemeral_apps_usd_snapshots": {
+          "after-wgmma-paired-output-paired": "21.91311717",
+          "after-wgmma-paired-output-prep": "17.22871517",
+          "after-wgmma-paired-output-profile": "17.51012350",
+          "after-wgmma-paired-output-profile-retry": "17.71776336",
+          "after-wgmma-paired-output-qualification": "19.60931286",
+          "after-wgmma-paired-output-racecheck": "20.45679924",
+          "after-wgmma-paired-output-uniform-prep": "17.31584693",
+          "before-wgmma-paired-output-export": "17.43131891",
+          "before-wgmma-paired-output-layout-prep": "17.31910033",
+          "before-wgmma-paired-output-memcheck": "20.28785587",
+          "before-wgmma-paired-output-paired": "21.92744631",
+          "before-wgmma-paired-output-prep": "17.14534170",
+          "before-wgmma-paired-output-profile": "17.41682927",
+          "before-wgmma-paired-output-profile-retry": "17.58510912",
+          "before-wgmma-paired-output-qualification": "17.83962345",
+          "before-wgmma-paired-output-racecheck": "19.44037075",
+          "before-wgmma-paired-output-uniform-prep": "17.22871517"
+        },
+        "all_workers_stopped": true
       }
     }
   }

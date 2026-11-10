@@ -283,6 +283,29 @@ artifacts. Verify the lane mapping and emitted stores before profiling.
 Keep the change only if the matched H200 measurements improve and the
 existing numerical, graph and sanitizer gates pass.
 
+The explicit TileLang register layout compiled all five variants. Each
+partial emits 32 paired BF16 stores and four guarded LSE stores, with zero
+scalar BF16 stores or spills. Batch 8 rose from 112 to 128 registers per
+thread. Registers for the other batches and shared allocation were unchanged.
+
+Run `glm53-decode-wgmma-paired-output-paired-20261110` reached **1.99452×**
+over untouched upstream Native on one H200 with 16 local heads. Its
+**0.501373** equal-case geometric-mean ratio missed the strict 0.5000
+target. Direct improved all 24 cases. The [timing CSV](upstream-decode-wgmma-bf16x2.csv)
+contains both paths and all 30 samples per case. The ledger binds the fresh
+timing and the 23 passing cases per sanitizer tool to image
+`im-qdUjEjfOAyMsNIpeobeT9P`, parent `f2c0c01fb756`, and SGLang
+`6265e0a17987`. Conservative compute through this comparison was $16.32
+of $20.
+
+Batch 16 still has the highest ratios, from 0.54391 to 0.57049. Test its
+current two-tile split against the already compiled one-tile partial and
+33-group, 128-column combine used at batch 8. Keep the control and
+alternative on identical batch-16 inputs and report both cache policies
+and tail counts. Reuse sanitizer evidence only for the exact binaries and
+unchanged test scope. A changed schedule must pass the maintained numerical
+and graph checks and a fresh 24-case run to establish a new aggregate.
+
 ### Original 1.20× target
 
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched
