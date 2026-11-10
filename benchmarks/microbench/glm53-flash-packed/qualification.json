@@ -6307,7 +6307,7 @@
     "status": "full_paired_result_below_target",
     "target_direct_over_upstream": 0.5,
     "budget_usd": 20,
-    "conservative_compute_usd": 10.860409477579118,
+    "conservative_compute_usd": 10.879449972015422,
     "decision": "Use 128 columns at batch 8. Partial attention dominates batch 16. Full paired timing and focused sanitizers for the fused-query candidate remain pending.",
     "diagnostics": {
       "wgmma_disjoint": {
@@ -14676,6 +14676,58 @@
         "log_sha256": "00c67f2f539b70604432990f028e3dde0d710555c5ca75b6f9d29acfda778810",
         "account_ephemeral_apps_usd": "17.31584693",
         "conservative_compute_usd": 10.860409477579118,
+        "gpu_allocated": false
+      },
+      "wgmma_paired_output_layout_probe": {
+        "status": "focused_cpu_compile_passed",
+        "source_identities": {
+          "parent": "cf94a92fb2b2623eb9abd88e732cb4175e8994fd",
+          "sglang": "6265e0a179874e41ae01290aa5f630da75ee567e"
+        },
+        "image": "im-u3qjKaUnxXy8WCAoMxEz9p",
+        "compiled_symbol": "glm_packed_wgmma_partial",
+        "target": "sm_90a",
+        "compiled_inner_iterations": [
+          1,
+          2
+        ],
+        "generated_epilogue_sha256": {
+          "1": "d664bfd2e99e2009f814019880650e93e4cd754cc5309a40c7f6cdfda0147a4e",
+          "2": "c5ebe89ba3d469239d90091ddf68ae034ae6f022f7bfa2d2a8c27c0ba449fdc1"
+        },
+        "source_files_sha256": {
+          "ops/attention/dsa/tilelang_kernel.py": "e5d70f2174f45bf51938d2cf565d2f754e0df5edc73d3ba34aedd3238a5c4686",
+          "jit/include/sgl_kernel/glm_wgmma_pv.cuh": "6914ba4441a862c2b2952b491b38f5c743564a4a4f5d75eddc668401486bba3a"
+        },
+        "attempts": [
+          {
+            "controller": {
+              "returncode": 0,
+              "seconds": 215.4444906659919,
+              "base_image": "im-u3qjKaUnxXy8WCAoMxEz9p",
+              "account": "winstoncai"
+            },
+            "app_id": "ap-PnQrf5DbNgrMmNqOzffC3q",
+            "result": "CPU probe module read a local path during remote startup",
+            "log": "wgmma-head-layout-cpu-probe.log",
+            "log_sha256": "fa84eac1464e52d50e32e668d98270eabed47d91716c4c3f8d8050ae4fc80ae4"
+          },
+          {
+            "controller": {
+              "returncode": 0,
+              "timed_out": false,
+              "seconds": 55.27343970800575,
+              "base_image": "im-u3qjKaUnxXy8WCAoMxEz9p",
+              "account": "winstoncai"
+            },
+            "app_id": "ap-TI3ocDg6qvXT4w8jVUiG47",
+            "result": "Compiled both pinned partial variants",
+            "log": "wgmma-head-layout-probe-retry.log",
+            "log_sha256": "4d476a70bbf8ce6e517cb8c0155effb9ae1426357e34ab3abb6648852f98a83f"
+          }
+        ],
+        "account_ephemeral_apps_usd": "17.31910033",
+        "conservative_compute_usd": 10.879449972015422,
         "gpu_allocated": false
       }
     },
