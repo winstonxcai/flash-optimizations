@@ -6307,7 +6307,7 @@
     "status": "full_paired_result_below_target",
     "target_direct_over_upstream": 0.5,
     "budget_usd": 20,
-    "conservative_compute_usd": 10.44260168566246,
+    "conservative_compute_usd": 10.627032578158955,
     "decision": "Use 128 columns at batch 8. Partial attention dominates batch 16. Full paired timing and focused sanitizers for the fused-query candidate remain pending.",
     "diagnostics": {
       "wgmma_disjoint": {
@@ -14602,6 +14602,44 @@
           "conservative_compute_usd": 10.44260168566246,
           "all_workers_stopped": true
         }
+      },
+      "wgmma_paired_output_initial": {
+        "status": "cpu_prepare_failed",
+        "app_id": "ap-ifgTvCIavPNEeBasKNKyZG",
+        "failed_image": "im-5M2L44ktWlWJWkyBy09EYi",
+        "source_identities": {
+          "parent": "c800e89f2bee9e3e9b90dbc08274f3e5eaa0b593",
+          "sglang": "96961842c0f874d17efa78159827a382f4cb61e8",
+          "flashmla": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208"
+        },
+        "controller": {
+          "argv": [
+            "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+            "run",
+            "scripts/modal/kernels.py::prepare_kernels",
+            "--model-family",
+            "glm53"
+          ],
+          "account": "winstoncai",
+          "base_image": "im-u3qjKaUnxXy8WCAoMxEz9p",
+          "seconds": 523.2906785840023,
+          "returncode": 1
+        },
+        "base_sglang": "f3b90867d03016f1c96784632d8e1bb5390e4905",
+        "environment": {
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_GLM_UPSTREAM_DECODE": "1",
+          "REMNANT_GLM_CPU_REBUILD_FROM": "im-u3qjKaUnxXy8WCAoMxEz9p",
+          "REMNANT_GLM_CPU_REBUILD_BASE_SGLANG": "f3b90867d03016f1c96784632d8e1bb5390e4905",
+          "REMNANT_VALIDATION_TIMEOUT_S": "1260"
+        },
+        "error": "TileLang LayoutInference rejected the thread-dependent LSE guard inside the per-head T.Parallel loop, before SM90a partial compilation.",
+        "next_change": "Keep the uniform reduction loop and put the unique writer guard inside the existing device epilogue.",
+        "log_sha256": "b98bd4af84536ad3356e4e74117a5068eec69f0d7f9a775b25a70d06ced2a894",
+        "account_ephemeral_apps_usd": "17.22871517",
+        "conservative_compute_usd": 10.627032578158955,
+        "gpu_allocated": false
       }
     },
     "full_paired_wgmma": {
