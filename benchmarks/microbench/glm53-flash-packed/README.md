@@ -251,6 +251,27 @@ exact partial and query conversion artifacts across the sweep. Select the
 width that improves paired latency across the two policies. Keep the
 unchanged 24-case protocol for the final comparison.
 
+Run `glm53-decode-wgmma-combine-sweep-profile-20261110` completed all 12
+zero-tail traces and the six batch-8 paired trials on one H200.
+
+| Cache policy | Columns per CTA | Untouched Native (µs) | Packed Direct (µs) | Mean paired ratio |
+|---|---:|---:|---:|---:|
+| Warm | 128 | 23.171 | 12.772 | 0.55120 |
+| Warm | 256 | 23.075 | 13.413 | 0.58136 |
+| Warm | 512 | 23.163 | 14.237 | 0.61465 |
+| Rotating | 128 | 22.886 | 12.372 | 0.54060 |
+| Rotating | 256 | 22.821 | 12.837 | 0.56249 |
+| Rotating | 512 | 22.829 | 14.025 | 0.61433 |
+
+Keep 128 columns at batch 8. Its two-policy paired ratio was 0.54587,
+versus 0.57184 for 256 and 0.61449 for 512. Batch 16 had the highest trace
+ratios (0.5890 warm and 0.5887 rotating). Its partial kernel consumed
+17.66–18.83 µs of the 20.10–21.12 µs traced Direct path. The 12-case
+summed-stage speedup with the measured 256-column primary was 1.918×.
+The full paired and focused sanitizer gates are still pending. The ledger
+records the summaries and exact artifact identities, with the raw paired
+series and traces retained in the run export.
+
 ### Original 1.20× target
 
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched
