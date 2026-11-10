@@ -6304,11 +6304,11 @@
     ]
   },
   "decode_wgmma_followup": {
-    "status": "qualified_target_missed",
+    "status": "qualified_target_met",
     "target_direct_over_upstream": 0.5,
     "budget_usd": 20,
-    "conservative_compute_usd": 16.55999115105835,
-    "decision": "Keep the verified BF16x2 measurements and continue toward the 0.5000 target.",
+    "conservative_compute_usd": 17.12572954711546,
+    "decision": "Keep the verified one-tile batch-16 decode schedule and full paired evidence.",
     "diagnostics": {
       "wgmma_disjoint": {
         "run_id": "glm53-decode-wgmma-profile-20261110",
@@ -17457,6 +17457,768 @@
           "before-wgmma-paired-output-qualification": "17.83962345",
           "before-wgmma-paired-output-racecheck": "19.44037075",
           "before-wgmma-paired-output-uniform-prep": "17.22871517"
+        },
+        "all_workers_stopped": true
+      }
+    },
+    "full_paired_batch16_one_tile": {
+      "status": "qualified_target_met",
+      "image": "im-qmsXdmqPtm4TpTYPIff4qe",
+      "source_identities": {
+        "parent": {
+          "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-decode-tuned",
+          "commit": "9b3c4847835aca6dcccd1b0cb7b4b65e6877772b"
+        },
+        "sglang": {
+          "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-decode-tuned/third_party/sglang-v0.5.22",
+          "expected_commit": "888d37af3df04fca58f836b4da37f2488576e5e0",
+          "commit": "888d37af3df04fca58f836b4da37f2488576e5e0",
+          "override": false,
+          "dirty": false,
+          "integration": "v0.5.22"
+        },
+        "flashmla/csrc/cutlass": {
+          "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-decode-tuned/third_party/flashmla-v0.5.22/csrc/cutlass",
+          "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "override": false,
+          "dirty": false
+        },
+        "flashmla": {
+          "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-decode-tuned/third_party/flashmla-v0.5.22",
+          "expected_commit": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208",
+          "commit": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208",
+          "override": false,
+          "dirty": false,
+          "integration": "v0.5.22"
+        }
+      },
+      "manifest_sha256": "a4e36bcf7e0d701b79427fe1f87c136779465941c5649ddb5969ee320a3be93e",
+      "native": {
+        "commit": "baa9befa381511cd4d56f83980951e5a45fffc6d",
+        "files": {
+          "kernels/ops/attention/dsa/tilelang_kernel.py": "3d288dc04676b304e1a4d1a44703a8281762ebe789ca7cdd745b0c80fcac591e",
+          "kernels/ops/quantization/fp8_kernel.py": "f5b428f2cb51b7707b19dd7b55e9ef61818a5f99b1cb382cd5e811429dd46806",
+          "srt/utils/__init__.py": "d4c887ce6d68fb14d2f870c50dabc621da1c67a85823e8c8cf704392865963c8",
+          "srt/utils/common.py": "5423d1bb153e72852306934ab56ee0b3eccab8b3ec6395dc9da0fea79f7e74da"
+        },
+        "scope": "attention-module"
+      },
+      "selected_batch16_artifact": {
+        "partial": {
+          "source_sha256": "56ad4b6b1940aa395886303185d115ac59cd34d1b74bde9c1e60ea5db954f803",
+          "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/fb6f3b73dfdafceeff1f7484e62d2dcbd2c887b967cc8b0a3f6d86bd85734b81.cubin",
+          "cubin_sha256": "94d7c2756db6771ca1f0d7e761de3f07376fddde72fda1f5188ca3f5593480f6",
+          "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/dfd6233f0bb49b95a260552e4c44d4551ccc00f96fb01f1d5e8dcd4cf2ba0bc7/executable.so",
+          "library_sha256": "b48c788b7f07c5571968bd6929786d6605002debd87c6613b139a8ff7d14a8eb",
+          "symbol": "glm_packed_partial_wgmma_kernel",
+          "parameters": [
+            {
+              "name": "bitmap",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "indices",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "kv_fp8",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "partial_lse",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "partial_o",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "q_bf16",
+              "pointer": true,
+              "type": "pointer"
+            },
+            {
+              "name": "num_pages",
+              "pointer": false,
+              "type": "int"
+            },
+            {
+              "name": "seq_len",
+              "pointer": false,
+              "type": "int"
+            }
+          ],
+          "dynamic_shared": 54784
+        },
+        "combine": {
+          "source_sha256": "fb39576d301e125bdbfa5b0ab508129b24d8adc69e457ca867775080e111065d",
+          "cubin_path": "/opt/remnant-tilelang-glm/0.1.12/cuda-binaries/0675e7943a89ba4673e54120e8d478aaa58eafe46bf0f0e7ebe4aac331401350.cubin",
+          "cubin_sha256": "40b7f1a86485f9550dcf27820bcdf229c887a5f6b79c5d50bbcd0e7b1941ea1e",
+          "library_path": "/opt/remnant-tilelang-glm/0.1.12/linux-x86_64/kernels/d5367b24988bcdbcb2cfd802aff9f5494f9e36d9be3c823e0aaabe6a677e86f5/executable.so",
+          "library_sha256": "51d8aa727e905b79b102989e605c3797105776a6e857300a8e15143ccceb6e24"
+        },
+        "combine_columns": 128,
+        "geometry": {
+          "tile_rows": 64,
+          "inner_iter": 1,
+          "partial_groups": 33
+        },
+        "qgmma_sites": 32,
+        "cta_barrier_sites": 14,
+        "matrix_load_sites": 16,
+        "matrix_store_sites": 0,
+        "local_sites": 0,
+        "pv_operand": "register",
+        "query_conversion": "fused",
+        "loader_call": "remnant_glm_expand_wide_tile<64, true>((&(kv_fp8[0])), (&(bitmap[0])), (&(indices[0])), (&(((uchar*)scratch)[0])), (&(((fp8_e4_t*)kv)[0])), (&(((fp8_e4_t*)kv)[8192])), (&(((fp8_e4_t*)kv)[16384])), (&(((fp8_e4_t*)kv)[24576])), num_pages, ((((int64_t)((int)blockIdx.x)) * (int64_t)2112) + (((int64_t)((int)blockIdx.y)) * (int64_t)64)));",
+        "shared_ranges": {
+          "kv": [
+            0,
+            32768
+          ],
+          "p": [
+            32768,
+            33792
+          ],
+          "q": [
+            33792,
+            41984
+          ],
+          "scratch": [
+            41984,
+            50688
+          ]
+        },
+        "dynamic_shared_bytes": 54784,
+        "resource_usage": "Resource usage:\n Common:\n  GLOBAL:0\n Function glm_packed_partial_wgmma_kernel:\n  REG:128 STACK:0 SHARED:1024 LOCAL:0 CONSTANT[0]:584 TEXTURE:0 SURFACE:0 SAMPLER:0"
+      },
+      "environment": {
+        "REMNANT_MODEL_FAMILY": "glm53",
+        "REMNANT_INTEGRATION": "v0.5.22",
+        "REMNANT_GLM_UPSTREAM_DECODE": "1",
+        "REMNANT_GLM_BATCH16_ONE_TILE": "1",
+        "REMNANT_COMPILED_IMAGE": "im-qdUjEjfOAyMsNIpeobeT9P",
+        "REMNANT_VALIDATION_TIMEOUT_S": "1260"
+      },
+      "cpu_preparation": {
+        "argv": [
+          "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+          "run",
+          "scripts/modal/kernels.py::prepare_kernels",
+          "--model-family",
+          "glm53"
+        ],
+        "account": "winstoncai",
+        "base_image": "im-qdUjEjfOAyMsNIpeobeT9P",
+        "seconds": 442.2767062079947,
+        "returncode": 0,
+        "app_id": "ap-PEWE4DRqLVh8sOiLurcHxr"
+      },
+      "cpu_export_app_id": "ap-9jmHF0VtV89jOUFKm9lvIa",
+      "cpu_receipt_sha256": "33ded9dcbad67c6bae84e64f7e92e25a520a2dff66b536b32eec96646ad06e8b",
+      "qualification": {
+        "status": "passed",
+        "scope": {
+          "compiled_base_image": "im-qdUjEjfOAyMsNIpeobeT9P",
+          "qualified_source_identities": {
+            "parent": {
+              "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-decode-tuned",
+              "commit": "f2c0c01fb756b66ae8a7d0f421442df4e6f82f5a"
+            },
+            "sglang": {
+              "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-decode-tuned/third_party/sglang-v0.5.22",
+              "expected_commit": "6265e0a179874e41ae01290aa5f630da75ee567e",
+              "commit": "6265e0a179874e41ae01290aa5f630da75ee567e",
+              "override": false,
+              "dirty": false,
+              "integration": "v0.5.22"
+            },
+            "flashmla/csrc/cutlass": {
+              "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-decode-tuned/third_party/flashmla-v0.5.22/csrc/cutlass",
+              "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+              "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+              "override": false,
+              "dirty": false
+            },
+            "flashmla": {
+              "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-decode-tuned/third_party/flashmla-v0.5.22",
+              "expected_commit": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208",
+              "commit": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208",
+              "override": false,
+              "dirty": false,
+              "integration": "v0.5.22"
+            }
+          },
+          "timing_source_identities": {
+            "parent": {
+              "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-decode-tuned",
+              "commit": "9b3c4847835aca6dcccd1b0cb7b4b65e6877772b"
+            },
+            "sglang": {
+              "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-decode-tuned/third_party/sglang-v0.5.22",
+              "expected_commit": "888d37af3df04fca58f836b4da37f2488576e5e0",
+              "commit": "888d37af3df04fca58f836b4da37f2488576e5e0",
+              "override": false,
+              "dirty": false,
+              "integration": "v0.5.22"
+            },
+            "flashmla/csrc/cutlass": {
+              "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-decode-tuned/third_party/flashmla-v0.5.22/csrc/cutlass",
+              "expected_commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+              "commit": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+              "override": false,
+              "dirty": false
+            },
+            "flashmla": {
+              "path": "/Users/poohthewinnie/Documents/Programming/flash-optimizations/data/source-snapshots/glm53-decode-tuned/third_party/flashmla-v0.5.22",
+              "expected_commit": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208",
+              "commit": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208",
+              "override": false,
+              "dirty": false,
+              "integration": "v0.5.22"
+            }
+          },
+          "batch16_artifact": "8"
+        },
+        "runtime_hashes": {
+          "kernels/ops/attention/dsa/tilelang_kernel.py": "e5d70f2174f45bf51938d2cf565d2f754e0df5edc73d3ba34aedd3238a5c4686",
+          "kernels/jit/include/sgl_kernel/glm_packed_decode.cuh": "39714719c741cae197c88dc940d39dc09065d483befacf84e1e4aa907eada8a6",
+          "kernels/jit/include/sgl_kernel/glm_wgmma_pv.cuh": "6914ba4441a862c2b2952b491b38f5c743564a4a4f5d75eddc668401486bba3a",
+          "kernels/jit/include/sgl_kernel/glm_wgmma_query.cuh": "7c09d8e5ae1d8dc2877f524c9dcb28ab03437c37d3524ea9eb4aa4111ff59f38",
+          "srt/remnant/glm.py": "50565426fe36070791743987cf41d177081874c9a52d9bfa6f30805b7ae307aa",
+          "srt/remnant/glm_pool.py": "cfc36ad197037879867417df91e8cfb91f128fa24bc1cbfa88ae89eeae4e301d",
+          "srt/remnant/reference.py": "6231ec9622623643eba8ab50d714f9433cd13672be927030c4070ae05452021e",
+          "srt/layers/layernorm.py": "98072d836e0c77312058521ee1015c80177b2c370da7408fd066eec61015ff21"
+        },
+        "tools": {
+          "synccheck": {
+            "cases": [
+              "test_decode_partial_graph[16-11]",
+              "test_decode_partial_graph[16-1]",
+              "test_decode_partial_graph[16-2]",
+              "test_decode_partial_graph[16-3]",
+              "test_decode_partial_graph[16-6]",
+              "test_decode_partial_graph[8-1]",
+              "test_decode_partial_graph[8-2]",
+              "test_packed_decode_combine_graph[11-512]",
+              "test_packed_decode_combine_graph[22-512]",
+              "test_packed_decode_combine_graph[33-512]",
+              "test_packed_decode_combine_graph[6-512]",
+              "test_packed_decode_combine_graph[66-128]",
+              "test_packed_loader_bytes",
+              "test_wgmma_decode_combine_graph[16]",
+              "test_wgmma_decode_combine_graph[24]",
+              "test_wgmma_decode_combine_graph[32]",
+              "test_wgmma_decode_combine_graph[64]",
+              "test_wgmma_decode_combine_graph[8]",
+              "test_wgmma_decode_partial_graph[16]",
+              "test_wgmma_decode_partial_graph[24]",
+              "test_wgmma_decode_partial_graph[32]",
+              "test_wgmma_decode_partial_graph[64]",
+              "test_wgmma_decode_partial_graph[8]"
+            ],
+            "runs": [
+              {
+                "run_id": "glm53-decode-wgmma-paired-output-qualification-20261110",
+                "cases": [
+                  "test_decode_partial_graph[16-11]",
+                  "test_decode_partial_graph[16-1]",
+                  "test_decode_partial_graph[16-2]",
+                  "test_decode_partial_graph[16-3]",
+                  "test_decode_partial_graph[16-6]",
+                  "test_decode_partial_graph[8-1]",
+                  "test_decode_partial_graph[8-2]",
+                  "test_packed_decode_combine_graph[11-512]",
+                  "test_packed_decode_combine_graph[22-512]",
+                  "test_packed_decode_combine_graph[33-512]",
+                  "test_packed_decode_combine_graph[6-512]",
+                  "test_packed_decode_combine_graph[66-128]",
+                  "test_packed_loader_bytes",
+                  "test_wgmma_decode_combine_graph[16]",
+                  "test_wgmma_decode_combine_graph[24]",
+                  "test_wgmma_decode_combine_graph[32]",
+                  "test_wgmma_decode_combine_graph[64]",
+                  "test_wgmma_decode_combine_graph[8]",
+                  "test_wgmma_decode_partial_graph[16]",
+                  "test_wgmma_decode_partial_graph[24]",
+                  "test_wgmma_decode_partial_graph[32]",
+                  "test_wgmma_decode_partial_graph[64]",
+                  "test_wgmma_decode_partial_graph[8]"
+                ],
+                "overall_run_status": "failed",
+                "tool_status": "passed",
+                "result_sha256": "7039fa29b7e264c31613c03a17e30af903590c98936f34454ba0efe6fc689016"
+              }
+            ]
+          },
+          "racecheck": {
+            "cases": [
+              "test_decode_partial_graph[16-11]",
+              "test_decode_partial_graph[16-1]",
+              "test_decode_partial_graph[16-2]",
+              "test_decode_partial_graph[16-3]",
+              "test_decode_partial_graph[16-6]",
+              "test_decode_partial_graph[8-1]",
+              "test_decode_partial_graph[8-2]",
+              "test_packed_decode_combine_graph[11-512]",
+              "test_packed_decode_combine_graph[22-512]",
+              "test_packed_decode_combine_graph[33-512]",
+              "test_packed_decode_combine_graph[6-512]",
+              "test_packed_decode_combine_graph[66-128]",
+              "test_packed_loader_bytes",
+              "test_wgmma_decode_combine_graph[16]",
+              "test_wgmma_decode_combine_graph[24]",
+              "test_wgmma_decode_combine_graph[32]",
+              "test_wgmma_decode_combine_graph[64]",
+              "test_wgmma_decode_combine_graph[8]",
+              "test_wgmma_decode_partial_graph[16]",
+              "test_wgmma_decode_partial_graph[24]",
+              "test_wgmma_decode_partial_graph[32]",
+              "test_wgmma_decode_partial_graph[64]",
+              "test_wgmma_decode_partial_graph[8]"
+            ],
+            "runs": [
+              {
+                "run_id": "glm53-decode-wgmma-paired-output-racecheck-20261110",
+                "cases": [
+                  "test_decode_partial_graph[16-11]",
+                  "test_decode_partial_graph[16-1]",
+                  "test_decode_partial_graph[16-2]",
+                  "test_decode_partial_graph[16-3]",
+                  "test_decode_partial_graph[16-6]",
+                  "test_decode_partial_graph[8-1]",
+                  "test_decode_partial_graph[8-2]",
+                  "test_packed_decode_combine_graph[11-512]",
+                  "test_packed_decode_combine_graph[22-512]",
+                  "test_packed_decode_combine_graph[33-512]",
+                  "test_packed_decode_combine_graph[6-512]",
+                  "test_packed_decode_combine_graph[66-128]",
+                  "test_packed_loader_bytes",
+                  "test_wgmma_decode_combine_graph[16]",
+                  "test_wgmma_decode_combine_graph[24]",
+                  "test_wgmma_decode_combine_graph[32]",
+                  "test_wgmma_decode_combine_graph[64]",
+                  "test_wgmma_decode_combine_graph[8]",
+                  "test_wgmma_decode_partial_graph[16]",
+                  "test_wgmma_decode_partial_graph[24]",
+                  "test_wgmma_decode_partial_graph[32]",
+                  "test_wgmma_decode_partial_graph[64]",
+                  "test_wgmma_decode_partial_graph[8]"
+                ],
+                "overall_run_status": "passed",
+                "tool_status": "passed",
+                "result_sha256": "3748cfb3627756274cbb9304cbe37dbebb442c8163c0b5c9e36de9021f80e108"
+              }
+            ]
+          },
+          "memcheck": {
+            "cases": [
+              "test_decode_partial_graph[16-11]",
+              "test_decode_partial_graph[16-1]",
+              "test_decode_partial_graph[16-2]",
+              "test_decode_partial_graph[16-3]",
+              "test_decode_partial_graph[16-6]",
+              "test_decode_partial_graph[8-1]",
+              "test_decode_partial_graph[8-2]",
+              "test_packed_decode_combine_graph[11-512]",
+              "test_packed_decode_combine_graph[22-512]",
+              "test_packed_decode_combine_graph[33-512]",
+              "test_packed_decode_combine_graph[6-512]",
+              "test_packed_decode_combine_graph[66-128]",
+              "test_packed_loader_bytes",
+              "test_wgmma_decode_combine_graph[16]",
+              "test_wgmma_decode_combine_graph[24]",
+              "test_wgmma_decode_combine_graph[32]",
+              "test_wgmma_decode_combine_graph[64]",
+              "test_wgmma_decode_combine_graph[8]",
+              "test_wgmma_decode_partial_graph[16]",
+              "test_wgmma_decode_partial_graph[24]",
+              "test_wgmma_decode_partial_graph[32]",
+              "test_wgmma_decode_partial_graph[64]",
+              "test_wgmma_decode_partial_graph[8]"
+            ],
+            "runs": [
+              {
+                "run_id": "glm53-decode-wgmma-paired-output-memcheck-20261110",
+                "cases": [
+                  "test_decode_partial_graph[16-11]",
+                  "test_decode_partial_graph[16-1]",
+                  "test_decode_partial_graph[16-2]",
+                  "test_decode_partial_graph[16-3]",
+                  "test_decode_partial_graph[16-6]",
+                  "test_decode_partial_graph[8-1]",
+                  "test_decode_partial_graph[8-2]",
+                  "test_packed_decode_combine_graph[11-512]",
+                  "test_packed_decode_combine_graph[22-512]",
+                  "test_packed_decode_combine_graph[33-512]",
+                  "test_packed_decode_combine_graph[6-512]",
+                  "test_packed_decode_combine_graph[66-128]",
+                  "test_packed_loader_bytes",
+                  "test_wgmma_decode_combine_graph[16]",
+                  "test_wgmma_decode_combine_graph[24]",
+                  "test_wgmma_decode_combine_graph[32]",
+                  "test_wgmma_decode_combine_graph[64]",
+                  "test_wgmma_decode_combine_graph[8]",
+                  "test_wgmma_decode_partial_graph[16]",
+                  "test_wgmma_decode_partial_graph[24]",
+                  "test_wgmma_decode_partial_graph[32]",
+                  "test_wgmma_decode_partial_graph[64]",
+                  "test_wgmma_decode_partial_graph[8]"
+                ],
+                "overall_run_status": "passed",
+                "tool_status": "passed",
+                "result_sha256": "4ca75ecc4eb8462cbbbd8af75f4a769cfdd367a6ee5a38fae4c92a39f940f9bc"
+              }
+            ]
+          }
+        }
+      },
+      "timing": {
+        "app_id": "ap-TzIdnKYljXxPa4a6gsDe5d",
+        "run_id": "glm53-decode-wgmma-batch16-one-tile-paired-20261110",
+        "gpu": "NVIDIA H200",
+        "heads": 16,
+        "rounds": 30,
+        "controller": {
+          "argv": [
+            "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+            "run",
+            "scripts/modal/kernels.py::benchmark_kernels",
+            "--run-id",
+            "glm53-decode-wgmma-batch16-one-tile-paired-20261110",
+            "--model-family",
+            "glm53",
+            "--suite",
+            "glm-upstream-decode",
+            "--phase",
+            "decode",
+            "--qualification-runs",
+            "glm53-decode-wgmma-paired-output-qualification-20261110,glm53-decode-wgmma-paired-output-racecheck-20261110,glm53-decode-wgmma-paired-output-memcheck-20261110",
+            "--max-seconds",
+            "420"
+          ],
+          "account": "winstoncai",
+          "image": "im-qmsXdmqPtm4TpTYPIff4qe",
+          "run_id": "glm53-decode-wgmma-batch16-one-tile-paired-20261110",
+          "seconds": 252.64734433300328,
+          "returncode": 0
+        },
+        "worker_command": [
+          "/opt/sglang/bin/python",
+          "/sgl-workspace/sglang-remnant/benchmark/remnant/microbench.py",
+          "--model-family",
+          "glm53",
+          "--suite",
+          "glm-upstream-decode",
+          "--phase",
+          "decode",
+          "--packed-prefill-tile",
+          "32",
+          "--output",
+          "/results/microbench/glm53-decode-wgmma-batch16-one-tile-paired-20261110/timing/timing",
+          "--max-seconds",
+          "381"
+        ],
+        "gpu_function_seconds": 91.96516349100001,
+        "volume": "winstoncai/remnant-stage2a-results/microbench/glm53-decode-wgmma-batch16-one-tile-paired-20261110",
+        "csv": "upstream-decode-wgmma-batch16-one-tile.csv",
+        "artifact_sha256": {
+          "local-reconciliation.json": "b568e7e369da4d9d075c3308839e0b1f5cae510b8d4ff2e19c3909026db02dff",
+          "preflight/build-manifest.json": "a4e36bcf7e0d701b79427fe1f87c136779465941c5649ddb5969ee320a3be93e",
+          "preflight/result.json": "014ff8fef769835c5a1cf0e6f7f9b430198ec5eab09c559317b08aafa2728032",
+          "timing/build-manifest.json": "a4e36bcf7e0d701b79427fe1f87c136779465941c5649ddb5969ee320a3be93e",
+          "timing/result.json": "fb10966319926386db95e16f6a099e19a54e8777e7ac591009318bd62ead749f",
+          "timing/timing.csv": "e96ba134114ce9c037d690f24ff43c0db3824487e6486dab555a4f178301611b",
+          "timing/timing.json": "c2276c5e785ab0f37debe7b156d01347eb0205c4ccac0b562d638bbdbf36be16",
+          "timing/timing.log": "eaf7a5f3d419fcad6f002e4fa0e4e0a0dcdd685527f92645e02c6e0c0a6e4001"
+        },
+        "ratio": 0.4895647821905068,
+        "speedup": 2.0426305902266986,
+        "meets_2x": true,
+        "cases": [
+          {
+            "case": "decode_h16_q1_t0_independent_warm",
+            "batch": 1,
+            "tails": 0,
+            "cache": "warm",
+            "upstream_us": 20.440309286117554,
+            "direct_us": 9.939754664897919,
+            "paired_direct_over_upstream": 0.48628202533684395,
+            "input_sha256": "701cb8f67b0f8f5ea7eee9c56020db5e7896b776517957edab7bd5e3ceea6593",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q1_t0_independent_rotating",
+            "batch": 1,
+            "tails": 0,
+            "cache": "rotating",
+            "upstream_us": 20.105124631693947,
+            "direct_us": 8.823140606361351,
+            "paired_direct_over_upstream": 0.4388508236737533,
+            "input_sha256": "8e7d6210911dbfa3139e71eb1fae267654932b766292952622d2fd1f977b3b82",
+            "banks": 193
+          },
+          {
+            "case": "decode_h16_q1_t3_independent_warm",
+            "batch": 1,
+            "tails": 3,
+            "cache": "warm",
+            "upstream_us": 20.254549344380695,
+            "direct_us": 9.883904039859772,
+            "paired_direct_over_upstream": 0.4879844535739728,
+            "input_sha256": "e66f4d233c9991f8e2efb577a639d53c260b745643bc30fcb81ca3a55ef397f2",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q1_t3_independent_rotating",
+            "batch": 1,
+            "tails": 3,
+            "cache": "rotating",
+            "upstream_us": 20.02314453323682,
+            "direct_us": 8.833672230442366,
+            "paired_direct_over_upstream": 0.44117332013180705,
+            "input_sha256": "24e5ca01dd0e779b66d41dabdda0d716530276592ce9fc43fc9bd5cfcea11ccd",
+            "banks": 192
+          },
+          {
+            "case": "decode_h16_q8_t0_independent_warm",
+            "batch": 8,
+            "tails": 0,
+            "cache": "warm",
+            "upstream_us": 22.813034693400066,
+            "direct_us": 11.513994733492533,
+            "paired_direct_over_upstream": 0.5047115216953888,
+            "input_sha256": "a306d9c66c9161e387a4eb6141eb9cab3ffad325190c0ceced4366656ab0d9d1",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q8_t0_independent_rotating",
+            "batch": 8,
+            "tails": 0,
+            "cache": "rotating",
+            "upstream_us": 22.845728079477947,
+            "direct_us": 11.458367983500162,
+            "paired_direct_over_upstream": 0.5015541647240622,
+            "input_sha256": "8a37d174e52cbcbec756f53a03b0ec3e2967dcf2e4eb5f03ff66295c20e46f7d",
+            "banks": 25
+          },
+          {
+            "case": "decode_h16_q8_t3_independent_warm",
+            "batch": 8,
+            "tails": 3,
+            "cache": "warm",
+            "upstream_us": 23.03923201560974,
+            "direct_us": 11.682453314463297,
+            "paired_direct_over_upstream": 0.5070681860121347,
+            "input_sha256": "a8b49f59486dd4079ba15fe514ab17a05e8ceac3db3e8c86c41a89930f81bd1b",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q8_t3_independent_rotating",
+            "batch": 8,
+            "tails": 3,
+            "cache": "rotating",
+            "upstream_us": 22.887431118223404,
+            "direct_us": 11.35170665052202,
+            "paired_direct_over_upstream": 0.49598029095016977,
+            "input_sha256": "870adaf99fa19cb97fee692419e6ef6d8b409e6413aba1fe8e90b66d645e91ff",
+            "banks": 24
+          },
+          {
+            "case": "decode_h16_q16_t0_independent_warm",
+            "batch": 16,
+            "tails": 0,
+            "cache": "warm",
+            "upstream_us": 34.87164799372355,
+            "direct_us": 17.85924271742503,
+            "paired_direct_over_upstream": 0.5121438843161943,
+            "input_sha256": "b03cc384b50e7d942a0c9ed9f521991a3714daf27f163f4ebd2d55374de42da1",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q16_t0_independent_rotating",
+            "batch": 16,
+            "tails": 0,
+            "cache": "rotating",
+            "upstream_us": 35.92569224345378,
+            "direct_us": 17.304266568941948,
+            "paired_direct_over_upstream": 0.48166828644487175,
+            "input_sha256": "b133cbdc9c5099dead9759faad9ece099cf0e7a6121c9554f8bb15d3134b0cde",
+            "banks": 13
+          },
+          {
+            "case": "decode_h16_q16_t3_independent_warm",
+            "batch": 16,
+            "tails": 3,
+            "cache": "warm",
+            "upstream_us": 34.61507193247477,
+            "direct_us": 17.685312032699585,
+            "paired_direct_over_upstream": 0.5109140492816798,
+            "input_sha256": "15365a88e339d30acdc01f000be059845a68ead590e12e8c9e5d65eb3ead8a7f",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q16_t3_independent_rotating",
+            "batch": 16,
+            "tails": 3,
+            "cache": "rotating",
+            "upstream_us": 35.88460257023941,
+            "direct_us": 17.28751611562423,
+            "paired_direct_over_upstream": 0.4817532947923482,
+            "input_sha256": "50255ac712f14a02893c135dea0257c48a23387f856701fbcd5e4badeff2f717",
+            "banks": 12
+          },
+          {
+            "case": "decode_h16_q24_t0_independent_warm",
+            "batch": 24,
+            "tails": 0,
+            "cache": "warm",
+            "upstream_us": 49.87160539627075,
+            "direct_us": 22.84323215484619,
+            "paired_direct_over_upstream": 0.45804164920896184,
+            "input_sha256": "847a8e0cc30694b1c1d24ee3aadbde4246ff2456726381a659960442c46c71ad",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q24_t0_independent_rotating",
+            "batch": 24,
+            "tails": 0,
+            "cache": "rotating",
+            "upstream_us": 48.99248414569431,
+            "direct_us": 24.330518348717398,
+            "paired_direct_over_upstream": 0.49661739983876446,
+            "input_sha256": "520bae18231515ce4ccacbc1af01e91725e25bb54e63b96288459e25702e626e",
+            "banks": 9
+          },
+          {
+            "case": "decode_h16_q24_t3_independent_warm",
+            "batch": 24,
+            "tails": 3,
+            "cache": "warm",
+            "upstream_us": 49.74183464050293,
+            "direct_us": 22.826666593551636,
+            "paired_direct_over_upstream": 0.4589032250498619,
+            "input_sha256": "b485476cd93e190f2358de66cba040ab136eee9af33849a02bd30a9635791419",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q24_t3_independent_rotating",
+            "batch": 24,
+            "tails": 3,
+            "cache": "rotating",
+            "upstream_us": 49.04752832192641,
+            "direct_us": 24.313723123990574,
+            "paired_direct_over_upstream": 0.4957176571923795,
+            "input_sha256": "12e164ee2632f47fd0060bc5aa001570a47f84eca3059ad367e2af4e855027f0",
+            "banks": 8
+          },
+          {
+            "case": "decode_h16_q32_t0_independent_warm",
+            "batch": 32,
+            "tails": 0,
+            "cache": "warm",
+            "upstream_us": 64.67127497990926,
+            "direct_us": 31.292352040608723,
+            "paired_direct_over_upstream": 0.4838679615218154,
+            "input_sha256": "4dbf8d4abdb05cf647687adfb156f1ed4566c6ab7be07743c104a034822cf1ac",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q32_t0_independent_rotating",
+            "batch": 32,
+            "tails": 0,
+            "cache": "rotating",
+            "upstream_us": 62.96365722777352,
+            "direct_us": 32.69145382775201,
+            "paired_direct_over_upstream": 0.519211542311234,
+            "input_sha256": "2c0e5c76a42f10dd830e5b7e76c1fefa85e0d403b7b80279e83ff15057652f24",
+            "banks": 7
+          },
+          {
+            "case": "decode_h16_q32_t3_independent_warm",
+            "batch": 32,
+            "tails": 3,
+            "cache": "warm",
+            "upstream_us": 64.63257614771526,
+            "direct_us": 31.023231983184814,
+            "paired_direct_over_upstream": 0.47999424456983825,
+            "input_sha256": "98cf6bf4fa52c8aa31ed9cae4a6ad0db0f1a6fa28fd174e4c2b411d32a06826c",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q32_t3_independent_rotating",
+            "batch": 32,
+            "tails": 3,
+            "cache": "rotating",
+            "upstream_us": 63.03369391198252,
+            "direct_us": 32.34658303603627,
+            "paired_direct_over_upstream": 0.5131635541791686,
+            "input_sha256": "fe79829b62b5a126009bc1cc6f6f74d66c521099325a7e38983fe4eeb22c6035",
+            "banks": 6
+          },
+          {
+            "case": "decode_h16_q64_t0_independent_warm",
+            "batch": 64,
+            "tails": 0,
+            "cache": "warm",
+            "upstream_us": 118.97663974761963,
+            "direct_us": 59.653685569763184,
+            "paired_direct_over_upstream": 0.5013898520977709,
+            "input_sha256": "97d47b391fd5342417e11581abe1feef14e5de8c8ff2cdc7ac43e8b5ea2eeec5",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q64_t0_independent_rotating",
+            "batch": 64,
+            "tails": 0,
+            "cache": "rotating",
+            "upstream_us": 117.65417607625325,
+            "direct_us": 59.3230930964152,
+            "paired_direct_over_upstream": 0.5042157182912661,
+            "input_sha256": "29aa19055b005f5f691c46e2b76181f03a21aa1b0a536e8b4ca551b890e23715",
+            "banks": 4
+          },
+          {
+            "case": "decode_h16_q64_t3_independent_warm",
+            "batch": 64,
+            "tails": 3,
+            "cache": "warm",
+            "upstream_us": 119.13523165384929,
+            "direct_us": 59.205418745676674,
+            "paired_direct_over_upstream": 0.4969598772002652,
+            "input_sha256": "3fa832e88430133d4bb2cd8fc65843729b31f4d8a1a2284b2485900c2405aa5d",
+            "banks": 1
+          },
+          {
+            "case": "decode_h16_q64_t3_independent_rotating",
+            "batch": 64,
+            "tails": 3,
+            "cache": "rotating",
+            "upstream_us": 117.81485002804426,
+            "direct_us": 59.24621204924738,
+            "paired_direct_over_upstream": 0.5028756065916568,
+            "input_sha256": "949908ff2ea8abdfff7f79d5edf0954f8a472be7be65cf4ba53864541ba88510",
+            "banks": 3
+          }
+        ],
+        "regressions": []
+      },
+      "account_compute": {
+        "account": "winstoncai",
+        "conservative_compute_usd": 17.12572954711546,
+        "cpu_worker_usd_per_hour": "1.26880",
+        "h200_worker_usd_per_hour": "4.98520",
+        "ephemeral_apps_usd_snapshots": {
+          "after-batch16-one-tile-paired": "21.95151557",
+          "before-batch16-one-tile-export": "21.79437868",
+          "before-batch16-one-tile-paired": "21.73800373",
+          "before-batch16-one-tile-prep": "21.67996425"
         },
         "all_workers_stopped": true
       }

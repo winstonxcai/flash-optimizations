@@ -2,6 +2,8 @@
 
 ## Decode performance follow-up
 
+[Accepted batch-16 schedule and paired results](#accepted-batch-16-schedule)
+
 ### 2.0× follow-up
 
 Starting point: measured SGLang `29fe520dd457` and evidence commit `36b8ad8`.
@@ -329,6 +331,24 @@ original qualification source fingerprint can be reconstructed with only
 the archived benchmark driver restored. It checks unchanged reference and
 graph code and identical compiled artifacts and toolchain before applying
 the original receipts to the selected binaries.
+
+#### Accepted batch-16 schedule
+
+Run `glm53-decode-wgmma-batch16-one-tile-paired-20261110` reached
+**2.04263×** with an equal-case paired ratio of **0.489565**. All 24 cases
+improved over untouched upstream Native on one H200 with 16 local heads.
+Batch-16 Direct averaged 17.29–17.86 µs. Every case used 30 fresh pairs and
+passed numerical and changing-input graph checks. The timed region
+includes query conversion, partial attention and combine.
+
+The [paired CSV](upstream-decode-wgmma-batch16-one-tile.csv) contains all
+case latencies, ratios and raw samples. The [ledger](qualification.json)
+binds them to image `im-qmsXdmqPtm4TpTYPIff4qe`, parent `9b3c4847835a`,
+SGLang `888d37af3df0`, upstream `baa9befa3815`, and the 23 passing cases
+per sanitizer tool on the same binaries. The run used 91.97 seconds in
+the H200 Function. Conservative compute totaled $17.13 of $20, with
+all workers stopped. Roll back the schedule by omitting
+`REMNANT_GLM_BATCH16_ONE_TILE`.
 
 ### Original 1.20× target
 
