@@ -210,6 +210,23 @@ Wait for the older group before recycling its operand registers, then
 drain both before the online softmax reads the accumulators. Verify the
 emitted dependency barriers, registers and spills before H200 profiling.
 
+The emitted code kept two groups in flight and passed all eight H200
+diagnostic cases. Trace speedup moved from 1.855× to 1.858×, with
+131–157 registers per thread instead of 112–138. Both batch-64 partials
+were slightly slower. Keep the simpler serial PV schedule.
+
+### Fuse query conversion into the WGMMA partial
+
+The separate BF16-to-FP8 launch still costs roughly 1–2 µs in the traces.
+Test staging the original BF16 query directly into the FP8 Q tile at
+batches 8–64. The measured path still starts with BF16 and ends after
+combine. Preserve round-to-nearest conversion, signed zero and the
+original out-of-range behavior. Compare all BF16 bit patterns against
+the actual Torch CUDA conversion before profiling and verify the fused
+kernel in the graph. Use the serial register-fed candidate as the
+control. Keep batch 1, the pristine Native path and all fixture shapes
+as recorded for that control.
+
 ### Original 1.20× target
 
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched

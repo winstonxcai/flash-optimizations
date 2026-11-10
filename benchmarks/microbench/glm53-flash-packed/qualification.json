@@ -6307,7 +6307,7 @@
     "status": "full_paired_result_below_target",
     "target_direct_over_upstream": 0.5,
     "budget_usd": 20,
-    "conservative_compute_usd": 8.210714370255763,
+    "conservative_compute_usd": 8.748401317078093,
     "decision": "Retain the qualified full-V WGMMA candidate as the measured control for further optimization. The 2.0x goal remains open.",
     "diagnostics": {
       "wgmma_disjoint": {
@@ -12832,6 +12832,577 @@
             },
             "register_pv_ratio": 0.5229047632260254,
             "rank_table_ratio": 0.5246689230164063
+          }
+        ]
+      },
+      "wgmma_register_pv_overlap": {
+        "status": "diagnostic_passed_rejected_on_latency_and_registers",
+        "decision": "Restore serial register-fed PV. The aggregate trace difference is small, both batch-64 partials regressed, and the candidate uses 19\u201320 extra registers.",
+        "run_id": "glm53-decode-wgmma-overlap-profile-20261110",
+        "account": "winstoncai",
+        "app_id": "ap-MdGSWniM1H0CNjOJZT3a7p",
+        "image": "im-U4fSKyiBlLToIHVK73Rxz6",
+        "gpu": "NVIDIA H200",
+        "gpu_function_seconds": 70.300705127,
+        "controller": {
+          "argv": [
+            "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+            "run",
+            "scripts/modal/kernels.py::benchmark_kernels",
+            "--run-id",
+            "glm53-decode-wgmma-overlap-profile-20261110",
+            "--model-family",
+            "glm53",
+            "--suite",
+            "glm-upstream-decode",
+            "--phase",
+            "decode",
+            "--profile-decode",
+            "--max-seconds",
+            "240"
+          ],
+          "account": "winstoncai",
+          "run_id": "glm53-decode-wgmma-overlap-profile-20261110",
+          "image": "im-U4fSKyiBlLToIHVK73Rxz6",
+          "seconds": 212.2953517499991,
+          "returncode": 0
+        },
+        "command": [
+          "/opt/sglang/bin/python",
+          "/sgl-workspace/sglang-remnant/benchmark/remnant/microbench.py",
+          "--model-family",
+          "glm53",
+          "--suite",
+          "glm-upstream-decode",
+          "--phase",
+          "decode",
+          "--packed-prefill-tile",
+          "32",
+          "--output",
+          "/results/microbench/glm53-decode-wgmma-overlap-profile-20261110/decode-profile/profile",
+          "--max-seconds",
+          "201",
+          "--profile-decode"
+        ],
+        "source_identities": {
+          "parent": "079a74afcd6bd16c9edea058683654ca57b447fe",
+          "sglang": "ab64190b50602e633cd58c429601357725e5826e",
+          "flashmla/csrc/cutlass": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "flashmla": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208"
+        },
+        "native": {
+          "commit": "baa9befa381511cd4d56f83980951e5a45fffc6d",
+          "files": {
+            "kernels/ops/attention/dsa/tilelang_kernel.py": "3d288dc04676b304e1a4d1a44703a8281762ebe789ca7cdd745b0c80fcac591e",
+            "kernels/ops/quantization/fp8_kernel.py": "f5b428f2cb51b7707b19dd7b55e9ef61818a5f99b1cb382cd5e811429dd46806",
+            "srt/utils/__init__.py": "d4c887ce6d68fb14d2f870c50dabc621da1c67a85823e8c8cf704392865963c8",
+            "srt/utils/common.py": "5423d1bb153e72852306934ab56ee0b3eccab8b3ec6395dc9da0fea79f7e74da"
+          },
+          "scope": "attention-module"
+        },
+        "environment": {
+          "MODAL_PROFILE": "winstoncai",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_GLM_UPSTREAM_DECODE": "1",
+          "REMNANT_GLM_CPU_REBUILD_FROM": "im-Ze2dhPXTzQEwaF4jrWbzLQ",
+          "REMNANT_GLM_CPU_REBUILD_BASE_SGLANG": "4479b36e430fa74da43a5845661f74965f4915e6",
+          "REMNANT_VALIDATION_TIMEOUT_S": "1260"
+        },
+        "artifact_volume": "winstoncai/remnant-stage2a-results/microbench/glm53-decode-wgmma-overlap-profile-20261110",
+        "artifacts": {
+          "decode-profile/build-manifest.json": "a31cc541c2857d4a75616332de75279b1d809cfcd1e712ba90c25c8f426dafbe",
+          "decode-profile/profile.json": "9bdd4be8abb8a9435ff84f7cd0794f68c48fb827dbae30479b7370f0d5e9c7b1",
+          "decode-profile/profile.log": "3f6d2f2a91fd6682e084e2e00df1f898b3f6e24a25ceb4b051d0bcc69e30232c",
+          "decode-profile/profile.traces/decode_h16_q1_t0_independent_rotating-direct.json": "a68e4ebbbf5cca2889ada81805e63551983edddcce1fbe30076933803d385131",
+          "decode-profile/profile.traces/decode_h16_q1_t0_independent_rotating-upstream.json": "d6ab4709c2f5587c346cbb8ac1121ebfeddcd3fc512f0176b415dd2810b324da",
+          "decode-profile/profile.traces/decode_h16_q1_t0_independent_warm-direct.json": "77711e837b5d264178ee133bb6df6a8b2902630f7ea3b9dd3d0f153252490644",
+          "decode-profile/profile.traces/decode_h16_q1_t0_independent_warm-upstream.json": "b77a5fc0f718d3bd5d8b00ed8f71fc14a1c13e5134c3c40cc856fde110094e35",
+          "decode-profile/profile.traces/decode_h16_q32_t0_independent_rotating-direct.json": "954f878c6a705088e716d459a0dbc37c48727f7832da82e18f85376f4effff0c",
+          "decode-profile/profile.traces/decode_h16_q32_t0_independent_rotating-upstream.json": "75f2696c20b76360d492de1bd7de0b31a0a1ba55a1d58a5f622e0b705fd6f9f2",
+          "decode-profile/profile.traces/decode_h16_q32_t0_independent_warm-direct.json": "38c2a2a4486e13d5b2309e99274025c89d4eaaa81df4a805bd9b9d21c2e529a9",
+          "decode-profile/profile.traces/decode_h16_q32_t0_independent_warm-upstream.json": "543d8a6111818fd8eb938e3e89142d3e9875185130d4ba58f926302ae9097bf1",
+          "decode-profile/profile.traces/decode_h16_q64_t0_independent_rotating-direct.json": "dac3cb1820152de4f811392e8caf7cd6eef79a6c0e909ca75187206f1c49714c",
+          "decode-profile/profile.traces/decode_h16_q64_t0_independent_rotating-upstream.json": "7f4d67e35698e078f9bf24fba77b27d80b7f907c084fd7740dad2d29d6916141",
+          "decode-profile/profile.traces/decode_h16_q64_t0_independent_warm-direct.json": "9838c3552998d82160259f51bbf7c194ced9396d16352f266d6e7ad7db3b0e7b",
+          "decode-profile/profile.traces/decode_h16_q64_t0_independent_warm-upstream.json": "6275c2ffb16a699e3186aef175e8436f5c08d5b4166f19155374b2bd76b2b19e",
+          "decode-profile/profile.traces/decode_h16_q8_t0_independent_rotating-direct.json": "c79285165e1b70b4e5ee04a60523f26142121f91c1be7bad0484479750fc12e4",
+          "decode-profile/profile.traces/decode_h16_q8_t0_independent_rotating-upstream.json": "a9c760f8ed35189880982e520d34aa19afa634527fa0249dc9540b445cdbcba2",
+          "decode-profile/profile.traces/decode_h16_q8_t0_independent_warm-direct.json": "b49f8abf8e976f7802b03734612317bed313b1f198094b119dcec38483c42d42",
+          "decode-profile/profile.traces/decode_h16_q8_t0_independent_warm-upstream.json": "d55a65751ab3d3f2bb051a6e70c21037bb715c5b6789308d920478411bd52273",
+          "decode-profile/result.json": "02b19918e137cd14eb3cfec3cac823734bd077c5f53bf58490f72ea34f68909b",
+          "local-reconciliation.json": "e5568d40f17db4987d7b593f12cc237ec6a120dde1b4eaaa3d4ea84f38698f3c",
+          "preflight/build-manifest.json": "a31cc541c2857d4a75616332de75279b1d809cfcd1e712ba90c25c8f426dafbe",
+          "preflight/result.json": "b0058915964958fe64b519104bbb1466b648d40988fea16ac5d0f4c7d553938d"
+        },
+        "cpu_preparation": {
+          "argv": [
+            "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+            "run",
+            "scripts/modal/kernels.py::prepare_kernels",
+            "--model-family",
+            "glm53"
+          ],
+          "account": "winstoncai",
+          "base_image": "im-Ze2dhPXTzQEwaF4jrWbzLQ",
+          "seconds": 606.351056917003,
+          "returncode": 0,
+          "app_id": "ap-1KnIeFks2vqnbNBweDTGCs"
+        },
+        "cpu_export_app_id": "ap-wjmmm8VA9phpqc2Ijfq8BB",
+        "cpu_manifest_sha256": "a31cc541c2857d4a75616332de75279b1d809cfcd1e712ba90c25c8f426dafbe",
+        "cpu_resource_summary": {
+          "8": {
+            "registers": 131,
+            "static_shared_bytes": 1024,
+            "dynamic_shared_bytes": 54784,
+            "estimated_ctas_per_sm": 3,
+            "pv_events": [
+              "commit",
+              "commit",
+              "wait1",
+              "commit",
+              "wait1",
+              "commit",
+              "wait0"
+            ],
+            "local_sites": 0,
+            "shared_ranges": {
+              "kv": [
+                0,
+                32768
+              ],
+              "p": [
+                32768,
+                33792
+              ],
+              "q": [
+                33792,
+                41984
+              ],
+              "scratch": [
+                41984,
+                50688
+              ]
+            },
+            "artifact_sha256": {
+              "batch8-device.cu": "de18c8f5480cf761659bbecf8cffe95a3127e782678833e5a651a1f067142a6b",
+              "batch8-sass.sass": "92dc7e5a7043d30e1901be783e1f75427aa5a4f4934881501e24b8c872696707"
+            }
+          },
+          "16": {
+            "registers": 157,
+            "static_shared_bytes": 1024,
+            "dynamic_shared_bytes": 54784,
+            "estimated_ctas_per_sm": 3,
+            "pv_events": [
+              "commit",
+              "commit",
+              "wait1",
+              "commit",
+              "wait1",
+              "commit",
+              "wait0"
+            ],
+            "local_sites": 0,
+            "shared_ranges": {
+              "kv": [
+                0,
+                32768
+              ],
+              "p": [
+                32768,
+                33792
+              ],
+              "q": [
+                33792,
+                41984
+              ],
+              "scratch": [
+                41984,
+                50688
+              ]
+            },
+            "artifact_sha256": {
+              "batch16-device.cu": "a6a4becb0c915b5f6756c115e89de81781eca45ddf35eb5b665ec3737040a369",
+              "batch16-sass.sass": "cd8e13a85a4c37f841dce9baf50bbc4a2bf29f73a3cf35f7d7d85b03b85a8bc4"
+            }
+          },
+          "24": {
+            "registers": 156,
+            "static_shared_bytes": 1024,
+            "dynamic_shared_bytes": 54784,
+            "estimated_ctas_per_sm": 3,
+            "pv_events": [
+              "commit",
+              "commit",
+              "wait1",
+              "commit",
+              "wait1",
+              "commit",
+              "wait0"
+            ],
+            "local_sites": 0,
+            "shared_ranges": {
+              "kv": [
+                0,
+                32768
+              ],
+              "p": [
+                32768,
+                33792
+              ],
+              "q": [
+                33792,
+                41984
+              ],
+              "scratch": [
+                41984,
+                50688
+              ]
+            },
+            "artifact_sha256": {
+              "batch24-device.cu": "faa05f86bd8d48d0b44eb0a2025585614b6795d66a2f3e6e9345380dc2ee7dcb",
+              "batch24-sass.sass": "202b049247cc6d48f9fb90b1b9690bccd2a64b3a39ff198df79253856a0bccd8"
+            }
+          },
+          "32": {
+            "registers": 157,
+            "static_shared_bytes": 1024,
+            "dynamic_shared_bytes": 54784,
+            "estimated_ctas_per_sm": 3,
+            "pv_events": [
+              "commit",
+              "commit",
+              "wait1",
+              "commit",
+              "wait1",
+              "commit",
+              "wait0"
+            ],
+            "local_sites": 0,
+            "shared_ranges": {
+              "kv": [
+                0,
+                32768
+              ],
+              "p": [
+                32768,
+                33792
+              ],
+              "q": [
+                33792,
+                41984
+              ],
+              "scratch": [
+                41984,
+                50688
+              ]
+            },
+            "artifact_sha256": {
+              "batch32-device.cu": "e55dbfe71feb1d3c45124d94efab9c8c102362c1eff2fb7055795cabc7a6ffad",
+              "batch32-sass.sass": "b3bc2ccd54a0d08193128d35185f53529061c2bc6cf3b5dc0b4b04a63b393e72"
+            }
+          },
+          "64": {
+            "registers": 157,
+            "static_shared_bytes": 1024,
+            "dynamic_shared_bytes": 54784,
+            "estimated_ctas_per_sm": 3,
+            "pv_events": [
+              "commit",
+              "commit",
+              "wait1",
+              "commit",
+              "wait1",
+              "commit",
+              "wait0"
+            ],
+            "local_sites": 0,
+            "shared_ranges": {
+              "kv": [
+                0,
+                32768
+              ],
+              "p": [
+                32768,
+                33792
+              ],
+              "q": [
+                33792,
+                41984
+              ],
+              "scratch": [
+                41984,
+                50688
+              ]
+            },
+            "artifact_sha256": {
+              "batch64-device.cu": "1c765587b1aa92b4caeacf08d83d5ecf46fa52b00c74f556dea434e8c13a31cf",
+              "batch64-sass.sass": "198db22e0d38087d84d2d24d67da4022bf7e87f6d3d5d0ffe6a315339886c4d1"
+            }
+          }
+        },
+        "partial_cubin_sha256": {
+          "8": "adce5859dd372e0f17c48049139c2fc4059ec80a4223afa4ca5a7cfd1a967ba0",
+          "16": "2f34d43b3b2cdb7a488e58eda47d9ab63d2f1dbde71cd5682d86779b6a654539",
+          "24": "a106b9936d3fdcd34b6d39fed3fda39975fc7e7327bcaa1e3ed0b09034fd5fac",
+          "32": "9209b33e24e7d11cd9d8fb575d95487fbc2615b1e117ff2937a15de56cbdad00",
+          "64": "7348838c1b2a488b36c3980aa044f0e41e07e4724cbf7b1886e0487cfa7a9b5b"
+        },
+        "account_compute": {
+          "ephemeral_apps_usd": {
+            "before-wgmma-overlap-prep": "16.31697844",
+            "before-wgmma-overlap-export": "16.45228052",
+            "before-wgmma-overlap-profile": "16.49394615",
+            "after-wgmma-overlap-profile": "16.43003956"
+          },
+          "conservative_compute_usd": 8.748401317078093,
+          "all_workers_stopped": true
+        },
+        "numerical_and_graph_checks": "passed_all_8",
+        "control_speedup": 1.8545347342375507,
+        "candidate_speedup": 1.8578179405257933,
+        "cases": [
+          {
+            "case": "decode_h16_q1_t0_independent_warm",
+            "fixture_sha256": "701cb8f67b0f8f5ea7eee9c56020db5e7896b776517957edab7bd5e3ceea6593",
+            "control": {
+              "upstream": {
+                "query_conversion": 1.024,
+                "partial_attention": 5.312,
+                "combine": 13.184
+              },
+              "direct": {
+                "query_conversion": 1.056,
+                "partial_attention": 5.568,
+                "combine": 2.176
+              }
+            },
+            "candidate": {
+              "upstream": {
+                "query_conversion": 1.024,
+                "partial_attention": 5.344,
+                "combine": 13.12
+              },
+              "direct": {
+                "query_conversion": 1.056,
+                "partial_attention": 5.632,
+                "combine": 2.144
+              }
+            },
+            "control_ratio": 0.4508196721311476,
+            "candidate_ratio": 0.4532019704433498
+          },
+          {
+            "case": "decode_h16_q1_t0_independent_rotating",
+            "fixture_sha256": "8e7d6210911dbfa3139e71eb1fae267654932b766292952622d2fd1f977b3b82",
+            "control": {
+              "upstream": {
+                "query_conversion": 1.0361502590673575,
+                "partial_attention": 5.89140932642487,
+                "combine": 13.053518134715027
+              },
+              "direct": {
+                "query_conversion": 1.0289430051813473,
+                "partial_attention": 5.946870466321244,
+                "combine": 1.947119170984456
+              }
+            },
+            "candidate": {
+              "upstream": {
+                "query_conversion": 1.034481865284974,
+                "partial_attention": 5.934559585492227,
+                "combine": 13.05319170984456
+              },
+              "direct": {
+                "query_conversion": 1.032440414507772,
+                "partial_attention": 5.977476683937824,
+                "combine": 1.945259067357513
+              }
+            },
+            "control_ratio": 0.44656913743261767,
+            "candidate_ratio": 0.4472616063334775
+          },
+          {
+            "case": "decode_h16_q8_t0_independent_warm",
+            "fixture_sha256": "a306d9c66c9161e387a4eb6141eb9cab3ffad325190c0ceced4366656ab0d9d1",
+            "control": {
+              "upstream": {
+                "query_conversion": 1.12,
+                "partial_attention": 12.001,
+                "combine": 8.832
+              },
+              "direct": {
+                "query_conversion": 1.12,
+                "partial_attention": 9.44,
+                "combine": 3.968
+              }
+            },
+            "candidate": {
+              "upstream": {
+                "query_conversion": 1.12,
+                "partial_attention": 12.16,
+                "combine": 8.736
+              },
+              "direct": {
+                "query_conversion": 1.152,
+                "partial_attention": 9.76,
+                "combine": 3.936
+              }
+            },
+            "control_ratio": 0.6617774336081629,
+            "candidate_ratio": 0.6744186046511627
+          },
+          {
+            "case": "decode_h16_q8_t0_independent_rotating",
+            "fixture_sha256": "8a37d174e52cbcbec756f53a03b0ec3e2967dcf2e4eb5f03ff66295c20e46f7d",
+            "control": {
+              "upstream": {
+                "query_conversion": 1.12264,
+                "partial_attention": 13.212200000000001,
+                "combine": 8.45576
+              },
+              "direct": {
+                "query_conversion": 1.12884,
+                "partial_attention": 10.287160000000002,
+                "combine": 3.7207999999999997
+              }
+            },
+            "candidate": {
+              "upstream": {
+                "query_conversion": 1.17516,
+                "partial_attention": 13.584159999999999,
+                "combine": 8.8064
+              },
+              "direct": {
+                "query_conversion": 1.1316000000000002,
+                "partial_attention": 10.3618,
+                "combine": 3.73908
+              }
+            },
+            "control_ratio": 0.664168560722403,
+            "candidate_ratio": 0.6463829664444796
+          },
+          {
+            "case": "decode_h16_q32_t0_independent_warm",
+            "fixture_sha256": "4dbf8d4abdb05cf647687adfb156f1ed4566c6ab7be07743c104a034822cf1ac",
+            "control": {
+              "upstream": {
+                "query_conversion": 1.664,
+                "partial_attention": 49.047,
+                "combine": 12.062
+              },
+              "direct": {
+                "query_conversion": 1.632,
+                "partial_attention": 29.568,
+                "combine": 2.24
+              }
+            },
+            "candidate": {
+              "upstream": {
+                "query_conversion": 1.758,
+                "partial_attention": 49.085,
+                "combine": 12.375
+              },
+              "direct": {
+                "query_conversion": 1.728,
+                "partial_attention": 29.442,
+                "combine": 2.24
+              }
+            },
+            "control_ratio": 0.5327131091392797,
+            "candidate_ratio": 0.5284887215666424
+          },
+          {
+            "case": "decode_h16_q32_t0_independent_rotating",
+            "fixture_sha256": "2c0e5c76a42f10dd830e5b7e76c1fefa85e0d403b7b80279e83ff15057652f24",
+            "control": {
+              "upstream": {
+                "query_conversion": 1.705142857142857,
+                "partial_attention": 49.30871428571429,
+                "combine": 12.04257142857143
+              },
+              "direct": {
+                "query_conversion": 1.6147142857142855,
+                "partial_attention": 31.482428571428574,
+                "combine": 2.0765714285714285
+              }
+            },
+            "candidate": {
+              "upstream": {
+                "query_conversion": 1.7462857142857142,
+                "partial_attention": 49.37085714285714,
+                "combine": 12.109571428571428
+              },
+              "direct": {
+                "query_conversion": 1.6868571428571428,
+                "partial_attention": 31.365714285714287,
+                "combine": 2.1165714285714285
+              }
+            },
+            "control_ratio": 0.5578132964804767,
+            "candidate_ratio": 0.5562386604215669
+          },
+          {
+            "case": "decode_h16_q64_t0_independent_warm",
+            "fixture_sha256": "97d47b391fd5342417e11581abe1feef14e5de8c8ff2cdc7ac43e8b5ea2eeec5",
+            "control": {
+              "upstream": {
+                "query_conversion": 2.016,
+                "partial_attention": 95.745,
+                "combine": 19.329
+              },
+              "direct": {
+                "query_conversion": 1.824,
+                "partial_attention": 56.479,
+                "combine": 2.56
+              }
+            },
+            "candidate": {
+              "upstream": {
+                "query_conversion": 1.887,
+                "partial_attention": 96.225,
+                "combine": 19.616
+              },
+              "direct": {
+                "query_conversion": 1.984,
+                "partial_attention": 56.608,
+                "combine": 2.593
+              }
+            },
+            "control_ratio": 0.5197967375523102,
+            "candidate_ratio": 0.5197149361239467
+          },
+          {
+            "case": "decode_h16_q64_t0_independent_rotating",
+            "fixture_sha256": "29aa19055b005f5f691c46e2b76181f03a21aa1b0a536e8b4ca551b890e23715",
+            "control": {
+              "upstream": {
+                "query_conversion": 2.11975,
+                "partial_attention": 95.405,
+                "combine": 19.607
+              },
+              "direct": {
+                "query_conversion": 1.84,
+                "partial_attention": 56.945,
+                "combine": 2.46375
+              }
+            },
+            "candidate": {
+              "upstream": {
+                "query_conversion": 2.4225,
+                "partial_attention": 95.749,
+                "combine": 19.594
+              },
+              "direct": {
+                "query_conversion": 1.81625,
+                "partial_attention": 57.116749999999996,
+                "combine": 2.53625
+              }
+            },
+            "control_ratio": 0.5229047632260254,
+            "candidate_ratio": 0.5219631386102042
           }
         ]
       }
