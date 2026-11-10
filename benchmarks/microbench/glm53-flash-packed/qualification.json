@@ -6307,7 +6307,7 @@
     "status": "full_paired_result_below_target",
     "target_direct_over_upstream": 0.5,
     "budget_usd": 20,
-    "conservative_compute_usd": 10.627032578158955,
+    "conservative_compute_usd": 10.860409477579118,
     "decision": "Use 128 columns at batch 8. Partial attention dominates batch 16. Full paired timing and focused sanitizers for the fused-query candidate remain pending.",
     "diagnostics": {
       "wgmma_disjoint": {
@@ -14639,6 +14639,43 @@
         "log_sha256": "b98bd4af84536ad3356e4e74117a5068eec69f0d7f9a775b25a70d06ced2a894",
         "account_ephemeral_apps_usd": "17.22871517",
         "conservative_compute_usd": 10.627032578158955,
+        "gpu_allocated": false
+      },
+      "wgmma_paired_output_uniform": {
+        "status": "cpu_prepare_failed",
+        "app_id": "ap-eAczZMRZ94oHvvWVRFDZJ2",
+        "failed_image": "im-RQ4MsL0PjSdGy8N7PnRMGp",
+        "source_identities": {
+          "parent": "ffb056e00ae6d182011e70f81d0723cd55ec6d74",
+          "sglang": "ee54c99f2b91d032fa10800a0892167ad7c39f3e",
+          "flashmla": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208"
+        },
+        "controller": {
+          "argv": [
+            "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+            "run",
+            "scripts/modal/kernels.py::prepare_kernels",
+            "--model-family",
+            "glm53"
+          ],
+          "account": "winstoncai",
+          "base_image": "im-u3qjKaUnxXy8WCAoMxEz9p",
+          "seconds": 662.1664863749902,
+          "returncode": 1
+        },
+        "environment": {
+          "REMNANT_MODEL_FAMILY": "glm53",
+          "REMNANT_INTEGRATION": "v0.5.22",
+          "REMNANT_GLM_UPSTREAM_DECODE": "1",
+          "REMNANT_GLM_CPU_REBUILD_FROM": "im-u3qjKaUnxXy8WCAoMxEz9p",
+          "REMNANT_GLM_CPU_REBUILD_BASE_SGLANG": "f3b90867d03016f1c96784632d8e1bb5390e4905",
+          "REMNANT_VALIDATION_TIMEOUT_S": "1260"
+        },
+        "error": "TileLang LayoutInference assigned full replication to the externally addressed maximum fragment, conflicting with the 32 replicas of the WGMMA score reduction.",
+        "next_change": "Annotate the reduction fragment with the exact layout reported by TileLang before exposing its address.",
+        "log_sha256": "00c67f2f539b70604432990f028e3dde0d710555c5ca75b6f9d29acfda778810",
+        "account_ephemeral_apps_usd": "17.31584693",
+        "conservative_compute_usd": 10.860409477579118,
         "gpu_allocated": false
       }
     },
