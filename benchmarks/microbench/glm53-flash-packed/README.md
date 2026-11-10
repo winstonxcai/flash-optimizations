@@ -272,6 +272,17 @@ The full paired and focused sanitizer gates are still pending. The ledger
 records the summaries and exact artifact identities, with the raw paired
 series and traces retained in the run export.
 
+### Pack the WGMMA partial output stores
+
+Use the 128-column batch-8 selection and fused-query partials as the
+control. The compiled partial emits 64 scalar BF16 stores per lane and
+replicates each LSE write across lanes. Pack each lane's adjacent feature
+pair into a single BF16x2 store and publish each LSE once. Preserve the
+partial buffer layout, BF16 rounding, normalization and combine
+artifacts. Verify the lane mapping and emitted stores before profiling.
+Keep the change only if the matched H200 measurements improve and the
+existing numerical, graph and sanitizer gates pass.
+
 ### Original 1.20× target
 
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched
