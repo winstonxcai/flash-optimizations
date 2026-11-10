@@ -56,6 +56,7 @@ def glm_rebuild_source_digest(
         "ops/attention/dsa/tilelang_kernel.py",
         "jit/include/sgl_kernel/glm_packed_decode.cuh",
         "jit/include/sgl_kernel/glm_wgmma_pv.cuh",
+        "jit/include/sgl_kernel/glm_wgmma_query.cuh",
     }
     digest = hashlib.sha256()
     for i, root in enumerate(map(Path, roots)):
