@@ -243,10 +243,13 @@ and focused sanitizer qualification for this candidate are pending.
 Conservative compute through the fused-query diagnostic is $9.90.
 
 Next, collect stage traces for batches 16 and 24 as well as the existing
-shapes. Test narrower output-column slices in the batch-8 combine to
-distribute its work across more CTAs. Keep the exact partial and query
-conversion artifacts, and use the unchanged 24-case protocol for any
-full paired comparison.
+shapes, covering all 12 zero-tail cases. Test 128, 256 and 512 output columns
+per batch-8 combine CTA, using 30 fresh paired upstream/Direct rounds for
+each width and cache policy. Run widths in opposite orders under warm and
+rotation and checkpoint each completed trial. Use the same input hash and
+exact partial and query conversion artifacts across the sweep. Select the
+width that improves paired latency across the two policies. Keep the
+unchanged 24-case protocol for the final comparison.
 
 ### Original 1.20× target
 

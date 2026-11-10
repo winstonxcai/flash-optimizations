@@ -582,6 +582,7 @@ def _prepare_upstream_decode(build: Path, deadline: float) -> None:
             "test_glm_upstream_compile_artifacts_are_bound",
             "test_glm_upstream_result_identity_and_csv",
             "test_glm_upstream_wgmma_timing_requires_candidate_geometry_and_score",
+            "test_glm_upstream_profile_requires_complete_matched_combine_sweep",
         )
     ), build, "upstream-cpu-tests", deadline, environment=environment)
     manifest = json.loads(MANIFEST.read_text())
@@ -1698,8 +1699,7 @@ def _benchmark_worker(
             contract = _glm_benchmark_contract()
             first = json.loads((root / f"{result_name}.json").read_text())
             if profile_decode:
-                if first["status"] != "passed" or len(first["cases"]) != 8:
-                    raise RuntimeError("Incomplete GLM upstream decode profile")
+                contract.validate_decode_profile(first)
                 record["profile"] = first
                 return str(root)
             contract.validate_timing(first)
