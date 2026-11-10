@@ -6307,7 +6307,7 @@
     "status": "qualified_target_missed",
     "target_direct_over_upstream": 0.5,
     "budget_usd": 20,
-    "conservative_compute_usd": 16.315931142814456,
+    "conservative_compute_usd": 16.55999115105835,
     "decision": "Keep the verified BF16x2 measurements and continue toward the 0.5000 target.",
     "diagnostics": {
       "wgmma_disjoint": {
@@ -14729,6 +14729,126 @@
         "account_ephemeral_apps_usd": "17.31910033",
         "conservative_compute_usd": 10.879449972015422,
         "gpu_allocated": false
+      },
+      "batch16_split": {
+        "app_id": "ap-eRwUwWflSmY52bnAbTgFhU",
+        "status": "passed",
+        "cases": {
+          "decode_h16_q16_t0_independent_warm": {
+            "trial_order": [
+              "16",
+              "8"
+            ],
+            "trials": {
+              "16": {
+                "native_us": 34.6319789091746,
+                "direct_us": 19.74395724137624,
+                "mean_paired_ratio": 0.570107933202764
+              },
+              "8": {
+                "native_us": 34.723136027654014,
+                "direct_us": 17.549855947494507,
+                "mean_paired_ratio": 0.5054225914956155
+              }
+            }
+          },
+          "decode_h16_q16_t0_independent_rotating": {
+            "trial_order": [
+              "8",
+              "16"
+            ],
+            "trials": {
+              "8": {
+                "native_us": 35.67488193511963,
+                "direct_us": 17.28019485106835,
+                "mean_paired_ratio": 0.4843803184261095
+              },
+              "16": {
+                "native_us": 35.650461377241676,
+                "direct_us": 19.726379559590267,
+                "mean_paired_ratio": 0.5533275663165926
+              }
+            }
+          },
+          "decode_h16_q16_t3_independent_warm": {
+            "trial_order": [
+              "8",
+              "16"
+            ],
+            "trials": {
+              "8": {
+                "native_us": 34.82249617576599,
+                "direct_us": 17.561920086542766,
+                "mean_paired_ratio": 0.5043268592257169
+              },
+              "16": {
+                "native_us": 34.866357485453285,
+                "direct_us": 19.77786676088969,
+                "mean_paired_ratio": 0.5672483595888903
+              }
+            }
+          },
+          "decode_h16_q16_t3_independent_rotating": {
+            "trial_order": [
+              "16",
+              "8"
+            ],
+            "trials": {
+              "16": {
+                "native_us": 35.689056729093004,
+                "direct_us": 19.42037542661031,
+                "mean_paired_ratio": 0.5441550032312511
+              },
+              "8": {
+                "native_us": 35.65234578685997,
+                "direct_us": 17.23858754575988,
+                "mean_paired_ratio": 0.4835191346874635
+              }
+            }
+          }
+        },
+        "paired_ratios": {
+          "16": 0.5586101423316598,
+          "8": 0.4943012691792118
+        },
+        "projected_ratio": 0.491153927267282,
+        "projected_speedup": 2.0360215901435885,
+        "raw_timing_sha256": "ac44af23a589aff912156f7ff7b9d6dae8744c269e44d39e9d4d8d4188fa778c",
+        "controller": {
+          "argv": [
+            "/Users/poohthewinnie/.local/share/uv/tools/modal/bin/modal",
+            "run",
+            "/private/tmp/glm53-batch16-split-WrlsGa/dispatch.py::run"
+          ],
+          "dispatch_sha256": "b648449e7415cf2d06bfd6f6e0a611be6eac6368f05d3d31b7d7b7f905fe6885",
+          "returncode": 0,
+          "timed_out": false,
+          "seconds": 154.58076500000607,
+          "account": "winstoncai",
+          "image": "im-qdUjEjfOAyMsNIpeobeT9P"
+        },
+        "run_id": "glm53-decode-wgmma-batch16-split-diagnostic-20261110",
+        "image": "im-qdUjEjfOAyMsNIpeobeT9P",
+        "source_identities": {
+          "parent": "f2c0c01fb756b66ae8a7d0f421442df4e6f82f5a",
+          "sglang": "6265e0a179874e41ae01290aa5f630da75ee567e",
+          "flashmla/csrc/cutlass": "147f5673d0c1c3dcf66f78d677fd647e4a020219",
+          "flashmla": "858bb1ccac6fa2c552c7bfc1ecea1dacd4800208"
+        },
+        "manifest_sha256": "c5177fb58547b7ce1c5a2d9c71d1d159059d646e6b29aeb4da734a54b537ddb9",
+        "selected_artifact": "8",
+        "decision": "Use the one-tile partial and 128-column combine for a fresh full comparison.",
+        "volume": "winstoncai/remnant-stage2a-results/microbench/glm53-decode-wgmma-batch16-split-diagnostic-20261110/batch16-split",
+        "artifact_sha256": {
+          "batch16-split/timing.json": "ac44af23a589aff912156f7ff7b9d6dae8744c269e44d39e9d4d8d4188fa778c",
+          "dispatch.py": "b648449e7415cf2d06bfd6f6e0a611be6eac6368f05d3d31b7d7b7f905fe6885",
+          "local-reconciliation.json": "739982c1e2caeb6ee780e8ea1d5e04e579a02fed1ec9d3f7afa6a3ddc79c15ca"
+        },
+        "ephemeral_apps_usd_snapshots": {
+          "after-batch16-split-diagnostic": "21.67996425",
+          "before-batch16-split-diagnostic": "21.54519734"
+        },
+        "conservative_compute_usd": 16.55999115105835
       }
     },
     "full_paired_wgmma": {

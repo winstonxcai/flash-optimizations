@@ -33,6 +33,7 @@ Download: modal volume get remnant-stage2a-results microbench/<run-id> <local-di
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import importlib.metadata
 import importlib.util
@@ -69,7 +70,12 @@ from scripts.modal.qualification import \
 from scripts.modal.qualification import (qualify_fp4_runs, read_pytest_report,
                                          validate_run_id)
 from scripts.model_profiles import model_profile
-from scripts.sources import check_sources, integration_profile
+from scripts.sources import (
+    GLM_ATTENTION_BENCHMARK,
+    GLM_QUALIFIED_BENCHMARK_SOURCE,
+    check_sources,
+    integration_profile,
+)
 
 
 def _resolve_image_sources(
@@ -98,6 +104,9 @@ if _UPSTREAM_DECODE and MODEL_FAMILY != "glm53":
 if MODEL_FAMILY not in ("dsv4", "glm53") or (MODEL_FAMILY == "glm53" and INTEGRATION["version"] != "v0.5.22"):
     raise ValueError("GLM validation requires REMNANT_INTEGRATION=v0.5.22")
 compiled_image_id, rebuild_image_id = _resolve_image_sources(MODEL_FAMILY, os.environ)
+_GLM_BATCH16_ONE_TILE = os.environ.get("REMNANT_GLM_BATCH16_ONE_TILE") == "1"
+if _GLM_BATCH16_ONE_TILE and (not _UPSTREAM_DECODE or not compiled_image_id):
+    raise ValueError("Batch-16 one-tile timing requires the qualified upstream decode image")
 MODEL_PROFILE = model_profile(MODEL_FAMILY, INTEGRATION["version"])
 GLM_TEST = "test/registered/attention/unittests/test_glm5_remnant.py"
 GLM_CPU_TEST = "test/registered/unit/test_glm5_mla_cache_format.py"
@@ -173,6 +182,7 @@ else:
 RESULTS_ROOT = Path("/results")
 NATIVE_LIBRARY = Path("/opt/remnant-native-store.so")
 MANIFEST = Path("/opt/remnant-build.json")
+GLM_REUSE_SNAPSHOT = Path("/opt/remnant-glm-reuse-base.json")
 BUILD_ROOT = Path("/opt/remnant-build")
 SANITIZER_ROOT = Path("/opt/remnant-sanitizer")
 UPSTREAM_FLASHMLA_ROOT = Path("/opt/flashmla-upstream-native")
@@ -439,7 +449,7 @@ def _flashmla_ignored(path: Path) -> bool:
     )
 
 
-def _source_hashes() -> dict[str, str]:
+def _source_hashes(*, base_glm_attention: bytes | None = None) -> dict[str, str]:
     hashes = {}
     roots = [("sglang", SGLANG_ROOT), ("flashmla", FLASHMLA_ROOT)]
     if VALIDATION_SUITE in ("v41-fp4", "v41-decode"):
@@ -456,7 +466,14 @@ def _source_hashes() -> dict[str, str]:
                 and not _ignore(relative)
             ):
                 digest.update(str(relative).encode() + b"\0")
-                digest.update(path.read_bytes())
+                if (
+                    label == "sglang"
+                    and relative == GLM_ATTENTION_BENCHMARK
+                    and base_glm_attention is not None
+                ):
+                    digest.update(base_glm_attention)
+                else:
+                    digest.update(path.read_bytes())
         hashes[label] = digest.hexdigest()
     # Policy and shared metadata are build inputs too, even outside fork trees.
     for name in ("scripts/modal/kernel_qualification.py", "scripts/modal/qualification.py", "scripts/model_profiles.py"):
@@ -526,7 +543,7 @@ def _reuse_glm_cpu_artifacts(build: Path, deadline: float, binding_requirements:
 
     if os.environ.get("REMNANT_GLM_CPU_REBUILD_FROM"):
         return False
-    snapshot = Path("/opt/remnant-glm-reuse-base.json")
+    snapshot = GLM_REUSE_SNAPSHOT
     if not os.environ.get("REMNANT_COMPILED_IMAGE") or not snapshot.is_file():
         return False
     previous = json.loads(snapshot.read_text())
@@ -554,6 +571,7 @@ def _reuse_glm_cpu_artifacts(build: Path, deadline: float, binding_requirements:
                  build / "glm-benchmark-imports.log",deadline,environment=environment)
     _run_pytest(CPU_TESTS,build,"cpu-tests",deadline,environment=environment)
     _run_pytest((GLM_TEST,),build,"collection",deadline,collect=True,environment=environment)
+    previous.pop("upstream_batch16_artifact", None)
     previous.update(glm_compile=compiled, sources=_source_hashes(),source_identities=SOURCE_IDENTITIES,
         launcher_sha256=hashlib.sha256(Path("/opt/remnant-launcher.py").read_bytes()).hexdigest(),
         compiled_base_image=os.environ["REMNANT_COMPILED_IMAGE"],cpu_rebuild_from=None,
@@ -589,6 +607,9 @@ def _prepare_upstream_decode(build: Path, deadline: float) -> None:
     manifest["upstream_compile"] = json.loads(
         Path("/opt/remnant-glm-upstream-compile.json").read_text()
     )
+    if _GLM_BATCH16_ONE_TILE:
+        manifest["upstream_batch16_artifact"] = "8"
+        _glm_timing_reuse_base(manifest)
     MANIFEST.write_text(json.dumps(manifest, indent=2) + "\n")
 
 
@@ -1189,8 +1210,11 @@ if compiled_image_id:
     from scripts.sources import compiled_source_digest
 
     expected = compiled_source_digest([SGLANG_SOURCE / "python/sglang/kernels", FLASHMLA_SOURCE / "csrc"])
+    snapshot_args = repr(str(SGLANG_ROOT))
+    if _GLM_BATCH16_ONE_TILE:
+        snapshot_args += ", record_benchmark_source=True"
     code = ("from scripts.sources import verify_compiled_image_sources, snapshot_glm_artifacts; "
-            f"verify_compiled_image_sources({expected!r}, {[str(SGLANG_ROOT / 'python/sglang/kernels'), str(FLASHMLA_ROOT / 'csrc')]!r}, {INTEGRATION['version']!r}); snapshot_glm_artifacts({str(SGLANG_ROOT)!r})")
+            f"verify_compiled_image_sources({expected!r}, {[str(SGLANG_ROOT / 'python/sglang/kernels'), str(FLASHMLA_ROOT / 'csrc')]!r}, {INTEGRATION['version']!r}); snapshot_glm_artifacts({snapshot_args})")
     kernel_base = (
         modal.Image.from_id(compiled_image_id)
         .env({"PYTHONPATH": f"{REMOTE_REPO}:{SGLANG_ROOT / 'python'}"})
@@ -1350,6 +1374,10 @@ kernel_image = (
             "REMNANT_GLM_CPU_REBUILD_FROM": rebuild_image_id or "",
             "REMNANT_GLM_MODEL_CONFIG": "/opt/remnant-glm-config.json",
             "REMNANT_GLM_COMPILE_MANIFEST": "/opt/remnant-glm-compile.json",
+            **(
+                {"REMNANT_GLM_BATCH16_ONE_TILE": "1" if _GLM_BATCH16_ONE_TILE else "0"}
+                if MODEL_FAMILY == "glm53" else {}
+            ),
             "REMNANT_GLM_FORMAT_TRANSITION_JSON": json.dumps(transition) if transition else "",
             **({"TILELANG_DEFAULT_TARGET": json.dumps({"kind": "cuda", "arch": "sm_90a"}), "TILELANG_CACHE_DIR": "/opt/remnant-tilelang-glm"} if MODEL_FAMILY == "glm53" else {}),
         }
@@ -1495,6 +1523,8 @@ def _preflight_glm_timing(
     profile_decode: bool = False,
 ) -> dict | None:
     """Check GLM image and evidence before scheduling its GPU worker."""
+    if _GLM_BATCH16_ONE_TILE and profile_decode:
+        raise ValueError("The selected batch-16 schedule requires paired timing")
     if profile_decode and (suite != "glm-upstream-decode" or phase != "decode"
                            or qualification_runs or allow_incomplete or resume_run):
         raise ValueError("Decode profiling requires a fresh diagnostic run")
@@ -1540,6 +1570,8 @@ def _dispatch_benchmark(
         raise ValueError("--model-family must match REMNANT_MODEL_FAMILY")
     preflight = None
     upstream = suite == "glm-upstream-decode"
+    if _GLM_BATCH16_ONE_TILE and profile_decode:
+        raise ValueError("The selected batch-16 schedule requires paired timing")
     if profile_decode and (not upstream or resume_run or qualification_runs):
         raise ValueError("Decode profiling requires a fresh upstream decode run")
     if upstream and (not _UPSTREAM_DECODE or model_family != "glm53" or phase != "decode"
@@ -1629,6 +1661,8 @@ def _benchmark_worker(
     profile_decode: bool = False,
 ) -> str:
     """Validate and time the complete matrix for the selected survivor budget."""
+    if _GLM_BATCH16_ONE_TILE and profile_decode:
+        raise ValueError("The selected batch-16 schedule requires paired timing")
     if model_family != MODEL_FAMILY:
         raise ValueError("--model-family must match REMNANT_MODEL_FAMILY")
     upstream = suite == "glm-upstream-decode"
@@ -2719,21 +2753,104 @@ def _glm_timing_checkpoint(run_id: str) -> Path:
     return checkpoint
 
 
+def _glm_qualification_driver_ast(source: bytes) -> str:
+    """Keep benchmark references and graph methods in the tested source scope."""
+    module = ast.parse(source)
+    schedule_assignment = ast.dump(
+        ast.parse(
+            'geometry = wgmma_geometry(8 if case.queries == 16 '
+            'and variant is wgmma.get("8") else case.queries)'
+        ).body[0]
+    )
+    helper_signature = ast.parse(
+        "def upstream_wgmma_launches(build: dict) -> dict: pass"
+    ).body[0]
+    found_helper = False
+    for node in list(module.body):
+        if isinstance(node, ast.FunctionDef):
+            if node.name == "upstream_wgmma_launches":
+                if (
+                    found_helper
+                    or node.decorator_list
+                    or getattr(node, "type_params", ())
+                    or ast.dump(node.args) != ast.dump(helper_signature.args)
+                    or node.returns is None
+                    or ast.dump(node.returns) != ast.dump(helper_signature.returns)
+                ):
+                    raise RuntimeError("Invalid batch-16 benchmark helper declaration")
+                found_helper = True
+                module.body.remove(node)
+            elif node.name in ("main", "validate_timing"):
+                node.body = []
+        elif isinstance(node, ast.ClassDef) and node.name == "Fixture":
+            constructor = next(
+                member for member in node.body
+                if isinstance(member, ast.FunctionDef) and member.name == "__init__"
+            )
+            for statement in ast.walk(constructor):
+                if (
+                    isinstance(statement, ast.Assign)
+                    and ast.dump(statement) == schedule_assignment
+                ):
+                    statement.value = ast.parse(
+                        "wgmma_geometry(case.queries)", mode="eval"
+                    ).body
+    return ast.dump(module)
+
+
+def _glm_timing_reuse_base(manifest: dict) -> dict:
+    """Prove a benchmark-only launch change against the immutable tested image."""
+    if not _GLM_BATCH16_ONE_TILE or manifest.get("upstream_batch16_artifact") != "8":
+        raise RuntimeError("Missing explicit one-tile benchmark source reuse")
+    baseline = json.loads(GLM_REUSE_SNAPSHOT.read_text())
+    original = GLM_QUALIFIED_BENCHMARK_SOURCE.read_bytes()
+    current = (SGLANG_ROOT / GLM_ATTENTION_BENCHMARK).read_bytes()
+    if (
+        manifest.get("compiled_base_image") != compiled_image_id
+        or "upstream_batch16_artifact" in baseline
+        or _source_hashes(base_glm_attention=original) != baseline["sources"]
+        or _glm_qualification_driver_ast(current) != _glm_qualification_driver_ast(original)
+    ):
+        raise RuntimeError("GLM benchmark reuse changed qualification source scope")
+    for key in (
+        "binaries", "glm_compile", "upstream_compile", "model_config", "arch",
+        "torch", "triton", "tilelang", "cuda", "cuda_python", "cuda_bindings",
+        "nvcc", "sanitizer",
+    ):
+        if baseline[key] != manifest[key]:
+            raise RuntimeError(f"GLM benchmark reuse changed qualified {key}")
+    _glm_benchmark_contract().upstream_wgmma_launches(manifest)
+    return baseline
+
+
 def _glm_timing_qualification(
     run_ids: str, *, allow_incomplete: bool = False, phase: str = "all"
 ) -> dict:
     qualification_run_ids(run_ids)
+    manifest = json.loads(MANIFEST.read_text())
+    reuse = _GLM_BATCH16_ONE_TILE or "upstream_batch16_artifact" in manifest
+    if reuse and (phase != "upstream-decode" or allow_incomplete):
+        raise RuntimeError("GLM one-tile schedule requires complete upstream qualification")
+    qualified_manifest = _glm_timing_reuse_base(manifest) if reuse else manifest
     context = QualificationContext(
         results_root=RESULTS_ROOT,
-        manifest=json.loads(MANIFEST.read_text()),
+        manifest=qualified_manifest,
         runtime_hashes=_glm_benchmark_contract().runtime_hashes(
             SGLANG_ROOT / "python/sglang"
         ),
         sanitizer_order=SANITIZER_ORDER,
     )
-    return qualify_glm_timing(
+    receipt = qualify_glm_timing(
         run_ids, context=context, allow_incomplete=allow_incomplete, phase=phase
     )
+    if reuse:
+        receipt["benchmark_source_reuse"] = {
+            "compiled_base_image": compiled_image_id,
+            "qualified_source_identities": qualified_manifest["source_identities"],
+            "timing_source_identities": manifest["source_identities"],
+            "batch16_artifact": manifest["upstream_batch16_artifact"],
+        }
+    return receipt
 
 
 def _benchmark_cases():

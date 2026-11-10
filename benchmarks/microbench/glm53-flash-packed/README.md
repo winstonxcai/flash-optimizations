@@ -306,6 +306,30 @@ and tail counts. Reuse sanitizer evidence only for the exact binaries and
 unchanged test scope. A changed schedule must pass the maintained numerical
 and graph checks and a fresh 24-case run to establish a new aggregate.
 
+The batch-16 schedule diagnostic used the qualified BF16x2 image and
+matched the previous fixture hashes, bank counts and L2 residency
+geometry. Each schedule had 30 fresh pairs per case. The one-tile partial
+and 128-column combine improved all four cases.
+
+| Tails | Cache | Two-tile Direct (µs) | One-tile Direct (µs) | Two-tile paired ratio | One-tile paired ratio |
+|---:|---|---:|---:|---:|---:|
+| 0 | Warm | 19.744 | 17.550 | 0.57011 | 0.50542 |
+| 0 | Rotating | 19.726 | 17.280 | 0.55333 | 0.48438 |
+| 3 | Warm | 19.778 | 17.562 | 0.56725 | 0.50433 |
+| 3 | Rotating | 19.420 | 17.239 | 0.54416 | 0.48352 |
+
+Replacing the four batch-16 ratios in the prior matrix projects 2.036×.
+Use the one-tile schedule for a fresh full comparison. The diagnostic
+result alone does not satisfy the 24-case target.
+
+Prepare and run the comparison with `REMNANT_GLM_BATCH16_ONE_TILE=1`
+and `REMNANT_COMPILED_IMAGE=im-qdUjEjfOAyMsNIpeobeT9P` alongside the
+usual GLM upstream-decode environment. CPU preparation checks that the
+original qualification source fingerprint can be reconstructed with only
+the archived benchmark driver restored. It checks unchanged reference and
+graph code and identical compiled artifacts and toolchain before applying
+the original receipts to the selected binaries.
+
 ### Original 1.20× target
 
 The goal is at least 1.20× equal-case geometric-mean speedup over untouched

@@ -4559,6 +4559,63 @@ class ValidationTierTests(unittest.TestCase):
 class GLMUpstreamDecodeTests(unittest.TestCase):
     """Upstream dispatch and source-bound evidence; no remote calls or CUDA."""
 
+    def test_benchmark_reuse_preserves_references_and_fixture_methods(self):
+        original = b"""
+def packed_reference():
+    return 1
+
+class Fixture:
+    def __init__(self, case, variant):
+        geometry = wgmma_geometry(case.queries)
+        self.geometry = geometry
+
+    def time(self):
+        return 1
+
+def main():
+    return 1
+
+def validate_timing(payload):
+    return 1
+"""
+        candidate = original.replace(
+            b"geometry = wgmma_geometry(case.queries)",
+            b'geometry = wgmma_geometry(8 if case.queries == 16 and variant is wgmma.get("8") else case.queries)',
+        ).replace(
+            b"def main():\n    return 1",
+            b"def upstream_wgmma_launches(build: dict) -> dict:\n"
+            b"    return build\n\ndef main():\n    return 2",
+        )
+        scope = kernels._glm_qualification_driver_ast
+        self.assertEqual(scope(candidate), scope(original))
+        for before, after in (
+            (b"packed_reference():\n    return 1", b"packed_reference():\n    return 0"),
+            (b"time(self):\n        return 1", b"time(self):\n        return 0"),
+            (b"self.geometry = geometry", b"self.geometry = None"),
+        ):
+            self.assertNotEqual(scope(candidate.replace(before, after)), scope(original))
+        self.assertNotEqual(scope(candidate + b"Fixture.time = None\n"), scope(original))
+        with self.assertRaisesRegex(RuntimeError, "Invalid batch-16 benchmark helper"):
+            scope(candidate.replace(b"def upstream_wgmma_launches", b"@change\ndef upstream_wgmma_launches"))
+
+    def test_batch16_selects_the_complete_qualified_batch8_variant(self):
+        contract = kernels._glm_benchmark_contract()
+        eight = dict(
+            geometry={"tile_rows": 64, "inner_iter": 1, "partial_groups": 33},
+            combine_columns=128,
+            query_conversion="fused",
+        )
+        sixteen = {"geometry": {"tile_rows": 64, "inner_iter": 2, "partial_groups": 17}}
+        variants = {"8": eight, "16": sixteen}
+        build = {"upstream_compile": {"decode_wgmma": variants}}
+        self.assertIs(contract.upstream_wgmma_launches(build)["16"], sixteen)
+        build["upstream_batch16_artifact"] = "8"
+        self.assertIs(contract.upstream_wgmma_launches(build)["16"], eight)
+        self.assertIs(variants["16"], sixteen)
+        eight["combine_columns"] = 256
+        with self.assertRaisesRegex(RuntimeError, "Unbound batch-16"):
+            contract.upstream_wgmma_launches(build)
+
     def test_full_preflight_checks_the_legacy_artifacts_before_qualification(self):
         preflight = inspect.unwrap(kernels._preflight_glm_timing.get_raw_f())
         upstream = SimpleNamespace(verify_compilation=MagicMock())
