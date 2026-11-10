@@ -1,5 +1,455 @@
 # GLM-5.3-Flash Packed
 
+## Decode performance follow-up
+
+[Accepted batch-16 schedule and paired results](#accepted-batch-16-schedule)
+
+### 2.0× follow-up
+
+Starting point: measured SGLang `29fe520dd457` and evidence commit `36b8ad8`.
+The question is whether Hopper WGMMA can cut Packed partial attention time
+enough to reach an equal-case Direct/Native ratio of 0.5000 on the same H200
+matrix. The prior candidate remains the batch-1 control. For batches 8–64,
+test 64 selected rows per tile, transposed QK and PV, and the existing
+cooperative expansion and parallel combine. The cache ABI, pristine Native
+source, query conversion, fixture inputs and timing boundaries stay fixed.
+
+CPU-compile and inspect the SM90a instructions first. Use the maintained
+eight-case diagnostic to check numerical parity, graph replay and stage
+latencies before qualifying a candidate. Acceptance requires focused
+sanitizers and the unprofiled 24-case, 30-round matrix with fresh paired Native
+samples. Preserve the prior result and any failed candidate. Stop scheduling
+when a launch would exceed $20, counting the $1.73 already metered.
+
+The first SM90a build emitted 32 FP8 `QGMMA` sites and zero local-memory
+instructions per specialization. The generated KV panel offsets matched the
+loader and the transpose buffer was disjoint from both QK operands. The
+generic transpose emitted 294 static CTA barriers, with 256 inside the
+per-tile transpose. Its CPU evidence is under
+`data/modal/glm53-decode-speed/wgmma-cpu-artifacts` in the experiment worktree.
+The next revision uses a per-lane 16×16 register transpose and verifies the
+CTA barrier count before H200 profiling.
+It reduced the count to 39 without spilling. The generated batch-8 kernel
+overlapped its transpose destination with Q and KV, so that revision remained
+CPU-only. The next build disables TileLang shared-memory reuse for this
+kernel and rejects overlapping generated buffer ranges during preparation.
+
+The disjoint-buffer build passed all eight H200 diagnostic cases, including
+independent numerical and changing-input graph checks. At batch 32, Direct
+partial attention fell from 50.17–53.50 µs to 39.78–42.10 µs. At batch 64,
+it fell from 93.02–93.79 µs to 81.48–81.85 µs. The equal-case speedup from
+the eight sums of traced kernel durations was 1.512×. The complete 24-case
+matrix is still pending. See `decode_wgmma_followup` in the
+[qualification ledger](qualification.json) for stage timings, commands,
+compiled artifact identities and raw trace hashes.
+
+The 39 static CTA barriers include separate max and sum reductions for each
+of the four heads owned by a lane. The next candidate batches those
+reductions using the pinned TileLang API, keeping the accumulator layout
+and softmax recurrence. CPU preparation now checks for at most 24 static
+CTA barriers and rechecks the disjoint shared ranges.
+
+The batched reductions emitted 15 CTA barriers with zero spills. The next
+eight-case H200 diagnostic passed and reached 1.551× on the summed stage
+traces. The batch-64 partial measured 76.84–77.54 µs. The following candidate
+delays each tile's PV issue until the start of the next iteration, where it
+can overlap expansion into separate K storage. The final PV drains after
+the loop. The experiment will keep the same attention recurrence and check
+the generated waits before H200 profiling.
+
+The first pipelined build reached artifact binding. Batch 8 produced the same
+device code as the previous build, with a second cached host wrapper. The
+retry binds each library to the exact TileLang JIT cache entry and checks it
+against the adapter's generated host and device code before profiling.
+
+The pipelined candidate passed all eight diagnostics at 1.555× on summed
+stage traces, compared with 1.551× for batched reductions alone. Batch-64
+partial attention still took 76.83–78.25 µs. The fixture hashes and pristine
+Native partial cubins matched the preceding run. Preparation and profiling
+bring conservative compute accounting to $2.78.
+
+The next candidate issues aligned asynchronous copies for both 32-row Packed
+payload waves before waiting and expanding them. Its shared scratch grows
+from 8.5 to 17 KiB so each wave owns its staging area. The bitmap ranking,
+swizzled FP8 tiles, PV schedule and baseline stay fixed. Verify the copy and
+wait instructions, shared ranges and register usage before profiling.
+
+CPU preparation verified eight async copy sites per variant, no stack or
+local traffic and unchanged upstream Native artifacts. All eight H200
+diagnostics passed numerical and changing-input replay checks. The traced
+speedup fell to 1.542× and batch-64 partial attention rose to
+78.52–79.99 µs. Keep the results in the ledger and return to the batched
+kernel and its original gather for the next comparison. Conservative compute
+accounting through the async diagnostic is $3.07.
+
+The next candidate replaces the per-lane K-to-V transpose with Hopper matrix
+loads and stores. Each warp owns 16 history rows. It transposes pairs of FP8
+bytes with a 16-bit matrix load, then uses byte permutations to put each
+feature's consecutive history bytes into the SW64 PV operand. A CPU address
+model checked all 32,768 bytes against the generated SW128 and SW64 layouts.
+The Packed ABI and FP8 attention arithmetic stay fixed. Check generated
+matrix instructions, register use and output parity before measuring it.
+
+The compiled transpose used 16 transposed matrix loads and 16 non-transposed
+matrix stores per specialization, with no spills. Batch-64 register use
+fell from 243 to 141 per thread, and shared memory still allowed two CTAs
+per SM. All eight H200 diagnostics passed. Batch-64 Direct partial attention
+fell from 76.84–77.54 µs to 63.59–65.15 µs. The equal-case speedup on summed
+stage traces rose from 1.551× to 1.751×. Keep this image as the control for
+the next experiment. Conservative compute spend is $3.38.
+
+Test whether warp-level PV can read FP8 inputs from the same expanded SW128
+K tile while keeping warpgroup QK. This removes the 32 KiB V allocation
+and the transpose.
+The two GEMMs distribute heads across different lanes, so publish the
+16 FP32 scale factors through shared memory. CPU preparation must confirm
+the QK and PV instruction families, any FP16 conversion, SW128 layout,
+register use and actual shared-memory footprint before running the same
+H200 diagnostic.
+
+Warp-level PV reduced dynamic shared memory to 54.5 KiB, but batch-64
+registers rose to 201 per thread. The SM90a binary used 72 FP8-to-FP16
+unpack sites and 32 warp MMA sites for PV. All eight H200 diagnostics
+passed numerical and replay checks. The six cases that used the new PV
+were slower, lowering the eight-case trace speedup to 1.639×.
+Conservative compute spend through this comparison is $3.62.
+
+The next candidate restores native FP8 warpgroup PV and uses one 16 KiB V
+buffer for two 256-feature halves. The first transpose overlaps QK.
+The first PV drains before the second transpose reuses V. Keep the
+probabilities and expanded K across both halves, with the same per-feature
+accumulation and normalization. The CPU gate checks both transpose calls,
+the native FP8 instructions and a shared-memory footprint that can fit
+three CTAs per SM. Register use and H200 timing determine whether that
+additional residency is attainable and worthwhile.
+
+The half-V build used 70 KiB of dynamic shared memory and 96–159 registers
+per thread, enough for three theoretical CTAs per SM. It passed all eight
+H200 diagnostic cases. Its equal-case trace speedup was 1.705× and the
+full-V control remained faster overall at 1.751×. Conservative compute
+spend through the half-V diagnostic is $3.95.
+
+The first full paired WGMMA comparison restores the measured full-V kernel
+and loader byte for byte. Batch 1 retains the existing tile32 partial and
+combine. Batches 8–64 use the image-bound tile64 partials and combines.
+The timing runner requires all five candidate artifact bindings and reports
+the strict 0.5000 Direct/Native target while retaining the 24 cases and 30
+paired rounds. Focused qualification requires exact cubin and probe source
+identities. It checks first-partition graph replay, the short final splits,
+and a positive WGMMA barrier trace on H200.
+
+The first H200 qualification exposed a missing optional field in the small
+graph fixture. The fixture-only fix preserved every compiled kernel artifact
+and passed all five smoke cases. The next run reached the 180-second
+racecheck trace limit after logging 9,984 combine events. The trace audit
+now uses one representative combine case. The three sanitizer tools still
+require all 23 focused cases each. Both attempts and raw report identities are
+in the ledger. Conservative compute spend through the trace timeout is $4.49.
+
+Run `glm53-decode-full-v-paired-20261110` completed all 24 cases with 30
+fresh pairs per case on one H200. The equal-case geometric-mean ratio was
+**0.58502**, or **1.70935×** speedup over untouched upstream Native. All
+case means favored Direct. Batch 8 had the highest ratios (0.70054–0.70994).
+Reaching 2.0× requires a further 14.53% reduction in the aggregate ratio.
+The [WGMMA CSV](upstream-decode-wgmma.csv) contains all absolute latencies,
+paired samples, and fixture hashes.
+
+The measured sources are parent `527574e36b9e`, SGLang `d355f3196cc9`,
+and FlashMLA `858bb1ccac6f`, image `im-pdTEWtY6wu4Sjj8l9DxGFF`.
+All fixture hashes match the prior 24-case run. Every fixture passed
+exact Packed-byte, independent numerical, and changing-input replay checks.
+The trace audit finished in 47 seconds and each sanitizer tool passed all
+23 focused cases. Timing took 77.62 seconds inside the H200 Function.
+Conservatively accounted compute through this result was $6.88 of $20.
+The ledger binds the raw reports and exact commands to the image and source
+identities. This candidate remains an experiment while the 2.0× goal is open.
+
+### Register-fed PV experiment
+
+Test whether feeding the expanded SW128 KV tile to FP8 WGMMA through
+registers makes up the remaining decode latency gap. Use the qualified
+full-V run as the candidate control and preserve the upstream Native
+baseline, split geometry, Packed ABI, query conversion and timing protocol.
+Keep the probability operand in SW64 shared memory and remove the
+32 KiB transposed V allocation. Batch independent PV panels and hold
+their source registers live through the WGMMA wait.
+
+Check the SM90a artifact for register-source PV instructions, the absence
+of shared matrix stores, shared-memory bounds and spills before H200
+profiling. The maintained diagnostic provides stage timings and graph
+and numerical checks. A promising candidate proceeds to the same focused
+sanitizers and full 24-case, 30-round comparison. Stop at the existing $20
+cap. Roll back to SGLang `d355f3196cc9` for the qualified full-V control.
+
+Register-fed PV passed all eight H200 diagnostic cases. The summed
+stage-trace speedup rose from 1.751× to 1.855×. Batch-64 Direct partial
+attention fell from 63.59–65.15 µs to 56.48–56.95 µs. The compiled kernel
+used 53.5 KiB of dynamic shared memory, 112–138 registers, and no spills.
+Keep this candidate as the control for a bitmap expansion experiment.
+
+### Nibble lookup for bitmap expansion
+
+Partial attention still dominates the large batches. Replace the repeated
+bitmap selector arithmetic in the register-fed loader with a 64-byte shared
+table. Each nibble selects four bytes from a compact payload word and an
+explicit zero source. Preserve history order, rank bounds, and the Packed
+ABI. Verify exact expansion with the existing byte probe and compare SM90a
+instructions and resources before profiling. Qualify the full matrix only
+after identifying a candidate that can plausibly reach 2.0×. The measured
+register-fed control is SGLang `4479b36e430f`.
+
+The H200 byte probe passed on both loaders, including malformed masks
+and offsets above 2 GiB. The lookup removed 10–12% of static instruction
+sites and added 64 shared-load sites. In the eight matched stage traces,
+the speedup fell from 1.855× to 1.838×. Five of the six partial-attention
+cases using the lookup slowed down. Keep the register-fed loader without
+the table. The ledger retains the rejected cubins, exact-byte receipt and
+stage timings. Conservative compute through this experiment is $8.21.
+
+The next experiment will allow two independent register-fed PV groups to
+be in flight. Each group owns separate source and accumulator registers.
+Wait for the older group before recycling its operand registers, then
+drain both before the online softmax reads the accumulators. Verify the
+emitted dependency barriers, registers and spills before H200 profiling.
+
+The emitted code kept two groups in flight and passed all eight H200
+diagnostic cases. Trace speedup moved from 1.855× to 1.858×, with
+131–157 registers per thread instead of 112–138. Both batch-64 partials
+were slightly slower. Keep the simpler serial PV schedule.
+
+### Fuse query conversion into the WGMMA partial
+
+The separate BF16-to-FP8 launch still costs roughly 1–2 µs in the traces.
+Test staging the original BF16 query directly into the FP8 Q tile at
+batches 8–64. The measured path still starts with BF16 and ends after
+combine. Preserve round-to-nearest conversion, signed zero and the
+original out-of-range behavior. Compare all BF16 bit patterns against
+the actual Torch CUDA conversion before profiling and verify the fused
+kernel in the graph. Use the serial register-fed candidate as the
+control. Keep batch 1, the pristine Native path and all fixture shapes
+as recorded for that control.
+
+The first H200 byte gate exposed a difference between CPU Torch and the
+pinned CUDA conversion. Its 30,639 mismatches matched the overflow and
+negative-NaN cases changed by the CPU-inspired correction. The next
+build uses Hopper's saturating conversion directly. Rerun the same
+65,536-pattern byte gate before measuring it.
+
+The corrected H200 byte gate matched Torch CUDA for all 65,536 patterns.
+The eight-case trace speedup rose from 1.855× to 1.921×. For batches 8–64,
+the Direct graph has two kernels per bank. Query conversion is inside
+the partial and remains in the measured time. Batch-8 trace ratios fell
+from 0.662–0.664 to 0.598–0.608. All eight numerical and replay checks
+passed. Retain fusion as the current experiment. The full paired matrix
+and focused sanitizer qualification for this candidate are pending.
+Conservative compute through the fused-query diagnostic is $9.90.
+
+Next, collect stage traces for batches 16 and 24 as well as the existing
+shapes, covering all 12 zero-tail cases. Test 128, 256 and 512 output columns
+per batch-8 combine CTA, using 30 fresh paired upstream/Direct rounds for
+each width and cache policy. Run widths in opposite orders under warm and
+rotation and checkpoint each completed trial. Use the same input hash and
+exact partial and query conversion artifacts across the sweep. Select the
+width that improves paired latency across the two policies. Keep the
+unchanged 24-case protocol for the final comparison.
+
+Run `glm53-decode-wgmma-combine-sweep-profile-20261110` completed all 12
+zero-tail traces and the six batch-8 paired trials on one H200.
+
+| Cache policy | Columns per CTA | Untouched Native (µs) | Packed Direct (µs) | Mean paired ratio |
+|---|---:|---:|---:|---:|
+| Warm | 128 | 23.171 | 12.772 | 0.55120 |
+| Warm | 256 | 23.075 | 13.413 | 0.58136 |
+| Warm | 512 | 23.163 | 14.237 | 0.61465 |
+| Rotating | 128 | 22.886 | 12.372 | 0.54060 |
+| Rotating | 256 | 22.821 | 12.837 | 0.56249 |
+| Rotating | 512 | 22.829 | 14.025 | 0.61433 |
+
+Keep 128 columns at batch 8. Its two-policy paired ratio was 0.54587,
+versus 0.57184 for 256 and 0.61449 for 512. Batch 16 had the highest trace
+ratios (0.5890 warm and 0.5887 rotating). Its partial kernel consumed
+17.66–18.83 µs of the 20.10–21.12 µs traced Direct path. The 12-case
+summed-stage speedup with the measured 256-column primary was 1.918×.
+The full paired and focused sanitizer gates are still pending. The ledger
+records the summaries and exact artifact identities, with the raw paired
+series and traces retained in the run export.
+
+### Pack the WGMMA partial output stores
+
+Use the 128-column batch-8 selection and fused-query partials as the
+control. The compiled partial emits 64 scalar BF16 stores per lane and
+replicates each LSE write across lanes. Pack each lane's adjacent feature
+pair into a single BF16x2 store and publish each LSE once. Preserve the
+partial buffer layout, BF16 rounding, normalization and combine
+artifacts. Verify the lane mapping and emitted stores before profiling.
+Keep the change only if the matched H200 measurements improve and the
+existing numerical, graph and sanitizer gates pass.
+
+The explicit TileLang register layout compiled all five variants. Each
+partial emits 32 paired BF16 stores and four guarded LSE stores, with zero
+scalar BF16 stores or spills. Batch 8 rose from 112 to 128 registers per
+thread. Registers for the other batches and shared allocation were unchanged.
+
+Run `glm53-decode-wgmma-paired-output-paired-20261110` reached **1.99452×**
+over untouched upstream Native on one H200 with 16 local heads. Its
+**0.501373** equal-case geometric-mean ratio missed the strict 0.5000
+target. Direct improved all 24 cases. The [timing CSV](upstream-decode-wgmma-bf16x2.csv)
+contains both paths and all 30 samples per case. The ledger binds the fresh
+timing and the 23 passing cases per sanitizer tool to image
+`im-qdUjEjfOAyMsNIpeobeT9P`, parent `f2c0c01fb756`, and SGLang
+`6265e0a17987`. Conservative compute through this comparison was $16.32
+of $20.
+
+Batch 16 still has the highest ratios, from 0.54391 to 0.57049. Test its
+current two-tile split against the already compiled one-tile partial and
+33-group, 128-column combine used at batch 8. Keep the control and
+alternative on identical batch-16 inputs and report both cache policies
+and tail counts. Reuse sanitizer evidence only for the exact binaries and
+unchanged test scope. A changed schedule must pass the maintained numerical
+and graph checks and a fresh 24-case run to establish a new aggregate.
+
+The batch-16 schedule diagnostic used the qualified BF16x2 image and
+matched the previous fixture hashes, bank counts and L2 residency
+geometry. Each schedule had 30 fresh pairs per case. The one-tile partial
+and 128-column combine improved all four cases.
+
+| Tails | Cache | Two-tile Direct (µs) | One-tile Direct (µs) | Two-tile paired ratio | One-tile paired ratio |
+|---:|---|---:|---:|---:|---:|
+| 0 | Warm | 19.744 | 17.550 | 0.57011 | 0.50542 |
+| 0 | Rotating | 19.726 | 17.280 | 0.55333 | 0.48438 |
+| 3 | Warm | 19.778 | 17.562 | 0.56725 | 0.50433 |
+| 3 | Rotating | 19.420 | 17.239 | 0.54416 | 0.48352 |
+
+Replacing the four batch-16 ratios in the prior matrix projects 2.036×.
+Use the one-tile schedule for a fresh full comparison. The diagnostic
+result alone does not satisfy the 24-case target.
+
+Prepare and run the comparison with `REMNANT_GLM_BATCH16_ONE_TILE=1`
+and `REMNANT_COMPILED_IMAGE=im-qdUjEjfOAyMsNIpeobeT9P` alongside the
+usual GLM upstream-decode environment. CPU preparation checks that the
+original qualification source fingerprint can be reconstructed with only
+the archived benchmark driver restored. It checks unchanged reference and
+graph code and identical compiled artifacts and toolchain before applying
+the original receipts to the selected binaries.
+
+#### Accepted batch-16 schedule
+
+Run `glm53-decode-wgmma-batch16-one-tile-paired-20261110` reached
+**2.04263×** with an equal-case paired ratio of **0.489565**. All 24 cases
+improved over untouched upstream Native on one H200 with 16 local heads.
+Batch-16 Direct averaged 17.29–17.86 µs. Every case used 30 fresh pairs and
+passed numerical and changing-input graph checks. The timed region
+includes query conversion, partial attention and combine.
+
+The [paired CSV](upstream-decode-wgmma-batch16-one-tile.csv) contains all
+case latencies, ratios and raw samples. The [ledger](qualification.json)
+binds them to image `im-qmsXdmqPtm4TpTYPIff4qe`, parent `9b3c4847835a`,
+SGLang `888d37af3df0`, upstream `baa9befa3815`, and the 23 passing cases
+per sanitizer tool on the same binaries. The run used 91.97 seconds in
+the H200 Function. Conservative compute totaled $17.13 of $20, with
+all workers stopped. Roll back the schedule by omitting
+`REMNANT_GLM_BATCH16_ONE_TILE`.
+
+### Original 1.20× target
+
+The goal is at least 1.20× equal-case geometric-mean speedup over untouched
+upstream FP8 TileLang on one H200. The score uses the mean of each case's 30
+paired Direct/Native ratios and all 24 cases. Preserve the existing fixture,
+Packed ABI, numerical tolerances and changing-input replay checks. The $20
+Modal budget covers preparation, profiling, candidates and final confirmation.
+
+The maintained upstream decode entry point accepts `--profile-decode` for a
+separate CUDA trace of batches 1, 8, 32 and 64 with zero tails under both cache
+policies. It exports per-mode graph kernel durations and the raw traces. Use
+those traces to decide which stage to optimize. Run without this flag for
+acceptance. The timing output reports the equal-case score alongside the
+existing batch-weighted statistic.
+
+### Baseline trace on H200
+
+| Batch | Cache | Native Q / partial / combine (µs) | Direct Q / partial / combine (µs) |
+|---:|---|---:|---:|
+| 1 | warm | 1.02 / 5.41 / 13.18 | 1.06 / 5.31 / 13.15 |
+| 1 | rotating | 1.03 / 5.87 / 13.18 | 1.03 / 5.83 / 13.11 |
+| 8 | warm | 1.15 / 12.03 / 8.74 | 1.12 / 13.34 / 8.80 |
+| 8 | rotating | 1.13 / 13.13 / 8.44 | 1.14 / 14.13 / 8.45 |
+| 32 | warm | 1.66 / 48.70 / 12.32 | 1.70 / 49.47 / 10.40 |
+| 32 | rotating | 1.75 / 49.09 / 11.81 | 1.72 / 50.05 / 10.50 |
+| 64 | warm | 1.92 / 95.31 / 19.36 | 2.03 / 97.61 / 19.75 |
+| 64 | rotating | 2.17 / 95.19 / 19.53 | 2.25 / 97.66 / 19.81 |
+
+At batch 1, combine accounts for about two thirds of traced Direct kernel
+time. At batch 64, partial attention accounts for about four fifths. Test
+parallel combine at low batch and fewer splits at higher batches. These
+diagnostic kernel durations come from one graph replay per mode and case.
+The profile manifest, trace hashes and exact command are in the qualification
+ledger.
+
+### Tuned H200 decode result
+
+Packed Direct achieved **1.3045× geometric-mean speedup** over untouched
+upstream FP8 TileLang. The equal-case paired ratio is **0.76657**, a **23.34%**
+latency reduction. All 24 case means favor Direct. Ratios range from 0.44283
+to 0.96887. Batch 1 gains the most, while batch 16 rotating gains the least.
+
+The tuned kernel distributes combine work over heads and output columns and
+reduces the number of partials at higher batches. The tuned diagnostic put
+batch 1 Direct combine at 1.92–2.11 µs, down from 13.11–13.15 µs in the baseline
+Direct trace. At batch 64, the tuned split policy emits six partials per query
+instead of 33, and the Direct combine trace fell from 19.75–19.82 µs to
+2.67–2.69 µs. Those traces are separate from the acceptance measurements below.
+
+The acceptance run `glm53-decode-tuned-acceptance-20261110` measured complete
+attention calls on one H200 with 16 local heads. It used fresh Native samples,
+30 balanced paired CUDA-graph rounds per case, and the same input hashes and
+bank counts as the historical matrix. All fixtures passed exact Packed-code
+and independent numerical checks at `atol=rtol=0.02` and changing-input graph
+replay. H100 memcheck, racecheck and synccheck each passed 13 focused cases,
+covering the byte loader, seven partial variants and five combine variants.
+
+Measured parent `66aee8c308cc`, SGLang `29fe520dd457`, FlashMLA `858bb1ccac6f`,
+CPU-prepared image `im-GxvdtgbwKar2lKco4w1lAq`. The pristine module is from
+`baa9befa381511cd4d56f83980951e5a45fffc6d`, with identical Native source and
+cubins across both profiles. The [ledger](qualification.json) contains exact
+commands, image/source/artifact hashes, trace and sanitizer receipts, and
+the raw output locations. The [tuned CSV](upstream-decode-tuned.csv) contains
+both modes and every paired sample. The existing comparison below retains
+its original data.
+
+| Batch | Tails | Cache | Native µs | Direct µs | Mean paired Direct/Native |
+|---:|---:|---|---:|---:|---:|
+| 1 | 0 | warm | 20.388 | 9.990 | 0.49002 |
+| 1 | 0 | rotating | 19.938 | 8.829 | 0.44283 |
+| 1 | 3 | warm | 20.352 | 9.958 | 0.48930 |
+| 1 | 3 | rotating | 19.904 | 8.816 | 0.44289 |
+| 8 | 0 | warm | 22.968 | 19.722 | 0.85868 |
+| 8 | 0 | rotating | 22.734 | 18.763 | 0.82536 |
+| 8 | 3 | warm | 22.918 | 19.498 | 0.85077 |
+| 8 | 3 | rotating | 22.762 | 18.920 | 0.83123 |
+| 16 | 0 | warm | 34.826 | 33.255 | 0.95489 |
+| 16 | 0 | rotating | 35.711 | 34.550 | 0.96749 |
+| 16 | 3 | warm | 34.888 | 33.278 | 0.95386 |
+| 16 | 3 | rotating | 35.707 | 34.595 | 0.96887 |
+| 24 | 0 | warm | 49.194 | 35.250 | 0.71656 |
+| 24 | 0 | rotating | 48.578 | 35.725 | 0.73542 |
+| 24 | 3 | warm | 49.391 | 35.081 | 0.71028 |
+| 24 | 3 | rotating | 48.604 | 35.756 | 0.73564 |
+| 32 | 0 | warm | 64.129 | 54.524 | 0.85023 |
+| 32 | 0 | rotating | 62.349 | 57.318 | 0.91930 |
+| 32 | 3 | warm | 64.093 | 54.705 | 0.85352 |
+| 32 | 3 | rotating | 62.382 | 57.371 | 0.91968 |
+| 64 | 0 | warm | 117.876 | 98.781 | 0.83800 |
+| 64 | 0 | rotating | 116.359 | 98.039 | 0.84255 |
+| 64 | 3 | warm | 117.865 | 98.851 | 0.83868 |
+| 64 | 3 | rotating | 116.602 | 98.206 | 0.84223 |
+
+The timing worker used 84.29 seconds. Across preparation, diagnostics,
+qualification and timing, the observed Modal compute delta was **$1.73** of
+the $20 budget. No workers remain. The tuned specialization is selected in
+the microbenchmark. Its serving dispatch and full-model performance are
+unverified. The earlier Packed path remains available through the existing
+GLM attention suite and the starting pin.
+
 ## Pristine upstream TP4 decode comparison
 
 Question: what is production Packed Direct's complete attention-call overhead

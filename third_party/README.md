@@ -17,7 +17,7 @@ Folder suffixes identify the SGLang integration pair, not a FlashMLA release.
 |---|---|---|---|
 | `sglang-v0.5.18/` | `71de97b264b04dcd514cf904003028aefe9775c8` | `remnant/v0.5.18` | `6687a7c` |
 | `flashmla-v0.5.18/` | `05e26647fe840b8baedae486c2d86d5ce4efeb7c` | `remnant/flashmla-v0518` | `97f3faa` |
-| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `exp/ds41-flash/upstream-decode` | `6ba5517ea595` |
+| `sglang-v0.5.22/` | `baa9befa381511cd4d56f83980951e5a45fffc6d` (peeled release commit) | `perf/glm53-flash/decode-splits` | `29fe520dd457` |
 | `flashmla-v0.5.22/` | `3620b63fc4ebe33950c50e1b7701b6607f44150e` (selected by SGLang v0.5.22) | `exp/ds41-flash/upstream-decode` | `858bb1c` |
 
 Both FlashMLA checkouts pin CUTLASS `147f5673d0c1c3dcf66f78d677fd647e4a020219`.
@@ -48,6 +48,15 @@ checkouts, including dirty worktrees. Their commits, expected pins, dirty state,
 content hashes and nested-source identities are retained in the build manifest.
 Ordinary serving does not accept these overrides. A source check does not prove
 that an existing container's loaded binaries match; source changes need a rebuild.
+
+## GLM Packed H200 decode experiment
+
+The v0.5.22 TileLang module owns the tuned Packed partial and combine kernels.
+The H200 split policy lives in `sglang/srt/remnant/glm_config.py` and the
+`glm-upstream-decode` benchmark selects it for its 16-head matrix. The
+[experiment record](../benchmarks/microbench/glm53-flash-packed/README.md#tuned-h200-decode-result)
+binds the 1.3045× speedup to the qualified source and cubins. Serving still
+uses its existing dispatch.
 
 ## Experimental V4.1 FP4 on SM90
 

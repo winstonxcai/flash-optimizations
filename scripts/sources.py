@@ -15,6 +15,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+GLM_ATTENTION_BENCHMARK = Path("python/sglang/benchmark/remnant/glm_attention.py")
+GLM_QUALIFIED_BENCHMARK_SOURCE = Path("/opt/remnant-glm-qualified-attention.py")
+
 
 def compiled_source_digest(roots: list[Path]) -> str:
     digest = hashlib.sha256()
@@ -51,10 +54,12 @@ def verify_compiled_image_sources(
 def glm_rebuild_source_digest(
     roots: list[Path], formatting_paths: tuple[str, ...] = ()
 ) -> str:
-    """Hash every compiled source except the two authorized GLM JIT inputs."""
+    """Hash compiled sources outside the authorized GLM attention JIT inputs."""
     allowed = {
         "ops/attention/dsa/tilelang_kernel.py",
         "jit/include/sgl_kernel/glm_packed_decode.cuh",
+        "jit/include/sgl_kernel/glm_wgmma_pv.cuh",
+        "jit/include/sgl_kernel/glm_wgmma_query.cuh",
     }
     digest = hashlib.sha256()
     for i, root in enumerate(map(Path, roots)):
@@ -193,7 +198,7 @@ def glm_compile_owner_digest(sglang: Path) -> str:
     return digest.hexdigest()
 
 
-def snapshot_glm_artifacts(sglang: str) -> None:
+def snapshot_glm_artifacts(sglang: str, *, record_benchmark_source: bool = False) -> None:
     """Called on the verified base BEFORE overlaying candidate test sources."""
     manifest = json.loads(Path("/opt/remnant-build.json").read_text())
     binaries = manifest.get("binaries", {})
@@ -215,6 +220,10 @@ def snapshot_glm_artifacts(sglang: str) -> None:
         else "legacy image; CPU preparation required"
     )
     Path("/opt/remnant-glm-reuse-base.json").write_text(json.dumps(manifest))
+    if record_benchmark_source:
+        GLM_QUALIFIED_BENCHMARK_SOURCE.write_bytes(
+            (Path(sglang) / GLM_ATTENTION_BENCHMARK).read_bytes()
+        )
 
 
 def integration_profile(value: str | None = None) -> dict[str, str]:

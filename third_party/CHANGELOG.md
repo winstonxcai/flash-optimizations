@@ -13,6 +13,14 @@ records rather than this milestone log.
 
 ## Unreleased
 
+- Measured parent `66aee8c308cc`, SGLang `29fe520dd457` / FlashMLA
+  `858bb1ccac6f`: benchmark the parallel Packed decode combine and H200 split
+  policy. All 24 paired H200 cases passed numerical and changing-input graph
+  checks, with a 0.76657 geometric-mean Direct/Native ratio (1.3045× speedup).
+  Focused H100 memcheck, racecheck and synccheck passed 13 cases per tool.
+  The [experiment record](../benchmarks/microbench/glm53-flash-packed/README.md#tuned-h200-decode-result)
+  records the image, source and raw artifacts. Serving dispatch is unchanged.
+
 - Upstream decode integration of parent tips `d186b9e` and `fb1a708` uses
   SGLang `6ba5517ea595` and FlashMLA `858bb1ccac6f`. Both benchmark protocols
   retain their own Native controls and receipt identities. V4.1 replay uses
